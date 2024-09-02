@@ -7,9 +7,34 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB01CB0E2C8497900069937C /* UICollectionView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */; };
+		AB01CB102C84985B0069937C /* Screen+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */; };
+		AB0868132C7C87DB00F5FCCB /* OnBoardingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0868122C7C87DB00F5FCCB /* OnBoardingViewController.swift */; };
+		AB0868172C7C880200F5FCCB /* OnBoardingViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB0868162C7C880200F5FCCB /* OnBoardingViewController.xib */; };
+		AB08681F2C7C89A800F5FCCB /* CarouselCollectionViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB08681E2C7C89A800F5FCCB /* CarouselCollectionViewCell.xib */; };
+		AB0868202C7C89A800F5FCCB /* CarouselCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB08681D2C7C89A800F5FCCB /* CarouselCollectionViewCell.swift */; };
+		AB0868222C7C8BE300F5FCCB /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0868212C7C8BE300F5FCCB /* CarouselView.swift */; };
+		AB0868252C7C8BF600F5FCCB /* CarouselView.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB0868242C7C8BF600F5FCCB /* CarouselView.xib */; };
+		AB6DBD2F2C68BF510009BB11 /* LoginViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD2E2C68BF510009BB11 /* LoginViewController.swift */; };
+		AB6DBD382C68CD560009BB11 /* BaseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD372C68CD560009BB11 /* BaseViewController.swift */; };
+		AB6DBD3D2C68CE9D0009BB11 /* FlowRoutingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */; };
+		AB6DBD3F2C68CEF70009BB11 /* LoginViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB6DBD3E2C68CEF70009BB11 /* LoginViewController.xib */; };
+		AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */; };
+		AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD442C68D8560009BB11 /* Utils.swift */; };
+		AB6DBD482C68D9430009BB11 /* LoadingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD472C68D9430009BB11 /* LoadingButton.swift */; };
+		AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */; };
+		ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */; };
+		ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C7B2C73688000013F18 /* MainViewController.swift */; };
+		ABF38C7E2C73688900013F18 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C7D2C73688900013F18 /* MainViewController.xib */; };
+		ABF38C812C73719300013F18 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C802C73719300013F18 /* Content.swift */; };
+		ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C862C73889100013F18 /* ScreenOneViewController.swift */; };
+		ABF38C892C73889A00013F18 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C882C73889A00013F18 /* ScreenOneViewController.xib */; };
+		ABF38C8B2C7388AA00013F18 /* ScreenTwoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C8A2C7388AA00013F18 /* ScreenTwoViewController.swift */; };
+		ABF38C8D2C7388B200013F18 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C8C2C7388B200013F18 /* ScreenTwoViewController.xib */; };
+		ABF38C8F2C7388C100013F18 /* ScreenThreeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C8E2C7388C100013F18 /* ScreenThreeViewController.swift */; };
+		ABF38C912C7388C900013F18 /* ScreenThreeViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C902C7388C900013F18 /* ScreenThreeViewController.xib */; };
 		C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897B82C5CFFFA0083928E /* AppDelegate.swift */; };
 		C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */; };
-		C5C897BD2C5CFFFA0083928E /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BC2C5CFFFA0083928E /* ViewController.swift */; };
 		C5C897C02C5CFFFA0083928E /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5C897BE2C5CFFFA0083928E /* Main.storyboard */; };
 		C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C12C5CFFFB0083928E /* Assets.xcassets */; };
 		C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */; };
@@ -17,10 +42,35 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UICollectionView+Extensions.swift"; sourceTree = "<group>"; };
+		AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Screen+Extensions.swift"; sourceTree = "<group>"; };
+		AB0868122C7C87DB00F5FCCB /* OnBoardingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnBoardingViewController.swift; sourceTree = "<group>"; };
+		AB0868162C7C880200F5FCCB /* OnBoardingViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = OnBoardingViewController.xib; sourceTree = "<group>"; };
+		AB08681D2C7C89A800F5FCCB /* CarouselCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselCollectionViewCell.swift; sourceTree = "<group>"; };
+		AB08681E2C7C89A800F5FCCB /* CarouselCollectionViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = CarouselCollectionViewCell.xib; sourceTree = "<group>"; };
+		AB0868212C7C8BE300F5FCCB /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
+		AB0868242C7C8BF600F5FCCB /* CarouselView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = CarouselView.xib; sourceTree = "<group>"; };
+		AB6DBD2E2C68BF510009BB11 /* LoginViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewController.swift; sourceTree = "<group>"; };
+		AB6DBD372C68CD560009BB11 /* BaseViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseViewController.swift; sourceTree = "<group>"; };
+		AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRoutingManager.swift; sourceTree = "<group>"; };
+		AB6DBD3E2C68CEF70009BB11 /* LoginViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = LoginViewController.xib; sourceTree = "<group>"; };
+		AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseNavigationController.swift; sourceTree = "<group>"; };
+		AB6DBD442C68D8560009BB11 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
+		AB6DBD472C68D9430009BB11 /* LoadingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingButton.swift; sourceTree = "<group>"; };
+		AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Exensions.swift"; sourceTree = "<group>"; };
+		ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPilotManager.swift; sourceTree = "<group>"; };
+		ABF38C7B2C73688000013F18 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		ABF38C7D2C73688900013F18 /* MainViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainViewController.xib; sourceTree = "<group>"; };
+		ABF38C802C73719300013F18 /* Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Content.swift; sourceTree = "<group>"; };
+		ABF38C862C73889100013F18 /* ScreenOneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenOneViewController.swift; sourceTree = "<group>"; };
+		ABF38C882C73889A00013F18 /* ScreenOneViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ScreenOneViewController.xib; sourceTree = "<group>"; };
+		ABF38C8A2C7388AA00013F18 /* ScreenTwoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTwoViewController.swift; sourceTree = "<group>"; };
+		ABF38C8C2C7388B200013F18 /* ScreenTwoViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ScreenTwoViewController.xib; sourceTree = "<group>"; };
+		ABF38C8E2C7388C100013F18 /* ScreenThreeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenThreeViewController.swift; sourceTree = "<group>"; };
+		ABF38C902C7388C900013F18 /* ScreenThreeViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ScreenThreeViewController.xib; sourceTree = "<group>"; };
 		C5C897B52C5CFFFA0083928E /* UserPilotSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserPilotSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5C897B82C5CFFFA0083928E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		C5C897BC2C5CFFFA0083928E /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		C5C897BF2C5CFFFA0083928E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		C5C897C12C5CFFFB0083928E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C5C897C42C5CFFFB0083928E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -39,6 +89,171 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AB0868112C7C87C700F5FCCB /* OnBoarding */ = {
+			isa = PBXGroup;
+			children = (
+				AB0868232C7C8BE900F5FCCB /* CarouselView */,
+				AB0868182C7C88FC00F5FCCB /* Cells */,
+				AB0868122C7C87DB00F5FCCB /* OnBoardingViewController.swift */,
+				AB0868162C7C880200F5FCCB /* OnBoardingViewController.xib */,
+			);
+			path = OnBoarding;
+			sourceTree = "<group>";
+		};
+		AB0868182C7C88FC00F5FCCB /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				AB08681D2C7C89A800F5FCCB /* CarouselCollectionViewCell.swift */,
+				AB08681E2C7C89A800F5FCCB /* CarouselCollectionViewCell.xib */,
+			);
+			path = Cells;
+			sourceTree = "<group>";
+		};
+		AB0868232C7C8BE900F5FCCB /* CarouselView */ = {
+			isa = PBXGroup;
+			children = (
+				AB0868212C7C8BE300F5FCCB /* CarouselView.swift */,
+				AB0868242C7C8BF600F5FCCB /* CarouselView.xib */,
+			);
+			path = CarouselView;
+			sourceTree = "<group>";
+		};
+		AB6DBD2D2C68BF450009BB11 /* Login */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD2E2C68BF510009BB11 /* LoginViewController.swift */,
+				AB6DBD3E2C68CEF70009BB11 /* LoginViewController.xib */,
+			);
+			path = Login;
+			sourceTree = "<group>";
+		};
+		AB6DBD322C68BF660009BB11 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				ABC0AE162C7205BA00BB9F62 /* UserPilot */,
+				AB6DBD3B2C68CDB90009BB11 /* Routing */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		AB6DBD352C68CD3B0009BB11 /* Featues */ = {
+			isa = PBXGroup;
+			children = (
+				AB0868112C7C87C700F5FCCB /* OnBoarding */,
+				ABF38C822C73886300013F18 /* ScreensFlow */,
+				AB6DBD402C68D2180009BB11 /* Main */,
+				AB6DBD362C68CD450009BB11 /* core */,
+				AB6DBD2D2C68BF450009BB11 /* Login */,
+			);
+			path = Featues;
+			sourceTree = "<group>";
+		};
+		AB6DBD362C68CD450009BB11 /* core */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD372C68CD560009BB11 /* BaseViewController.swift */,
+				AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */,
+			);
+			path = core;
+			sourceTree = "<group>";
+		};
+		AB6DBD3B2C68CDB90009BB11 /* Routing */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */,
+			);
+			path = Routing;
+			sourceTree = "<group>";
+		};
+		AB6DBD402C68D2180009BB11 /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				ABF38C7F2C73713100013F18 /* Models */,
+				ABF38C7B2C73688000013F18 /* MainViewController.swift */,
+				ABF38C7D2C73688900013F18 /* MainViewController.xib */,
+			);
+			path = Main;
+			sourceTree = "<group>";
+		};
+		AB6DBD432C68D83B0009BB11 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD442C68D8560009BB11 /* Utils.swift */,
+			);
+			name = Helpers;
+			sourceTree = "<group>";
+		};
+		AB6DBD462C68D9350009BB11 /* CustomViews */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD472C68D9430009BB11 /* LoadingButton.swift */,
+			);
+			path = CustomViews;
+			sourceTree = "<group>";
+		};
+		AB6DBD492C68DA370009BB11 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */,
+				AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */,
+				AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		ABC0AE162C7205BA00BB9F62 /* UserPilot */ = {
+			isa = PBXGroup;
+			children = (
+				ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */,
+			);
+			path = UserPilot;
+			sourceTree = "<group>";
+		};
+		ABF38C7F2C73713100013F18 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				ABF38C802C73719300013F18 /* Content.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		ABF38C822C73886300013F18 /* ScreensFlow */ = {
+			isa = PBXGroup;
+			children = (
+				ABF38C852C73887E00013F18 /* ScreenThree */,
+				ABF38C842C73887500013F18 /* ScreenTwo */,
+				ABF38C832C73887000013F18 /* ScreenOne */,
+			);
+			path = ScreensFlow;
+			sourceTree = "<group>";
+		};
+		ABF38C832C73887000013F18 /* ScreenOne */ = {
+			isa = PBXGroup;
+			children = (
+				ABF38C862C73889100013F18 /* ScreenOneViewController.swift */,
+				ABF38C882C73889A00013F18 /* ScreenOneViewController.xib */,
+			);
+			path = ScreenOne;
+			sourceTree = "<group>";
+		};
+		ABF38C842C73887500013F18 /* ScreenTwo */ = {
+			isa = PBXGroup;
+			children = (
+				ABF38C8A2C7388AA00013F18 /* ScreenTwoViewController.swift */,
+				ABF38C8C2C7388B200013F18 /* ScreenTwoViewController.xib */,
+			);
+			path = ScreenTwo;
+			sourceTree = "<group>";
+		};
+		ABF38C852C73887E00013F18 /* ScreenThree */ = {
+			isa = PBXGroup;
+			children = (
+				ABF38C8E2C7388C100013F18 /* ScreenThreeViewController.swift */,
+				ABF38C902C7388C900013F18 /* ScreenThreeViewController.xib */,
+			);
+			path = ScreenThree;
+			sourceTree = "<group>";
+		};
 		C5C897AC2C5CFFFA0083928E = {
 			isa = PBXGroup;
 			children = (
@@ -58,9 +273,13 @@
 		C5C897B72C5CFFFA0083928E /* UserPilotSample */ = {
 			isa = PBXGroup;
 			children = (
+				AB6DBD492C68DA370009BB11 /* Extensions */,
+				AB6DBD462C68D9350009BB11 /* CustomViews */,
+				AB6DBD432C68D83B0009BB11 /* Helpers */,
+				AB6DBD352C68CD3B0009BB11 /* Featues */,
+				AB6DBD322C68BF660009BB11 /* Managers */,
 				C5C897B82C5CFFFA0083928E /* AppDelegate.swift */,
 				C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */,
-				C5C897BC2C5CFFFA0083928E /* ViewController.swift */,
 				C5C897BE2C5CFFFA0083928E /* Main.storyboard */,
 				C5C897C12C5CFFFB0083928E /* Assets.xcassets */,
 				C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */,
@@ -79,6 +298,7 @@
 				C5C897B12C5CFFFA0083928E /* Sources */,
 				C5C897B22C5CFFFA0083928E /* Frameworks */,
 				C5C897B32C5CFFFA0083928E /* Resources */,
+				AB20F94D2C5E62D8008C0157 /* SwiftLint */,
 			);
 			buildRules = (
 			);
@@ -133,21 +353,69 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB6DBD3F2C68CEF70009BB11 /* LoginViewController.xib in Resources */,
+				ABF38C8D2C7388B200013F18 /* ScreenTwoViewController.xib in Resources */,
+				AB0868252C7C8BF600F5FCCB /* CarouselView.xib in Resources */,
+				AB08681F2C7C89A800F5FCCB /* CarouselCollectionViewCell.xib in Resources */,
 				C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */,
+				ABF38C7E2C73688900013F18 /* MainViewController.xib in Resources */,
 				C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */,
+				ABF38C912C7388C900013F18 /* ScreenThreeViewController.xib in Resources */,
+				AB0868172C7C880200F5FCCB /* OnBoardingViewController.xib in Resources */,
 				C5C897C02C5CFFFA0083928E /* Main.storyboard in Resources */,
+				ABF38C892C73889A00013F18 /* ScreenOneViewController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AB20F94D2C5E62D8008C0157 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [[ \"$(uname -m)\" == arm64 ]]; then\n    export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\n\nif which swiftlint > /dev/null; then\n  swiftlint --fix && swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C5C897B12C5CFFFA0083928E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C5C897BD2C5CFFFA0083928E /* ViewController.swift in Sources */,
+				AB6DBD2F2C68BF510009BB11 /* LoginViewController.swift in Sources */,
+				AB01CB0E2C8497900069937C /* UICollectionView+Extensions.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,
+				AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */,
+				ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */,
+				ABF38C8B2C7388AA00013F18 /* ScreenTwoViewController.swift in Sources */,
+				ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */,
+				ABF38C812C73719300013F18 /* Content.swift in Sources */,
+				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
+				AB0868222C7C8BE300F5FCCB /* CarouselView.swift in Sources */,
+				AB6DBD482C68D9430009BB11 /* LoadingButton.swift in Sources */,
+				AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */,
+				ABF38C8F2C7388C100013F18 /* ScreenThreeViewController.swift in Sources */,
+				AB01CB102C84985B0069937C /* Screen+Extensions.swift in Sources */,
+				AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */,
+				AB6DBD382C68CD560009BB11 /* BaseViewController.swift in Sources */,
+				AB0868132C7C87DB00F5FCCB /* OnBoardingViewController.swift in Sources */,
+				AB6DBD3D2C68CE9D0009BB11 /* FlowRoutingManager.swift in Sources */,
+				AB0868202C7C89A800F5FCCB /* CarouselCollectionViewCell.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -300,6 +568,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -327,6 +596,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

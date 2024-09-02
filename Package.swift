@@ -5,17 +5,39 @@ import PackageDescription
 
 let package = Package(
     name: "UserPilot",
+    platforms: [
+        .iOS(.v15)
+    ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "UserPilot",
             targets: ["UserPilot"]),
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/realm/realm-swift",
+            from: "10.52.2"),
+        .package(
+            url: "https://github.com/SimplyDanny/SwiftLintPlugins",
+            from: "0.55.1"),
+        .package(
+            url: "https://github.com/davidstump/SwiftPhoenixClient",
+            from: "5.2.2")
+        ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "UserPilot"),
+            name: "UserPilot",
+            dependencies: [
+                .product(name: "RealmSwift", package: "realm-swift"),
+                .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient"),
+            ],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
+            ]
+        ),
         .testTarget(
             name: "UserPilotTests",
             dependencies: ["UserPilot"]),
