@@ -16,6 +16,11 @@ class LoginViewController: BaseViewController {
     @IBOutlet weak var textFieldPassword: UITextField!
     @IBOutlet weak var loginButton: LoadingButton!
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        UserPilotManager.shared.startPerformanceTest()
+    }
+
     // MARK: - IBActions
     @IBAction func onLoginButtonClicked(_ sender: UIButton) {
         excuteLogin()

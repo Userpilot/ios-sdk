@@ -19,6 +19,7 @@ struct UserDefaultConstants {
 struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
+    static let DEBOUNCER_QUEUE = "userpilot-debouncer-queue"
 }
 
 struct SocketConstants {
@@ -38,14 +39,17 @@ struct SocketConstants {
 struct EventCaseNameConstants {
     static let IDENTIFY = "identify"
     static let SCREEN = "screen"
-    static let COMPANY = "company"
     static let EVENT = "event"
 }
 
 struct EventNameConstants {
     static let IDENTIFY = "user_identify"
     static let SCREEN = "screen"
-    static let COMPANY = "company"
     static let EVENT = "event"
+}
+
+struct GeneralConstants {
+    static let MAX_EVENTS_PER_SCREEN = 200
+    static let MAX_ACTION_TO_DEBOUNCE = 20
 }
 // swiftlint:enable identifier_name

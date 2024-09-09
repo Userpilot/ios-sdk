@@ -29,10 +29,9 @@ extension UIViewController {
         guard UIApplication.shared.topViewController() != nil else { return }
 
         // communicate the tracked screen back to AnalyticsTracker
-        NotificationCenter.userpilot.post(
-            name: .userpilotTrackedScreen,
-            object: self,
-            userInfo: Notification.toInfo(self.displayName)
+        NotificationCenter.userpilot.post(name: .userpilotTrackedScreen,
+                                          object: self,
+                                          userInfo: Notification.toInfo(self.displayName)
         )
     }
 

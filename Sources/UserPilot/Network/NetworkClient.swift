@@ -41,6 +41,9 @@ class NetworkClient {
     private let config: UserPilot.Config
     private let storage: DataStoring
 
+    /// Network session base URL
+    let urlSession: URLSession = NetworkClient.defaultURLSession
+
     init(container: DIContainer) {
         self.config = container.resolve(UserPilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
@@ -131,7 +134,7 @@ extension NetworkClient {
         requestId: UUID?,
         completion: @escaping (_ result: Result<T, Error>) -> Void
     ) {
-        let dataTask = config.urlSession.dataTask(with: urlRequest) { [weak self] data, response, error in
+        let dataTask = urlSession.dataTask(with: urlRequest) { [weak self] data, response, error in
             let url = (response?.url ?? urlRequest.url)?.absoluteString ?? "<unknown>"
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             // swiftlint:disable:next non_optional_string_data_conversion
@@ -176,7 +179,7 @@ extension NetworkClient {
         _ urlRequest: URLRequest,
         completion: @escaping (_ result: Result<Void, Error>) -> Void
     ) {
-        let dataTask = config.urlSession.dataTask(with: urlRequest) { [weak self] _, response, error in
+        let dataTask = urlSession.dataTask(with: urlRequest) { [weak self] _, response, error in
             let url = (response?.url ?? urlRequest.url)?.absoluteString ?? "<unknown>"
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
 
@@ -209,7 +212,6 @@ extension NetworkClient {
 // MARK: - Static methods
 extension NetworkClient {
     // swiftlint:disable force_unwrapping
-    static let defaultAPIHost = URL(string: "https://----")!
     static let defaultSettingsHost = URL(string: "https://---")!
     // swiftlint:enable force_unwrapping
 

@@ -21,7 +21,7 @@ enum SettingsEndpoint: Endpoint {
 
     func url(config: UserPilot.Config, storage: DataStoring) -> URL? {
         guard
-            var components = URLComponents(url: config.settingsHost, resolvingAgainstBaseURL: false)
+            var components = URLComponents(url: NetworkClient.defaultSettingsHost, resolvingAgainstBaseURL: false)
         else { return nil }
 
         switch self {

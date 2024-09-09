@@ -22,12 +22,6 @@ public extension UserPilot {
         /// Customer token
         let token: String
 
-        /// UserPilot SDK settings URL
-        let settingsHost: URL = NetworkClient.defaultSettingsHost
-
-        /// Network session base URL
-        let urlSession: URLSession = NetworkClient.defaultURLSession
-
         /// UserPilot SDK logger
         var logger: Logging = OSLog.disabled
 
@@ -42,8 +36,6 @@ public extension UserPilot {
         /// Create an UserPilot SDK configuration
         /// - Parameter accountID: UserPilot Account ID - a string containing an integer,
         ///  copied from the Account settings page in Studio.
-        /// - Parameter applicationID: UserPilot Application ID - a string containing a UUID,
-        ///  copied from the Apps & Installation page in Studio for this iOS application.
         public init(token: String) {
             self.token = token
         }

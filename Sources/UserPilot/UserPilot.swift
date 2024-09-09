@@ -5,67 +5,111 @@
 //  Created by Motasem Hamed on 18/08/2024.
 //  Copyright © 2024 UserPilot. All rights reserved.
 //
-// [Brief Description]
-// UserPilot An object that manages UserPilot tracking and rendering of experience content, for your app.
+//  [Brief Description]
+//  The `UserPilot` class is the primary interface for integrating UserPilot SDK into an application.
+//  It manages user tracking, event publishing, experience rendering, and various analytics functions,
+//  allowing you to deliver personalized, context-aware content based on user actions and data.
 //
 
 import UIKit
 
+/// `UserPilot` manages the lifecycle of the UserPilot SDK and tracks user activity, enabling 
+/// personalized content delivery.
 public class UserPilot: NSObject {
 
     // MARK: - Properties
-    private lazy var settingsVerifier = container.resolve(SettingsVerifing.self)
-    private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-    private lazy var storage = container.resolve(DataStoring.self)
-    private lazy var socketManager = container.resolve(SocketEvents.self)
 
+    /// A dependency injection container that stores and provides necessary services like analytics, 
+    /// storage, and networking.
     let container = DIContainer()
+
+    /// Configuration object that holds initialization parameters for the SDK.
     let config: Config
 
+    /// A UUID representing the current user session. If `nil`, there is no active session.
     var sessionID: UUID?
+
+    /// A Boolean indicating whether the SDK is active (i.e., a session is active). True if `sessionID` is not `nil`.
     var isActive: Bool { sessionID != nil }
 
-    // MARK: - init
-    /*
-     Creates an instance of UserPilot.
-     Parameter config: `Config` object for this instance, containing initialization options.
+    /// Lazy loading of the `SettingsVerifing` instance to verify SDK settings at runtime.
+    private lazy var settingsVerifier = container.resolve(SettingsVerifing.self)
+
+    /// Lazy loading of the `AnalyticsPublishing` instance responsible for publishing user tracking events.
+    private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
+
+    /// Lazy loading of the `DataStoring` instance that manages persistent storage (e.g., user data, preferences).
+    private lazy var storage = container.resolve(DataStoring.self)
+
+    /// Lazy loading of the `SocketEvents` instance that manages WebSocket connections and event-driven communication.
+    private lazy var socketManager = container.resolve(SocketEvents.self)
+
+    // MARK: - Initializer
+
+    /**
+     Initializes the `UserPilot` SDK with the provided configuration.
+     
+     This method sets up the required services such as analytics, storage, and networking, and prepares
+     the SDK for tracking and rendering.
+     
+     - Parameter config: A `Config` object that contains various initialization settings like logging, 
+     API keys, and anonymous user tracking settings.
      */
     public init(config: Config) {
         self.config = config
         super.init()
 
+        // Set up the dependency container and register required services
         initializeContainer()
+
+        // Verify and apply necessary SDK settings
         setupSettings()
-        config.logger.info("🌏 UserPilot SDK %{public}@ initialized", version())
+
+        // Log the initialization of the SDK with the current version
+        config.logger.info("🌏 UserPilot SDK version %{public}@ initialized", version())
     }
 
 }
 
-// MARK: - Public methods
+// MARK: - Public Methods
+
 extension UserPilot {
 
-    /*
-     Get the current version of the UserPilot SDK.
-     Returns: Current version of the UserPilot SDK.
+    /**
+     Retrieves the current version of the UserPilot SDK as a string.
+     
+     This method provides the static version of the SDK, useful for logging or debugging purposes.
+     
+     - Returns: A string representing the current version of the UserPilot SDK.
      */
     public static func version() -> String {
         return userpilotVersion
     }
 
-    /*
-     Get the current version of the UserPilot SDK.
-     Returns: Current version of the UserPilot SDK.
+    /**
+     Retrieves the current version of the UserPilot SDK for the specific instance.
+     
+     This method returns the SDK version from the context of the instance, though it delegates the 
+     call to the static method.
+     
+     - Returns: A string representing the current version of the SDK for this instance.
      */
     public func version() -> String {
         return UserPilot.version()
     }
-
 }
 
-// MARK: - Setup methods
+// MARK: - Setup Methods
+
 extension UserPilot {
 
-    /// setup managers and sengletons
+    /**
+     Initializes the DI (Dependency Injection) container and registers required services.
+     
+     This method sets up lazy initialization for essential SDK services like `DataStoring`, 
+     `Networking`, `SocketEvents`, and more.
+     By using lazy registration, the services are only created when they are first used, improving performance.
+     */
     private func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
@@ -77,79 +121,109 @@ extension UserPilot {
         container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
     }
 
-    /// get customer state and settings
+    /**
+     Applies necessary configurations and verifies the SDK settings.
+     
+     This method uses the `SettingsVerifing` service to ensure that all required settings are valid.
+     It can be customized further if specific settings need to be checked or applied.
+     */
     private func setupSettings() {
+        // Placeholder for settings verification logic
         // settingsVerifier.verifySettings {
         // }
     }
 
-    /// In case the userID there, join to channel
+    /**
+     Initializes the SDK session by verifying the state of the WebSocket connection and other conditions.
+     
+     This method should be called after identifying the user or initiating an anonymous session.
+     It ensures that the SDK is ready to track events and trigger real-time experiences.
+     */
     public func initialize() {
         checkSocketState()
     }
 
+    /**
+     Checks whether the WebSocket connection should be established based on the presence of a valid `userID`.
+     
+     This method verifies if the `userID` exists in the local storage. If it exists, it attempts to connect
+     to the WebSocket server.
+     */
     private func checkSocketState() {
-        if storage.userID.isNotEmpty {
-            socketManager.connect()
-        }
+        // Uncomment and implement logic when userID-based socket management is ready.
+        // if storage.userID.isNotEmpty {
+        //     socketManager.connect()
+        // }
     }
-
 }
 
 // MARK: - Tracking APIs
+
 extension UserPilot {
 
-    /*
-     Identify the user and determine if they should see Appcues content.
+    /**
+     Identifies a user to the SDK, enabling personalized content and behavior tracking.
+     
+     This method allows the SDK to associate analytics and content with a known user by passing their unique `userID`.
+     Additional properties and company details can be provided for more context.
+     
      - Parameters:
-     - userID: Unique value identifying the user.
-     - properties: Optional properties that provide additional context about the user.
-     - company: Optional company that provide additional context about the user.
+       - userID: A unique identifier for the user, which is used to track their behavior across sessions.
+       - properties: An optional dictionary containing user-specific properties like email, role, or age.
+       - company: An optional dictionary containing company-specific properties for users associated with organizations.
      */
     public func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
-        let event = Event(type: .identify(userID), properties: properties, company: company)
-        analyticsPublisher.identify(event, isAnonymous: false)
+        let event = Event(type: .identify(userID), properties: properties, company: company, userID: userID)
+        analyticsPublisher.publish(event)
     }
 
-    /*
-     Generate a unique ID for the current user when there is not a known identity to use in
-     the `identify` call. This will cause the SDK to begin tracking activity and checking for
-     qualified content.
+    /**
+     Tracks an anonymous user session when a known user identity is unavailable.
+     
+     This method generates a unique anonymous ID, allowing the SDK to track behavior and trigger relevant content
+     even when the user has not explicitly signed in or identified themselves.
      */
     public func anonymous() {
-        let event = Event(type: .identify("anonymous:\(config.anonymousIDFactory())"))
-        analyticsPublisher.identify(event, isAnonymous: true)
+        let event = Event(type: .identify("anonymous:\(config.anonymousIDFactory())"), userID: "")
+        analyticsPublisher.publish(event)
     }
 
-    /*
-     Track a custom event for an action taken by a user.
+    /**
+     Tracks when a user views a screen within the app.
+     
+     This method can be used to manually track screen views for analytics purposes.
+     It is especially useful when automatic screen tracking is not available or for custom screens.
+     
+     - Parameter title: The title of the screen that the user has viewed.
+     */
+    public func screen(_ title: String) {
+        analyticsPublisher.publish(Event(type: .screen(title), userID: storage.userID))
+    }
+
+    /**
+     Tracks a custom event based on a user action.
+     
+     This method allows developers to track any arbitrary action taken by the user, such as button clicks,
+     form submissions, or purchases.
+     The event is recorded and sent to the analytics service for further analysis or content triggering.
+     
      - Parameters:
-     - name: Name of the event.
-     - properties: Optional properties that provide additional context about the event.
+       - name: The name of the custom event (e.g., "purchase", "button_click").
+       - properties: An optional dictionary containing additional context or metadata related to the event.
      */
     public func track(name: String, properties: [String: Any]? = nil) {
-        if !socketManager.isSocketOpened { return }
-        analyticsPublisher.publish(Event(type: .event(name), properties: properties))
+        analyticsPublisher.publish(Event(type: .event(name), properties: properties, userID: storage.userID))
     }
 
-    /*
-     Track an screen viewed by a user manually.
-     - Parameters:
-     - title: Title of the screen.
-     - properties: Optional properties that provide additional context about the screen view.
+    /**
+     Logs the user out and clears their session data.
+     
+     This method should be called when the user logs out of the application.
+     It resets the session state, clears user-related data, and ensures no further tracking occurs for
+     the logged-out user.
      */
-    public func screen(_ title: String, properties: [String: Any]? = nil) {
-        analyticsPublisher.publish(Event(type: .screen(title), properties: properties))
-    }
-
-    /*
-     Called when user logout.
-     Clears out the current user in this session. Can be used when the user logs out of your application.
-     */
-    public func reset() {
-        analyticsPublisher.reset()
+    public func clean() {
+        analyticsPublisher.clean()
         storage.userID = ""
-        storage.isAnonymous = true
     }
-
 }

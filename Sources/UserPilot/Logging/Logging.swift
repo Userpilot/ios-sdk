@@ -12,7 +12,7 @@
 import Foundation
 import os.log
 
-protocol Logging {
+internal protocol Logging {
     func debug(_ message: StaticString, _ args: CVarArg...)
     func info(_ message: StaticString, _ args: CVarArg...)
     func log(_ message: StaticString, _ args: CVarArg...)
@@ -30,7 +30,7 @@ protocol Logging {
  */
 extension OSLog: Logging {
 
-    private static var subsystem = Bundle.main.bundleIdentifier! // "com.userpilot.sdk"
+    private static var subsystem = Bundle.main.bundleIdentifier!
 
     /// Create an userpilot-specific logger.
     convenience init(userpilotCategory category: String) {

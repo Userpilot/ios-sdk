@@ -42,9 +42,15 @@ extension UIApplication {
     func topViewController() -> UIViewController? {
         var window: UIWindow? = activeKeyWindow
 
-        // swiftlint:disable:next force_unwrapping
-        if window == nil || window!.isAppcuesWindow {
-            window = UIApplication.shared.windows.first { !$0.isAppcuesWindow }
+        if window == nil {
+            if #available(iOS 15.0, *) {
+                if let windowScene = UIApplication.shared.connectedScenes
+                    .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                    window = windowScene.windows.first
+                }
+            } else {
+                window = UIApplication.shared.windows.first
+            }
         }
 
         guard let rootViewController = window?.rootViewController else { return nil }
