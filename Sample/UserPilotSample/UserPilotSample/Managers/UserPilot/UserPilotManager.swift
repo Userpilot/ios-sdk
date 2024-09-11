@@ -24,12 +24,13 @@ class UserPilotManager {
         userPilot = UserPilot(config: UserPilot.Config(token: "NX-b7b285fd").logging(true))
     }
 
+    // MARK: - UserPilot SDK APIs
+
+    /// setup SDK, get client SDK status...
     func setup() {
         userPilot.initialize()
     }
-
-    // MARK: - UserPilot SDK APIs
-
+    
     /// Identify user
     func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
         userPilot.identify(userID: userID, properties: properties, company: company)

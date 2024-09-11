@@ -55,7 +55,7 @@ internal class SocketManager {
     // MARK: - Properties
 
     /// URL for the WebSocket connection.
-    private let socketURL = "wss://analytex-dev-nxtapp-8755.userpilot.io/mobile/v1/events/"
+    private let socketURL = "wss://analytex-dev-nxtapp-8763.userpilot.io/mobile/v1/events/"
 
     /// The WebSocket instance for handling connections.
     private var phoenixSocket: Socket?
@@ -67,15 +67,7 @@ internal class SocketManager {
     private var didTryToOpenSocketChannel: Bool = false
 
     /// Computed property for socket connection parameters.
-    private var socketProperties: [String: String] {
-        [
-            SocketManager.tokenKey: config.token,
-            SocketManager.userIDKey: storage.userID
-        ]
-    }
-
-    /// Computed property for channel-specific parameters.
-    private var socketChannelProperties: [String: Any] {
+    private var socketProperties: [String: Any] {
         [
             SocketManager.tokenKey: config.token,
             SocketManager.userIDKey: storage.userID,
@@ -148,7 +140,7 @@ extension SocketManager {
         }
 
         // Setup the channel
-        let channel = phoenixSocket.channel(SocketManager.channelTopic, params: socketChannelProperties)
+        let channel = phoenixSocket.channel(SocketManager.channelTopic)
 
         // Connect to the channel
         phoenixChannel = channel
@@ -249,7 +241,7 @@ internal extension SocketManager {
     static var successKey: String { return "ok" }
     static var errorKey: String { return "error" }
 
-    static var tokenKey: String { return "token" }
+    static var tokenKey: String { return "app_token" }
     static var userIDKey: String { return "user_id" }
     static var autoPropertiesKey: String { return "auto_properties" }
     static var appPropertiesKey: String { return "app_properties" }

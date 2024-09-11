@@ -185,8 +185,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         /// In-case new user ID
         if socketManager.isSocketOpened && storage.userID.isNotEmpty && userID != storage.userID {
-            userPilot?.clean()
-            closeSocket()
+            flush()
             return
         }
 
@@ -364,6 +363,7 @@ extension AnalyticsPublisher: SocketSubscription {
     /// Socket closed callback.
     func onSocketClosed() {
         if let eventToPublish = cachedIdentifyEvent {
+            userPilot?.clean()
             identify(eventToPublish)
         } else {
             clearAllCachedProperties()

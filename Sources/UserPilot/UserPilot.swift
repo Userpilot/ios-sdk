@@ -202,8 +202,7 @@ extension UserPilot {
      It calls clean method and close user socket.
      */
     public func logout() {
-        clean()
-        socketManager.close()
+        analyticsPublisher.flush()
     }
 
     /**
