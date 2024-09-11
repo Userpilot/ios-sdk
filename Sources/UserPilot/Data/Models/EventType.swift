@@ -70,23 +70,23 @@ internal enum EventType: Equatable {
 
     // MARK: - Event Titles
 
-    /**
-     Provides a human-readable title for the event, useful for displaying event information in logs or UIs.
-     
-     - For `event`: Returns the custom event name.
-     - For `screen`: Returns "Screen (<title>)" where `<title>` is the screen name.
-     - For `identify`: Returns "Identify <userId>" where `<userId>` is the user's ID.
-     */
-    var title: String {
-        switch self {
-        case let .event(eventName):
-            return eventName
-        case let .screen(title):
-            return "Screen (\(title))"
-        case let .identify(userId):
-            return "Identify \(userId)"
-        }
-    }
+//    /**
+//     Provides a human-readable title for the event, useful for displaying event information in logs or UIs.
+//     
+//     - For `event`: Returns the custom event name.
+//     - For `screen`: Returns "Screen (<title>)" where `<title>` is the screen name.
+//     - For `identify`: Returns "Identify <userId>" where `<userId>` is the user's ID.
+//     */
+//    var title: String {
+//        switch self {
+//        case let .event(eventName):
+//            return eventName
+//        case let .screen(title):
+//            return "Screen (\(title))"
+//        case let .identify(userId):
+//            return "Identify \(userId)"
+//        }
+//    }
 
     // MARK: - Type Checking
 
@@ -124,8 +124,8 @@ internal enum EventType: Equatable {
      This helps in identifying the screen associated with a screen-view event.
      */
     var screenName: String? {
-        if case let .screen(screenName) = self {
-            return screenName
+        if case let .screen(title) = self {
+            return title
         } else {
             return nil
         }

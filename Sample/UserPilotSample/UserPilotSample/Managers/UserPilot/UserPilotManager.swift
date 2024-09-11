@@ -30,47 +30,121 @@ class UserPilotManager {
 
     // MARK: - UserPilot SDK APIs
 
-    func identify(userID: String) {
-        userPilot.identify(userID: userID, properties: ["name": "Motasem", "age": 32])
+    /// Identify user
+    func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
+        userPilot.identify(userID: userID, properties: properties, company: company)
     }
 
+    /// Track screens
     func screen(_ name: String) {
         userPilot.screen(name)
     }
 
+    /// Track user events
+    func track(eventName: String, properties: [String: Any]? = nil) {
+        userPilot.track(eventName: eventName, properties: properties)
+    }
+
     // MARK: - Test Log multiEvents
 
+    /**
+    Call this method from any where to test app performance.
+     
+    - Test Cases to Cover
+     1- Sequential User Identifications
+        Description: Verify that multiple user identification requests are processed sequentially without
+        any data overlap or race conditions.
+
+     - Test Steps:
+        Identify User NX-11111.
+        Identify User NX-22222 immediately after.
+     * Expected Outcome: Each user should be identified correctly in sequence, but the SDK will close
+       the socket immediately for first user and cancel all its events and open new socket for new user.
+     
+     2- Multiple Different Events
+        Description: Test that different types of events are tracked accurately without interference.
+
+     - Test Steps:
+        Automatic event 1
+        Automatic event 1.
+        Automatic event 1.
+     * Expected Outcome: The system should successfully track all events, cache them, debounce them and
+       then send them as a patch event.
+     
+     3- Repeated Same Event
+        Description: Ensure that sending the same event multiple times is handled correctly, and all
+     occurrences are tracked.
+
+     - Test Steps:
+        Track Event 100000.
+        Track Event 100000 again.
+        Track Event 100000 a third time, etc...
+     * Expected Outcome: All instances of Event A should be tracked independently, and the SDK will take
+       first event and drop the other events.
+     
+     3- Screen View Events
+        Description: Test that screen view events are tracked properly, with accurate timestamps and no
+        duplication when switching between screens.
+
+     - Test Steps:
+        Send a screen view event for Screen Main.
+        Switch to Screen Profile and send the same screen again.
+        Return to Screen Main.
+     * Expected Outcome: Each screen view should be recorded with the correct screen name, with drop
+       to duplicated screens.
+     
+     * Further Enhancements:
+     - Edge Cases: You might want to consider edge cases like sending events while the app is in the
+       background or sending invalid user information (e.g., missing user ID) to ensure the robustness of the system.
+
+     - Concurrency: Add a case where multiple events are sent in parallel to ensure thread safety.
+
+     - By structuring the test cases this way, you'll have clear expectations for each scenario and can 
+       better guarantee thorough test coverage.
+     */
     func startPerformanceTest() {
-        userPilot.identify(userID: "4343")
-        delay(3.0, closure: {
-            self.userPilot.track(name: "Event 444")
-            let count = 1...100
-            for number in count {
-                self.userPilot.track(name: "Event \(number)")
+        // identify user
+        identify(userID: "NX-11111")
+
+        // delay for 3 seconds
+        delay(3.0, closure: { [weak self] in
+            guard let self = self else { return }
+
+            // track user event
+            self.track(eventName: "App Open")
+
+            // track multi events to send them as one shout, should send them in one request as patch request
+            for number in 1...100 {
+                self.track(eventName: "Automatic event - \(number)")
             }
 
-//            self.userPilot.screen("Log in")
-//            self.userPilot.identify(userID: "4343")
-//            self.screen("Main screen 111")
-//            self.userPilot.track(name: "Event New user \(999)")
-//            self.screen("Main screen 222")
-//            self.screen("Main screen 222")
-//            self.screen("Main screen 333")
+            // another delay for 1 second, send same event name, should ignore them
             delay(1) {
                 for _ in 1...10 {
-                    self.userPilot.track(name: "Event 100000")
+                    self.track(eventName: "Event 100000")
                 }
 
-                self.userPilot.identify(userID: "1111")
-                self.screen("Main screen 111")
-                delay(2, closure: {
-                    self.userPilot.track(name: "Event New user \(999)")
-                })
-                self.screen("Main screen 222")
+                // another user event
+                // self.userPilot.identify(userID: "NX-22222")
 
+                // screen event
+                self.screen("Main")
+
+                // another delay for 2 seconds
+                delay(2, closure: {
+                    self.track(eventName: "Event - User payment")
+                })
+
+                // screen event
+                self.screen("Profile")
+
+                // another delay for 2 seconds
                 delay(2) {
-                    self.screen("Main screen 222")
-                    self.screen("Main screen 333")
+                    // screen event, same to previous screen, should be ignored
+                    self.screen("Profile")
+
+                    // screen event
+                    self.screen("Main")
                 }
             }
 

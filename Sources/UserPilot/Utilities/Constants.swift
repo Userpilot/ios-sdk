@@ -12,28 +12,10 @@
 import Foundation
 
 // swiftlint:disable identifier_name
-struct UserDefaultConstants {
-    static let USER_DEFAULT_SUITE_NAME = "com.userpilot.storage."
-}
-
 struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
     static let DEBOUNCER_QUEUE = "userpilot-debouncer-queue"
-}
-
-struct SocketConstants {
-    /// Socket Params
-    static let SOCKET_CHANNEL_TOPIC = "events:*"
-    static let SOCKET_SUCCESS_KEY = "ok"
-    static let SOCKET_ERROR_KEY = "error"
-
-    // Socket Keys
-    static let SOCKET_TOKEN_KEY = "token"
-    static let SOCKET_USER_ID_KEY = "user_id"
-    static let SOCKET_AUTO_PROPERTIES_KEY = "auto_properties"
-    static let SOCKET_APP_PROPERTIES_KEY = "app_properties"
-    static let SOCKET_SDK_VERSION_KEY = "sdk_version"
 }
 
 struct EventCaseNameConstants {

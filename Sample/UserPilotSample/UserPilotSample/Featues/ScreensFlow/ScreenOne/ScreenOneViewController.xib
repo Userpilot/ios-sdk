@@ -5,7 +5,6 @@
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -20,9 +19,9 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Screen One" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tK4-GA-TJE">
-                    <rect key="frame" x="149.33333333333334" y="75" width="94.333333333333343" height="21"/>
-                    <fontDescription key="fontDescription" type="boldSystem" pointSize="17"/>
-                    <nil key="textColor"/>
+                    <rect key="frame" x="142" y="414" width="109" height="24"/>
+                    <fontDescription key="fontDescription" type="boldSystem" pointSize="20"/>
+                    <color key="textColor" name="MineShaft"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="aoH-Rs-PCb">
@@ -32,15 +31,33 @@
                     </constraints>
                     <color key="tintColor" name="AccentColor"/>
                     <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="filled" title="Next screen"/>
+                    <buttonConfiguration key="configuration" style="filled" title="Next"/>
+                    <connections>
+                        <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="bLS-RX-3ar"/>
+                    </connections>
+                </button>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ss9-HL-T6u">
+                    <rect key="frame" x="16" y="75" width="40" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="8P8-oB-c0D"/>
+                        <constraint firstAttribute="width" constant="40" id="b1V-1b-AVF"/>
+                    </constraints>
+                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
+                    <connections>
+                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="htV-Kw-SDr"/>
+                    </connections>
                 </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
-            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+            <color key="backgroundColor" name="HawkesBlue"/>
             <constraints>
-                <constraint firstItem="tK4-GA-TJE" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="16" id="Aec-vY-jSS"/>
+                <constraint firstItem="tK4-GA-TJE" firstAttribute="centerY" secondItem="iN0-l3-epB" secondAttribute="centerY" id="GKs-5s-p8o"/>
+                <constraint firstItem="ss9-HL-T6u" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="YJM-2G-hYI"/>
                 <constraint firstItem="aoH-Rs-PCb" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="24" id="pBU-dx-QtQ"/>
                 <constraint firstItem="tK4-GA-TJE" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="tUt-Bj-eNj"/>
+                <constraint firstItem="ss9-HL-T6u" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="16" id="tbe-gc-lyi"/>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="aoH-Rs-PCb" secondAttribute="trailing" constant="24" id="vRf-dc-MDd"/>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="aoH-Rs-PCb" secondAttribute="bottom" constant="10" id="ynT-Tj-YMc"/>
             </constraints>
@@ -48,11 +65,15 @@
         </view>
     </objects>
     <resources>
+        <image name="arrow.backward" catalog="system" width="128" height="95"/>
         <namedColor name="AccentColor">
             <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
+        <namedColor name="HawkesBlue">
+            <color red="0.82352941176470584" green="0.8784313725490196" blue="0.98431372549019602" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="MineShaft">
+            <color red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
     </resources>
 </document>

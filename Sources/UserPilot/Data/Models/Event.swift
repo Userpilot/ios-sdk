@@ -31,8 +31,9 @@ internal struct Event {
     /// used to track events related to specific organizations or entities.
     var company: [String: Any]?
 
+    /// The userID for user how did this event.
     let userID: String
-    
+
     /// The timestamp when the event was created, captured at the moment
     /// of event initialization. Defaults to the current date and time.
     let timestamp = Date()
@@ -58,7 +59,7 @@ internal extension Event {
         logger.info("PUBLISHED ANALYTIC EVENT:\n")
 
         // Log the event type (e.g., screen view, user interaction)
-        logger.info("Event name: %{public}@\n", type.title)
+        // logger.info("Event name: %{public}@\n", type.title)
 
         // Log the event timestamp (formatted as a full date string)
         logger.info("Event date: %{public}@\n", self.timestamp.fullDateString)

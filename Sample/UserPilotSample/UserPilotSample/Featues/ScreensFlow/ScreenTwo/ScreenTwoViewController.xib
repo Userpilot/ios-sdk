@@ -3,28 +3,77 @@
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="ScreenTwoViewController" customModule="UserPilotSample" customModuleProvider="target">
             <connections>
-                <outlet property="view" destination="iN0-l3-epB" id="6eZ-eX-HYp"/>
+                <outlet property="view" destination="3bd-BQ-YJR" id="cg2-fL-mtP"/>
             </connections>
         </placeholder>
         <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
-        <view contentMode="scaleToFill" id="iN0-l3-epB">
+        <view contentMode="scaleToFill" id="3bd-BQ-YJR">
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-            <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
-            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-            <point key="canvasLocation" x="110" y="-11"/>
+            <subviews>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Screen Two" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="eft-v9-sQR">
+                    <rect key="frame" x="141.66666666666666" y="414" width="110" height="24"/>
+                    <fontDescription key="fontDescription" type="boldSystem" pointSize="20"/>
+                    <color key="textColor" name="MineShaft"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="6UZ-QK-BHy">
+                    <rect key="frame" x="24" y="768" width="345" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="Fvq-MI-ATa"/>
+                    </constraints>
+                    <color key="tintColor" name="AccentColor"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="filled" title="Show dialog"/>
+                    <connections>
+                        <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="WX2-Fg-qQF"/>
+                    </connections>
+                </button>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1IC-NC-MKC">
+                    <rect key="frame" x="16" y="75" width="40" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="8WX-nd-VFZ"/>
+                        <constraint firstAttribute="width" constant="40" id="F4s-Dz-9lQ"/>
+                    </constraints>
+                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
+                    <connections>
+                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="GqR-1D-aQd"/>
+                    </connections>
+                </button>
+            </subviews>
+            <viewLayoutGuide key="safeArea" id="yuX-s0-pil"/>
+            <color key="backgroundColor" name="PeriglacialBlue"/>
+            <constraints>
+                <constraint firstItem="yuX-s0-pil" firstAttribute="trailing" secondItem="6UZ-QK-BHy" secondAttribute="trailing" constant="24" id="5rh-Hj-JK0"/>
+                <constraint firstItem="1IC-NC-MKC" firstAttribute="leading" secondItem="yuX-s0-pil" secondAttribute="leading" constant="16" id="FLo-b8-Rme"/>
+                <constraint firstItem="6UZ-QK-BHy" firstAttribute="leading" secondItem="yuX-s0-pil" secondAttribute="leading" constant="24" id="Oz9-pI-EQB"/>
+                <constraint firstItem="eft-v9-sQR" firstAttribute="centerY" secondItem="3bd-BQ-YJR" secondAttribute="centerY" id="ZvX-ky-kxE"/>
+                <constraint firstItem="yuX-s0-pil" firstAttribute="bottom" secondItem="6UZ-QK-BHy" secondAttribute="bottom" constant="10" id="bYO-Aq-XeS"/>
+                <constraint firstItem="eft-v9-sQR" firstAttribute="centerX" secondItem="3bd-BQ-YJR" secondAttribute="centerX" id="mYZ-54-e2A"/>
+                <constraint firstItem="1IC-NC-MKC" firstAttribute="top" secondItem="yuX-s0-pil" secondAttribute="top" constant="16" id="riy-8H-Qkg"/>
+            </constraints>
+            <point key="canvasLocation" x="109.16030534351144" y="-11.267605633802818"/>
         </view>
     </objects>
     <resources>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
+        <image name="arrow.backward" catalog="system" width="128" height="95"/>
+        <namedColor name="AccentColor">
+            <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="MineShaft">
+            <color red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="PeriglacialBlue">
+            <color red="0.87058823529411766" green="0.89803921568627454" blue="0.83137254901960778" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
     </resources>
 </document>

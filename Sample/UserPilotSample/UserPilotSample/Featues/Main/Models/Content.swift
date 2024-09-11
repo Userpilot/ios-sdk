@@ -10,6 +10,7 @@ import Foundation
 enum Content {
     case identify
     case screens
+    case events
 
     var title: String {
         switch self {
@@ -17,6 +18,8 @@ enum Content {
             return "User & Anonymous"
         case .screens:
             return "Track screens"
+        case .events:
+            return "Track events"
         }
     }
 }

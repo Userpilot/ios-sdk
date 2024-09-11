@@ -44,6 +44,9 @@ public class UserPilot: NSObject {
     /// Lazy loading of the `SocketEvents` instance that manages WebSocket connections and event-driven communication.
     private lazy var socketManager = container.resolve(SocketEvents.self)
 
+    /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
+    private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
+
     // MARK: - Initializer
 
     /**
@@ -62,11 +65,11 @@ public class UserPilot: NSObject {
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // Verify and apply necessary SDK settings
-        setupSettings()
+        // start session monotiring
+        sessionMonitor.start()
 
         // Log the initialization of the SDK with the current version
-        config.logger.info("🌏 UserPilot SDK version %{public}@ initialized", version())
+        config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
     }
 
 }
@@ -86,14 +89,7 @@ extension UserPilot {
         return userpilotVersion
     }
 
-    /**
-     Retrieves the current version of the UserPilot SDK for the specific instance.
-     
-     This method returns the SDK version from the context of the instance, though it delegates the 
-     call to the static method.
-     
-     - Returns: A string representing the current version of the SDK for this instance.
-     */
+    /// Retrieves the current version of the SDK for this instance.
     public func version() -> String {
         return UserPilot.version()
     }
@@ -119,42 +115,26 @@ extension UserPilot {
         container.registerLazy(AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
         container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
+        container.registerLazy(SessionMonitoring.self, initializer: SessionMonitor.init)
     }
 
     /**
-     Applies necessary configurations and verifies the SDK settings.
+     Initializes the SDK session and applies necessary configurations.
      
-     This method uses the `SettingsVerifing` service to ensure that all required settings are valid.
-     It can be customized further if specific settings need to be checked or applied.
-     */
-    private func setupSettings() {
-        // Placeholder for settings verification logic
-        // settingsVerifier.verifySettings {
-        // }
-    }
-
-    /**
-     Initializes the SDK session by verifying the state of the WebSocket connection and other conditions.
-     
-     This method should be called after identifying the user or initiating an anonymous session.
-     It ensures that the SDK is ready to track events and trigger real-time experiences.
+     This method should be called when the application is launched to set up the SDK environment
+     and verify settings using the `SettingsVerifier` service.
      */
     public func initialize() {
-        checkSocketState()
-    }
-
-    /**
-     Checks whether the WebSocket connection should be established based on the presence of a valid `userID`.
-     
-     This method verifies if the `userID` exists in the local storage. If it exists, it attempts to connect
-     to the WebSocket server.
-     */
-    private func checkSocketState() {
-        // Uncomment and implement logic when userID-based socket management is ready.
-        // if storage.userID.isNotEmpty {
-        //     socketManager.connect()
+        // Placeholder for settings verification logic
+        // settingsVerifier.verifySettings {
+        // checkUserStatus()
         // }
     }
+
+    private func checkUserStatus() {
+        analyticsPublisher.resume()
+    }
+
 }
 
 // MARK: - Tracking APIs
@@ -170,7 +150,7 @@ extension UserPilot {
      - Parameters:
        - userID: A unique identifier for the user, which is used to track their behavior across sessions.
        - properties: An optional dictionary containing user-specific properties like email, role, or age.
-       - company: An optional dictionary containing company-specific properties for users associated with organizations.
+       - company: An optional dictionary containing company-specific properties for users associated with company.
      */
     public func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
         let event = Event(type: .identify(userID), properties: properties, company: company, userID: userID)
@@ -189,11 +169,11 @@ extension UserPilot {
     }
 
     /**
-     Tracks when a user views a screen within the app.
-     
-     This method can be used to manually track screen views for analytics purposes.
-     It is especially useful when automatic screen tracking is not available or for custom screens.
-     
+     Tracks a screen view event when a user navigates to a specific screen in the app.
+      
+     This method records the screen title and sends it to the analytics service for tracking
+     user activity and triggering content.
+      
      - Parameter title: The title of the screen that the user has viewed.
      */
     public func screen(_ title: String) {
@@ -211,18 +191,29 @@ extension UserPilot {
        - name: The name of the custom event (e.g., "purchase", "button_click").
        - properties: An optional dictionary containing additional context or metadata related to the event.
      */
-    public func track(name: String, properties: [String: Any]? = nil) {
-        analyticsPublisher.publish(Event(type: .event(name), properties: properties, userID: storage.userID))
+    public func track(eventName: String, properties: [String: Any]? = nil) {
+        analyticsPublisher.publish(Event(type: .event(eventName), properties: properties, userID: storage.userID))
     }
 
     /**
      Logs the user out and clears their session data.
      
      This method should be called when the user logs out of the application.
+     It calls clean method and close user socket.
+     */
+    public func logout() {
+        clean()
+        socketManager.close()
+    }
+
+    /**
+     Clear user session data.
+     
+     This method should be called when the user logs out or when identify called with new userID.
      It resets the session state, clears user-related data, and ensures no further tracking occurs for
      the logged-out user.
      */
-    public func clean() {
+    internal func clean() {
         analyticsPublisher.clean()
         storage.userID = ""
     }

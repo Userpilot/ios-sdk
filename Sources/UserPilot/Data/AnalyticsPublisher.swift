@@ -21,10 +21,14 @@ import Foundation
  - Methods:
    - `publish(_:)`: Sends an event to the backend.
    - `clean()`: Clears any cached events or session data.
+   - `flush()`: Flushs any cached events or session data.
+   - `resume()`: Open sockect connection.
  */
 internal protocol AnalyticsPublishing: AnyObject {
     func publish(_ event: Event)
     func clean()
+    func flush()
+    func resume()
 }
 
 /**
@@ -57,6 +61,9 @@ internal class AnalyticsPublisher {
     /// Queue to hold events waiting to be sent.
     private lazy var eventsToFlush = [TrackedPayloadEvent]()
 
+    /// Set of event names sent during the current screen view.
+    private var eventsName = Set<String>()
+
     /// A debouncer used to control the frequency of event flushing.
     /// let backgroundQueue = DispatchQueue(label: "com.example.background")
     /// let debouncer = Debouncer(delay: 1.0, queue: backgroundQueue)
@@ -74,11 +81,8 @@ internal class AnalyticsPublisher {
     /// Tracks the first event to open the socket.
     private var cachedEvent: Event?
 
-    /// Counter for events sent during the current session.
+    /// Counter for events per screen.
     private var eventsCount = 0
-
-    /// Set of event names sent during the current screen view.
-    private var eventsName = Set<String>()
 
     // MARK: - Initialization
 
@@ -112,6 +116,24 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func logEvent(_ event: Event) {
         guard let logger = userPilot?.config.logger else { return }
         event.logData(logger: logger)
+    }
+
+    /**
+     Flush the event once the app enter background.
+     */
+    func flush() {
+        debouncer.cancel()
+        flushQueue(shouldCloseSocket: true)
+    }
+
+    /**
+     Resume socket connection when back from background.
+     */
+    func resume() {
+        socketManager.allowToStart()
+        if storage.userID.isNotEmpty && socketManager.isAllowToOpenSocket {
+            socketManager.connect()
+        }
     }
 
     /**
@@ -168,11 +190,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             return
         }
 
-        /// In-case new session
+        /// In-case new session, save new userID to storage
         storage.userID = userID
 
         if socketManager.isSocketOpened {
-            flushEvent()
+            flushPriorityEvents()
         } else {
             openSocket()
         }
@@ -207,15 +229,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         eventsCount = 0
         lastScreenViewed = (false, event)
-        flushEvent()
+        flushPriorityEvents()
     }
 
     /**
-     Tracks and sends custom user events.
+     Tracks general user events.
      
      - Ensures the event count and uniqueness constraints are met before publishing.
      
-     - Parameter event: The custom event to process.
+     - Parameter event: The event to track.
      */
     private func trackEvent(_ event: Event) {
         /// In-case first event called is event in the new session
@@ -231,12 +253,14 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             eventsCount < GeneralConstants.MAX_EVENTS_PER_SCREEN
         else { return }
 
-        eventsCount.increment()
-        eventsName.insert(event.type.eventName)
-        readWriteLock.write {
+        self.eventsCount.increment()
+        self.eventsName.insert(event.type.eventName)
+
+        readWriteLock.write { [weak self] in
+            guard let self = self else { return }
             self.debouncer.cancel()
             self.eventsToFlush.append(TrackedPayloadEvent(title: event.type.eventName, meta: event.properties))
-            self.flushQueue()
+            self.flushTrackedEvents()
         }
     }
 }
@@ -248,10 +272,8 @@ extension AnalyticsPublisher {
     /**
      Flushes high-priority events, such as identify or screen events, through the socket, or events that
      opens the socket.
-     
-     - Parameter event: The event to flush.
-     */
-    private func flushEvent() {
+    */
+    private func flushPriorityEvents() {
         var payload: [String: Any] = [:]
 
         /// Identify event
@@ -284,33 +306,36 @@ extension AnalyticsPublisher {
         if let event = cachedEvent {
             clearCachedEvent()
             self.eventsToFlush.append(TrackedPayloadEvent(title: event.type.eventName, meta: event.properties))
-            flushQueue()
+            flushTrackedEvents()
         }
     }
 
     /**
      Flushes the queue of normal events, applying debouncing logic to prevent excessive socket communication.
      */
-    private func flushQueue() {
-        /// Debouncer
+    private func flushTrackedEvents() {
         debouncer.debounce { [weak self] in
             guard let self = self else { return }
+            self.flushQueue()
+        }
+    }
 
-            // Read write lock
-            readWriteLock.read {
-                if self.eventsToFlush.isEmpty { return }
-//                self.logger.info("AnalyticsPublisher events size %{punlic}@", "\(self.eventsToFlush.count)")
-                let compyItems = self.eventsToFlush
-//                compyItems.forEach {
-//                    self.logger.info("Event name: %{punlic}@", $0.title)
-//                }
-                /// clear cached properties, publish events
-                self.eventsToFlush.removeAll()
-                self.eventsName.removeAll()
-                self.socketManager.publish(
-                    EventNameConstants.EVENT,
-                    payload: TrackedPayload(events: compyItems).toDictionary())
+    /**
+     Flushs the queue directly, for example when application moves to background
+     */
+    private func flushQueue(shouldCloseSocket: Bool = false) {
+        readWriteLock.read {
+            if self.eventsToFlush.isEmpty {
+                if shouldCloseSocket { closeSocket() }
+                return
             }
+            let compyItems = self.eventsToFlush
+            self.eventsToFlush.removeAll()
+            self.eventsName.removeAll()
+            self.socketManager.publish(
+                EventNameConstants.EVENT,
+                payload: TrackedPayload(events: compyItems).toDictionary(),
+                shouldCloseSocket: shouldCloseSocket)
         }
     }
 
@@ -333,10 +358,10 @@ extension AnalyticsPublisher: SocketSubscription {
     /// Socket opened callback.
     func onSocketOpened() {
         clearCachedEvents()
-        flushEvent()
+        flushPriorityEvents()
     }
 
-    /// Socket closed callback
+    /// Socket closed callback.
     func onSocketClosed() {
         if let eventToPublish = cachedIdentifyEvent {
             identify(eventToPublish)
@@ -353,7 +378,7 @@ extension AnalyticsPublisher: SocketSubscription {
        - eventSent: Whether the event was successfully sent.
      */
     func onSocketEventSent(_ eventName: String, _ eventSent: Bool) {
-        flushQueue()
+        flushTrackedEvents()
     }
 
 }

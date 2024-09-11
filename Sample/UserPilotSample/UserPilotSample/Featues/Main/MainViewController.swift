@@ -18,7 +18,7 @@ class MainViewController: BaseViewController {
     }
 
     // MARK: - Properties
-    lazy var content: [Content] = [.identify, .screens]
+    lazy var content: [Content] = [.identify, .screens, .events]
 
 }
 
@@ -50,7 +50,9 @@ extension MainViewController: UITableViewDelegate, UITableViewDataSource {
         case .identify:
             FlowRoutingManager.shared.openViewController(LoginViewController.newInstance())
         case .screens:
-            break
+            FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
+        case .events:
+            FlowRoutingManager.shared.openViewController(EventsViewController.newInstance())
         }
     }
 

@@ -63,7 +63,7 @@ internal class Storage: DataStoring {
 
     /// A lazy-loaded `UserDefaults` instance, scoped to the SDK’s user defaults suite name for isolating stored data.
     private lazy var defaults = UserDefaults(
-        suiteName: "\(UserDefaultConstants.USER_DEFAULT_SUITE_NAME)\(Bundle.main.identifier)"
+        suiteName: "\(Storage.userDefaultSuiteName)\(Bundle.main.identifier)"
     )
 
     /// The URL of the socket connection used by the SDK. The value is stored and retrieved from `UserDefaults`.
@@ -140,4 +140,12 @@ internal class Storage: DataStoring {
 
         defaults?.set(newValue, forKey: key.rawValue)
     }
+}
+
+// MARK: - Properties name
+
+internal extension Storage {
+
+    // Static constants
+    static let userDefaultSuiteName = "com.userpilot.storage."
 }
