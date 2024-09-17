@@ -276,13 +276,14 @@ extension AnalyticsPublisher {
 
         /// Identify event
         if let identifyEvent = cachedIdentifyEvent {
+            guard let userID = identifyEvent.userID else { return }
 
             // In-case identify event called again when joining socket channel
             if identifyEvent.userID != storage.userID {
                 identify(identifyEvent)
                 return
             }
-            self.logger.info("USER %{punlic}@", "\(identifyEvent.userID)")
+            self.logger.info("USER %{punlic}@", "\(userID)")
             if let properties = identifyEvent.properties {
                 payload[AnalyticsPublisher.identifyMetaDataProperty] = properties
             }

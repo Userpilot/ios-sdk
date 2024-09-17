@@ -80,7 +80,7 @@ internal extension Event {
      
      - Parameter logger: An instance conforming to the `Logging` protocol, responsible for outputting logs.
      */
-    internal func logData(logger: Logging) {
+    func logData(logger: Logging) {
         logger.info("------------ Event ----------")
         logger.info("PUBLISHED ANALYTIC EVENT:")
         logger.info("Event name: %{public}@", type.eventName)

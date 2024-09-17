@@ -43,8 +43,8 @@ internal struct User {
  */
 extension User: CustomStringConvertible {
     var description: String {
-        var propertiesDescription = properties.map { "\($0): \($1)" }.joined(separator: ", ") ?? "nil"
-        var companyDescription = company.map { "\($0): \($1)" }.joined(separator: ", ") ?? "nil"
+        let propertiesDescription = properties.map { "\($0): \($1)" }.joined(separator: ", ")
+        let companyDescription = company.map { "\($0): \($1)" }.joined(separator: ", ")
 
         return """
         User:
@@ -129,8 +129,8 @@ extension User {
         guard userID == event.type.userID else {
             return false
         }
-        let isMetaDataMapSame = (properties ?? [:]).isEqual(to: event.properties ?? [:])
-        let isCompanyDataMapSame = (company ?? [:]).isEqual(to: event.company ?? [:])
+        let isMetaDataMapSame = (properties).isEqual(to: event.properties ?? [:])
+        let isCompanyDataMapSame = (company).isEqual(to: event.company ?? [:])
         return isMetaDataMapSame && isCompanyDataMapSame
     }
 }
