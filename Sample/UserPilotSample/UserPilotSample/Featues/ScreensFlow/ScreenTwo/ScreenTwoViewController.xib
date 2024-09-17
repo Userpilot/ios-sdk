@@ -31,7 +31,9 @@
                     </constraints>
                     <color key="tintColor" name="AccentColor"/>
                     <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="filled" title="Show dialog"/>
+                    <buttonConfiguration key="configuration" style="filled" title="Show dialog">
+                        <fontDescription key="titleFontDescription" type="system" weight="medium" pointSize="16"/>
+                    </buttonConfiguration>
                     <connections>
                         <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="WX2-Fg-qQF"/>
                     </connections>
@@ -70,10 +72,10 @@
             <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
         <namedColor name="MineShaft">
-            <color red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
         <namedColor name="PeriglacialBlue">
-            <color red="0.87058823529411766" green="0.89803921568627454" blue="0.83137254901960778" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.87099999189376831" green="0.89800000190734863" blue="0.83099997043609619" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

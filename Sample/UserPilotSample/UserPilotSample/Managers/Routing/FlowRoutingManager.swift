@@ -2,7 +2,7 @@
 //  FlowRoutingManager.swift
 //  UserPilotSample
 //
-//  Created by Motasem Hamed on 11/08/2024.
+//  Created by Motasem Hamed on 25/08/2024.
 //
 
 /*
@@ -248,14 +248,16 @@ extension FlowRoutingManager {
     }
 
     // MARK: - Helper Method
-//    static func topMostController() -> UIViewController? {
-//        if let window = UIApplication.shared.windows.filter({$0.isKeyWindow}).first{
-//            return window.visibleViewController()
-//        }else {
-//            guard let viewController = UIViewController.topMostViewController() else { return nil }
-//            return viewController
-//        }
-//    }
+    // MARK: - Helper Method
+    static func topMostController() -> UIViewController? {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window.visibleViewController()
+        } else {
+            guard let viewController = UIViewController.topMostViewController() else { return nil }
+            return viewController
+        }
+    }
 
     // MARK: - General methods
     static func getWindow() -> UIWindow? {
@@ -264,6 +266,66 @@ extension FlowRoutingManager {
             .compactMap({$0 as? UIWindowScene})
             .first?.windows
             .filter({$0.isKeyWindow}).first
+    }
+
+}
+
+extension UIWindow {
+
+    func visibleViewController() -> UIViewController? {
+        if let rootViewController: UIViewController = self.rootViewController {
+            return UIWindow.getVisibleViewControllerFrom(viewController: rootViewController)
+        }
+        return nil
+    }
+
+    static func getVisibleViewControllerFrom(viewController: UIViewController) -> UIViewController {
+        if let navigationController = viewController as? UINavigationController,
+           let visibleController = navigationController.visibleViewController {
+            return UIWindow.getVisibleViewControllerFrom(viewController: visibleController )
+        } else if let tabBarController = viewController as? UITabBarController,
+                  let selectedTabController = tabBarController.selectedViewController {
+            return UIWindow.getVisibleViewControllerFrom(viewController: selectedTabController )
+        } else {
+            if let presentedViewController = viewController.presentedViewController {
+                return UIWindow.getVisibleViewControllerFrom(viewController: presentedViewController)
+            } else {
+                return viewController
+            }
+        }
+    }
+
+}
+
+extension UIViewController {
+
+    static func topMostViewController() -> UIViewController? {
+        if #available(iOS 13.0, *) {
+            let keyWindow = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+
+            return keyWindow?.rootViewController?.topMostViewController()
+        } else {
+            let keyWindow = UIApplication.shared.keyWindow
+            return keyWindow?.rootViewController?.topMostViewController()
+        }
+    }
+
+    func topMostViewController() -> UIViewController? {
+        if let navigationController = self as? UINavigationController {
+            return navigationController.topViewController?.topMostViewController()
+        } else if let tabBarController = self as? UITabBarController {
+            if let selectedViewController = tabBarController.selectedViewController {
+                return selectedViewController.topMostViewController()
+            }
+            return tabBarController.topMostViewController()
+        } else if let presentedViewController = self.presentedViewController {
+            return presentedViewController.topMostViewController()
+        } else {
+            return self
+        }
     }
 
 }

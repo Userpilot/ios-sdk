@@ -10,6 +10,7 @@ import UIKit
 
 class BaseViewController: UIViewController {
 
+    // MARK: - Helper methods
     func close() {
         self.navigationController?.popViewController(animated: true)
     }

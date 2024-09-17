@@ -30,7 +30,7 @@ class UserPilotManager {
     func setup() {
         userPilot.initialize()
     }
-    
+
     /// Identify user
     func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
         userPilot.identify(userID: userID, properties: properties, company: company)
@@ -150,6 +150,68 @@ class UserPilotManager {
             }
 
         })
-
     }
+
+    /**
+     Tests the sequence of identifying a user with different sets of attributes over time.
+    
+     This function simulates a series of updates to a user's identification information,
+     with delays between each update to mimic asynchronous behavior or to observe changes over time.
+     The `identify` function is called multiple times with different attributes and data,
+     followed by a call to `userPilot.settings()` to log or review the final state of the user settings.
+     
+     The SDK should post identify event in case there is new data updated or added to user info,
+     otherwise, is should be ignored
+     */
+    func testUpdateIdentifyUser() {
+        identify(
+            userID: "NX-33333",
+            properties: [
+                "age": 20,
+                "name": "Motasem Hamed"
+            ]
+        )
+
+        delay(4) { [weak self] in
+            guard let self = self else { return }
+            self.identify(
+                userID: "NX-33333",
+                properties: [
+                    "salary": 4000,
+                    "age": 25,
+                    "name": "Motasem Hamed"
+                ],
+                company: [
+                    "id": 100
+                ]
+            )
+
+            delay(4) {
+                self.identify(
+                    userID: "NX-33333",
+                    properties: [
+                        "age": 30,
+                        "isVerified": true,
+                        "title": "Test",
+                        "mail": [
+                            "title": "mail@",
+                            "domain": "gmail.com"
+                        ]
+                    ]
+                )
+
+                delay(4) {
+                    self.identify(
+                        userID: "NX-33333",
+                        properties: [
+                            "name": "Motasem Hamed"
+                        ]
+                    )
+
+                    self.userPilot.settings()
+                }
+            }
+        }
+    }
+
 }

@@ -4,6 +4,10 @@
 //
 //  Created by Motasem Hamed on 11/09/2024.
 //
+//  - The `UITableView` extension adds methods for registering and dequeuing cells.
+//  - The `ReusableTableCellView` protocol defines a reusable identifier for cells.
+//  - The `TableViewCellFromNib` protocol supports cells instantiated from nib files.
+//
 
 import Foundation
 import UIKit

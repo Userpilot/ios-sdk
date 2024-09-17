@@ -4,6 +4,13 @@
 //
 //  Created by Motasem Hamed on 01/09/2024.
 //
+//  Extensions include:
+//  - `dequeueReusableCell`: Dequeues a reusable cell with a specified identifier and type.
+//  - `register`: Registers a cell from a nib file.
+//  - `reuseIdentifier`: Provides a reuse identifier based on the class name.
+//  - `onBoardingCollectionViewLayout`: Configures a horizontal paging layout for onboarding screens.
+//  - `CollectionViewCellFromNib`: Protocol for cells registered from nib files.
+//
 
 import Foundation
 import UIKit

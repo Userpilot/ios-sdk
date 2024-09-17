@@ -21,14 +21,14 @@
                         <rect key="frame" x="10" y="10" width="357" height="197"/>
                         <subviews>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Row #1" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="SLb-E0-eD6">
-                                <rect key="frame" x="150.66666666666666" y="15.999999999999998" width="56" height="20.333333333333329"/>
-                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="17"/>
+                                <rect key="frame" x="149.66666666666666" y="15.999999999999998" width="58" height="20.333333333333329"/>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="17"/>
                                 <color key="textColor" name="MineShaft"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Event properties" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XsH-Un-zUo">
-                                <rect key="frame" x="15.999999999999993" y="56.333333333333336" width="119.33333333333331" height="19.333333333333336"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                                <rect key="frame" x="16.000000000000007" y="56.333333333333336" width="122.66666666666669" height="19.333333333333336"/>
+                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="16"/>
                                 <color key="textColor" name="MineShaft"/>
                                 <nil key="highlightedColor"/>
                             </label>
@@ -52,6 +52,7 @@
                                 <constraints>
                                     <constraint firstAttribute="height" constant="45.329999999999998" id="aDZ-zy-29u"/>
                                 </constraints>
+                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
                                 <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
                                 <state key="normal" title="Track event">
                                     <color key="titleColor" name="AccentColor"/>
@@ -97,7 +98,7 @@
             <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
         <namedColor name="MineShaft">
-            <color red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

@@ -4,6 +4,12 @@
 //
 //  Created by Motasem Hamed on 01/09/2024.
 //
+//  The `Screen` struct includes:
+//  - `bounds`: The device's screen bounds.
+//  - `width`: The device's screen width.
+//  - `height`: The device's screen height.
+//  - `scale`: The scale factor of the device's screen.
+//
 
 import Foundation
 import UIKit

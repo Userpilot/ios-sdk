@@ -3,6 +3,7 @@
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -20,13 +21,13 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Events" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="jDe-9x-PKY">
-                    <rect key="frame" x="164.66666666666666" y="75" width="63.666666666666657" height="24"/>
-                    <fontDescription key="fontDescription" type="boldSystem" pointSize="20"/>
+                    <rect key="frame" x="173" y="75" width="47.333333333333343" height="18"/>
+                    <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
                     <nil key="textColor"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Una-Nl-A2t">
-                    <rect key="frame" x="16" y="67" width="40" height="40"/>
+                    <rect key="frame" x="16" y="64" width="40" height="40"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="40" id="gvN-VF-NnW"/>
                         <constraint firstAttribute="width" constant="40" id="qOA-jY-mH4"/>
@@ -39,17 +40,33 @@
                     </connections>
                 </button>
                 <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" style="plain" separatorStyle="none" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" translatesAutoresizingMaskIntoConstraints="NO" id="OaA-hL-rHD">
-                    <rect key="frame" x="0.0" y="115" width="393" height="703"/>
+                    <rect key="frame" x="0.0" y="109" width="393" height="709"/>
                     <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                     <connections>
                         <outlet property="dataSource" destination="-1" id="JjL-PP-x1d"/>
                         <outlet property="delegate" destination="-1" id="1Mo-zG-6QA"/>
                     </connections>
                 </tableView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="hpT-Jc-gdz">
+                    <rect key="frame" x="293" y="70.666666666666671" width="90" height="27"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="90" id="4hR-Le-cMB"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" weight="medium" pointSize="12"/>
+                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                    <state key="normal" title="Custom event">
+                        <color key="titleColor" name="AccentColor"/>
+                    </state>
+                    <connections>
+                        <action selector="onCustomEventButtonClicked:" destination="-1" eventType="touchUpInside" id="CWd-HZ-cEk"/>
+                    </connections>
+                </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
             <constraints>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="hpT-Jc-gdz" secondAttribute="trailing" constant="10" id="LsZ-9A-gba"/>
+                <constraint firstItem="hpT-Jc-gdz" firstAttribute="centerY" secondItem="jDe-9x-PKY" secondAttribute="centerY" id="USQ-8v-sUR"/>
                 <constraint firstItem="Una-Nl-A2t" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="WdS-lz-3AU"/>
                 <constraint firstItem="Una-Nl-A2t" firstAttribute="centerY" secondItem="jDe-9x-PKY" secondAttribute="centerY" id="YnQ-uZ-LP4"/>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="OaA-hL-rHD" secondAttribute="bottom" id="ZuC-6y-bzV"/>
@@ -64,6 +81,9 @@
     </objects>
     <resources>
         <image name="arrow.backward" catalog="system" width="128" height="95"/>
+        <namedColor name="AccentColor">
+            <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>
