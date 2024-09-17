@@ -67,6 +67,6 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterForeground(notification: Notification) {
-        analyticsPublisher.resume()
+        // analyticsPublisher.resume()
     }
 }

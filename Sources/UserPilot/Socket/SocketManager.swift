@@ -18,13 +18,11 @@ import SwiftPhoenixClient
  `SocketEvents` defines methods and properties for managing WebSocket connections and events.
  */
 internal protocol SocketEvents: AnyObject {
-    var isAllowToOpenSocket: Bool { get }
     var isSocketOpened: Bool { get }
     var isJoiningSocket: Bool { get }
 
     func connect()
     func close()
-    func allowToStart()
 
     func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool)
     func registerCallback(_ socketSubscription: SocketSubscription)
@@ -63,26 +61,22 @@ internal class SocketManager {
     /// The channel within the WebSocket connection.
     private var phoenixChannel: Channel?
 
-    /// A flag indicating whether the socket channel has been successfully opened.
-    private var didTryToOpenSocketChannel: Bool = false
-
-    /// Computed property for socket connection parameters.
-    private var socketProperties: [String: Any] {
-        [
-            SocketManager.tokenKey: config.token,
-            SocketManager.userIDKey: storage.userID,
-            SocketManager.sdkVersionKey: userPilot?.version() ?? "",
-            SocketManager.autoPropertiesKey: autoPropertyDecorator.autoProperties,
-            SocketManager.appPropertiesKey: autoPropertyDecorator.appProperties
-        ]
-    }
-
+    /// SDK instance.
     private weak var userPilot: UserPilot?
+
+    /// SDK Config.
     private let config: UserPilot.Config
+
+    /// SDK storage.
     private let storage: DataStoring
+
+    /// Auto property decorator.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
+
+    /// SDK logger
     private let logger: Logging
 
+    /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
 
     // MARK: - Initialization
@@ -112,31 +106,41 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the connection attempt completes.
      */
     private func openSocket() {
+        guard
+            let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
+            let appProperties = autoPropertyDecorator.appProperties.toJSONString()
+        else { return }
+
+        let socketProperties: [String: Any] = [
+                SocketManager.tokenKey: config.token,
+                SocketManager.userIDKey: storage.userID,
+                SocketManager.sdkVersionKey: userPilot?.version() ?? "",
+                SocketManager.autoPropertiesKey: autoProperties,
+                SocketManager.appPropertiesKey: appProperties
+        ]
+
         phoenixSocket = Socket(socketURL, params: socketProperties)
         guard let phoenixSocket = phoenixSocket else { return }
 
         // Setup delegates for socket events
         phoenixSocket.delegateOnOpen(to: self) { (self) in
-            self.logger.info("🚀 SOCKET opened\n")
-            self.didTryToOpenSocketChannel = true
+            self.logger.info("🚀 SOCKET opened")
         }
 
         phoenixSocket.delegateOnClose(to: self) { (self) in
-            self.logger.error("🛑 SOCKET closed\n")
-            self.didTryToOpenSocketChannel = true
+            self.logger.error("🛑 SOCKET closed")
             self.$socketSubscription.invoke { $0.onSocketClosed() }
         }
 
         phoenixSocket.delegateOnError(to: self) { (self, error) in
             let (error, _) = error
-            self.logger.error("🛑 SOCKET error - details %{public}@\n", error.localizedDescription)
-            self.didTryToOpenSocketChannel = true
+            self.logger.error("🛑 SOCKET error - details %{public}@", error.localizedDescription)
             self.closeSocket()
         }
 
         // Setup socket logger
         phoenixSocket.logger = { [weak self] message in
-            self?.logger.debug("💡 SOCKET logger - message %{public}@\n", message)
+            self?.logger.debug("💡 SOCKET logger - message %{public}@", message)
         }
 
         // Setup the channel
@@ -146,15 +150,23 @@ extension SocketManager {
         phoenixChannel = channel
         phoenixChannel?.join()
             .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
-                self.logger.info("🚀 SOCKET channel JOINED\n")
-                self.didTryToOpenSocketChannel = true
+                self.logger.info("🚀 SOCKET channel JOINED")
                 self.$socketSubscription.invoke { $0.onSocketOpened() }
             })
             .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
-                self.logger.error("⚠️ SOCKET channel join FAIL: %{public}@\n", message.payload)
-                self.didTryToOpenSocketChannel = true
+                self.logger.error("⚠️ SOCKET channel join FAIL: %{public}@", message.payload)
                 self.closeSocket()
             })
+
+        phoenixChannel?.onError { [weak self] message in
+            self?.logger.debug("🛑 SOCKET Channel error - message %{public}@", message.payload)
+            self?.closeSocket()
+        }
+
+        phoenixChannel?.onClose { [weak self] message in
+            self?.logger.debug("🛑 SOCKET Channel close - message %{public}@", message.payload)
+            self?.closeSocket()
+        }
 
         // Connect the socket
         phoenixSocket.connect()
@@ -167,7 +179,7 @@ extension SocketManager {
      */
     private func closeSocket() {
         guard let phoenixSocket = phoenixSocket else { return }
-        if let channel = self.phoenixChannel {
+        if let channel = self.phoenixChannel, !channel.isClosed {
             channel.leave()
             phoenixSocket.remove(channel)
         }
@@ -180,11 +192,6 @@ extension SocketManager {
 
 extension SocketManager: SocketEvents {
 
-    /// Logic to determine if a new socket connection can be opened
-    var isAllowToOpenSocket: Bool {
-        !didTryToOpenSocketChannel && !isJoiningSocket && !isSocketOpened
-    }
-
     /// Logic to determine if the channel state is joining
     var isJoiningSocket: Bool {
         phoenixChannel?.isJoining == true
@@ -193,11 +200,6 @@ extension SocketManager: SocketEvents {
     /// Logic to check if the socket is currently open
     var isSocketOpened: Bool {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == true
-    }
-
-    // Implementation to allow open the WebSocket connection
-    func allowToStart() {
-        didTryToOpenSocketChannel = false
     }
 
     /// Implementation to open a WebSocket connection

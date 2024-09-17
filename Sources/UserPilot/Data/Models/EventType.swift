@@ -68,26 +68,6 @@ internal enum EventType: Equatable {
         }
     }
 
-    // MARK: - Event Titles
-
-//    /**
-//     Provides a human-readable title for the event, useful for displaying event information in logs or UIs.
-//     
-//     - For `event`: Returns the custom event name.
-//     - For `screen`: Returns "Screen (<title>)" where `<title>` is the screen name.
-//     - For `identify`: Returns "Identify <userId>" where `<userId>` is the user's ID.
-//     */
-//    var title: String {
-//        switch self {
-//        case let .event(eventName):
-//            return eventName
-//        case let .screen(title):
-//            return "Screen (\(title))"
-//        case let .identify(userId):
-//            return "Identify \(userId)"
-//        }
-//    }
-
     // MARK: - Type Checking
 
     /// Checks if the event is a custom event (`event` case).

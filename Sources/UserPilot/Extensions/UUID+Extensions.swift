@@ -2,11 +2,20 @@
 //  UUID+Data.swift
 //  UserPilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2021 UserPilot. All rights reserved.
+//  UUID+Data.swift
+//  UserPilot SDK
 //
-// [Brief Description]
-// UUID+Data contains extensions helper methods
+//  Created by Motasem Hamed on 18/08/2024.
+//
+//  [Brief Description]
+//  This file contains an extension for the `UUID` class, providing helper methods
+//  to customize UUID generation and formatting. It includes a method to override UUID creation
+//  for testing purposes and a method to format UUID strings.
+//
+//  Extensions include:
+//  - `generator`: A closure that generates UUIDs, allowing for customizable UUID creation.
+//  - `userpilotFormatted`: Returns the UUID string in lowercase for consistent formatting.
+//  - `create()`: Generates a new UUID using the `generator` closure.
 //
 
 import Foundation

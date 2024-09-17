@@ -31,12 +31,39 @@ internal struct Event {
     /// used to track events related to specific organizations or entities.
     var company: [String: Any]?
 
-    /// The userID for user how did this event.
-    let userID: String
-
     /// The timestamp when the event was created, captured at the moment
     /// of event initialization. Defaults to the current date and time.
     let timestamp = Date()
+
+    // MARK: - Variables from `EventType`
+
+    var caseName: String {
+        return type.caseName
+    }
+
+    var eventName: String {
+        return type.eventName
+    }
+
+    var isEvent: Bool {
+        return type.isEvent
+    }
+
+    var isScreenEvent: Bool {
+        return type.isScreenEvent
+    }
+
+    var isIdentifyEvent: Bool {
+        return type.isIdentifyEvent
+    }
+
+    var screenName: String? {
+        return type.screenName
+    }
+
+    var userID: String? {
+        return type.userID
+    }
 }
 
 // MARK: - Event Logging
@@ -54,43 +81,23 @@ internal extension Event {
      - Parameter logger: An instance conforming to the `Logging` protocol, responsible for outputting logs.
      */
     internal func logData(logger: Logging) {
-        // Log the event header
-        logger.info("------------ Event ----------\n")
-        logger.info("PUBLISHED ANALYTIC EVENT:\n")
-
-        // Log the event type (e.g., screen view, user interaction)
-        // logger.info("Event name: %{public}@\n", type.title)
-
-        // Log the event timestamp (formatted as a full date string)
-        logger.info("Event date: %{public}@\n", self.timestamp.fullDateString)
-
-        // Log any properties associated with the event
-        logger.info("Event properties:\n")
-
-        // Check if properties exist, then iterate through them
-        if let properties = self.properties {
-            for (key, value) in properties {
-                if let nestedDict = value as? [String: Any] {
-                    logger.info("Event key: %{public}@\n", key)
-
-                    // Handle nested dictionaries and log their keys/values
-                    for (nestedKey, nestedValue) in nestedDict {
-                        logger.info("   %{public}@ -> %{public}@\n", nestedKey, nestedValue as? CVarArg ?? "")
-                    }
-                } else if let arrayValue = value as? [Any] {
-                    // Handle arrays by logging their content
-                    logger.info("%{public}@ -> %{public}@\n", key, arrayValue)
-                } else if let intValue = value as? Int {
-                    // Handle integers and log them
-                    logger.info("%{public}@ -> %{public}d\n", key, intValue)
-                } else {
-                    // Log any other property as a string
-                    logger.info("%{public}@ -> %{public}@\n", key, value as? String ?? "")
-                }
-            }
+        logger.info("------------ Event ----------")
+        logger.info("PUBLISHED ANALYTIC EVENT:")
+        logger.info("Event name: %{public}@", type.eventName)
+        logger.info("Event date: %{public}@", self.timestamp.fullDateString)
+        logger.info("Event properties:")
+        if let properties = self.properties, let propertiesJsonString = properties.toJSONString() {
+            logger.info("Event properties: %{public}@", propertiesJsonString)
+        } else {
+            logger.info("No properties")
         }
-        // Log event footer to signal the end of the log
-        logger.info("----------------------\n")
+        logger.info("Event company properties:")
+        if let company = self.company, let companyJsonString = company.toJSONString() {
+            logger.info("Event company: %{public}@", companyJsonString)
+        } else {
+            logger.info("No company")
+        }
+        logger.info("----------------------")
     }
 
 }

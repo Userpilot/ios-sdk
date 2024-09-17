@@ -47,7 +47,10 @@ public class UserPilot: NSObject {
     /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
 
-    // MARK: - Initializer
+    /// SDK logger
+    private lazy var logger = container.resolve(Logging.self)
+
+    // MARK: - Initialization
 
     /**
      Initializes the `UserPilot` SDK with the provided configuration.
@@ -153,7 +156,7 @@ extension UserPilot {
        - company: An optional dictionary containing company-specific properties for users associated with company.
      */
     public func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
-        let event = Event(type: .identify(userID), properties: properties, company: company, userID: userID)
+        let event = Event(type: .identify(userID), properties: properties, company: company)
         analyticsPublisher.publish(event)
     }
 
@@ -164,7 +167,7 @@ extension UserPilot {
      even when the user has not explicitly signed in or identified themselves.
      */
     public func anonymous() {
-        let event = Event(type: .identify("anonymous:\(config.anonymousIDFactory())"), userID: "")
+        let event = Event(type: .identify("anonymous:\(config.anonymousIDFactory())"))
         analyticsPublisher.publish(event)
     }
 
@@ -177,7 +180,7 @@ extension UserPilot {
      - Parameter title: The title of the screen that the user has viewed.
      */
     public func screen(_ title: String) {
-        analyticsPublisher.publish(Event(type: .screen(title), userID: storage.userID))
+        analyticsPublisher.publish(Event(type: .screen(title)))
     }
 
     /**
@@ -192,7 +195,7 @@ extension UserPilot {
        - properties: An optional dictionary containing additional context or metadata related to the event.
      */
     public func track(eventName: String, properties: [String: Any]? = nil) {
-        analyticsPublisher.publish(Event(type: .event(eventName), properties: properties, userID: storage.userID))
+        analyticsPublisher.publish(Event(type: .event(eventName), properties: properties))
     }
 
     /**
@@ -206,6 +209,29 @@ extension UserPilot {
     }
 
     /**
+     This function gathers application settings (such as the SDK version and user data) into a dictionary,
+     converts it into a JSON string, and logs it for debugging purposes.
+     */
+    public func settings() {
+        // Create the dictionary for settings
+        let settings: [String: Any?] = [
+            "SDK Version": version(),
+            "User": storage.user ?? nil
+        ]
+
+        // Convert the dictionary to JSON string
+        if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .prettyPrinted) {
+            // swiftlint:disable:next non_optional_string_data_conversion
+            let jsonString = String(data: jsonData, encoding: .utf8)
+            logger.debug("Settings -> %{public}@", jsonString ?? "")
+        } else {
+            logger.error("Failed to create JSON string")
+        }
+    }
+
+    // MARK: - SDK APIs
+
+    /**
      Clear user session data.
      
      This method should be called when the user logs out or when identify called with new userID.
@@ -215,5 +241,6 @@ extension UserPilot {
     internal func clean() {
         analyticsPublisher.clean()
         storage.userID = ""
+        storage.user = User().toJson() ?? ""
     }
 }

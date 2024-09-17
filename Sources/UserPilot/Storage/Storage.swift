@@ -20,6 +20,7 @@ import UIKit
    - `socketURL`: The URL for the socket connection.
    - `deviceID`: A unique identifier for the device, generated on the first initialization of the SDK.
    - `userID`: The current user’s ID, which may be an anonymous or authenticated value.
+   - `user`: The current user, which contains all user details.
  */
 internal protocol DataStoring: AnyObject {
     /// The socket URL used to connect the SDK to the backend services.
@@ -31,6 +32,9 @@ internal protocol DataStoring: AnyObject {
     /// The current user ID, which could be either a generated anonymous ID or a value provided
     ///  by the application upon authentication.
     var userID: String { get set }
+
+    /// The socket URL used to connect the SDK to the backend services.
+    var user: String { get set }
 }
 
 /**
@@ -53,6 +57,7 @@ internal class Storage: DataStoring {
         case socketURL
         case deviceID
         case userID
+        case user
         case isAnonymous
     }
 
@@ -95,6 +100,16 @@ internal class Storage: DataStoring {
         }
         set {
             write(.userID, newValue: newValue)
+        }
+    }
+
+    /// The user, which contains all updated user meta data and company.
+    internal var user: String {
+        get {
+            return read(.user, defaultValue: User().toJson() ?? "")
+        }
+        set {
+            write(.user, newValue: newValue)
         }
     }
 

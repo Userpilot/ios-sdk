@@ -19,10 +19,10 @@ import Foundation
  to publish analytic events and manage the event lifecycle.
  
  - Methods:
-   - `publish(_:)`: Sends an event to the backend.
-   - `clean()`: Clears any cached events or session data.
-   - `flush()`: Flushs any cached events or session data.
-   - `resume()`: Open sockect connection.
+ - `publish(_:)`: Sends an event to the backend.
+ - `clean()`: Clears any cached events or session data.
+ - `flush()`: Flushs any cached events or session data.
+ - `resume()`: Open sockect connection.
  */
 internal protocol AnalyticsPublishing: AnyObject {
     func publish(_ event: Event)
@@ -50,7 +50,7 @@ internal class AnalyticsPublisher {
     private let logger: Logging
 
     /// The storage used to store user-related data.
-    private let storage: DataStoring
+    private var storage: DataStoring
 
     /// Decorator used to modify event properties before sending.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
@@ -67,7 +67,7 @@ internal class AnalyticsPublisher {
     /// A debouncer used to control the frequency of event flushing.
     /// let backgroundQueue = DispatchQueue(label: "com.example.background")
     /// let debouncer = Debouncer(delay: 1.0, queue: backgroundQueue)
-    private var debouncer = Debouncer(delay: 3.0)
+    private var debouncer = Debouncer(delay: 4.0)
 
     /// Read-write lock for thread-safe event queue operations.
     private lazy var readWriteLock = ReadWriteLock(label: DispatchQueueConstants.EVENT_QUEUE)
@@ -130,8 +130,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Resume socket connection when back from background.
      */
     func resume() {
-        socketManager.allowToStart()
-        if storage.userID.isNotEmpty && socketManager.isAllowToOpenSocket {
+        if storage.userID.isNotEmpty && !socketManager.isSocketOpened && !socketManager.isJoiningSocket {
             socketManager.connect()
         }
     }
@@ -153,6 +152,19 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The event to publish.
      */
     func publish(_ event: Event) {
+        if socketManager.isJoiningSocket {
+            cacheEvent(event)
+            return
+        }
+
+        if !socketManager.isSocketOpened {
+            cacheEvent(event)
+            if let userID = event.userID { storage.userID = userID }
+            if (event.userID ?? storage.userID).isEmpty { return }
+            openSocket()
+            return
+        }
+
         switch event.type {
         case .identify:
             identify(event)
@@ -160,6 +172,22 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             screen(event)
         case .event:
             trackEvent(event)
+        }
+    }
+
+    /**
+     Cache Event when socket is not opened or is joining.
+     
+     - Parameter event: The event to publish.
+     */
+    private func cacheEvent(_ event: Event) {
+        switch event.type {
+        case .identify:
+            cachedIdentifyEvent = event
+        case .screen:
+            lastScreenViewed = (false, event)
+        case .event:
+            cachedEvent = event
         }
     }
 
@@ -174,28 +202,17 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The `identify` event to process.
      */
     private func identify(_ event: Event) {
-        guard let userID = event.type.userID else { return }
-
-        cachedIdentifyEvent = event
-
-        /// In-case the user call identify event directly after identify calls
-        if socketManager.isJoiningSocket {
-            return
-        }
+        guard let userID = event.userID else { return }
 
         /// In-case new user ID
-        if socketManager.isSocketOpened && storage.userID.isNotEmpty && userID != storage.userID {
+        if storage.userID.isNotEmpty && userID != storage.userID {
+            cachedIdentifyEvent = event
             flush()
-            return
-        }
-
-        /// In-case new session, save new userID to storage
-        storage.userID = userID
-
-        if socketManager.isSocketOpened {
-            flushPriorityEvents()
         } else {
-            openSocket()
+            if User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
+
+            storage.userID = userID
+            flushPriorityEvents()
         }
     }
 
@@ -208,22 +225,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The screen event to process.
      */
     private func screen(_ event: Event) {
-        /// In-case the user call screen event directly after identify
-        if socketManager.isJoiningSocket {
-            lastScreenViewed = (false, event)
-            return
-        }
-
-        /// In-case first event called screen in the new session
-        if !socketManager.isSocketOpened && socketManager.isAllowToOpenSocket {
-            openSocket()
-            return
-        }
-
         guard
-            socketManager.isSocketOpened &&
-            (lastScreenViewed == nil ||
-            lastScreenViewed?.1.type.screenName != event.type.screenName)
+            lastScreenViewed == nil ||
+                lastScreenViewed?.1.screenName != event.screenName
         else { return }
 
         eventsCount = 0
@@ -239,26 +243,19 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The event to track.
      */
     private func trackEvent(_ event: Event) {
-        /// In-case first event called is event in the new session
-        if !socketManager.isSocketOpened && socketManager.isAllowToOpenSocket {
-            cachedEvent = event
-            openSocket()
-            return
-        }
-
-        guard
-            socketManager.isSocketOpened,
-            !eventsName.contains(event.type.eventName),
-            eventsCount < GeneralConstants.MAX_EVENTS_PER_SCREEN
-        else { return }
-
-        self.eventsCount.increment()
-        self.eventsName.insert(event.type.eventName)
-
         readWriteLock.write { [weak self] in
             guard let self = self else { return }
+            guard
+                !eventsName.contains(event.eventName),
+                eventsCount < GeneralConstants.MAX_EVENTS_PER_SCREEN
+            else { return }
+
+            eventsCount.increment()
+            eventsName.insert(event.eventName)
+
             self.debouncer.cancel()
-            self.eventsToFlush.append(TrackedPayloadEvent(title: event.type.eventName, meta: event.properties))
+            self.eventsToFlush.append(TrackedPayloadEvent(title: event.eventName,
+                                                          meta: event.properties))
             self.flushTrackedEvents()
         }
     }
@@ -271,8 +268,10 @@ extension AnalyticsPublisher {
     /**
      Flushes high-priority events, such as identify or screen events, through the socket, or events that
      opens the socket.
-    */
+     */
     private func flushPriorityEvents() {
+        if !socketManager.isSocketOpened || socketManager.isJoiningSocket { return }
+
         var payload: [String: Any] = [:]
 
         /// Identify event
@@ -291,20 +290,24 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.identifyCompanyProperty] = company
             }
             clearCachedIdentifyEvent()
-            socketManager.publish(identifyEvent.type.eventName, payload: payload)
+            var user = User.fromJson(storage.user)
+            storage.user = user.updateUser(event: identifyEvent).toJson() ?? ""
+            socketManager.publish(identifyEvent.eventName, payload: payload)
         }
 
         /// Screen event
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
-            self.logger.info("SCREEN %{punlic}@", "\(screenEvent.1.type.screenName)")
-            payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.type.screenName
-            socketManager.publish(screenEvent.1.type.eventName, payload: payload)
+            self.logger.info("SCREEN %{punlic}@", "\(String(describing: screenEvent.1.screenName))")
+            payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenName
+            socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
 
         /// Track event
         if let event = cachedEvent {
             clearCachedEvent()
-            self.eventsToFlush.append(TrackedPayloadEvent(title: event.type.eventName, meta: event.properties))
+            self.eventsToFlush.append(
+                TrackedPayloadEvent(title: event.eventName,
+                                    meta: event.properties))
             flushTrackedEvents()
         }
     }
@@ -324,6 +327,7 @@ extension AnalyticsPublisher {
      */
     private func flushQueue(shouldCloseSocket: Bool = false) {
         readWriteLock.read {
+            if !socketManager.isSocketOpened || socketManager.isJoiningSocket { return }
             if self.eventsToFlush.isEmpty {
                 if shouldCloseSocket { closeSocket() }
                 return
@@ -372,7 +376,7 @@ extension AnalyticsPublisher: SocketSubscription {
 
     /**
      Callback method triggered when a socket event has been sent, ensuring any remaining queued events are flushed.
-     
+
      - Parameters:
        - eventName: The name of the event sent.
        - eventSent: Whether the event was successfully sent.

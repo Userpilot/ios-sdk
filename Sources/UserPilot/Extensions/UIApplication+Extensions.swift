@@ -1,8 +1,20 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Motasem Hamed on 20/08/2024.
+//
+//  [Brief Description]
+//  This file contains an extension of the `UIApplication` class, providing helper methods
+//  for retrieving the top-most view controller and managing active window scenes.
+//
+//  Extensions include:
+//  - `activeWindowScenes`: A computed property that returns the list of active window scenes.
+//  - `hasActiveWindowScenes`: A computed property that checks if there are any active window scenes.
+//  - `activeKeyWindow`: A private computed property that returns the current key window in the active window scenes.
+//  - `topViewController()`: A method that returns the top-most view controller in the current window or scene.
+//  - `topViewController(controller:)`: A private method that recursively finds the top-most view controller
+//  from a given controller.
 //
 
 import Foundation
