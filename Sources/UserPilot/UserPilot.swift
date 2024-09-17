@@ -32,9 +32,6 @@ public class UserPilot: NSObject {
     /// A Boolean indicating whether the SDK is active (i.e., a session is active). True if `sessionID` is not `nil`.
     var isActive: Bool { sessionID != nil }
 
-    /// Lazy loading of the `SettingsVerifing` instance to verify SDK settings at runtime.
-    private lazy var settingsVerifier = container.resolve(SettingsVerifing.self)
-
     /// Lazy loading of the `AnalyticsPublishing` instance responsible for publishing user tracking events.
     private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
 
@@ -113,12 +110,11 @@ extension UserPilot {
         container.owner = self
         container.register(Config.self, value: config)
         container.registerLazy(DataStoring.self, initializer: Storage.init)
-        container.registerLazy(Networking.self, initializer: NetworkClient.init)
-        container.registerLazy(SettingsVerifing.self, initializer: SettingsVerifier.init)
         container.registerLazy(AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
         container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerLazy(SessionMonitoring.self, initializer: SessionMonitor.init)
+        container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
     }
 
     /**
@@ -216,11 +212,11 @@ extension UserPilot {
         // Create the dictionary for settings
         let settings: [String: Any?] = [
             "SDK Version": version(),
-            "User": storage.user ?? nil
+            "User": storage.user
         ]
 
         // Convert the dictionary to JSON string
-        if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .prettyPrinted) {
+        if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .withoutEscapingSlashes) {
             // swiftlint:disable:next non_optional_string_data_conversion
             let jsonString = String(data: jsonData, encoding: .utf8)
             logger.debug("Settings -> %{public}@", jsonString ?? "")

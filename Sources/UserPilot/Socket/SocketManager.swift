@@ -76,8 +76,14 @@ internal class SocketManager {
     /// SDK logger
     private let logger: Logging
 
+    /// SDK storage.
+    private let sdkSettingsDetector: SDKSettingsDetectoring
+
     /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
+
+    /// gettings SDK settings
+    private var isGettingSettings = false
 
     // MARK: - Initialization
 
@@ -91,6 +97,7 @@ internal class SocketManager {
         self.config = container.resolve(UserPilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
+        self.sdkSettingsDetector = container.resolve(SDKSettingsDetectoring.self)
         self.logger = config.logger
     }
 
@@ -194,7 +201,7 @@ extension SocketManager: SocketEvents {
 
     /// Logic to determine if the channel state is joining
     var isJoiningSocket: Bool {
-        phoenixChannel?.isJoining == true
+        phoenixChannel?.isJoining == true || isGettingSettings
     }
 
     /// Logic to check if the socket is currently open
@@ -204,7 +211,12 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to open a WebSocket connection
     func connect() {
-        openSocket()
+        isGettingSettings = true
+        sdkSettingsDetector.fetchSettings { [weak self] in
+            guard let self = self else { return }
+            self.isGettingSettings = false
+            self.openSocket()
+        }
     }
 
     /// Implementation to close the WebSocket connection
