@@ -44,7 +44,7 @@ internal struct Event {
     var eventName: String {
         return type.eventName
     }
-    
+
     var eventTitle: String {
         return type.eventTitle ?? ""
     }

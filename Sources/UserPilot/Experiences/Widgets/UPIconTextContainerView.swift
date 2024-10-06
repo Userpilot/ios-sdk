@@ -40,7 +40,10 @@ internal class UPIconTextContainerView: UIStackView {
     ///   - lines: A list of `Line` objects representing the content to be displayed.
     ///   - style: The theme data used to style each `UPIconTextView` child in the container.
     ///   - experienceContentListener: An event listener to handle interactions with each `UPIconTextView`.
-    func setupView(lines: [Line], style: ThemeData, experienceContentProtocol: ExperienceContentProtocol) {
+    func setupView(lines: [Line],
+                   style: ThemeData,
+                   experienceContentProtocol: ExperienceContentProtocol,
+                   imageLoader: ImageLoading) {
         // Remove existing views before adding new ones.
         arrangedSubviews.forEach { $0.removeFromSuperview() }
 
@@ -49,7 +52,10 @@ internal class UPIconTextContainerView: UIStackView {
             // Create and set up a new `UPIconTextView` for the current line.
             let iconText = UPIconTextView()
             iconText.backgroundColor = UIColor.random()
-            iconText.setupView(line: line, style: style, experienceContentProtocol: experienceContentProtocol)
+            iconText.setupView(line: line,
+                               style: style,
+                               experienceContentProtocol: experienceContentProtocol,
+                               imageLoader: imageLoader)
             addArrangedSubview(iconText)
 
             // Add a spacer view between `UPIconTextView` components if this is not the last line.

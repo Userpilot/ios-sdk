@@ -123,6 +123,7 @@ extension UserPilot {
         container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
         container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
+        container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
     }
 
     /**

@@ -30,7 +30,8 @@ internal class StepCollectionViewCell: UICollectionViewCell {
 
     func bindStep(_ step: Step,
                   withThemeData themeData: ThemeData,
-                  andExperienceContentListener experienceContentProtocol: ExperienceContentProtocol) {
+                  andExperienceContentListener experienceContentProtocol: ExperienceContentProtocol,
+                  andImageLoader imageLoader: ImageLoading) {
         stackView.arrangedSubviews.forEach { view in
             stackView.removeArrangedSubview(view)
             view.removeFromSuperview()
@@ -38,14 +39,16 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         setupUI(withThemeData: themeData)
         bindSections(step,
                      withThemeData: themeData,
-                     andExperienceContentProtocol: experienceContentProtocol
+                     andExperienceContentProtocol: experienceContentProtocol,
+                     andImageLoader: imageLoader
         )
     }
 
     // unused_enumerated
     private func bindSections(_ step: Step,
                               withThemeData themeData: ThemeData,
-                              andExperienceContentProtocol experienceContentProtocol: ExperienceContentProtocol) {
+                              andExperienceContentProtocol experienceContentProtocol: ExperienceContentProtocol,
+                              andImageLoader imageLoader: ImageLoading) {
         // Iterate over each section of the step
         // for (_, section) in step.sections.enumerated() {
         step.sections.forEach { section in
@@ -73,13 +76,14 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 image.heightAnchor.constraint(equalToConstant: 200).isActive = true
                 image.widthAnchor.constraint(equalToConstant: 200).isActive = true
                 image.backgroundColor = .brown
-                image.setupView(line: firstLine)
+                image.setupView(line: firstLine, imageLoader: imageLoader)
                 stackView.addArrangedSubview(image)
             case .iconText:
                 let iconText = UPIconTextContainerView()
                 iconText.setupView(lines: section.lines,
                                    style: themeData,
-                                   experienceContentProtocol: experienceContentProtocol)
+                                   experienceContentProtocol: experienceContentProtocol,
+                                   imageLoader: imageLoader)
                 iconText.translatesAutoresizingMaskIntoConstraints = false
                 stackView.addArrangedSubview(iconText)
             default:

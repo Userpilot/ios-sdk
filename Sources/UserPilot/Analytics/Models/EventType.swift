@@ -59,7 +59,7 @@ internal enum EventType: Equatable {
      */
     var eventName: String {
         switch self {
-        case let .event(eventName):
+        case .event:
             return EventNameConstants.EVENT // Return the custom event name for `.event`
         case .screen:
             return EventNameConstants.SCREEN // Use the constant name for screens

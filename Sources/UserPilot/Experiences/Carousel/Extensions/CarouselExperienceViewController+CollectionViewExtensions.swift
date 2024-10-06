@@ -29,7 +29,10 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
             return UICollectionViewCell()
         }
 
-        stepCollectionViewCell.bindStep(step, withThemeData: themeData, andExperienceContentListener: self)
+        stepCollectionViewCell.bindStep(step,
+                                        withThemeData: themeData,
+                                        andExperienceContentListener: self,
+                                        andImageLoader: carouselExperienceViewModel.imageLoader)
         return stepCollectionViewCell
     }
 

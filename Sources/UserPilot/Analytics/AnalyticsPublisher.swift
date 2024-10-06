@@ -335,7 +335,7 @@ extension AnalyticsPublisher {
                 eventsName.remove(eventToSend.eventTitle)
 
                 var payload: [String: Any] = [:]
-                payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle ?? ""
+                payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle
                 payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
 
                 socketManager.publish(

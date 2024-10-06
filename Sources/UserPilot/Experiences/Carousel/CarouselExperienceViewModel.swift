@@ -13,12 +13,14 @@ internal class CarouselExperienceViewModel {
     private let themeHandler: ThemeHandling
     private let config: UserPilot.Config
     private let storage: DataStoring
+    let imageLoader: ImageLoading
 
     init(container: DIContainer) {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
         self.config = container.resolve(UserPilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
+        self.imageLoader = container.resolve(ImageLoading.self)
     }
 
     private(set) var mergedTheme = [ThemeData]()
@@ -136,9 +138,7 @@ internal class CarouselExperienceViewModel {
             let deepLink = carouselContent?.steps.last?.buttonAction?.deepLink,
             let url = URL(string: deepLink)
         else { return }
-        config.navigationDelegate?.navigate(to: url, completion: { [weak self] _ in
-            // self?.dismissViewController?()
-        })
+        config.navigationDelegate?.navigate(to: url, completion: {_ in })
     }
 
 }

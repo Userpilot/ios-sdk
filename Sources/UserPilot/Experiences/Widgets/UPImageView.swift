@@ -39,21 +39,18 @@ internal class UPImageView: UIImageView {
      
      - Parameter line: The `Line` object containing configuration and attributes for the image or icon to display.
      */
-    func setupView(line: Line) {
+    func setupView(line: Line, imageLoader: ImageLoading) {
         self.line = line
 
         guard let attrs = line.attrs else { return }
 
-        if line.type == .image {
-            // If the line type is `IMAGE`, load the image from the specified source URL.
-            if let src = attrs.src {
-                setImage(from: src)
-            }
-        } else {
-            // Otherwise, load an icon based on the provided icon attribute.
-            if let icon = attrs.icon {
-                setImage(from: icon)
-            }
-        }
+        let url = line.type == .image ? attrs.src : attrs.icon
+        guard let url = url else { return }
+
+        imageLoader.loadImage(target: self,
+                              url: url,
+                              placeholder: .lightGray,
+                              blurHash: "",
+                              size: CGSize(width: 200, height: 200))
     }
 }

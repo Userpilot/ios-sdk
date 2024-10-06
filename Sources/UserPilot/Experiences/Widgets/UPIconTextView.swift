@@ -71,9 +71,12 @@ internal class UPIconTextView: UIStackView {
     ///   - line: The data representing the content and styling for the icon and text.
     ///   - style: The `ThemeData` instance that defines the style attributes for the text and icon.
     ///   - experienceContentListener: The listener to handle interactions and events with this content.
-    func setupView(line: Line, style: ThemeData, experienceContentProtocol: ExperienceContentProtocol) {
+    func setupView(line: Line,
+                   style: ThemeData,
+                   experienceContentProtocol: ExperienceContentProtocol,
+                   imageLoader: ImageLoading) {
         // Configure the imageView using the provided line data.
-        imageView.setupView(line: line)
+        imageView.setupView(line: line, imageLoader: imageLoader)
 
         // Configure the textView using the line data, style, and listener.
         textView.setupView(line: line, style: style, experienceContentProtocol: experienceContentProtocol)
