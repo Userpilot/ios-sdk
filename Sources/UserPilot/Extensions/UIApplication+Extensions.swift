@@ -20,7 +20,7 @@
 import Foundation
 import UIKit
 
-extension UIApplication {
+internal extension UIApplication {
 
     @available(iOS 13.0, *)
     var activeWindowScenes: [UIWindowScene] {

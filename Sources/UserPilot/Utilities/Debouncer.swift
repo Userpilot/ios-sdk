@@ -2,7 +2,7 @@ import Foundation
 
 /// A utility class that ensures a function is only called after a specified delay has passed
 /// since the last call. Useful for managing repetitive actions like user input or API requests.
-class Debouncer {
+internal class Debouncer {
 
     // MARK: - Properties
 

@@ -7,6 +7,7 @@
 
 import Foundation
 import UserPilot
+import UIKit
 
 class UserPilotManager {
 
@@ -16,13 +17,14 @@ class UserPilotManager {
 
     // MARK: - Private Properties
 
-    private var userPilot: UserPilot
+    private lazy var userPilot = UserPilot(config: UserPilot
+        .Config(token: "NX-b7b285fd")
+        .logging(true)
+        .setNavigationHandler(navigationDelegate: self))
 
     // MARK: - Life Cycle
 
-    private init() {
-        userPilot = UserPilot(config: UserPilot.Config(token: "NX-b7b285fd").logging(true))
-    }
+    private init() { }
 
     // MARK: - UserPilot SDK APIs
 
@@ -209,6 +211,22 @@ class UserPilotManager {
                     )
 
                     self.userPilot.settings()
+                }
+            }
+        }
+    }
+
+}
+
+extension UserPilotManager: UserPilotNavigationDelegate {
+
+    func navigate(to url: URL, completion: @escaping (Bool) -> Void) {
+        if url.scheme == "userpilot-example" {
+            guard let destination = url.host else { return }
+            if destination == "demo" {
+                delay(0.4) {
+                    FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
+                    completion(true)
                 }
             }
         }

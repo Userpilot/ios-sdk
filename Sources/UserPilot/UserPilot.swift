@@ -44,6 +44,9 @@ public class UserPilot: NSObject {
     /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
 
+    /// Lazy loading of the `ExperiencesPublishing` instance that manages app lifecycle.
+    private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
+
     /// SDK logger
     private lazy var logger = container.resolve(Logging.self)
 
@@ -65,8 +68,11 @@ public class UserPilot: NSObject {
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // start session monotiring
+        // start session monitoring
         sessionMonitor.start()
+
+        // start experience listener
+        experiencesPublisher.start()
 
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
@@ -115,6 +121,8 @@ extension UserPilot {
         container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerLazy(SessionMonitoring.self, initializer: SessionMonitor.init)
         container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
+        container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
+        container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
     }
 
     /**

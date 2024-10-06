@@ -18,7 +18,7 @@
 
 import Foundation
 
-extension Dictionary {
+internal extension Dictionary {
     /// Creates a dictionary by merging the given dictionary into this dictionary,
     /// preferring the new value for duplicate keys.
     func merging(_ other: [Key: Value]) -> [Key: Value] {

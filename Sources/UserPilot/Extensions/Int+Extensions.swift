@@ -15,8 +15,26 @@
 
 import Foundation
 
-extension Int {
+internal extension Int {
     mutating func increment(by value: Int = 1) {
         self += value
+    }
+}
+
+internal extension Comparable {
+    func clamped(to limits: ClosedRange<Self>) -> Self {
+        return min(max(self, limits.lowerBound), limits.upperBound)
+    }
+}
+
+internal extension Collection {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }

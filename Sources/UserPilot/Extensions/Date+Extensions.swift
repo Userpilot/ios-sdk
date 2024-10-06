@@ -17,7 +17,7 @@
 import Foundation
 import UIKit
 
-extension Date {
+internal extension Date {
 
     var fullDateString: String {
         let dateFormatter = DateFormatter()

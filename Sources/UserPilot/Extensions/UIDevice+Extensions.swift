@@ -17,7 +17,7 @@
 import Foundation
 import UIKit
 
-extension UIDevice {
+internal extension UIDevice {
 
     static var identifier: String {
         (current.identifierForVendor ?? UUID()).userpilotFormatted

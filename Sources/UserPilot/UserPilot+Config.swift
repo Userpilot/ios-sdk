@@ -25,6 +25,9 @@ public extension UserPilot {
         /// UserPilot SDK logger
         var logger: Logging = OSLog.disabled
 
+        /// The delegate object that handles application screen navigation during experience presentation.
+        @objc public weak var navigationDelegate: UserPilotNavigationDelegate?
+
         /// default customer properties
         var additionalAutoProperties: [String: Any] = [:]
 
@@ -49,6 +52,13 @@ public extension UserPilot {
         @objc
         public func logging(_ enabled: Bool) -> Self {
             logger = enabled ? OSLog(userpilotCategory: "general") : .disabled
+            return self
+        }
+
+        @discardableResult
+        @objc
+        public func setNavigationHandler(navigationDelegate: UserPilotNavigationDelegate?) -> Self {
+            self.navigationDelegate = navigationDelegate
             return self
         }
     }

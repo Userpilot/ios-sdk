@@ -20,17 +20,22 @@ import SwiftPhoenixClient
 internal protocol SocketEvents: AnyObject {
     var isSocketOpened: Bool { get }
     var isJoiningSocket: Bool { get }
+    var didErrorOccurred: Bool { get }
 
     func connect()
     func close()
 
-    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool)
+    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool,
+                 socketSubscription: SocketSubscription?)
     func registerCallback(_ socketSubscription: SocketSubscription)
 }
 
-extension SocketEvents {
-    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool = false) {
-        publish(eventName, payload: payload, shouldCloseSocket: shouldCloseSocket)
+internal extension SocketEvents {
+
+    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool = false,
+                 socketSubscription: SocketSubscription? = nil) {
+        publish(eventName, payload: payload, shouldCloseSocket: shouldCloseSocket,
+                socketSubscription: socketSubscription)
     }
 }
 
@@ -40,7 +45,24 @@ extension SocketEvents {
 internal protocol SocketSubscription: AnyObject {
     func onSocketClosed()
     func onSocketOpened()
-    func onSocketEventSent(_ event: String, _ status: Bool)
+    func onSocketEventSent(_ event: String, _ message: Message, _ status: Bool)
+}
+
+extension SocketSubscription {
+    func onSocketClosed() {
+        // Default implementation (optional)
+    }
+
+    func onSocketOpened() {
+        // Default implementation (optional)
+    }
+
+    func onSocketEventSent(_ event: String,
+                           _ message: Message,
+                           _ status: Bool,
+                           _ socketSubscription: SocketSubscription) {
+        // Default implementation (optional)
+    }
 }
 
 // MARK: - SocketManager
@@ -53,7 +75,7 @@ internal class SocketManager {
     // MARK: - Properties
 
     /// URL for the WebSocket connection.
-    private let socketURL = "wss://analytex-dev-nxtapp-8763.userpilot.io/mobile/v1/events/"
+    private let socketURL = "wss://analytex-dev-nxtapp-8794.userpilot.io/mobile/v1/events/websocket"
 
     /// The WebSocket instance for handling connections.
     private var phoenixSocket: Socket?
@@ -82,8 +104,11 @@ internal class SocketManager {
     /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
 
-    /// gettings SDK settings
+    /// getting SDK settings
     private var isGettingSettings = false
+
+    /// track error state
+    private var isErrorOccurred = false
 
     // MARK: - Initialization
 
@@ -141,6 +166,7 @@ extension SocketManager {
 
         phoenixSocket.delegateOnError(to: self) { (self, error) in
             let (error, _) = error
+            self.isErrorOccurred = true
             self.logger.error("🛑 SOCKET error - details %{public}@", error.localizedDescription)
             self.closeSocket()
         }
@@ -166,6 +192,7 @@ extension SocketManager {
             })
 
         phoenixChannel?.onError { [weak self] message in
+            self?.isErrorOccurred = true
             self?.logger.debug("🛑 SOCKET Channel error - message %{public}@", message.payload)
             self?.closeSocket()
         }
@@ -209,9 +236,14 @@ extension SocketManager: SocketEvents {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == true
     }
 
+    var didErrorOccurred: Bool {
+        isErrorOccurred
+    }
+
     /// Implementation to open a WebSocket connection
     func connect() {
         isGettingSettings = true
+        isErrorOccurred = false
         sdkSettingsDetector.fetchSettings { [weak self] in
             guard let self = self else { return }
             self.isGettingSettings = false
@@ -225,17 +257,28 @@ extension SocketManager: SocketEvents {
     }
 
     /// Implementation to publish an event over the WebSocket
-    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool) {
+    func publish(_ eventName: String,
+                 payload: [String: Any]?,
+                 shouldCloseSocket: Bool,
+                 socketSubscription: SocketSubscription?) {
         phoenixChannel?
             .push(eventName, payload: payload ?? [:])
-            .receive(SocketManager.successKey) { [weak self] (_) in
+            .receive(SocketManager.successKey) { [weak self] message in
                 self?.logger.info("✈️ SOCKET message sent: %{public}@\n Payload: %{public}@", eventName, payload ?? [:])
-                self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, true) }
+                if let socketSubscription {
+                    socketSubscription.onSocketEventSent(eventName, message, true)
+                } else {
+                    self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                }
                 if shouldCloseSocket { self?.closeSocket() }
             }
-            .receive(SocketManager.errorKey) { [weak self] (errorMessage) in
-                self?.logger.error("⚠️ SOCKET message send FAIL: %{public}@", errorMessage.event)
-                self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, false) }
+            .receive(SocketManager.errorKey) { [weak self] message in
+                self?.logger.error("⚠️ SOCKET message send FAIL: %{public}@", message.event)
+                if let socketSubscription {
+                    socketSubscription.onSocketEventSent(eventName, message, false)
+                } else {
+                    self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                }
                 if shouldCloseSocket { self?.closeSocket() }
             }
     }

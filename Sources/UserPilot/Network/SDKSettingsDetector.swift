@@ -30,7 +30,7 @@ internal protocol SDKSettingsDetectoring: AnyObject {
  * `SDKSettingsDetector` is a class that implements `SDKSettingsDetectoring` protocol.
  * It fetches SDK settings from a remote server and updates the storage with the obtained data.
  */
-class SDKSettingsDetector {
+internal class SDKSettingsDetector {
 
     // MARK: - Properties
 

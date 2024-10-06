@@ -20,9 +20,9 @@
 import Foundation
 import UIKit
 
-extension UIViewController {
+internal extension UIViewController {
 
-    public var upClassName: String {
+    var upClassName: String {
         return String(describing: type(of: self))
     }
 

@@ -18,10 +18,10 @@
 import Foundation
 import UIKit
 
-extension UIButton {
+internal extension UIButton {
 
     // MARK: - Capture button details
-    internal func captureButtonClick() {
+    func captureButtonClick() {
         let buttonName = self.titleLabel?.text ??
         self.accessibilityIdentifier ??
         "Target: \(String(describing: target))"

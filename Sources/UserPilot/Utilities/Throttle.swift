@@ -15,7 +15,7 @@
 
 import Foundation
 
-class Throttle {
+internal class Throttle {
 
     // MARK: - Properties
 
@@ -49,7 +49,7 @@ class Throttle {
 }
 
 // MARK: - Helper method
-extension Throttle {
+internal extension Throttle {
 
     /// Executes the provided block of code, ensuring it does not run more frequently than the minimum delay.
     /// If a new execution is requested before the delay period from the previous run has passed,

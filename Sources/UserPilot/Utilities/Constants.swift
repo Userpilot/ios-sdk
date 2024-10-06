@@ -12,25 +12,25 @@
 import Foundation
 
 // swiftlint:disable identifier_name
-struct DispatchQueueConstants {
+internal struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
     static let DEBOUNCER_QUEUE = "userpilot-debouncer-queue"
 }
 
-struct EventCaseNameConstants {
+internal struct EventCaseNameConstants {
     static let IDENTIFY = "identify"
     static let SCREEN = "screen"
     static let EVENT = "event"
 }
 
-struct EventNameConstants {
+internal struct EventNameConstants {
     static let IDENTIFY = "user_identify"
     static let SCREEN = "screen"
     static let EVENT = "event"
 }
 
-struct GeneralConstants {
+internal struct GeneralConstants {
     static let MAX_EVENTS_PER_SCREEN = 200
     static let MAX_ACTION_TO_DEBOUNCE = 20
 }

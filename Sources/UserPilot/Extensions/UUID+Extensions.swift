@@ -21,7 +21,7 @@
 import Foundation
 
 // Allows overriding of UUID creation for deterministic testing.
-extension UUID {
+internal extension UUID {
 
     static var generator: () -> UUID = UUID.init
 

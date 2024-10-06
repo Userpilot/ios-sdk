@@ -17,7 +17,7 @@
 
 import Foundation
 
-extension HTTPURLResponse {
+internal extension HTTPURLResponse {
 
     var isSuccessStatusCode: Bool {
         (200...299).contains(statusCode)

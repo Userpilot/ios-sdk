@@ -20,7 +20,7 @@
 
 import Foundation
 
-extension Bundle {
+internal extension Bundle {
 
     var identifier: String {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String ?? ""

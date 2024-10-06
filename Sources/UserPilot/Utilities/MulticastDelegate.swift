@@ -16,7 +16,7 @@ import Foundation
 /// A property wrapper that allows a class or struct to use a multicast delegate pattern.
 /// It provides an easy way to add, remove, and invoke multiple delegates.
 @propertyWrapper
-struct Multicast<T> {
+internal struct Multicast<T> {
 
     // MARK: - Properties
 

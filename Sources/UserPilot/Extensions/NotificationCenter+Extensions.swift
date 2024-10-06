@@ -19,12 +19,12 @@
 
 import Foundation
 
-extension NotificationCenter {
+internal extension NotificationCenter {
 
     static var userpilot = NotificationCenter()
 }
 
-extension Notification {
+internal extension Notification {
 
     static func toInfo<T>(_ value: T) -> [String: T] { return ["key": value] }
 
@@ -40,7 +40,7 @@ extension Notification {
 
 }
 
-extension Notification.Name {
-    internal static let userpilotTrackedScreen = Notification.Name("userpilotTrackedScreen")
-    internal static let userpilotTrackedButton = Notification.Name("userpilotTrackedButton")
+internal extension Notification.Name {
+    static let userpilotTrackedScreen = Notification.Name("userpilotTrackedScreen")
+    static let userpilotTrackedButton = Notification.Name("userpilotTrackedButton")
 }

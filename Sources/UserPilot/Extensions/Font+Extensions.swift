@@ -12,7 +12,7 @@
 import Foundation
 import UIKit
 
-extension UIFontDescriptor.SystemDesign {
+internal extension UIFontDescriptor.SystemDesign {
     static var allCases: [UIFontDescriptor.SystemDesign] {
         [.default, .monospaced, .rounded, .serif]
     }
@@ -27,7 +27,7 @@ extension UIFontDescriptor.SystemDesign {
     }
 }
 
-extension UIFont.Weight {
+internal extension UIFont.Weight {
     static var allCases: [UIFont.Weight] {
         [.ultraLight, .thin, .light, .regular, .medium, .semibold, .bold, .heavy, .black]
     }

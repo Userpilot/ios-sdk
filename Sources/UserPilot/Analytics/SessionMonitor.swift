@@ -63,7 +63,7 @@ internal class SessionMonitor: SessionMonitoring {
     }
 
     /// Called when the app enters the foreground.
-    /// This method resumes analytics sockect connection and event publishing.
+    /// This method resumes analytics socket connection and event publishing.
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterForeground(notification: Notification) {

@@ -14,7 +14,7 @@ import Foundation
 
 /// A thread-safe read-write lock implementation for managing concurrent access to shared resources.
 /// Allows multiple threads to read data simultaneously but ensures exclusive access for writing operations.
-class ReadWriteLock {
+internal class ReadWriteLock {
 
     // MARK: - Properties
 

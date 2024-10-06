@@ -13,6 +13,7 @@
 
 // swiftlint:disable file_length
 import Foundation
+import SwiftPhoenixClient
 
 /**
  The `AnalyticsPublishing` protocol defines the methods necessary
@@ -279,26 +280,24 @@ extension AnalyticsPublisher {
             guard let userID = identifyEvent.userID else { return }
 
             // In-case identify event called again when joining socket channel
-            if identifyEvent.userID != storage.userID {
+            if userID != storage.userID {
                 identify(identifyEvent)
                 return
             }
-            self.logger.info("USER %{punlic}@", "\(userID)")
-            if let properties = identifyEvent.properties {
-                payload[AnalyticsPublisher.identifyMetaDataProperty] = properties
-            }
+            payload[AnalyticsPublisher.identifyMetaDataProperty] = identifyEvent.properties ?? [:]
             if let company = identifyEvent.company {
                 payload[AnalyticsPublisher.identifyCompanyProperty] = company
             }
             clearCachedIdentifyEvent()
             var user = User.fromJson(storage.user)
             storage.user = user.updateUser(event: identifyEvent).toJson() ?? ""
+            self.logger.info("USER %{public}@", user.updateUser(event: identifyEvent).toJson() ?? "")
             socketManager.publish(identifyEvent.eventName, payload: payload)
         }
 
         /// Screen event
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
-            self.logger.info("SCREEN %{punlic}@", "\(String(describing: screenEvent.1.screenName))")
+            self.logger.info("SCREEN %{public}@", "\(String(describing: screenEvent.1.screenName))")
             payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenName
             socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
@@ -367,6 +366,10 @@ extension AnalyticsPublisher: SocketSubscription {
 
     /// Socket closed callback.
     func onSocketClosed() {
+        if socketManager.didErrorOccurred {
+            clearAllCachedProperties()
+            return
+        }
         if let eventToPublish = cachedIdentifyEvent {
             userPilot?.clean()
             identify(eventToPublish)
@@ -382,7 +385,7 @@ extension AnalyticsPublisher: SocketSubscription {
        - eventName: The name of the event sent.
        - eventSent: Whether the event was successfully sent.
      */
-    func onSocketEventSent(_ eventName: String, _ eventSent: Bool) {
+    func onSocketEventSent(_ eventName: String, _ message: Message, _ eventSent: Bool) {
         flushTrackedEvents()
     }
 
