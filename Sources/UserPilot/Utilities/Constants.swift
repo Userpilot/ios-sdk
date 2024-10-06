@@ -27,7 +27,7 @@ internal struct EventCaseNameConstants {
 internal struct EventNameConstants {
     static let IDENTIFY = "user_identify"
     static let SCREEN = "screen"
-    static let EVENT = "event"
+    static let EVENT = "track"
 }
 
 internal struct GeneralConstants {

@@ -44,6 +44,10 @@ internal struct Event {
     var eventName: String {
         return type.eventName
     }
+    
+    var eventTitle: String {
+        return type.eventTitle ?? ""
+    }
 
     var isEvent: Bool {
         return type.isEvent
@@ -57,8 +61,8 @@ internal struct Event {
         return type.isIdentifyEvent
     }
 
-    var screenName: String? {
-        return type.screenName
+    var screenTitle: String? {
+        return type.screenTitle
     }
 
     var userID: String? {

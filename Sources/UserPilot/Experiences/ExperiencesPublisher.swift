@@ -142,16 +142,16 @@ extension ExperiencesPublisher: SocketSubscription {
      */
     func onSocketEventSent(_ eventName: String, _ message: Message, _ eventSent: Bool) {
         // Temporarily using mock data for demonstration.
-        if let carouselData = MockManager.carouselData.toCarouselList() {
-            carousels.append(contentsOf: carouselData)
-        }
-
-        if let baseTheme = MockManager.BaseTheme.toMobileTheme() {
-            themeHandler.saveTheme(baseTheme)
-        }
-
-        performOn(.main) { [weak self] in
-            self?.openCarouselScreen()
-        }
+//        if let carouselData = MockManager.carouselData.toCarouselList() {
+//            carousels.append(contentsOf: carouselData)
+//        }
+//
+//        if let baseTheme = MockManager.BaseTheme.toMobileTheme() {
+//            themeHandler.saveTheme(baseTheme)
+//        }
+//
+//        performOn(.main) { [weak self] in
+//            self?.openCarouselScreen()
+//        }
     }
 }

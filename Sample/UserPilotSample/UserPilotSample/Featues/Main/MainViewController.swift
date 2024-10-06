@@ -22,7 +22,8 @@ class MainViewController: BaseViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        UserPilotManager.shared.identify(userID: "11113")
+        // UserPilotManager.shared.identify(userID: "11113")
+        UserPilotManager.shared.startPerformanceTest()
     }
 
 }

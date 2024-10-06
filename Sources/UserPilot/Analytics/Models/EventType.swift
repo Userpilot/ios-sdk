@@ -60,7 +60,7 @@ internal enum EventType: Equatable {
     var eventName: String {
         switch self {
         case let .event(eventName):
-            return "\(eventName)" // Return the custom event name for `.event`
+            return EventNameConstants.EVENT // Return the custom event name for `.event`
         case .screen:
             return EventNameConstants.SCREEN // Use the constant name for screens
         case .identify:
@@ -103,8 +103,20 @@ internal enum EventType: Equatable {
      Returns the screen name if the event is a `screen` event. If the event type is not `screen`, it returns `nil`.
      This helps in identifying the screen associated with a screen-view event.
      */
-    var screenName: String? {
+    var screenTitle: String? {
         if case let .screen(title) = self {
+            return title
+        } else {
+            return nil
+        }
+    }
+
+    /**
+     Returns the screen name if the event is a `screen` event. If the event type is not `screen`, it returns `nil`.
+     This helps in identifying the screen associated with a screen-view event.
+     */
+    var eventTitle: String? {
+        if case let .event(title) = self {
             return title
         } else {
             return nil

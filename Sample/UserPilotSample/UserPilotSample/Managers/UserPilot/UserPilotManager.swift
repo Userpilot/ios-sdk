@@ -110,14 +110,14 @@ class UserPilotManager {
         identify(userID: "NX-11111")
 
         // delay for 3 seconds
-        delay(3.0, closure: { [weak self] in
+        delay(4.0, closure: { [weak self] in
             guard let self = self else { return }
 
             // track user event
             self.track(eventName: "App Open")
 
             // track multi events to send them as one shout, should send them in one request as patch request
-            for number in 1...100 {
+            for number in 1...20 {
                 self.track(eventName: "Automatic event - \(number)")
             }
 

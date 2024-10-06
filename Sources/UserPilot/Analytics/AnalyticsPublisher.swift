@@ -60,7 +60,7 @@ internal class AnalyticsPublisher {
     private let socketManager: SocketEvents
 
     /// Queue to hold events waiting to be sent.
-    private lazy var eventsToFlush = [TrackedPayloadEvent]()
+    private lazy var eventsToFlush = [Event]()
 
     /// Set of event names sent during the current screen view.
     private var eventsName = Set<String>()
@@ -68,7 +68,7 @@ internal class AnalyticsPublisher {
     /// A debouncer used to control the frequency of event flushing.
     /// let backgroundQueue = DispatchQueue(label: "com.example.background")
     /// let debouncer = Debouncer(delay: 1.0, queue: backgroundQueue)
-    private var debouncer = Debouncer(delay: 4.0)
+    private var debouncer = Debouncer(delay: 2.0)
 
     /// Read-write lock for thread-safe event queue operations.
     private lazy var readWriteLock = ReadWriteLock(label: DispatchQueueConstants.EVENT_QUEUE)
@@ -228,7 +228,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     private func screen(_ event: Event) {
         guard
             lastScreenViewed == nil ||
-                lastScreenViewed?.1.screenName != event.screenName
+                lastScreenViewed?.1.screenTitle != event.screenTitle
         else { return }
 
         eventsCount = 0
@@ -247,16 +247,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         readWriteLock.write { [weak self] in
             guard let self = self else { return }
             guard
-                !eventsName.contains(event.eventName),
+                !eventsName.contains(event.eventTitle),
                 eventsCount < GeneralConstants.MAX_EVENTS_PER_SCREEN
             else { return }
 
             eventsCount.increment()
-            eventsName.insert(event.eventName)
+            eventsName.insert(event.eventTitle)
 
             self.debouncer.cancel()
-            self.eventsToFlush.append(TrackedPayloadEvent(title: event.eventName,
-                                                          meta: event.properties))
+            self.eventsToFlush.append(event)
             self.flushTrackedEvents()
         }
     }
@@ -284,7 +283,7 @@ extension AnalyticsPublisher {
                 identify(identifyEvent)
                 return
             }
-            payload[AnalyticsPublisher.identifyMetaDataProperty] = identifyEvent.properties ?? [:]
+            payload[AnalyticsPublisher.metaDataProperty] = identifyEvent.properties ?? [:]
             if let company = identifyEvent.company {
                 payload[AnalyticsPublisher.identifyCompanyProperty] = company
             }
@@ -297,17 +296,15 @@ extension AnalyticsPublisher {
 
         /// Screen event
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
-            self.logger.info("SCREEN %{public}@", "\(String(describing: screenEvent.1.screenName))")
-            payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenName
+            self.logger.info("SCREEN %{public}@", "\(String(describing: screenEvent.1.screenTitle))")
+            payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenTitle
             socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
 
         /// Track event
         if let event = cachedEvent {
             clearCachedEvent()
-            self.eventsToFlush.append(
-                TrackedPayloadEvent(title: event.eventName,
-                                    meta: event.properties))
+            self.eventsToFlush.append(event)
             flushTrackedEvents()
         }
     }
@@ -332,13 +329,23 @@ extension AnalyticsPublisher {
                 if shouldCloseSocket { closeSocket() }
                 return
             }
-            let compyItems = self.eventsToFlush
-            self.eventsToFlush.removeAll()
-            self.eventsName.removeAll()
-            self.socketManager.publish(
-                EventNameConstants.EVENT,
-                payload: TrackedPayload(events: compyItems).toDictionary(),
-                shouldCloseSocket: shouldCloseSocket)
+
+            if let eventToSend = self.eventsToFlush.first {
+                eventsToFlush.removeFirst()
+                eventsName.remove(eventToSend.eventTitle)
+
+                var payload: [String: Any] = [:]
+                payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle ?? ""
+                payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
+
+                socketManager.publish(
+                    eventToSend.eventName,
+                    payload: payload,
+                    shouldCloseSocket: shouldCloseSocket
+                )
+
+                flushTrackedEvents()
+            }
         }
     }
 
@@ -431,8 +438,9 @@ private extension AnalyticsPublisher {
 private extension AnalyticsPublisher {
 
     // Static constants
-    static var identifyMetaDataProperty: String { return "metadata" }
+    static var metaDataProperty: String { return "metadata" }
     static var identifyCompanyProperty: String { return "company" }
 
     static var identifyScreenProperty: String { return "title" }
+    static var eventNameProperty = "event_name"
 }
