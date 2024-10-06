@@ -16,9 +16,6 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/realm/realm-swift",
-            from: "10.52.2"),
-        .package(
             url: "https://github.com/SimplyDanny/SwiftLintPlugins",
             from: "0.55.1"),
         .package(
@@ -31,7 +28,6 @@ let package = Package(
         .target(
             name: "UserPilot",
             dependencies: [
-                .product(name: "RealmSwift", package: "realm-swift"),
                 .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient"),
             ],
             plugins: [
