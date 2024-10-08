@@ -1,8 +1,12 @@
 //
-//  File.swift
-//  
+//  UPButtonView.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//
+//  [Brief Description]
+//  A custom UIButton subclass that provides enhanced functionality and styling
+//  capabilities based on provided configuration data.
 //
 
 import Foundation
@@ -34,8 +38,7 @@ internal class UPButtonView: UIButton {
 
     /// Configures initial properties for the button.
     private func initializeView() {
-        // Initial view setup can be placed here, if required
-        // e.g., setting the default style or state
+        translatesAutoresizingMaskIntoConstraints = false
         layer.masksToBounds = true
     }
 
@@ -74,7 +77,13 @@ internal class UPButtonView: UIButton {
             setTitle("", for: .normal)
             return
         }
-        setTitle(firstContent.text, for: .normal)
+
+        UIView.performWithoutAnimation {
+            for state in [UIControl.State.normal, .highlighted, .selected, .disabled] {
+               self.setTitle(firstContent.text, for: state)
+            }
+            layoutIfNeeded()
+        }
     }
 
     /// Applies styling attributes to the button based on the provided `ThemeData`.
@@ -86,6 +95,11 @@ internal class UPButtonView: UIButton {
         layer.cornerRadius = style.buttonBorderRadius
         layer.borderWidth = style.buttonBorderWidth
         layer.borderColor = style.buttonBorderColor.cgColor
+
+        let font = UIFont.matching(fontName: style.fontFamily,
+                                   fontWeight: [],
+                                   fontSize: CGFloat(ThemeHandler.DefaultValues.normalTextSize))
+        titleLabel?.font = font
     }
 
     /// - Parameter alignment: The `TextAlignment` that defines the button's text alignment.

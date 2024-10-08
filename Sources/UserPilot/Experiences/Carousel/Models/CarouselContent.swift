@@ -1,15 +1,38 @@
-//
-//  File.swift
-//  
+//  CarouselExperienceViewController.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//  Copyright © 2021 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  Represents the configuration and content of a carousel.
 //
 
 import Foundation
 import UIKit
 
+/**
+ This class encapsulates data related to a carousel, including its type, order,
+ steps, theme, and configuration settings.
+
+ - Properties:
+    - `type`: The type of the carousel, represented as a `CarouselType`.
+    - `order`: The display order of the carousel.
+    - `steps`: A list of `Step` objects that make up the carousel's content.
+    - `mobileTheme`: An optional `MobileTheme` that defines the visual style for the carousel.
+    - `configuration`: The `Configuration` settings that apply to the carousel.
+
+ - Parameters:
+    - `type`: The type of the carousel.
+    - `order`: The order in which the carousel should be displayed.
+    - `steps`: A list of steps in the carousel.
+    - `mobileTheme`: An optional theme for mobile representation.
+    - `configuration`: The configuration settings for the carousel.
+ */
+
 // MARK: - CarouselData
-internal struct CarouselData: Codable {
+
+internal struct CarouselContent: Codable {
     let type: CarouselType
     let order: Int
     let steps: [Step]
@@ -24,16 +47,19 @@ internal struct CarouselData: Codable {
 }
 
 // MARK: - Configuration
+
 internal struct Configuration: Codable {
     let targeting: Targeting
 }
 
 // MARK: - Targeting
+
 internal struct Targeting: Codable {
     let screens: [String]
 }
 
 // MARK: - Step
+
 internal struct Step: Codable {
     let id: Int
     let order: Int
@@ -49,11 +75,13 @@ internal struct Step: Codable {
 }
 
 // MARK: - Section
+
 internal struct Section: Codable {
     let lines: [Line]
 }
 
 // MARK: - Line
+
 internal struct Line: Codable {
     let type: LineType
     let attrs: Attributes?
@@ -65,6 +93,7 @@ internal struct Line: Codable {
 }
 
 // MARK: - Attributes
+
 internal struct Attributes: Codable {
     let textAlign: TextAlignmentType?
     let level: HeaderType?
@@ -78,6 +107,7 @@ internal struct Attributes: Codable {
 }
 
 // MARK: - Content
+
 internal struct Content: Codable {
     let text: String?
     let type: String
@@ -89,6 +119,7 @@ internal struct Content: Codable {
 }
 
 // MARK: - Mark
+
 internal struct Mark: Codable {
     let type: String?
     let attrs: MarkAttributes?
@@ -99,6 +130,7 @@ internal struct Mark: Codable {
 }
 
 // MARK: - MarkAttributes
+
 internal struct MarkAttributes: Codable {
     let fontSize: Int?
     let href: String?
@@ -111,6 +143,7 @@ internal struct MarkAttributes: Codable {
 }
 
 // MARK: - ButtonAction
+
 internal struct ButtonAction: Codable {
     let buttonAction: String?
     let deepLink: String?
@@ -122,12 +155,14 @@ internal struct ButtonAction: Codable {
 }
 
 // MARK: - CarouselType
+
 internal enum CarouselType: String, Codable {
     case carousel
     case slider
 }
 
 // MARK: - LineType
+
 internal enum LineType: String, Codable {
     case heading = "heading"
     case paragraph = "paragraph"
@@ -137,6 +172,7 @@ internal enum LineType: String, Codable {
 }
 
 // MARK: - HeaderType
+
 internal enum HeaderType: String, Codable {
     case headerOne = "h1"
     case headerTwo = "h2"
@@ -150,6 +186,7 @@ internal enum HeaderType: String, Codable {
 }
 
 // MARK: - TextAlignmentType
+
 internal enum TextAlignmentType: String, Codable {
     case center
     case right
@@ -173,43 +210,19 @@ internal enum TextAlignmentType: String, Codable {
 }
 
 // MARK: - String Extension for JSON Deserialization
+
 extension String {
     /// Converts a JSON string into a `CarouselData` object using `JSONDecoder`.
-    func toCarousel() -> CarouselData? {
+    func toCarousel() -> CarouselContent? {
         let decoder = JSONDecoder()
-        return try? decoder.decode(CarouselData.self, from: Data(self.utf8))
+        return try? decoder.decode(CarouselContent.self, from: Data(self.utf8))
     }
 
     /// Converts a JSON string into an array of `CarouselData` objects using `JSONDecoder`.
-    func toCarouselList() -> [CarouselData]? {
-        let decoder = JSONDecoder()
-        do {
-            let decodedData = try decoder.decode([CarouselData].self, from: Data(self.utf8))
-            return decodedData
-        } catch {
-            // Use a switch statement to handle different types of DecodingError
-            if let decodingError = error as? DecodingError {
-                switch decodingError {
-                case .dataCorrupted(let context):
-                    print("Data corrupted: \(context.debugDescription)")
-                case .keyNotFound(let key, let context):
-                    print("Key '\(key)' not found: \(context.debugDescription)")
-                case .typeMismatch(let type, let context):
-                    // Print the properties of the type mismatch error
-                    print("Type '\(type)' mismatch:")
-                    print("  Expected type: \(type)")
-                    print("  Contextual info: \(context.debugDescription)")
-                    print("  Coding path: \(context.codingPath)")
-                    print("  Debug description: \(context.debugDescription)")
-                case .valueNotFound(let value, let context):
-                    print("Value '\(value)' not found: \(context.debugDescription)")
-                @unknown default:
-                    print("Unknown decoding error: \(error)")
-                }
-            } else {
-                // If the error is not a DecodingError, print its description
-                print("Failed to decode JSON: \(error.localizedDescription)")
-            }
+    func toCarouselList() -> [CarouselContent]? {
+        if let carouselDataList: [CarouselContent] = self.toArray() {
+            return carouselDataList
+        } else {
             return nil
         }
     }

@@ -1,8 +1,12 @@
 //
-//  TrackedEvent.swift
+//  TrackedPayload.swift
+//  UserPilot SDK
 //
+//  Created by Motasem Hamed on 20/08/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
 //
-//  Created by Motasem Hamed on 04/09/2024.
+//  [Brief Description]
+//  The `TrackedPayload` struct is a patch and send events as one event.
 //
 
 import Foundation

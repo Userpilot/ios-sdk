@@ -29,7 +29,7 @@ internal struct DynamicCodingKeys: CodingKey {
 
 extension KeyedEncodingContainer where K == DynamicCodingKeys {
 
-    /// Encodes the given dictionary to primitive types permitted by the Appcues API, skipping invalid types.
+    /// Encodes the given dictionary to primitive types permitted by the Userpilot API, skipping invalid types.
     mutating func encodeSkippingInvalid(_ dict: [String: Any]?) throws {
         var encodingErrorKeys: [String] = []
 

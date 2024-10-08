@@ -19,6 +19,12 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Merriweather-Regular</string>
+		<string>Qwitcher-Grypen-Regular</string>
+		<string>Merriweather-Bold</string>
+	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
 </dict>

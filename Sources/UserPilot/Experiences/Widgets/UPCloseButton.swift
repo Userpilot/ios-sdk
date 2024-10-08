@@ -1,8 +1,13 @@
 //
 //  File.swift
 //
+//  UPCloseButton.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//
+//  [Brief Description]
+//  A custom close button that utilizes a system image for the close action.
 //
 
 import Foundation
@@ -11,13 +16,12 @@ import UIKit
 internal class UPCloseButton: UIButton {
 
     // MARK: - Initializers
-    /// Initializes the close button with the given frame.
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         initializeView()
     }
 
-    /// Initializes the close button from the storyboard or XIB file.
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         initializeView()
@@ -40,6 +44,7 @@ internal class UPCloseButton: UIButton {
     }
 
     // MARK: - Configuration Methods
+
     /**
      Configures the visibility and appearance of the close button based on the provided theme data.
      

@@ -1,8 +1,13 @@
 //
-//  File.swift
-//  
+//  UPTextView.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//
+//  [Brief Description]
+//  A custom UILabel subclass that supports attributed text with various styles
+//  and link handling. This label is designed to render dynamic content with
+//  configurable styles and responds to user interactions for link clicks.
 //
 
 import Foundation
@@ -10,16 +15,20 @@ import UIKit
 
 internal class UPTextView: UILabel {
 
-    // Listener for handling content-related actions such as link clicks.
+    // MARK: - Properties
+
+    /// Listener for handling content-related actions such as link clicks.
     private weak var experienceContentProtocol: ExperienceContentProtocol?
 
     // MARK: - Initializers
 
+    /// Initializes the label with a specified frame.
     override init(frame: CGRect) {
         super.init(frame: frame)
         initializeView()
     }
 
+    /// Initializes the label from a storyboard or XIB file.
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         initializeView()
@@ -27,8 +36,9 @@ internal class UPTextView: UILabel {
 
     /// Common initializer for setting up view properties.
     private func initializeView() {
-        numberOfLines = 0 // UILabel does not have a direct property for line numbers, but this allows multi-line.
-        isUserInteractionEnabled = true // Enable user interaction for link detection
+        translatesAutoresizingMaskIntoConstraints = false
+        numberOfLines = 0
+        isUserInteractionEnabled = true
         backgroundColor = .clear
     }
 
@@ -39,9 +49,9 @@ internal class UPTextView: UILabel {
      handling content-related actions.
      
      - Parameters:
-     - line: The `Line` object containing the text content and styling information.
-     - style: The `ThemeData` that provides styling attributes for the text.
-     - experienceContentListener: A listener for handling link clicks.
+       - line: The `Line` object containing the text content and styling information.
+       - style: The `ThemeData` that provides styling attributes for the text.
+       - experienceContentProtocol: A listener for handling link clicks.
      */
     func setupView(line: Line, style: ThemeData, experienceContentProtocol: ExperienceContentProtocol) {
         self.experienceContentProtocol = experienceContentProtocol
@@ -59,28 +69,13 @@ internal class UPTextView: UILabel {
                 // Apply header styles if the line is a heading
                 applyHeaderStyles(to: attributedString, line: line, style: style, range: NSRange(start..<end))
             } else {
-                // Retrieve text style mark or use a default one
-                let textStyleMark = content.marks?.first(where: {
-                    $0.type == "textStyle"
-                }) ?? ThemeHandler.DefaultValues.defaultTextStyleMark
-                applyTextStyle(to: attributedString, mark: textStyleMark, style: style, range: NSRange(start..<end))
+                applyTextStyle(to: attributedString, marks: content.marks ?? [],
+                               style: style, range: NSRange(start..<end))
             }
 
             // Apply additional marks (link, bold, italic)
-            content.marks?.forEach { mark in
-                switch mark.type ?? "" {
-                case "link":
-                    // Apply link style
-                    applyLinkStyle(to: attributedString, mark: mark, range: NSRange(start..<end))
-                case "bold":
-                    // Apply bold trait to existing font
-                    updateFontTrait(for: attributedString, mark: mark, trait: .traitBold, range: NSRange(start..<end))
-                case "italic":
-                    // Apply italic trait to existing font
-                    updateFontTrait(for: attributedString, mark: mark, trait: .traitItalic, range: NSRange(start..<end))
-                default:
-                    break
-                }
+            if let linkMark = content.marks?.first(where: { $0.type == ThemeHandler.StyleName.textLink }) {
+                applyLinkStyle(to: attributedString, mark: linkMark, range: NSRange(start..<end))
             }
         }
 
@@ -91,67 +86,27 @@ internal class UPTextView: UILabel {
 
     // MARK: - Private Helper Methods
 
-    /// Function to apply or update the font trait (bold/italic) for a specified range.
-    private func updateFontTrait(for attributedString: NSMutableAttributedString,
-                                 mark: Mark,
-                                 trait: UIFontDescriptor.SymbolicTraits,
-                                 range: NSRange) {
-        // Retrieve the current font in the specified range
-        let fontSize = CGFloat(mark.attrs?.fontSize ?? Int(ThemeHandler.DefaultValues.normalTextSize))
-
-        // Get the current font and set a new font with the specified size
-        let currentFont = attributedString
-            .attribute(.font, at: range.location, effectiveRange: nil) as? UIFont ?? UIFont.systemFont(ofSize: fontSize)
-
-        // Create a new font descriptor by combining the desired trait with the existing traits
-        var newDescriptor = currentFont.fontDescriptor
-        if let updatedDescriptor = newDescriptor.withSymbolicTraits(newDescriptor.symbolicTraits.union(trait)) {
-            newDescriptor = updatedDescriptor
-        }
-
-        // Create a new font using the updated descriptor
-        let updatedFont = UIFont(descriptor: newDescriptor, size: currentFont.pointSize)
-
-        // Apply the new font to the specified range
-        attributedString.addAttribute(.font, value: updatedFont, range: range)
-    }
-
-    /// Function to apply link style.
-    private func applyLinkStyle(to attributedString: NSMutableAttributedString, mark: Mark, range: NSRange) {
-        // Assuming `mark.attrs?.href` is the URL string.
-        if let link = mark.attrs?.href, let url = URL(string: link) {
-                // Apply the link attribute to the specified range
-                attributedString.addAttribute(.link, value: url, range: range)
-                attributedString.addAttribute(.underlineStyle,
-                                              value: NSUnderlineStyle.single.rawValue,
-                                              range: range)  // Optional underline
-                attributedString.addAttribute(.foregroundColor,
-                                              value: UIColor.blue,
-                                              range: range)  // Optional color
-                isUserInteractionEnabled = true  // Enable interaction
-                // Add a gesture recognizer to detect link taps
-                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleLabelTap(_:)))
-                addGestureRecognizer(tapGesture)
-            }
-    }
-
     /// Function to apply text style (e.g., font size, color) from a Mark to an attributed string.
     private func applyTextStyle(to attributedString: NSMutableAttributedString,
-                                mark: Mark,
+                                marks: [Mark],
                                 style: ThemeData,
                                 range: NSRange) {
-        // Set the font size based on the mark's attributes or use a default value
-        let fontSize = CGFloat(mark.attrs?.fontSize ?? Int(ThemeHandler.DefaultValues.normalTextSize))
+        // Retrieve text style mark or use a default one
+        let textStyleMark = marks.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
+        ?? ThemeHandler.DefaultValues.defaultTextStyleMark
+        let fontSize = CGFloat(textStyleMark.attrs?.fontSize ?? Int(ThemeHandler.DefaultValues.normalTextSize))
+        let textColor = textStyleMark.attrs?.color?.color ?? style.textColor
 
-        // Get the current font and set a new font with the specified size
-        let currentFont = attributedString
-            .attribute(.font, at: range.location, effectiveRange: nil) as? UIFont ?? UIFont.systemFont(ofSize: fontSize)
-        let updatedFont = currentFont.withSize(fontSize)
+        var traits = [UIFontDescriptor.SymbolicTraits]()
+        if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
+            traits.append(.traitBold)
+        }
+        if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
+            traits.append(.traitItalic)
+        }
+        let font = UIFont.matching(fontName: style.fontFamily, fontWeight: traits, fontSize: fontSize)
 
-        // Apply the new font to the specified range
-        attributedString.addAttribute(.font, value: updatedFont, range: range)
-
-        let textColor = mark.attrs?.color?.color ?? style.textColor
+        attributedString.addAttribute(.font, value: font, range: range)
         attributedString.addAttribute(.foregroundColor, value: textColor, range: range)
     }
 
@@ -162,8 +117,28 @@ internal class UPTextView: UILabel {
                                    range: NSRange) {
         let textColor = style.titleTextColor
         let headerFont = line.attrs?.level?.fontSize() ?? ThemeHandler.DefaultValues.headerTextSize
+        let font = UIFont.matching(fontName: style.fontFamily, fontWeight: [.traitBold], fontSize: CGFloat(headerFont))
+
         attributedString.addAttribute(.foregroundColor, value: textColor, range: range)
-        attributedString.addAttribute(.font, value: headerFont, range: range)
+        attributedString.addAttribute(.font, value: font, range: range)
+    }
+
+    /// Function to apply link style.
+    private func applyLinkStyle(to attributedString: NSMutableAttributedString, mark: Mark, range: NSRange) {
+        if let link = mark.attrs?.href, let url = URL(string: link) {
+            attributedString.addAttribute(.link, value: url, range: range)
+            attributedString.addAttribute(.underlineStyle,
+                                          value: NSUnderlineStyle.single.rawValue,
+                                          range: range)
+            attributedString.addAttribute(.foregroundColor,
+                                          value: UIColor.blue,
+                                          range: range)
+            isUserInteractionEnabled = true
+
+            // Add tap gesture for the link
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleLabelTap(_:)))
+            addGestureRecognizer(tapGesture)
+        }
     }
 
     // Method to handle link tap
@@ -187,7 +162,6 @@ internal class UPTextView: UILabel {
 
         // Check if the tapped index is within a link's range
         if index < text.length, let link = text.attribute(.link, at: index, effectiveRange: nil) as? URL {
-            // Open the link
             UIApplication.shared.open(link)
         }
     }

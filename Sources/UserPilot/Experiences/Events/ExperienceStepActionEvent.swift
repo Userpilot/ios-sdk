@@ -1,8 +1,12 @@
 //
-//  File.swift
-//  
+//  CarouselExperienceViewController.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  This class is responsible for defining experience `step` events.
 //
 
 import Foundation
@@ -14,11 +18,11 @@ import Foundation
  - Parameters:
    - mobileContentId: The ID of the mobile content associated with the event.
    - appToken: The client SDK token.
-   - userId: The ID of the user associated with the event.
-   - stepId: The ID of the step associated with the event.
+   - userID: The ID of the user associated with the event.
+   - stepID: The ID of the step associated with the event.
  */
 internal class ExperienceStepActionEvent: ExperienceActionEvent {
-    let stepId: String
+    let stepID: String
 
     override var eventName: String {
         return "mobile_content_step"
@@ -29,13 +33,13 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, user ID, and step ID.
     override func toMap() -> [String: Any] {
         var map = super.toMap()
-        map["stepId"] = stepId
+        map["stepId"] = stepID
         return map
     }
 
-    init(mobileContentId: Int, appToken: String, userId: String, stepId: String) {
-        self.stepId = stepId
-        super.init(mobileContentId: mobileContentId, appToken: appToken, userId: userId)
+    init(mobileContentId: Int, appToken: String, userID: String, stepID: String) {
+        self.stepID = stepID
+        super.init(mobileContentId: mobileContentId, appToken: appToken, userID: userID)
     }
 }
 

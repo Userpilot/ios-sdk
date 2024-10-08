@@ -1,31 +1,32 @@
 //
-//  File.swift
-//  
+//  UPIconTextView.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//
+//  [Brief Description]
+//  A custom view that contains an icon (`UPImageView`) and a text label (`UPTextView`)
+//  arranged horizontally within a `UIStackView`.
 //
 
 import Foundation
 import UIKit
 
-/// A custom view that contains an icon (`UIImageView`) and a text label (`UPTextView`) arranged horizontally.
 internal class UPIconTextView: UIStackView {
 
     // MARK: - Constants
 
+    private let textLeftMargin: CGFloat = 8
+
     private struct Constants {
         static let iconWidth: CGFloat = 38
         static let iconHeight: CGFloat = 38
-        static let textLeftMargin: CGFloat = 8
     }
-
     // MARK: - Subviews
 
     /// Icon component of the view.
     private let imageView: UPImageView = {
         let imageView = UPImageView(frame: .zero)
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentMode = .scaleAspectFit
         NSLayoutConstraint.activate([
             imageView.widthAnchor.constraint(equalToConstant: Constants.iconWidth),
             imageView.heightAnchor.constraint(equalToConstant: Constants.iconHeight)
@@ -36,7 +37,6 @@ internal class UPIconTextView: UIStackView {
     /// Text component of the view.
     private let textView: UPTextView = {
         let textView = UPTextView()
-        textView.translatesAutoresizingMaskIntoConstraints = false
         return textView
     }()
 
@@ -56,7 +56,7 @@ internal class UPIconTextView: UIStackView {
     private func setupViewProperties() {
         axis = .horizontal
         alignment = .center
-        spacing = Constants.textLeftMargin
+        spacing = textLeftMargin
 
         // Add the subviews to the stack view
         addArrangedSubview(imageView)
@@ -65,12 +65,14 @@ internal class UPIconTextView: UIStackView {
 
     // MARK: - Configuration
 
-    /// Sets up the views in this layout using the provided `Line` data, style, and interaction listener.
-    ///
-    /// - Parameters:
-    ///   - line: The data representing the content and styling for the icon and text.
-    ///   - style: The `ThemeData` instance that defines the style attributes for the text and icon.
-    ///   - experienceContentListener: The listener to handle interactions and events with this content.
+    /**
+     Sets up the views in this layout using the provided `Line` data, style, and interaction listener.
+     
+     - Parameters:
+        - line: The data representing the content and styling for the icon and text.
+        - style: The `ThemeData` instance that defines the style attributes for the text and icon.
+        - experienceContentListener: The listener to handle interactions and events with this content.
+     */
     func setupView(line: Line,
                    style: ThemeData,
                    experienceContentProtocol: ExperienceContentProtocol,

@@ -1,15 +1,19 @@
-//
-//  File.swift
-//  
+//  CarouselExperienceViewController.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  Represents the configuration and content for experiences base theme.
 //
 
 import Foundation
 import UIKit
 
 // MARK: - ThemeResponse
-internal struct ThemeResponse: Codable {
+
+internal struct ThemeContent: Codable {
     let mobileTheme: MobileTheme?
 
     private enum CodingKeys: String, CodingKey {
@@ -18,6 +22,7 @@ internal struct ThemeResponse: Codable {
 }
 
 // MARK: - MobileTheme
+
 internal struct MobileTheme: Codable {
     let id: Int?
     let themeData: ThemeData?
@@ -29,10 +34,15 @@ internal struct MobileTheme: Codable {
 }
 
 // MARK: - ThemeData
+
 internal struct ThemeData: Codable {
     let carousel: CarouselTheme?
 
     // General
+    var fontFamily: String? {
+        carousel?.general?.fontFamily
+    }
+
     var contentAlignment: ContentAlignmentType {
         carousel?.general?.contentAlignment ?? .top
     }
@@ -111,6 +121,7 @@ internal struct ThemeData: Codable {
 }
 
 // MARK: - CarouselTheme
+
 internal struct CarouselTheme: Codable {
     let button: ButtonStyle?
     let colors: ColorsStyle?
@@ -125,6 +136,7 @@ internal struct CarouselTheme: Codable {
 }
 
 // MARK: - ButtonStyle
+
 internal struct ButtonStyle: Codable {
     let backgroundColor: String?
     let labelColor: String?
@@ -142,6 +154,7 @@ internal struct ButtonStyle: Codable {
 }
 
 // MARK: - ColorsStyle
+
 internal struct ColorsStyle: Codable {
     let backgroundColor: String?
     let textColor: String?
@@ -155,6 +168,7 @@ internal struct ColorsStyle: Codable {
 }
 
 // MARK: - DismissContentStyle
+
 internal struct DismissContentStyle: Codable {
     let color: String?
     let colorType: String?
@@ -167,6 +181,7 @@ internal struct DismissContentStyle: Codable {
 }
 
 // MARK: - GeneralStyle
+
 internal struct GeneralStyle: Codable {
     let contentAlignment: ContentAlignmentType?
     let fontFamily: String?
@@ -178,6 +193,7 @@ internal struct GeneralStyle: Codable {
 }
 
 // MARK: - ProgressStyle
+
 internal struct ProgressStyle: Codable {
     let color: String?
     let colorType: String?
@@ -190,15 +206,20 @@ internal struct ProgressStyle: Codable {
 }
 
 // MARK: - ContentAlignmentType
+
 internal enum ContentAlignmentType: String, Codable {
     case center
     case top
 }
 
 // MARK: - Extension to deserialize a String into a ThemeResponse object
+
 extension String {
-    func toMobileTheme() -> ThemeResponse? {
-        let decoder = JSONDecoder()
-        return try? decoder.decode(ThemeResponse.self, from: Data(self.utf8))
+    func toMobileTheme() -> ThemeContent? {
+        if let themeContent: ThemeContent = self.toObject() {
+            return themeContent
+        }else {
+            return nil
+        }
     }
 }

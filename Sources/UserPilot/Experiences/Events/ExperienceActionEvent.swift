@@ -1,19 +1,23 @@
 //
-//  File.swift
-//  
+//  CarouselExperienceViewController.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  This class is responsible for defining experience events.
 //
 
 import Foundation
 
-// MARK: - SDKEventInterface
+// MARK: - SDKEvent
 /**
  Protocol defining the structure for SDK events.
  */
 internal protocol SDKEvent {
-    var eventName: String { get } // The name of the event.
-    var eventPayload: [String: Any] { get } // The payload of the event represented as a dictionary.
+    var eventName: String { get }
+    var eventPayload: [String: Any] { get }
 }
 
 // MARK: - ExperienceActionEvent
@@ -23,12 +27,12 @@ internal protocol SDKEvent {
  - Parameters:
    - mobileContentId: The ID of the mobile content associated with the event.
    - appToken: The client SDK token.
-   - userId: The ID of the user associated with the event.
+   - userID: The ID of the user associated with the event.
  */
 internal class ExperienceActionEvent: SDKEvent {
     let mobileContentId: Int
     let appToken: String
-    let userId: String
+    let userID: String
 
     /// The action type of the event.
     var act: String {
@@ -53,14 +57,14 @@ internal class ExperienceActionEvent: SDKEvent {
             "act": act,
             "mobile_content_id": mobileContentId,
             "app_token": appToken,
-            "userid": userId
+            "userid": userID
         ]
     }
 
-    init(mobileContentId: Int, appToken: String, userId: String) {
+    init(mobileContentId: Int, appToken: String, userID: String) {
         self.mobileContentId = mobileContentId
         self.appToken = appToken
-        self.userId = userId
+        self.userID = userID
     }
 }
 

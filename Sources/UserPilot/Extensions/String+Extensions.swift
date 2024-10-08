@@ -3,7 +3,7 @@
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 27/08/2024.
-//  Copyright © 2021 UserPilot. All rights reserved.
+//  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
 //  `String+Data` contains extensions with helper methods for the `String` class.
@@ -28,6 +28,8 @@ internal extension String {
     }
 
 }
+
+// MARK: - Colors
 
 internal extension String {
 
@@ -144,5 +146,81 @@ internal extension String {
             radix: 16) ?? 0
         let blueValue = Int(cleanHex.suffix(2), radix: 16) ?? 0
         return "rgb(\(redValue), \(greenValue), \(blueValue))"
+    }
+}
+
+// MARK: - Json converter
+
+internal extension String {
+    /**
+    Converts a JSON string into an array of a specified type using `JSONDecoder`.
+         
+    - Returns: An optional array of the specified type if decoding is successful, or `nil` if decoding fails.
+    - Parameter type: The type to decode into, which must conform to `Decodable`.
+    */
+    func toArray<T: Decodable>() -> [T]? {
+        let decoder = JSONDecoder()
+        do {
+            let decodedData = try decoder.decode([T].self, from: Data(self.utf8))
+            return decodedData
+        } catch {
+            // Use a switch statement to handle different types of DecodingError
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .dataCorrupted(let context):
+                    print("Data corrupted: \(context.debugDescription)")
+                case .keyNotFound(let key, let context):
+                    print("Key '\(key)' not found: \(context.debugDescription)")
+                case .typeMismatch(let type, let context):
+                    print("Type '\(type)' mismatch:")
+                    print("  Expected type: \(type)")
+                    print("  Contextual info: \(context.debugDescription)")
+                    print("  Coding path: \(context.codingPath)")
+                case .valueNotFound(let value, let context):
+                    print("Value '\(value)' not found: \(context.debugDescription)")
+                @unknown default:
+                    print("Unknown decoding error: \(error)")
+                }
+            } else {
+                print("Failed to decode JSON: \(error.localizedDescription)")
+            }
+            return nil
+        }
+    }
+
+    /**
+    Converts a JSON string into a specified type using `JSONDecoder`.
+
+    - Returns: An optional instance of the specified type if decoding is successful, or `nil` if decoding fails.
+    - Parameter type: The type to decode into, which must conform to `Decodable`.
+    */
+    func toObject<T: Decodable>() -> T? {
+        let decoder = JSONDecoder()
+        do {
+            let decodedData = try decoder.decode(T.self, from: Data(self.utf8))
+            return decodedData
+        } catch {
+            // Use a switch statement to handle different types of DecodingError
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .dataCorrupted(let context):
+                    print("Data corrupted: \(context.debugDescription)")
+                case .keyNotFound(let key, let context):
+                    print("Key '\(key)' not found: \(context.debugDescription)")
+                case .typeMismatch(let type, let context):
+                    print("Type '\(type)' mismatch:")
+                    print("  Expected type: \(type)")
+                    print("  Contextual info: \(context.debugDescription)")
+                    print("  Coding path: \(context.codingPath)")
+                case .valueNotFound(let value, let context):
+                    print("Value '\(value)' not found: \(context.debugDescription)")
+                @unknown default:
+                    print("Unknown decoding error: \(error)")
+                }
+            } else {
+                print("Failed to decode JSON: \(error.localizedDescription)")
+            }
+            return nil
+        }
     }
 }

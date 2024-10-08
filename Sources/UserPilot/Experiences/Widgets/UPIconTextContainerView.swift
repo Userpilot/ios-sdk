@@ -1,14 +1,17 @@
 //
-//  File.swift
-//  
+//  UPIconTextContainerView.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//
+//  [Brief Description]
+//  A custom container view that dynamically creates and manages multiple `UPIconTextView` components,
+//  arranged vertically within a `UIStackView`.
 //
 
 import Foundation
 import UIKit
 
-/// A container view that dynamically creates and manages multiple `UPIconTextView` components based on provided lines.
 internal class UPIconTextContainerView: UIStackView {
 
     // MARK: - Initialization
@@ -27,19 +30,21 @@ internal class UPIconTextContainerView: UIStackView {
     private func setupViewProperties() {
         axis = .vertical
         alignment = .fill
-        spacing = 4.0 // Default spacing between elements.
+        spacing = 4
         distribution = .fillProportionally
     }
 
     // MARK: - Configuration
 
-    /// Sets up the container view by dynamically creating and adding `UPIconTextView` components
-    ///  based on the provided lines.
-    ///
-    /// - Parameters:
-    ///   - lines: A list of `Line` objects representing the content to be displayed.
-    ///   - style: The theme data used to style each `UPIconTextView` child in the container.
-    ///   - experienceContentListener: An event listener to handle interactions with each `UPIconTextView`.
+    /**
+     Sets up the container view by dynamically creating and adding `UPIconTextView` components
+     based on the provided lines.
+     
+     - Parameters:
+        - lines: A list of `Line` objects representing the content to be displayed.
+        - style: The theme data used to style each `UPIconTextView` child in the container.
+        - experienceContentListener: An event listener to handle interactions with each `UPIconTextView`.
+     */
     func setupView(lines: [Line],
                    style: ThemeData,
                    experienceContentProtocol: ExperienceContentProtocol,
@@ -48,22 +53,21 @@ internal class UPIconTextContainerView: UIStackView {
         arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         // Iterate through each line and add corresponding `UPIconTextView` components to the container.
-        for (index, line) in lines.enumerated() {
+        lines.forEach { line in
             // Create and set up a new `UPIconTextView` for the current line.
             let iconText = UPIconTextView()
-            iconText.backgroundColor = UIColor.random()
             iconText.setupView(line: line,
                                style: style,
                                experienceContentProtocol: experienceContentProtocol,
                                imageLoader: imageLoader)
             addArrangedSubview(iconText)
 
-            // Add a spacer view between `UPIconTextView` components if this is not the last line.
-            if index < lines.count - 1 {
-                let spacer = UPSpaceView()
-                spacer.setHeight(10) // Set height for spacing between views.
-                addArrangedSubview(spacer)
-            }
+//            // Add a spacer view between `UPIconTextView` components if this is not the last line.
+//            if index < lines.count - 1 {
+//                let spacer = UPSpaceView()
+//                spacer.setHeight(10)
+//                addArrangedSubview(spacer)
+//            }
         }
     }
 }

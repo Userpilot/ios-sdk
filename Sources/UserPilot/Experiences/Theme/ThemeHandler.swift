@@ -1,17 +1,42 @@
 //
-//  File.swift
-//  
+//  ThemeHandler.swift
+//  UserPilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
+//  Created by Motasem Hamed on 18/08/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  This class and protocol define how themes are managed within the application.
+//  `ThemeHandling` provides an interface for saving, retrieving, and merging theme data.
+//  `ThemeHandler` implements the protocol, handling theme caching and merging logic.
 //
 
 import Foundation
 
+// MARK: - ThemeHandling Protocol
+
 internal protocol ThemeHandling: AnyObject {
-    func saveTheme(_ themeResponse: ThemeResponse)
+
+    /// Saves the provided theme data.
+    /// - Parameter themeResponse: The response containing the theme data to be saved.
+    func saveTheme(_ themeResponse: ThemeContent)
+
+    /// Retrieves theme data for the specified theme ID.
+    /// - Parameter themeId: The ID of the theme to retrieve.
+    /// - Returns: The theme data if found, otherwise `nil`.
     func getThemeById(_ themeId: Int) -> ThemeData?
+
+    /// Checks if the specified theme ID is already cached.
+    /// - Parameter themeId: The ID of the theme to check.
+    /// - Returns: `true` if the theme ID is cached, `false` otherwise.
     func containsTheme(_ themeId: Int) -> Bool
 
+    /// Merges multiple themes into a unified theme.
+    /// - Parameters:
+    ///   - baseTheme: The base theme data.
+    ///   - globalTheme: The global theme data.
+    ///   - stepTheme: The step-specific theme data.
+    /// - Returns: A unified theme that combines all provided themes.
     func mergeThemes(
         _ baseTheme: ThemeData?,
         _ globalTheme: ThemeData?,
@@ -19,15 +44,19 @@ internal protocol ThemeHandling: AnyObject {
     ) -> ThemeData
 }
 
+// MARK: - ThemeHandler Class
+
 internal class ThemeHandler: ThemeHandling {
 
-    /// Object that defines default values for various text styles and attributes used in themes.
+    // MARK: - Nested Types
+
+    /// Default values for various text styles and attributes.
     struct DefaultValues {
         static let headerTextSize = 16
         static let normalTextSize = 14
         static let blackColor = "#000000"
 
-        /// Returns the default text style mark with predefined attributes.
+        /// Default text style mark with predefined attributes.
         static var defaultTextStyleMark: Mark {
             return Mark(
                 type: StyleName.textStyle,
@@ -40,7 +69,7 @@ internal class ThemeHandler: ThemeHandling {
         }
     }
 
-    /// Object that defines various style names used for text formatting in the themes.
+    /// Style names used for text formatting in themes.
     struct StyleName {
         static let textStyle = "textStyle"
         static let textLink = "link"
@@ -48,40 +77,45 @@ internal class ThemeHandler: ThemeHandling {
         static let textItalic = "italic"
     }
 
+    /// Additional style values.
     struct StyleValues {
         static let manual = "manual"
         static let borderRadius = 8
     }
 
-    // Stores theme data mapped by their IDs.
+    // MARK: - Properties
+
+    /// Cached theme data mapped by their IDs.
     private var themes: [Int: ThemeData] = [:]
 
+    // MARK: - ThemeHandling Implementation
+
     /**
-     * Saves the given theme data into the `themes` map using the theme ID as the key.
-     *
-     * - Parameter themeResponse: The response containing the theme data to be saved.
+     Saves the given theme data into the `themes` map using the theme ID as the key.
+
+     - Parameter themeResponse: The response containing the theme data to be saved.
      */
-    func saveTheme(_ themeResponse: ThemeResponse) {
+    func saveTheme(_ themeResponse: ThemeContent) {
         if let id = themeResponse.mobileTheme?.id {
             themes[id] = themeResponse.mobileTheme?.themeData
         }
     }
 
     /**
-     * Retrieves the theme data associated with the specified theme ID.
-     *
-     * - Parameter themeId: The ID of the theme to retrieve.
-     * - Returns: The theme data if found, or `nil` if no theme with the given ID is cached.
+     Retrieves the theme data associated with the specified theme ID.
+
+     - Parameter themeId: The ID of the theme to retrieve.
+     - Returns: The theme data if found, or `nil` if no theme with the given ID is cached.
      */
     func getThemeById(_ themeId: Int) -> ThemeData? {
         return themes[themeId]
     }
 
     /**
-     * Checks if the provided set of theme IDs is fully contained within the cached themes.
-     *
-     * - Parameter themeId: The set of theme IDs to check.
-     * - Returns: `true` if the theme ID is cached, `false` otherwise.
+     Checks if the provided set of theme IDs is fully contained within the cached themes.
+
+     - Parameter themeId: The set of theme IDs to check.
+     - Returns: `true` if the theme ID is cached, `false` otherwise.
      */
     func containsTheme(_ themeId: Int) -> Bool {
         return themes.keys.contains(themeId)

@@ -3,7 +3,7 @@
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2021 UserPilot. All rights reserved.
+//  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
 //  `NotificationCenter+Data` contains extensions with helper methods for the `NotificationCenter`

@@ -1,8 +1,12 @@
 //
-//  File.swift
-//  
+//  ThemeContentEvent.swift
+//  UserPilot SDK
 //
-//  Created by Motasem Hamed on 01/10/2024.
+//  Created by Motasem Hamed on 29/09/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  Protocol to handle content-related actions, such as opening links.
 //
 
 import Foundation

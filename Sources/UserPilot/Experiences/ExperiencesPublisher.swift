@@ -11,7 +11,7 @@ import SwiftPhoenixClient
 
 internal protocol ExperiencesPublishing: AnyObject {
     func start()
-    func getActiveCarousel() -> CarouselData?
+    func getActiveCarousel() -> CarouselContent?
     func sendSocketRequest(_ sdkEvent: SDKEvent)
 }
 
@@ -36,7 +36,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     // Properties
     private var appScreen: String = ""
     private var carouselScreen: String = ""
-    private var carousels: [CarouselData] = []
+    private var carousels: [CarouselContent] = []
 
     init(container: DIContainer) {
         self.container = container
@@ -52,7 +52,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         socketManager.registerCallback(self)
     }
 
-    func getActiveCarousel() -> CarouselData? {
+    func getActiveCarousel() -> CarouselContent? {
         return carousels.first
     }
 
@@ -86,7 +86,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         let carouselExperienceViewController = CarouselExperienceViewController(
             carouselExperienceViewModel: carouselExperienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen
-        if let topViewController = UIApplication.shared.topViewController() {
+        if let topViewController = UIApplication.shared.topViewController(),
+           !topViewController.isKind(of: CarouselExperienceViewController.self) {
             topViewController.present(carouselExperienceViewController, animated: true)
         }
     }
@@ -114,7 +115,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func sendSocketRequest(_ sdkEvent: SDKEvent) {
         // Implementation to publish socket event.
-        socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
+        // socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
     }
 
     /**
@@ -142,16 +143,16 @@ extension ExperiencesPublisher: SocketSubscription {
      */
     func onSocketEventSent(_ eventName: String, _ message: Message, _ eventSent: Bool) {
         // Temporarily using mock data for demonstration.
-//        if let carouselData = MockManager.carouselData.toCarouselList() {
-//            carousels.append(contentsOf: carouselData)
-//        }
-//
-//        if let baseTheme = MockManager.BaseTheme.toMobileTheme() {
-//            themeHandler.saveTheme(baseTheme)
-//        }
-//
-//        performOn(.main) { [weak self] in
-//            self?.openCarouselScreen()
-//        }
+        if let carouselData = MockManager.carouselData.toCarouselList() {
+            carousels.append(contentsOf: carouselData)
+        }
+
+        if let baseTheme = MockManager.BaseTheme.toMobileTheme() {
+            themeHandler.saveTheme(baseTheme)
+        }
+
+        performOn(.main) { [weak self] in
+            self?.openCarouselScreen()
+        }
     }
 }

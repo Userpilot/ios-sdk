@@ -1,7 +1,17 @@
+//
+//  Constants.swift
+//  UserPilot SDK
+//
+//  Created by Motasem Hamed on 18/08/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+// [Brief Description]
+// A utility class that ensures a function is only called after a specified delay has passed
+// since the last call. Useful for managing repetitive actions like user input or API requests.
+//
+
 import Foundation
 
-/// A utility class that ensures a function is only called after a specified delay has passed
-/// since the last call. Useful for managing repetitive actions like user input or API requests.
 internal class Debouncer {
 
     // MARK: - Properties

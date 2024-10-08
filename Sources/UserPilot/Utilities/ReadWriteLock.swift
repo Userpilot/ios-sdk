@@ -3,7 +3,7 @@
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 19/08/2024.
-//  Copyright © 2021 UserPilot. All rights reserved.
+//  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
 //  A thread-safe read-write lock implementation that allows concurrent reads and exclusive writes.

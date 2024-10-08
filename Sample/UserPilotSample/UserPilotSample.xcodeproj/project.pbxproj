@@ -21,7 +21,10 @@
 		ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */; };
 		ABACA8622C96E0E7006C9B77 /* AddPropertyDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABACA8612C96E0E7006C9B77 /* AddPropertyDialogViewController.xib */; };
 		ABACA8652C96E3F5006C9B77 /* DialogManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA8642C96E3F5006C9B77 /* DialogManager.swift */; };
+		ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */; };
 		ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */; };
+		ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */; };
+		ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */; };
 		ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */; };
 		ABCDBF442CAEABCE0083DF1D /* DeepLinkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABCDBF432CAEABCE0083DF1D /* DeepLinkViewController.xib */; };
 		ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */; };
@@ -31,6 +34,7 @@
 		ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */; };
 		ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F682C985E2000004D1C /* CustomEventViewController.swift */; };
 		ABED3F6B2C985E2A00004D1C /* CustomEventViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABED3F6A2C985E2A00004D1C /* CustomEventViewController.xib */; };
+		ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */; };
 		ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C7B2C73688000013F18 /* MainViewController.swift */; };
 		ABF38C7E2C73688900013F18 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C7D2C73688900013F18 /* MainViewController.xib */; };
 		ABF38C812C73719300013F18 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C802C73719300013F18 /* Content.swift */; };
@@ -67,7 +71,10 @@
 		ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPropertyDialogViewController.swift; sourceTree = "<group>"; };
 		ABACA8612C96E0E7006C9B77 /* AddPropertyDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = AddPropertyDialogViewController.xib; sourceTree = "<group>"; };
 		ABACA8642C96E3F5006C9B77 /* DialogManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogManager.swift; sourceTree = "<group>"; };
+		ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-BoldItalic.ttf"; sourceTree = "<group>"; };
 		ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPilotManager.swift; sourceTree = "<group>"; };
+		ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Regular.ttf"; sourceTree = "<group>"; };
+		ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwitcher-Grypen-Regular.ttf"; sourceTree = "<group>"; };
 		ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkViewController.swift; sourceTree = "<group>"; };
 		ABCDBF432CAEABCE0083DF1D /* DeepLinkViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = DeepLinkViewController.xib; sourceTree = "<group>"; };
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
@@ -77,6 +84,7 @@
 		ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+TableView.swift"; sourceTree = "<group>"; };
 		ABED3F682C985E2000004D1C /* CustomEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomEventViewController.swift; sourceTree = "<group>"; };
 		ABED3F6A2C985E2A00004D1C /* CustomEventViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = CustomEventViewController.xib; sourceTree = "<group>"; };
+		ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Bold.ttf"; sourceTree = "<group>"; };
 		ABF38C7B2C73688000013F18 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		ABF38C7D2C73688900013F18 /* MainViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainViewController.xib; sourceTree = "<group>"; };
 		ABF38C802C73719300013F18 /* Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Content.swift; sourceTree = "<group>"; };
@@ -237,6 +245,25 @@
 			path = UserPilot;
 			sourceTree = "<group>";
 		};
+		ABC0B5132CB3CBB200139174 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */,
+				ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */,
+				ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */,
+				ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		ABC0B5142CB3CBB200139174 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				ABC0B5132CB3CBB200139174 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		ABCDBF3E2CAEAB250083DF1D /* DeepLink */ = {
 			isa = PBXGroup;
 			children = (
@@ -354,6 +381,7 @@
 		C5C897B72C5CFFFA0083928E /* UserPilotSample */ = {
 			isa = PBXGroup;
 			children = (
+				ABC0B5142CB3CBB200139174 /* Resources */,
 				ABACA85E2C96E0C2006C9B77 /* Dialogs */,
 				AB6DBD492C68DA370009BB11 /* Extensions */,
 				AB6DBD462C68D9350009BB11 /* CustomViews */,
@@ -441,9 +469,13 @@
 				ABED3F6B2C985E2A00004D1C /* CustomEventViewController.xib in Resources */,
 				C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */,
 				ABFB5FDA2C916E590054E142 /* EventsViewController.xib in Resources */,
+				ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */,
 				ABF38C7E2C73688900013F18 /* MainViewController.xib in Resources */,
+				ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */,
+				ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */,
 				ABACA8622C96E0E7006C9B77 /* AddPropertyDialogViewController.xib in Resources */,
 				C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */,
+				ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */,
 				ABACA85D2C96D5B7006C9B77 /* PropertyView.xib in Resources */,
 				ABF38C892C73889A00013F18 /* ScreenOneViewController.xib in Resources */,
 			);

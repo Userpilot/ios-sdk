@@ -1,14 +1,17 @@
 //
-//  File.swift
-//  
+//  ThemeContentEvent.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  This class responsible for defining mock responses for `carouselData` and `BaseTheme`.
 //
 
 import Foundation
 
 // swiftlint:disable all
-
 internal class MockManager {
 
     static var carouselData: String {
@@ -329,7 +332,7 @@ internal class MockManager {
                                             },
                                             "content":[
                                                {
-                                                  "text":"Start Exploring [apps function]",
+                                                  "text":"Start Exploring [apps function] Start Exploring [apps function] Start Exploring [apps function] Start Exploring [apps function] Start Exploring [apps function] Start Exploring [apps function] Start Exploring [apps function] Start Exploring [apps function]",
                                                   "type":"text",
                                                   "marks":[
                                                      {
@@ -404,7 +407,7 @@ internal class MockManager {
                                    "general":{
                                       "content_alignment":"top",
                                       "layout":"image_title_text",
-                                      "font_family":"Roboto"
+                                      "font_family":"Merriweather"
                                    },
                                    "progress":{
                                       "color":"#000000",
