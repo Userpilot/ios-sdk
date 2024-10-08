@@ -31,11 +31,6 @@ public extension UserPilot {
         /// default customer properties
         var additionalAutoProperties: [String: Any] = [:]
 
-        /// anonymous id generator
-        var anonymousIDFactory: () -> String = {
-            UIDevice.identifier
-        }
-
         /// Create an UserPilot SDK configuration
         /// - Parameter accountID: UserPilot Account ID - a string containing an integer,
         ///  copied from the Account settings page in Studio.

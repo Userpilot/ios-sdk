@@ -37,9 +37,9 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
         return map
     }
 
-    init(mobileContentId: Int, appToken: String, userID: String, stepID: String) {
+    init(mobileContentID: Int, appToken: String, userID: String, stepID: String) {
         self.stepID = stepID
-        super.init(mobileContentId: mobileContentId, appToken: appToken, userID: userID)
+        super.init(mobileContentID: mobileContentID, appToken: appToken, userID: userID)
     }
 }
 

@@ -30,7 +30,7 @@ internal protocol SDKEvent {
    - userID: The ID of the user associated with the event.
  */
 internal class ExperienceActionEvent: SDKEvent {
-    let mobileContentId: Int
+    let mobileContentID: Int
     let appToken: String
     let userID: String
 
@@ -55,14 +55,14 @@ internal class ExperienceActionEvent: SDKEvent {
     func toMap() -> [String: Any] {
         return [
             "act": act,
-            "mobile_content_id": mobileContentId,
+            "mobile_content_id": mobileContentID,
             "app_token": appToken,
             "userid": userID
         ]
     }
 
-    init(mobileContentId: Int, appToken: String, userID: String) {
-        self.mobileContentId = mobileContentId
+    init(mobileContentID: Int, appToken: String, userID: String) {
+        self.mobileContentID = mobileContentID
         self.appToken = appToken
         self.userID = userID
     }

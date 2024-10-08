@@ -81,14 +81,14 @@ internal class CarouselExperienceViewModel {
      */
     private func onExperienceOpened() {
         let eventStepCompleted = ExperienceStepSeenEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
         experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceSeenEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID)
         experiencesPublisher.sendSocketRequest(eventStepSeen)
@@ -99,14 +99,14 @@ internal class CarouselExperienceViewModel {
      */
     func onExperienceCompleted() {
         let eventStepCompleted = ExperienceStepCompletedEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
         experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceCompletedEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID)
         experiencesPublisher.sendSocketRequest(eventStepSeen)
@@ -122,14 +122,14 @@ internal class CarouselExperienceViewModel {
         lastStep = step
 
         let eventStepCompleted = ExperienceStepCompletedEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
         experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceStepSeenEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
@@ -143,14 +143,14 @@ internal class CarouselExperienceViewModel {
      */
     func onDismissStep(step: Int) {
         let eventStepDismissed = ExperienceStepDismissedEvent(
-            mobileContentId: 4,
+            mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
         experiencesPublisher.sendSocketRequest(eventStepDismissed)
 
         let eventCarouselDismissed = ExperienceDismissedEvent(
-            mobileContentId: 0,
+            mobileContentID: 0,
             appToken: config.token,
             userID: storage.userID)
         experiencesPublisher.sendSocketRequest(eventCarouselDismissed)

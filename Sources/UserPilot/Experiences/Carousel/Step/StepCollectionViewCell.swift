@@ -134,12 +134,12 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         [theScrollView, contentContainerView, stackView].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
-        
+
         // Add the scroll view and its content view to the cell's content view
         contentView.addSubview(theScrollView)
         theScrollView.addSubview(contentContainerView)
         contentContainerView.addSubview(stackView)
-        
+
         // Define layout guides
         let safeAreaLayoutGuide = contentView.safeAreaLayoutGuide
         let contentLayoutGuide = theScrollView.contentLayoutGuide

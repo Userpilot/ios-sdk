@@ -14,7 +14,7 @@ import UIKit
 
 @available(iOS 13.0, *)
 extension UIFont {
-    
+
     /// Returns a UIFont that matches the specified name, weight, and size.
     /// If the custom font is not available, it falls back to the system font.
     ///
