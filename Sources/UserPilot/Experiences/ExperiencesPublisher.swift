@@ -152,7 +152,7 @@ extension ExperiencesPublisher: SocketSubscription {
         }
 
         performOn(.main) { [weak self] in
-            self?.openCarouselScreen()
+            // self?.openCarouselScreen()
         }
     }
 }

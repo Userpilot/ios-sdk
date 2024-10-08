@@ -218,7 +218,7 @@ extension String {
     func toMobileTheme() -> ThemeContent? {
         if let themeContent: ThemeContent = self.toObject() {
             return themeContent
-        }else {
+        } else {
             return nil
         }
     }

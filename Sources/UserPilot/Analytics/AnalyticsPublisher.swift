@@ -30,6 +30,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     func clean()
     func flush()
     func resume()
+    func logout()
 }
 
 /**
@@ -123,8 +124,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Flush the event once the app enter background.
      */
     func flush() {
+        socketManager.enterShutdownState()
         debouncer.cancel()
-        flushQueue(shouldCloseSocket: true)
+        flushQueue(shouldCloseSocket: true, flushImmediately: true)
+    }
+
+    /**
+     Clear all cached data and close the socket.
+     */
+    func logout() {
+        socketManager.enterShutdownState()
+        clearAllCachedProperties()
+        socketManager.close()
     }
 
     /**
@@ -153,6 +164,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The event to publish.
      */
     func publish(_ event: Event) {
+        if socketManager.isShutdownState { return }
         if socketManager.isJoiningSocket {
             cacheEvent(event)
             return
@@ -207,8 +219,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         /// In-case new user ID
         if storage.userID.isNotEmpty && userID != storage.userID {
+            socketManager.enterSwitchUserState()
+            userPilot?.clean()
             cachedIdentifyEvent = event
-            flush()
+            logout()
         } else {
             if User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
 
@@ -322,7 +336,7 @@ extension AnalyticsPublisher {
     /**
      Flushs the queue directly, for example when application moves to background
      */
-    private func flushQueue(shouldCloseSocket: Bool = false) {
+    private func flushQueue(shouldCloseSocket: Bool = false, flushImmediately: Bool = false) {
         readWriteLock.read {
             if !socketManager.isSocketOpened || socketManager.isJoiningSocket { return }
             if self.eventsToFlush.isEmpty {
@@ -344,7 +358,13 @@ extension AnalyticsPublisher {
                     shouldCloseSocket: shouldCloseSocket
                 )
 
-                flushTrackedEvents()
+                if flushImmediately {
+                    flushQueue(shouldCloseSocket: shouldCloseSocket, flushImmediately: true)
+                } else {
+                    if !shouldCloseSocket {
+                        flushTrackedEvents()
+                    }
+                }
             }
         }
     }

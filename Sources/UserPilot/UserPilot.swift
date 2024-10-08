@@ -19,7 +19,15 @@ public class UserPilot: NSObject {
 
     // MARK: - Properties
 
-    /// A dependency injection container that stores and provides necessary services like analytics, 
+    // Socket state enums
+    enum SocketState {
+        case shuttingDown
+        case switchingUser
+        case opened
+        case closed
+    }
+
+    /// A dependency injection container that stores and provides necessary services like analytics,
     /// storage, and networking.
     let container = DIContainer()
 
@@ -92,7 +100,7 @@ extension UserPilot {
      - Returns: A string representing the current version of the UserPilot SDK.
      */
     public static func version() -> String {
-        return userpilotVersion
+        return userPilotVersion
     }
 
     /// Retrieves the current version of the SDK for this instance.
@@ -172,8 +180,10 @@ extension UserPilot {
      even when the user has not explicitly signed in or identified themselves.
      */
     public func anonymous() {
-        let event = Event(type: .identify("anonymous:\(config.anonymousIDFactory())"))
-        analyticsPublisher.publish(event)
+        let randomNumber = Int.random(in: 0..<10000) +
+                         Int(Date().timeIntervalSince1970 * Double.random(in: 1000..<9999) * 100000)
+        let userID = "\(config.token)_\(randomNumber)"
+        identify(userID: userID)
     }
 
     /**
@@ -210,7 +220,8 @@ extension UserPilot {
      It calls clean method and close user socket.
      */
     public func logout() {
-        analyticsPublisher.flush()
+        clean()
+        analyticsPublisher.logout()
     }
 
     /**

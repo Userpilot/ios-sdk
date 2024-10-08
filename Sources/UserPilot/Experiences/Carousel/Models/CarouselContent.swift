@@ -11,7 +11,7 @@
 import Foundation
 import UIKit
 
-/**
+/*
  This class encapsulates data related to a carousel, including its type, order,
  steps, theme, and configuration settings.
 

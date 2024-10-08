@@ -21,6 +21,10 @@ internal protocol SocketEvents: AnyObject {
     var isSocketOpened: Bool { get }
     var isJoiningSocket: Bool { get }
     var didErrorOccurred: Bool { get }
+    var isShutdownState: Bool { get }
+
+    func enterShutdownState()
+    func enterSwitchUserState()
 
     func connect()
     func close()
@@ -74,6 +78,14 @@ internal class SocketManager {
 
     // MARK: - Properties
 
+    // Socket state enums
+    enum SocketState {
+        case shuttingDown
+        case switchingUser
+        case opened
+        case closed
+    }
+
     /// URL for the WebSocket connection.
     private let socketURL = "wss://analytex-dev-nxtapp-8794.userpilot.io/mobile/v1/events/websocket"
 
@@ -110,6 +122,9 @@ internal class SocketManager {
     /// track error state
     private var isErrorOccurred = false
 
+    // track socket state
+    private var socketState: SocketState = .closed
+
     // MARK: - Initialization
 
     /**
@@ -132,11 +147,12 @@ internal class SocketManager {
 
 extension SocketManager {
 
-    /**
+    /*
      Opens a WebSocket connection and joins the specified channel.
      
      - Parameter completion: A closure that is called when the connection attempt completes.
      */
+    // swiftlint:disable:next function_body_length
     private func openSocket() {
         guard
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
@@ -161,7 +177,10 @@ extension SocketManager {
 
         phoenixSocket.delegateOnClose(to: self) { (self) in
             self.logger.error("🛑 SOCKET closed")
-            self.$socketSubscription.invoke { $0.onSocketClosed() }
+            if self.socketState != .shuttingDown {
+                self.$socketSubscription.invoke { $0.onSocketClosed() }
+            }
+            self.socketState = .closed
         }
 
         phoenixSocket.delegateOnError(to: self) { (self, error) in
@@ -184,6 +203,7 @@ extension SocketManager {
         phoenixChannel?.join()
             .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
                 self.logger.info("🚀 SOCKET channel JOINED")
+                self.socketState = .opened
                 self.$socketSubscription.invoke { $0.onSocketOpened() }
             })
             .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
@@ -236,8 +256,24 @@ extension SocketManager: SocketEvents {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == true
     }
 
+    /// Checks if the socket is closed due to error reason
     var didErrorOccurred: Bool {
         isErrorOccurred
+    }
+
+    /// Checks if the socket in shutting down state
+    var isShutdownState: Bool {
+        socketState == .shuttingDown
+    }
+
+    // /Enter socket shutdown state.
+    func enterShutdownState() {
+        socketState = .shuttingDown
+    }
+
+    /// Enter socket switching user state.
+    func enterSwitchUserState() {
+        socketState = .switchingUser
     }
 
     /// Implementation to open a WebSocket connection
@@ -265,19 +301,23 @@ extension SocketManager: SocketEvents {
             .push(eventName, payload: payload ?? [:])
             .receive(SocketManager.successKey) { [weak self] message in
                 self?.logger.info("✈️ SOCKET message sent: %{public}@\n Payload: %{public}@", eventName, payload ?? [:])
-                if let socketSubscription {
-                    socketSubscription.onSocketEventSent(eventName, message, true)
-                } else {
-                    self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                if self?.socketState != .shuttingDown {
+                    if let socketSubscription {
+                        socketSubscription.onSocketEventSent(eventName, message, true)
+                    } else {
+                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                    }
                 }
                 if shouldCloseSocket { self?.closeSocket() }
             }
             .receive(SocketManager.errorKey) { [weak self] message in
                 self?.logger.error("⚠️ SOCKET message send FAIL: %{public}@", message.event)
-                if let socketSubscription {
-                    socketSubscription.onSocketEventSent(eventName, message, false)
-                } else {
-                    self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                if self?.socketState != .shuttingDown {
+                    if let socketSubscription {
+                        socketSubscription.onSocketEventSent(eventName, message, false)
+                    } else {
+                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                    }
                 }
                 if shouldCloseSocket { self?.closeSocket() }
             }
