@@ -11,7 +11,7 @@ import Foundation
 
 extension IdentifyViewController {
 
-    internal func showAddCompanyPropertyDiaog(_ propertyTitle: String = "", _ propertyValue: String = "") {
+    internal func showAddCompanyPropertyDialog(_ propertyTitle: String = "", _ propertyValue: String = "") {
         DialogManager.shared().showAPIAlertDialog(propertyTitle: propertyTitle,
                                                   propertyValue: propertyValue,
                                                   doneButtonHandler: { [weak self] propertyTitle, propertyValue in
@@ -25,7 +25,7 @@ extension IdentifyViewController {
 
         propertyView.onEditProperty = { [weak self] propertyTitle, propertyValue in
             guard let self = self else { return }
-            self.showAddCompanyPropertyDiaog(propertyTitle, propertyValue)
+            self.showAddCompanyPropertyDialog(propertyTitle, propertyValue)
         }
 
         propertyView.onDeleteProperty = { [weak self] propertyTitle, _ in

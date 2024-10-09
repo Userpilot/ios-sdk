@@ -15,16 +15,15 @@ class IdentifyViewController: BaseViewController {
     @IBOutlet weak var textFieldUserID: UITextField!
     @IBOutlet weak var userPropertiesStackView: UIStackView!
     @IBOutlet weak var companyPropertiesStackView: UIStackView!
+    @IBOutlet weak var anonymousButton: UIButton! {
+        didSet {
+            anonymousButton.layer.borderColor = UIColor.accent.cgColor
+            anonymousButton.layer.borderWidth = 1
+        }
+    }
 
     internal var userPropertiesViews: [String: PropertyView] = [:]
     internal var companyPropertiesViews: [String: PropertyView] = [:]
-
-    // MARK: - override
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        UserPilotManager.shared.startPerformanceTest()
-    }
 
     // MARK: - IBActions
 
@@ -41,7 +40,15 @@ class IdentifyViewController: BaseViewController {
     }
 
     @IBAction func onAddCompanyProperty(_ sender: UIButton) {
-        showAddCompanyPropertyDiaog()
+        showAddCompanyPropertyDialog()
+    }
+
+    @IBAction func onLogout(_ sender: UIButton) {
+        UserPilotManager.shared.logout()
+    }
+
+    @IBAction func onAnonymous(_ sender: UIButton) {
+        UserPilotManager.shared.anonymous()
     }
 
 }

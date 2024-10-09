@@ -38,6 +38,16 @@ class UserPilotManager {
         userPilot.identify(userID: userID, properties: properties, company: company)
     }
 
+    /// login as Anonymous
+    func anonymous() {
+        userPilot.anonymous()
+    }
+
+    /// Logout user
+    func logout() {
+        userPilot.logout()
+    }
+
     /// Track screens
     func screen(_ name: String) {
         userPilot.screen(name)
