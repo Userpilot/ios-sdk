@@ -50,7 +50,7 @@ internal struct TrackedPayloadEvent {
 
     /// Optional additional metadata associated with the event.
     /// This is a dictionary where keys are strings and values are of any type.
-    let meta: [String: Any]?
+    let meta: Payload
 
     /// Converts the `TrackedPayloadEvent` instance to a dictionary representation.
     ///

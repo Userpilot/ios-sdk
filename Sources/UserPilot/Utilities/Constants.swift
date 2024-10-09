@@ -11,23 +11,13 @@
 
 import Foundation
 
+public typealias Payload = [String: Any]?
+
 // swiftlint:disable identifier_name
 internal struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
     static let DEBOUNCER_QUEUE = "userpilot-debouncer-queue"
-}
-
-internal struct EventCaseNameConstants {
-    static let IDENTIFY = "identify"
-    static let SCREEN = "screen"
-    static let EVENT = "event"
-}
-
-internal struct EventNameConstants {
-    static let IDENTIFY = "user_identify"
-    static let SCREEN = "screen"
-    static let EVENT = "track"
 }
 
 internal struct GeneralConstants {

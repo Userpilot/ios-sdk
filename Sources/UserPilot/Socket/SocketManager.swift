@@ -29,14 +29,14 @@ internal protocol SocketEvents: AnyObject {
     func connect()
     func close()
 
-    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool,
+    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool,
                  socketSubscription: SocketSubscription?)
     func registerCallback(_ socketSubscription: SocketSubscription)
 }
 
 internal extension SocketEvents {
 
-    func publish(_ eventName: String, payload: [String: Any]?, shouldCloseSocket: Bool = false,
+    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool = false,
                  socketSubscription: SocketSubscription? = nil) {
         publish(eventName, payload: payload, shouldCloseSocket: shouldCloseSocket,
                 socketSubscription: socketSubscription)
@@ -49,7 +49,8 @@ internal extension SocketEvents {
 internal protocol SocketSubscription: AnyObject {
     func onSocketClosed()
     func onSocketOpened()
-    func onSocketEventSent(_ event: String, _ message: Message, _ status: Bool)
+    func onSocketEventSent(_ event: String, _ payload: Payload, _ message: Message, _ status: Bool)
+    func onNewMessage(_ message: Message)
 }
 
 extension SocketSubscription {
@@ -62,9 +63,14 @@ extension SocketSubscription {
     }
 
     func onSocketEventSent(_ event: String,
+                           _ payload: Payload,
                            _ message: Message,
                            _ status: Bool,
                            _ socketSubscription: SocketSubscription) {
+        // Default implementation (optional)
+    }
+
+    func onNewMessage(_ message: Message) {
         // Default implementation (optional)
     }
 }
@@ -190,6 +196,11 @@ extension SocketManager {
             self.closeSocket()
         }
 
+        phoenixSocket.onMessage(callback: { [weak self] message in
+            self?.logger.debug("💡 SOCKET logger - message %{public}@", message.payload)
+            self?.$socketSubscription.invoke { $0.onNewMessage(message) }
+        })
+
         // Setup socket logger
         phoenixSocket.logger = { [weak self] message in
             self?.logger.debug("💡 SOCKET logger - message %{public}@", message)
@@ -294,7 +305,7 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to publish an event over the WebSocket
     func publish(_ eventName: String,
-                 payload: [String: Any]?,
+                 payload: Payload,
                  shouldCloseSocket: Bool,
                  socketSubscription: SocketSubscription?) {
         phoenixChannel?
@@ -303,9 +314,9 @@ extension SocketManager: SocketEvents {
                 self?.logger.info("✈️ SOCKET message sent: %{public}@\n Payload: %{public}@", eventName, payload ?? [:])
                 if self?.socketState != .shuttingDown {
                     if let socketSubscription {
-                        socketSubscription.onSocketEventSent(eventName, message, true)
+                        socketSubscription.onSocketEventSent(eventName, payload, message, true)
                     } else {
-                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true) }
                     }
                 }
                 if shouldCloseSocket { self?.closeSocket() }
@@ -314,9 +325,9 @@ extension SocketManager: SocketEvents {
                 self?.logger.error("⚠️ SOCKET message send FAIL: %{public}@", message.event)
                 if self?.socketState != .shuttingDown {
                     if let socketSubscription {
-                        socketSubscription.onSocketEventSent(eventName, message, false)
+                        socketSubscription.onSocketEventSent(eventName, payload, message, false)
                     } else {
-                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, message, true) }
+                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true) }
                     }
                 }
                 if shouldCloseSocket { self?.closeSocket() }

@@ -36,7 +36,7 @@ internal struct CarouselContent: Codable {
     let type: CarouselType
     let order: Int
     let steps: [Step]
-    let mobileTheme: MobileTheme?
+    let mobileTheme: MobileTheme
     let configuration: Configuration
 
     private enum CodingKeys: String, CodingKey {
@@ -44,6 +44,16 @@ internal struct CarouselContent: Codable {
         case mobileTheme = "mobile_theme"
         case configuration
     }
+
+    // General
+    var baseThemeID: Int {
+        mobileTheme.id
+    }
+    // General
+    var carouselScreen: [String] {
+        configuration.targeting.screens
+    }
+
 }
 
 // MARK: - Configuration

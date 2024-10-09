@@ -42,11 +42,11 @@ internal enum EventType: Equatable {
     var caseName: String {
         switch self {
         case .event:
-            return EventCaseNameConstants.EVENT
+            return EventType.eventCaseEvent
         case .screen:
-            return EventCaseNameConstants.SCREEN
+            return EventType.eventCaseEvent
         case .identify:
-            return EventCaseNameConstants.IDENTIFY
+            return EventType.eventCaseIdentify
         }
     }
 
@@ -60,11 +60,11 @@ internal enum EventType: Equatable {
     var eventName: String {
         switch self {
         case .event:
-            return EventNameConstants.EVENT // Return the custom event name for `.event`
+            return EventType.eventCaseEvent
         case .screen:
-            return EventNameConstants.SCREEN // Use the constant name for screens
+            return EventType.eventCaseScreen
         case .identify:
-            return EventNameConstants.IDENTIFY // Use the constant name for identification events
+            return EventType.eventCaseIdentify
         }
     }
 
@@ -72,17 +72,17 @@ internal enum EventType: Equatable {
 
     /// Checks if the event is a custom event (`event` case).
     var isEvent: Bool {
-        return self.caseName == EventCaseNameConstants.EVENT
+        return self.caseName == EventType.eventCaseEvent
     }
 
     /// Checks if the event is related to a screen view (`screen` case).
     var isScreenEvent: Bool {
-        return self.caseName == EventCaseNameConstants.SCREEN
+        return self.caseName == EventType.eventCaseScreen
     }
 
     /// Checks if the event is an identification event (`identify` case).
     var isIdentifyEvent: Bool {
-        return self.caseName == EventCaseNameConstants.IDENTIFY
+        return self.caseName == EventType.eventCaseIdentify
     }
 
     // MARK: - Associated Values
@@ -122,4 +122,16 @@ internal enum EventType: Equatable {
             return nil
         }
     }
+}
+
+internal extension EventType {
+
+    // Static constants
+    static var eventCaseNameIdentify: String { return "identify" }
+    static var eventCaseNameScreen: String { return "screen" }
+    static var eventCaseNameEvent: String { return "event" }
+
+    static var eventCaseIdentify: String { return "identify" }
+    static var eventCaseScreen: String { return "screen" }
+    static var eventCaseEvent: String { return "track" }
 }

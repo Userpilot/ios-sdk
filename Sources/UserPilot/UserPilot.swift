@@ -168,7 +168,7 @@ extension UserPilot {
        - properties: An optional dictionary containing user-specific properties like email, role, or age.
        - company: An optional dictionary containing company-specific properties for users associated with company.
      */
-    public func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
+    public func identify(userID: String, properties: Payload = nil, company: Payload = nil) {
         let event = Event(type: .identify(userID), properties: properties, company: company)
         analyticsPublisher.publish(event)
     }
@@ -209,7 +209,7 @@ extension UserPilot {
        - name: The name of the custom event (e.g., "purchase", "button_click").
        - properties: An optional dictionary containing additional context or metadata related to the event.
      */
-    public func track(eventName: String, properties: [String: Any]? = nil) {
+    public func track(eventName: String, properties: Payload = nil) {
         analyticsPublisher.publish(Event(type: .event(eventName), properties: properties))
     }
 

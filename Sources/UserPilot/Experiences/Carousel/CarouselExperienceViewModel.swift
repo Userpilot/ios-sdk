@@ -49,18 +49,18 @@ internal class CarouselExperienceViewModel {
      Initializes the theme for each step and binds data for UI updates.
      */
     func onStart() {
-        guard let carouselContent = experiencesPublisher.getActiveCarousel(),
-              let themeId = carouselContent.mobileTheme?.id
+        guard
+            let carouselContent = experiencesPublisher.getActiveCarousel()
         else { return }
 
         self.carouselContent = carouselContent
-        let baseTheme = themeHandler.getThemeById(themeId)
+        let baseTheme = themeHandler.getThemeById(carouselContent.baseThemeID)
 
         carouselContent.steps.forEach { step in
             mergedTheme.append(
                 themeHandler.mergeThemes(
                     baseTheme,
-                    carouselContent.mobileTheme?.themeData,
+                    carouselContent.mobileTheme.themeData,
                     step.mobileTheme?.themeData
                 )
             )

@@ -25,11 +25,11 @@ internal struct Event {
 
     /// A dictionary of optional properties that provide additional
     /// metadata for the event (e.g., button clicked, item purchased).
-    var properties: [String: Any]?
+    var properties: Payload = nil
 
     /// A dictionary of optional company-related properties. This can be
     /// used to track events related to specific organizations or entities.
-    var company: [String: Any]?
+    var company: Payload = nil
 
     /// The timestamp when the event was created, captured at the moment
     /// of event initialization. Defaults to the current date and time.

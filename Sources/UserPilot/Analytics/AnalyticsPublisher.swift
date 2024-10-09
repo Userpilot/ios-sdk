@@ -412,7 +412,7 @@ extension AnalyticsPublisher: SocketSubscription {
        - eventName: The name of the event sent.
        - eventSent: Whether the event was successfully sent.
      */
-    func onSocketEventSent(_ eventName: String, _ message: Message, _ eventSent: Bool) {
+    func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
         flushTrackedEvents()
     }
 
@@ -455,7 +455,7 @@ private extension AnalyticsPublisher {
 
 // MARK: - Properties name
 
-private extension AnalyticsPublisher {
+internal extension AnalyticsPublisher {
 
     // Static constants
     static var metaDataProperty: String { return "metadata" }

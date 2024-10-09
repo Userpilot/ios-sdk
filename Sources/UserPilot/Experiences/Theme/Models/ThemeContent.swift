@@ -24,7 +24,7 @@ internal struct ThemeContent: Codable {
 // MARK: - MobileTheme
 
 internal struct MobileTheme: Codable {
-    let id: Int?
+    let id: Int
     let themeData: ThemeData?
 
     private enum CodingKeys: String, CodingKey {
