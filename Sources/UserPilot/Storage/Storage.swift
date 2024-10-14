@@ -37,6 +37,9 @@ internal protocol DataStoring: AnyObject {
     var user: String { get set }
 
     /// The socket URL used to connect the SDK to the backend services.
+    var temporaryUser: String? { get set }
+
+    /// The socket URL used to connect the SDK to the backend services.
     var imagesCache: [NSString: Date] { get set }
 }
 
@@ -61,6 +64,7 @@ internal class Storage: DataStoring {
         case deviceID
         case userID
         case user
+        case temporaryUser
         case isAnonymous
         case imagesCache
     }
@@ -114,6 +118,15 @@ internal class Storage: DataStoring {
         }
         set {
             write(.user, newValue: newValue)
+        }
+    }
+
+    internal var temporaryUser: String? {
+        get {
+            return read(.temporaryUser, defaultValue: nil)
+        }
+        set {
+            write(.temporaryUser, newValue: newValue)
         }
     }
 

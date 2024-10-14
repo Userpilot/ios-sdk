@@ -1,21 +1,14 @@
 //
-//  Bundle+Data.swift
+//  Bundle+Extension.swift
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
 //  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
-//  `Bundle+Data` contains extensions with helper methods for the `Bundle` class.
+//  `Bundle+Extension` contains extensions with helper methods for the `Bundle` class.
 //  These methods provide convenient access to various pieces of information from the app's bundle,
 //  including identifiers, names, versions, and build numbers.
-//
-//  Extensions include:
-//  - `identifier`: The bundle identifier of the app.
-//  - `displayName`: The display name of the app, or the application name if not set.
-//  - `version`: The short version string of the app.
-//  - `build`: The build version of the app.
-//  - `applicationName`: The name of the app as specified in the bundle.
 //
 
 import Foundation

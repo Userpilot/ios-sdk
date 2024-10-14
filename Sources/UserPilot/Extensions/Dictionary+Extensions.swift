@@ -1,19 +1,14 @@
 //
-//  Dictionary+Data.swift
+//  Dictionary+Extension.swift
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
 //  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
-//  `Dictionary+Data` contains extensions with helper methods for the `Dictionary` class.
+//  `Dictionary+Extension` contains extensions with helper methods for the `Dictionary` class.
 //  These methods provide additional functionality for merging dictionaries and converting
 //  dictionaries to JSON strings.
-//
-//  Extensions include:
-//  - `merging(_:)`: Merges another dictionary into the current dictionary, preferring the new values
-// for duplicate keys.
-//  - `toJSONString()`: Converts the dictionary to a JSON string representation.
 //
 
 import Foundation

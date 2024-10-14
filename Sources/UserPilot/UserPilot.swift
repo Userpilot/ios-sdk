@@ -55,8 +55,11 @@ public class UserPilot: NSObject {
     /// Lazy loading of the `ExperiencesPublishing` instance that manages app lifecycle.
     private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
 
-    /// SDK logger
-    private lazy var logger = container.resolve(Logging.self)
+    /// Lazy loading AutoPropertyDecoratoring
+    private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
+
+    /// Lazy loading SDK logger
+    private lazy var logger = container.resolve(UserPilot.Config.self).logger
 
     // MARK: - Initialization
 
@@ -180,9 +183,7 @@ extension UserPilot {
      even when the user has not explicitly signed in or identified themselves.
      */
     public func anonymous() {
-        let randomNumber = Int.random(in: 0..<10000) +
-                         Int(Date().timeIntervalSince1970 * Double.random(in: 1000..<9999) * 100000)
-        let userID = "\(config.token)_\(randomNumber)"
+        let userID = "\(config.token)_\(anonymousFactory)"
         identify(userID: userID)
     }
 
@@ -221,7 +222,7 @@ extension UserPilot {
      */
     public func logout() {
         clean()
-        analyticsPublisher.logout()
+        analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
     }
 
     /**
@@ -229,17 +230,29 @@ extension UserPilot {
      converts it into a JSON string, and logs it for debugging purposes.
      */
     public func settings() {
+        // Convert the JSON strings to dictionaries
+        let autoPropertiesDict = try? JSONSerialization.jsonObject(with: Data(
+            autoPropertyDecorator.autoProperties.toJSONString()?.utf8
+            ?? "".utf8), options: []) as? [String: Any]
+        let appPropertiesDict = try? JSONSerialization.jsonObject(with: Data(
+            autoPropertyDecorator.appProperties.toJSONString()?.utf8 ?? "".utf8),
+            options: []) as? [String: Any]
+        let user = try? JSONSerialization.jsonObject(with: Data(
+            storage.user.utf8), options: []) as? [String: Any]
+
         // Create the dictionary for settings
         let settings: [String: Any?] = [
-            "SDK Version": version(),
-            "User": storage.user
+            "SDK version": version(),
+            "User": user,
+            "Auto properties": autoPropertiesDict,
+            "App properties": appPropertiesDict
         ]
 
         // Convert the dictionary to JSON string
         if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .withoutEscapingSlashes) {
             // swiftlint:disable:next non_optional_string_data_conversion
             let jsonString = String(data: jsonData, encoding: .utf8)
-            logger.debug("Settings -> %{public}@", jsonString ?? "")
+            logger.debug("⚙️ Settings -> %{public}@", jsonString ?? "")
         } else {
             logger.error("Failed to create JSON string")
         }
@@ -255,8 +268,29 @@ extension UserPilot {
      the logged-out user.
      */
     internal func clean() {
-        analyticsPublisher.clean()
         storage.userID = ""
         storage.user = User().toJson() ?? ""
     }
+}
+
+// MARK: - Experiences
+extension UserPilot {
+
+    /**
+     Manually starts an experience within the client application using the provided experience ID.
+     
+     This method triggers the SDK to fetch the content associated with the given experience ID
+     from the backend, and displays it directly to the user if the content is available.
+     
+     Use this method to programmatically launch an experience when certain conditions are met,
+     such as after user login, navigating to a specific screen, or when a custom event occurs.
+     
+     - Parameters:
+       - experienceId: unique identifier for the experience to be launched, this ID should be provided
+        by the backend or obtained during experience configuration.
+     */
+    func triggerExperience(experienceId: String) {
+        // experiencesPublisher.triggerExperience(experienceId)
+    }
+
 }

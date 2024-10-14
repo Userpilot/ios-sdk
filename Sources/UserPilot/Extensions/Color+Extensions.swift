@@ -1,8 +1,14 @@
 //
-//  File.swift
-//  
+//  UIColor+Extension.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 01/10/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  `Bundle+Data` contains extensions with helper methods for the `Bundle` class.
+//  These methods provide convenient access to various pieces of information from the app's bundle,
+//  including identifiers, names, versions, and build numbers.
 //
 
 import Foundation

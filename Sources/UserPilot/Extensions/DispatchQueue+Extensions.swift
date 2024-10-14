@@ -1,8 +1,13 @@
 //
-//  File.swift
-//  
+//  QueueType.swift
+//  UserPilot SDK
 //
-//  Created by Motasem Hamed on 30/09/2024.
+//  Created by Motasem Hamed on 13/10/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  `QueueType` defines different queue types for dispatching tasks asynchronously.
+//  It provides queues for main, background, low, and high priority tasks.
 //
 
 import Foundation

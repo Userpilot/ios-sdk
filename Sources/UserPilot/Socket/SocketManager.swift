@@ -23,23 +23,19 @@ internal protocol SocketEvents: AnyObject {
     var didErrorOccurred: Bool { get }
     var isShutdownState: Bool { get }
 
-    func enterShutdownState()
-    func enterSwitchUserState()
+    func updateSocketState(_ socketState: SocketManager.SocketState)
 
     func connect()
     func close()
 
-    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool,
-                 socketSubscription: SocketSubscription?)
+    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool)
     func registerCallback(_ socketSubscription: SocketSubscription)
 }
 
 internal extension SocketEvents {
 
-    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool = false,
-                 socketSubscription: SocketSubscription? = nil) {
-        publish(eventName, payload: payload, shouldCloseSocket: shouldCloseSocket,
-                socketSubscription: socketSubscription)
+    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool = false) {
+        publish(eventName, payload: payload, shouldCloseSocket: shouldCloseSocket)
     }
 }
 
@@ -65,8 +61,7 @@ extension SocketSubscription {
     func onSocketEventSent(_ event: String,
                            _ payload: Payload,
                            _ message: Message,
-                           _ status: Bool,
-                           _ socketSubscription: SocketSubscription) {
+                           _ status: Bool) {
         // Default implementation (optional)
     }
 
@@ -90,6 +85,7 @@ internal class SocketManager {
         case switchingUser
         case opened
         case closed
+        case connecting
     }
 
     /// URL for the WebSocket connection.
@@ -161,9 +157,11 @@ extension SocketManager {
     // swiftlint:disable:next function_body_length
     private func openSocket() {
         guard
+            storage.userID.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
         else { return }
+        socketState = .connecting
 
         let socketProperties: [String: Any] = [
                 SocketManager.tokenKey: config.token,
@@ -178,7 +176,7 @@ extension SocketManager {
 
         // Setup delegates for socket events
         phoenixSocket.delegateOnOpen(to: self) { (self) in
-            self.logger.info("🚀 SOCKET opened")
+            self.logger.info("✅ SOCKET opened")
         }
 
         phoenixSocket.delegateOnClose(to: self) { (self) in
@@ -192,18 +190,16 @@ extension SocketManager {
         phoenixSocket.delegateOnError(to: self) { (self, error) in
             let (error, _) = error
             self.isErrorOccurred = true
-            self.logger.error("🛑 SOCKET error - details %{public}@", error.localizedDescription)
+            self.logger.error("❗ SOCKET error - details %{public}@", error.localizedDescription)
             self.closeSocket()
         }
 
         phoenixSocket.onMessage(callback: { [weak self] message in
-            self?.logger.debug("💡 SOCKET logger - message %{public}@", message.payload)
             self?.$socketSubscription.invoke { $0.onNewMessage(message) }
         })
 
-        // Setup socket logger
         phoenixSocket.logger = { [weak self] message in
-            self?.logger.debug("💡 SOCKET logger - message %{public}@", message)
+            self?.logger.debug("✈️ SOCKET message: %{public}@", message)
         }
 
         // Setup the channel
@@ -213,23 +209,24 @@ extension SocketManager {
         phoenixChannel = channel
         phoenixChannel?.join()
             .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
-                self.logger.info("🚀 SOCKET channel JOINED")
+                self.logger.info("🚀 SOCKET channel joined")
                 self.socketState = .opened
                 self.$socketSubscription.invoke { $0.onSocketOpened() }
             })
             .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
-                self.logger.error("⚠️ SOCKET channel join FAIL: %{public}@", message.payload)
+                self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
                 self.closeSocket()
             })
 
         phoenixChannel?.onError { [weak self] message in
             self?.isErrorOccurred = true
-            self?.logger.debug("🛑 SOCKET Channel error - message %{public}@", message.payload)
+            self?.logger.debug("❗ SOCKET Channel error: %{public}@", message.payload)
             self?.closeSocket()
         }
 
         phoenixChannel?.onClose { [weak self] message in
-            self?.logger.debug("🛑 SOCKET Channel close - message %{public}@", message.payload)
+            self?.socketState = .closed
+            self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
             self?.closeSocket()
         }
 
@@ -243,12 +240,14 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        guard let phoenixSocket = phoenixSocket else { return }
+        socketState = .closed
         if let channel = self.phoenixChannel, !channel.isClosed {
-            channel.leave()
-            phoenixSocket.remove(channel)
+            channel.leave(timeout: 0.0)
+            phoenixSocket?.remove(channel)
         }
-        phoenixSocket.disconnect()
+        if let phoenixSocket = phoenixSocket, phoenixSocket.isConnected {
+            phoenixSocket.disconnect()
+        }
     }
 
 }
@@ -277,14 +276,9 @@ extension SocketManager: SocketEvents {
         socketState == .shuttingDown
     }
 
-    // /Enter socket shutdown state.
-    func enterShutdownState() {
-        socketState = .shuttingDown
-    }
-
-    /// Enter socket switching user state.
-    func enterSwitchUserState() {
-        socketState = .switchingUser
+    /// Update socket state.
+    func updateSocketState(_ socketState: SocketManager.SocketState) {
+        self.socketState = socketState
     }
 
     /// Implementation to open a WebSocket connection
@@ -306,29 +300,18 @@ extension SocketManager: SocketEvents {
     /// Implementation to publish an event over the WebSocket
     func publish(_ eventName: String,
                  payload: Payload,
-                 shouldCloseSocket: Bool,
-                 socketSubscription: SocketSubscription?) {
+                 shouldCloseSocket: Bool) {
         phoenixChannel?
             .push(eventName, payload: payload ?? [:])
             .receive(SocketManager.successKey) { [weak self] message in
-                self?.logger.info("✈️ SOCKET message sent: %{public}@\n Payload: %{public}@", eventName, payload ?? [:])
                 if self?.socketState != .shuttingDown {
-                    if let socketSubscription {
-                        socketSubscription.onSocketEventSent(eventName, payload, message, true)
-                    } else {
-                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true) }
-                    }
+                    self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true) }
                 }
                 if shouldCloseSocket { self?.closeSocket() }
             }
             .receive(SocketManager.errorKey) { [weak self] message in
-                self?.logger.error("⚠️ SOCKET message send FAIL: %{public}@", message.event)
                 if self?.socketState != .shuttingDown {
-                    if let socketSubscription {
-                        socketSubscription.onSocketEventSent(eventName, payload, message, false)
-                    } else {
-                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true) }
-                    }
+                    self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, false) }
                 }
                 if shouldCloseSocket { self?.closeSocket() }
             }

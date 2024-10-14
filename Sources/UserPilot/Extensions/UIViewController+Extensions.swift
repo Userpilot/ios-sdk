@@ -1,20 +1,13 @@
 //
-//  File.swift
+//  UIViewController+Extension.swift
 //
 //
 //  Created by Motasem Hamed on 20/08/2024.
 //
 //  [Brief Description]
-//  This file contains an extension for the `UIViewController` class, providing helper methods
-//  for obtaining class names, capturing screen events, and swizzling the `viewDidAppear` method
-//  to include custom tracking logic.
-//
-//  Extensions include:
-//  - `upClassName`: Returns the fully qualified class name of the view controller.
-//  - `displayName`: Provides a simplified name of the view controller for display purposes.
-//  - `captureScreen()`: Captures and posts the screen view event to `NotificationCenter`.
-//  - `userpilot__viewDidAppear(animated:)`: Swizzled method to call `captureScreen()` before the
-//  original `viewDidAppear` method.
+//  UIViewController+Extension file contains an extension for the `UIViewController` class,
+// providing helper methods for obtaining class names, capturing screen events, and swizzling
+// the `viewDidAppear` method to include custom tracking logic.
 //
 
 import Foundation

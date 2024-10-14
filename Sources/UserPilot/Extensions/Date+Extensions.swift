@@ -1,17 +1,13 @@
 //
-//  Date+Data.swift
+//  Date+Extension.swift
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
 //  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
-//  `Date+Data` contains extensions with helper methods for the `Date` class.
+//  `Date+Extension` contains extensions with helper methods for the `Date` class.
 //  It provides additional functionality to format dates and calculate time intervals.
-//
-//  Extensions include:
-//  - `fullDateString`: Returns the date in a full date and time format.
-//  - `millisecondsSince1970`: Returns the time interval since January 1, 1970, in milliseconds.
 //
 
 import Foundation
@@ -21,8 +17,8 @@ internal extension Date {
 
     var fullDateString: String {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .full // This gives a full date format (e.g., "Monday, August 19, 2024")
-        dateFormatter.timeStyle = .medium // Medium time format (e.g., "3:30:32 PM")
+        dateFormatter.dateStyle = .full
+        dateFormatter.timeStyle = .medium
         return dateFormatter.string(from: self)
     }
 

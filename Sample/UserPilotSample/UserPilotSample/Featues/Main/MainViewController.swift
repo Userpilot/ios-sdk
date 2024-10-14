@@ -20,6 +20,10 @@ class MainViewController: BaseViewController {
     // MARK: - Properties
     lazy var content: [Content] = [.identify, .screens, .events]
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        UserPilotManager.shared.settings()
+    }
 }
 
 // MARK: - Instance

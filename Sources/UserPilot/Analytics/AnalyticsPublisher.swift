@@ -23,14 +23,13 @@ import SwiftPhoenixClient
  - `publish(_:)`: Sends an event to the backend.
  - `clean()`: Clears any cached events or session data.
  - `flush()`: Flushs any cached events or session data.
- - `resume()`: Open sockect connection.
+ - `resume()`: Open socket connection.
  */
 internal protocol AnalyticsPublishing: AnyObject {
     func publish(_ event: Event)
-    func clean()
     func flush()
     func resume()
-    func logout()
+    func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool)
 }
 
 /**
@@ -102,6 +101,12 @@ internal class AnalyticsPublisher {
 
         // Register socket event callback
         self.socketManager.registerCallback(self)
+        if let temporaryUserString = storage.temporaryUser {
+            let temporaryUser = User.fromJson(temporaryUserString) // temporaryUserString.toUser()
+            cachedIdentifyEvent = Event(type: EventType.identify(temporaryUser.userID),
+                                properties: temporaryUser.properties,
+                                company: temporaryUser.company)
+        }
     }
 
 }
@@ -124,7 +129,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Flush the event once the app enter background.
      */
     func flush() {
-        socketManager.enterShutdownState()
+        socketManager.updateSocketState(.shuttingDown)
         debouncer.cancel()
         flushQueue(shouldCloseSocket: true, flushImmediately: true)
     }
@@ -132,9 +137,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /**
      Clear all cached data and close the socket.
      */
-    func logout() {
-        socketManager.enterShutdownState()
-        clearAllCachedProperties()
+    func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool = false) {
+        socketManager.updateSocketState(socketState)
+        clearAllCachedProperties(shouldClearCachedIdentifyEvent)
         socketManager.close()
     }
 
@@ -142,20 +147,12 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Resume socket connection when back from background.
      */
     func resume() {
+        if let userID = cachedIdentifyEvent?.userID {
+            storage.userID = userID
+        }
         if storage.userID.isNotEmpty && !socketManager.isSocketOpened && !socketManager.isJoiningSocket {
             socketManager.connect()
         }
-    }
-
-    /**
-     Clears last screen viewed and pending events in the queue.
-     
-     This method comes when switch to new Identify userID, should clean all cached events for old user
-     and clear screen last screen viewed
-     */
-    func clean() {
-        clearCachedEvents()
-        clearLastScreenViewedEvent()
     }
 
     /**
@@ -164,6 +161,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The event to publish.
      */
     func publish(_ event: Event) {
+        if event.isIdentifyEvent {
+            storage.temporaryUser = event.toUser().toJson()
+            cachedIdentifyEvent = event
+            socketManager.updateSocketState(.closed)
+        }
         if socketManager.isShutdownState { return }
         if socketManager.isJoiningSocket {
             cacheEvent(event)
@@ -172,8 +174,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         if !socketManager.isSocketOpened {
             cacheEvent(event)
+            if let userID = cachedIdentifyEvent?.userID { storage.userID = userID }
             if let userID = event.userID { storage.userID = userID }
-            if (event.userID ?? storage.userID).isEmpty { return }
+            if storage.userID.isEmpty { return }
             openSocket()
             return
         }
@@ -219,14 +222,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         /// In-case new user ID
         if storage.userID.isNotEmpty && userID != storage.userID {
-            socketManager.enterSwitchUserState()
             userPilot?.clean()
-            cachedIdentifyEvent = event
-            logout()
+            logout(socketState: .switchingUser)
         } else {
+            // In-case new user ID
             if User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
-
-            storage.userID = userID
             flushPriorityEvents()
         }
     }
@@ -291,26 +291,20 @@ extension AnalyticsPublisher {
         /// Identify event
         if let identifyEvent = cachedIdentifyEvent {
             guard let userID = identifyEvent.userID else { return }
-
             // In-case identify event called again when joining socket channel
-            if userID != storage.userID {
+            if storage.userID.isNotEmpty && userID != storage.userID {
                 identify(identifyEvent)
                 return
             }
             payload[AnalyticsPublisher.metaDataProperty] = identifyEvent.properties ?? [:]
-            if let company = identifyEvent.company {
+            if let company = identifyEvent.company, !company.isEmpty {
                 payload[AnalyticsPublisher.identifyCompanyProperty] = company
             }
-            clearCachedIdentifyEvent()
-            var user = User.fromJson(storage.user)
-            storage.user = user.updateUser(event: identifyEvent).toJson() ?? ""
-            self.logger.info("USER %{public}@", user.updateUser(event: identifyEvent).toJson() ?? "")
             socketManager.publish(identifyEvent.eventName, payload: payload)
         }
 
         /// Screen event
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
-            self.logger.info("SCREEN %{public}@", "\(String(describing: screenEvent.1.screenTitle))")
             payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenTitle
             socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
@@ -328,8 +322,7 @@ extension AnalyticsPublisher {
      */
     private func flushTrackedEvents() {
         debouncer.debounce { [weak self] in
-            guard let self = self else { return }
-            self.flushQueue()
+            self?.flushQueue()
         }
     }
 
@@ -413,6 +406,15 @@ extension AnalyticsPublisher: SocketSubscription {
        - eventSent: Whether the event was successfully sent.
      */
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
+        if let cachedIdentifyEvent {
+            if eventName == EventType.identifyEvent &&
+                cachedIdentifyEvent.userID == storage.userID {
+                var newUser = User.fromJson(storage.user)
+                storage.user = newUser.updateUser(event: cachedIdentifyEvent).toJson() ?? ""
+                self.logger.info("👤 USER %{public}@", storage.user)
+                clearCachedIdentifyEvent()
+            }
+        }
         flushTrackedEvents()
     }
 
@@ -423,11 +425,11 @@ extension AnalyticsPublisher: SocketSubscription {
 private extension AnalyticsPublisher {
 
     /// Clear all cached properties in case we get closed callback from socket.
-    private func clearAllCachedProperties() {
+    private func clearAllCachedProperties(_ shouldClearCachedIdentifyEvent: Bool = false) {
         clearCachedEvents()
-        clearCachedIdentifyEvent()
         clearLastScreenViewedEvent()
         clearCachedEvent()
+        if shouldClearCachedIdentifyEvent { clearCachedIdentifyEvent() }
     }
 
     /// Clears the cached events on new identify event or when socket opened.
@@ -439,6 +441,7 @@ private extension AnalyticsPublisher {
     /// Clears the cached identify event after it has been successfully sent.
     private func clearCachedIdentifyEvent() {
         cachedIdentifyEvent = nil
+        storage.temporaryUser = nil
     }
 
     /// Clears the cached last screen viewed on new identify event.

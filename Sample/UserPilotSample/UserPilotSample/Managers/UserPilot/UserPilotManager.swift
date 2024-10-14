@@ -33,6 +33,11 @@ class UserPilotManager {
         userPilot.initialize()
     }
 
+    /// UserPilot Settings
+    func settings() {
+        userPilot.settings()
+    }
+
     /// Identify user
     func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
         userPilot.identify(userID: userID, properties: properties, company: company)
@@ -49,8 +54,8 @@ class UserPilotManager {
     }
 
     /// Track screens
-    func screen(_ name: String) {
-        userPilot.screen(name)
+    func screen(_ screenTitle: String) {
+        userPilot.screen(screenTitle)
     }
 
     /// Track user events
@@ -117,7 +122,7 @@ class UserPilotManager {
      */
     func startPerformanceTest() {
         // identify user
-        identify(userID: "NX-11111")
+        // identify(userID: "NX-11111")
 
         // delay for 3 seconds
         delay(4.0, closure: { [weak self] in

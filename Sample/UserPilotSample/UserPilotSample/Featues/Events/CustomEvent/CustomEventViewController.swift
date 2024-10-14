@@ -17,13 +17,6 @@ class CustomEventViewController: BaseViewController {
 
     internal var eventPropertiesViews: [String: PropertyView] = [:]
 
-    // MARK: - override
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        UserPilotManager.shared.startPerformanceTest()
-    }
-
     // MARK: - IBActions
 
     @IBAction func onTrackEventButtonClicked(_ sender: UIButton) {

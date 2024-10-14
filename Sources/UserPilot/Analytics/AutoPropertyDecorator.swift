@@ -26,7 +26,7 @@ import UIKit
  - Methods:
    - `decorate(_:)`: Method to decorate events with additional properties.
  */
-internal protocol AutoPropertyDecoratoring: AnyObject, AnalyticsDecorating {
+internal protocol AutoPropertyDecoratoring: AnyObject {
     var autoProperties: [String: Any] { get }
     var appProperties: [String: Any] { get }
 }
@@ -72,35 +72,6 @@ internal class AutoPropertyDecorator {
         AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier
     ]
 
-    /// Provides information about app and system fonts.
-    private lazy var fonts: [(title: String, names: [String])] = {
-        let familyNames: [String] = (Bundle.main.infoDictionary?["UIAppFonts"] as? [String] ?? [])
-            .compactMap { resourceName in
-                if let url = Bundle.main.url(forResource: resourceName, withExtension: nil),
-                   let fontData = try? Data(contentsOf: url),
-                   let fontDataProvider = CGDataProvider(data: fontData as CFData),
-                   let font = CGFont(fontDataProvider),
-                   let name = font.postScriptName {
-                    let ctfont = CTFontCreateWithName(name, 17, nil)
-                    return CTFontCopyFamilyName(ctfont) as String
-                } else {
-                    return nil
-                }
-            }
-
-        let appFonts = Set(familyNames).sorted().flatMap { UIFont.fontNames(forFamilyName: $0) }
-        let systemFonts = UIFontDescriptor.SystemDesign.allCases.flatMap { design in
-            UIFont.Weight.allCases.map { weight in
-                "System \(design.description) \(weight.description)"
-            }
-        }
-
-        return [
-            (AutoPropertyDecorator.appFontsKey, appFonts),
-            (AutoPropertyDecorator.systemFontsKey, systemFonts)
-        ]
-    }()
-
 }
 
 // MARK: - AnalyticsDecorating
@@ -113,22 +84,6 @@ extension AutoPropertyDecorator: AutoPropertyDecoratoring {
 
     var appProperties: [String: Any] {
         return userPilotAppProperties
-    }
-
-    /**
-     Decorates the provided event with additional properties related to the system, application, and fonts.
-     
-     - Parameter event: The event to decorate.
-     - Returns: A new event with additional properties.
-     */
-    func decorate(_ event: Event) -> Event {
-        var decoratedEvent = event
-        decoratedEvent.properties?[AutoPropertyDecorator.autoPropertiesKey] = autoProperties
-        if event.type.isIdentifyEvent {
-            decoratedEvent.properties?[AutoPropertyDecorator.appPropertiesKey] = appProperties
-            decoratedEvent.properties?[AutoPropertyDecorator.fontsKey] = fonts
-        }
-        return decoratedEvent
     }
 }
 

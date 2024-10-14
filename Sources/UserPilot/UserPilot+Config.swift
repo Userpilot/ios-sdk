@@ -28,9 +28,6 @@ public extension UserPilot {
         /// The delegate object that handles application screen navigation during experience presentation.
         @objc public weak var navigationDelegate: UserPilotNavigationDelegate?
 
-        /// default customer properties
-        var additionalAutoProperties: [String: Any] = [:]
-
         /// Create an UserPilot SDK configuration
         /// - Parameter accountID: UserPilot Account ID - a string containing an integer,
         ///  copied from the Account settings page in Studio.

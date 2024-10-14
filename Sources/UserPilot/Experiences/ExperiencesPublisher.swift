@@ -107,7 +107,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
     func sendSocketRequest(_ sdkEvent: SDKEvent) {
-        socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
+        // socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
     }
 
     // MARK: - Private Methods
@@ -142,16 +142,16 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      if the conditions for displaying the carousel are met.
      */
     private func openCarouselScreen() {
-        if !canShowCarousel() { return }
-        let carouselExperienceViewModel = CarouselExperienceViewModel(container: container)
-        let carouselExperienceViewController = CarouselExperienceViewController(
-            carouselExperienceViewModel: carouselExperienceViewModel)
-        carouselExperienceViewController.modalPresentationStyle = .fullScreen
-        if let topViewController = UIApplication.shared.topViewController() {
-            performOn(.main) {
-                topViewController.present(carouselExperienceViewController, animated: true)
-            }
-        }
+        // if !canShowCarousel() { return }
+//        let carouselExperienceViewModel = CarouselExperienceViewModel(container: container)
+//        let carouselExperienceViewController = CarouselExperienceViewController(
+//            carouselExperienceViewModel: carouselExperienceViewModel)
+//        carouselExperienceViewController.modalPresentationStyle = .fullScreen
+//        if let topViewController = UIApplication.shared.topViewController() {
+//            performOn(.main) {
+//                topViewController.present(carouselExperienceViewController, animated: true)
+//            }
+//        }
     }
 
     /**
@@ -190,20 +190,19 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         if let response = message.payload["response"] as? String, !response.isEmpty {
             if let carousel = response.toCarousel() {
                 carouselContent = carousel
-                checkCachedThemes(carousel.baseThemeID)
             }
 
             if let themeData = response.toMobileTheme() {
                 themeHandler.saveTheme(themeData)
-                if let carouselContent = carouselContent {
-                    checkCachedThemes(carouselContent.baseThemeID)
-                }
             }
+        }
+        if let carouselContent = carouselContent {
+            checkCachedThemes(carouselContent.baseThemeID)
         }
     }
 }
 
-// MARK: - SocketSubscription Conformance
+// MARK: - SocketSubscription
 
 extension ExperiencesPublisher: SocketSubscription {
 
@@ -219,11 +218,22 @@ extension ExperiencesPublisher: SocketSubscription {
        - eventSent: Indicates whether the event was successfully sent.
      */
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
-        if eventName == EventType.eventCaseEvent {
-            currentScreen = payload?[AnalyticsPublisher.identifyScreenProperty] as? String ?? ""
+        if let carouselData = MockManager.carouselData.toCarousel() {
+            carouselContent = carouselData
         }
 
-        handleIncomingMessage(message)
+        if let baseTheme = MockManager.BaseTheme.toMobileTheme() {
+            themeHandler.saveTheme(baseTheme)
+        }
+
+//        performOn(.main) { [weak self] in
+//            self?.openCarouselScreen()
+//        }
+//        if eventName == EventType.screenEvent {
+//            currentScreen = payload?[AnalyticsPublisher.identifyScreenProperty] as? String ?? ""
+//        }
+//
+//        handleIncomingMessage(message)
     }
 
     /**

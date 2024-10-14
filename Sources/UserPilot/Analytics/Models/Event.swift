@@ -13,8 +13,6 @@
 import Foundation
 import UIKit
 
-/// `Event` represents a user interaction or analytics event in the UserPilot SDK.
-/// It captures essential details such as the event type, optional properties, company details, and the timestamp.
 internal struct Event {
 
     // MARK: - Properties
@@ -104,4 +102,12 @@ internal extension Event {
         logger.info("----------------------")
     }
 
+}
+
+extension Event {
+    func toUser() -> User {
+        return User(userID: userID ?? "",
+                    properties: properties ?? [:],
+                    company: company ?? [:])
+    }
 }

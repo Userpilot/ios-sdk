@@ -238,3 +238,12 @@ extension User: Encodable {
         try companyAttributesContainer.encodeSkippingInvalid(company)
     }
 }
+
+/// Extension function to deserialize a `String` into a `User` object
+extension String {
+
+    func toUser() -> User {
+        return  User.fromJson(self)
+    }
+
+}

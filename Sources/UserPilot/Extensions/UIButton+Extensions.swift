@@ -1,5 +1,5 @@
 //
-//  UIButton+Data.swift
+//  UIButton+Extension.swift
 //  UserPilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
@@ -8,11 +8,6 @@
 //  [Brief Description]
 //  This file contains an extension for the `UIButton` class, providing helper methods
 //  for capturing button click events and communicating these events using the NotificationCenter.
-//
-//  Extensions include:
-//  - `captureButtonClick()`: Captures button click details and posts them to `NotificationCenter`.
-//  - `userpilot_sendAction(_:to:for:)`: Swizzled method that captures button click details before
-//  calling the original `sendAction` implementation.
 //
 
 import Foundation
