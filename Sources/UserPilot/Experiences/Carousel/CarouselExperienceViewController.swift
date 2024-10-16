@@ -70,6 +70,14 @@ internal class CarouselExperienceViewController: UIViewController {
         isModalInPresentation = true
     }
 
+    // Override the preferredStatusBarStyle based on the current style
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        guard
+            let theme = carouselExperienceViewModel.mergedTheme[safe: collectionView.currentIndex]
+        else { return .lightContent }
+        return theme.isLightTheme ? .darkContent : .lightContent
+    }
+
     // MARK: - Actions
 
     /// Action handler for the close button. Dismisses the experience view.

@@ -33,7 +33,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         view.axis = .vertical
         view.alignment = .fill
         view.distribution = .fill
-        view.spacing = 16
+        view.spacing = 12
         return view
     }()
 
@@ -162,8 +162,8 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor, constant: 0.0),
             contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor, constant: 0.0),
             stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor, constant: -8.0),
-            stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -16),
+            stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -20),
             contentViewHeightConstraint
         ])
 

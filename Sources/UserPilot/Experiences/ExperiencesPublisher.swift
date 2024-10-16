@@ -6,10 +6,9 @@
 //  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
-//  `ExperiencesPublisher` manages and publishes in-app experiences such as carousels and slideouts.
-//  It interfaces with socket connections, handles incoming messages, and updates theme and carousel
-//  content. This class ensures that relevant experiences are shown in the app by listening for socket
-//  events, managing content caching, and providing a seamless user experience.
+//  The `ExperiencesPublisher` class is responsible for managing and publishing in-app experiences,
+//  such as carousels, using socket connections. It handles socket events, updates themes, and
+//  manages the lifecycle of the experiences displayed within the application.
 //
 
 import Foundation
@@ -22,19 +21,10 @@ import SwiftPhoenixClient
  */
 internal protocol ExperiencesPublishing: AnyObject {
     func start()
-    func getActiveCarousel() -> CarouselContent?
+    func getActiveCarousel() -> MobileContent?
     func sendSocketRequest(_ sdkEvent: SDKEvent)
 }
 
-/**
- The `ExperiencesPublisher` class is responsible for managing and publishing in-app experiences,
- such as carousels, using socket connections. It handles socket events, updates themes, and
- manages the lifecycle of the experiences displayed within the application.
-
- This class listens for socket events, processes incoming messages, and ensures that content
- like carousels and themes are displayed or updated appropriately. It communicates with other
- services (e.g., `ThemeHandler` and `SocketManager`) to manage state and fetch data as needed.
- */
 internal class ExperiencesPublisher: ExperiencesPublishing {
 
     // MARK: - Properties
@@ -64,7 +54,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     private var currentScreen: String = ""
 
     /// Holds the active carousel content, if any, that is being displayed.
-    private var carouselContent: CarouselContent?
+    private var mobileContent: MobileContent?
 
     // MARK: - Initializer
 
@@ -93,12 +83,14 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     }
 
     /**
-     Retrieves the currently active carousel content, if available.
+     Return the current active carousel content.
 
-     - Returns: The current `CarouselContent`, or `nil` if no active carousel is present.
+     - Returns: The current `MobileContent`, or `nil` if no active carousel is present.
      */
-    func getActiveCarousel() -> CarouselContent? {
-        return carouselContent
+    func getActiveCarousel() -> MobileContent? {
+        let currentContent = mobileContent
+        mobileContent = nil
+        return currentContent
     }
 
     /**
@@ -107,7 +99,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
     func sendSocketRequest(_ sdkEvent: SDKEvent) {
-        // socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
+        socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
     }
 
     // MARK: - Private Methods
@@ -142,16 +134,17 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      if the conditions for displaying the carousel are met.
      */
     private func openCarouselScreen() {
-        // if !canShowCarousel() { return }
-//        let carouselExperienceViewModel = CarouselExperienceViewModel(container: container)
-//        let carouselExperienceViewController = CarouselExperienceViewController(
-//            carouselExperienceViewModel: carouselExperienceViewModel)
-//        carouselExperienceViewController.modalPresentationStyle = .fullScreen
-//        if let topViewController = UIApplication.shared.topViewController() {
-//            performOn(.main) {
-//                topViewController.present(carouselExperienceViewController, animated: true)
-//            }
-//        }
+        performOn(.main) { [weak self] in
+            guard let self = self else { return }
+            // if !canShowCarousel() { return }
+            let carouselExperienceViewModel = CarouselExperienceViewModel(container: self.container)
+            let carouselExperienceViewController = CarouselExperienceViewController(
+                carouselExperienceViewModel: carouselExperienceViewModel)
+            carouselExperienceViewController.modalPresentationStyle = .fullScreen
+            if let topViewController = UIApplication.shared.topViewController() {
+                topViewController.present(carouselExperienceViewController, animated: true)
+            }
+        }
     }
 
     /**
@@ -161,7 +154,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     private func fetchThemeData(_ themeID: Int) {
         guard socketManager.isSocketOpened else {
-            carouselContent = nil
+            mobileContent = nil
             return
         }
         sendSocketRequest(ThemeContentEvent(themeID: themeID, token: config.token))
@@ -175,30 +168,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     private func canShowCarousel() -> Bool {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: CarouselExperienceViewController.self),
-           carouselContent?.carouselScreen.contains(currentScreen) == true {
+           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           mobileContent?.type == .carousel {
             return true
         }
         return false
-    }
-
-    /**
-     Handles incoming messages received from the socket.
-
-     - Parameter message: The message object containing payload data.
-     */
-    private func handleIncomingMessage(_ message: Message) {
-        if let response = message.payload["response"] as? String, !response.isEmpty {
-            if let carousel = response.toCarousel() {
-                carouselContent = carousel
-            }
-
-            if let themeData = response.toMobileTheme() {
-                themeHandler.saveTheme(themeData)
-            }
-        }
-        if let carouselContent = carouselContent {
-            checkCachedThemes(carouselContent.baseThemeID)
-        }
     }
 }
 
@@ -218,32 +192,45 @@ extension ExperiencesPublisher: SocketSubscription {
        - eventSent: Indicates whether the event was successfully sent.
      */
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
-        if let carouselData = MockManager.carouselData.toCarousel() {
-            carouselContent = carouselData
+        if eventName == EventType.screenEvent {
+            currentScreen = payload?[AnalyticsPublisher.identifyScreenProperty] as? String ?? ""
         }
 
-        if let baseTheme = MockManager.BaseTheme.toMobileTheme() {
-            themeHandler.saveTheme(baseTheme)
+        guard
+            !message.payload.isEmpty,
+            let response = message.payload.toJSONString()
+        else { return }
+
+        if let mobileContentData = response.toMobileContent() {
+            mobileContent = mobileContentData.mobileContent
+        }
+        if let themeData = response.toMobileTheme() {
+            themeHandler.saveTheme(themeData)
         }
 
-//        performOn(.main) { [weak self] in
-//            self?.openCarouselScreen()
-//        }
-//        if eventName == EventType.screenEvent {
-//            currentScreen = payload?[AnalyticsPublisher.identifyScreenProperty] as? String ?? ""
-//        }
-//
-//        handleIncomingMessage(message)
+        if let mobileContent = mobileContent {
+            checkCachedThemes(mobileContent.baseThemeID)
+        }
     }
 
-    /**
-     Handles new messages received over the socket.
-
-     Processes the message to extract carousel and theme data.
+    /*
+     Handles new messages received over the socket, Processes the message to extract carousel and theme data.
 
      - Parameter message: The message object containing payload data.
      */
-    func onNewMessage(_ message: Message) {
-        handleIncomingMessage(message)
-    }
+//    func onNewMessage(_ message: Message) {
+//        guard let response = message.payload.toJSONString() else { return }
+//
+//        if let mobileContentData = response.toMobileContent() {
+//            mobileContent = mobileContentData.mobileContent
+//        }
+//        if let themeData = response.toMobileTheme() {
+//            themeHandler.saveTheme(themeData)
+//        }
+//
+//        if let mobileContent = mobileContent {
+//            checkCachedThemes(mobileContent.baseThemeID)
+//        }
+//
+//    }
 }

@@ -53,7 +53,7 @@
                 </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="yuX-s0-pil"/>
-            <color key="backgroundColor" name="PeriglacialBlue"/>
+            <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
                 <constraint firstItem="yuX-s0-pil" firstAttribute="trailing" secondItem="6UZ-QK-BHy" secondAttribute="trailing" constant="24" id="5rh-Hj-JK0"/>
                 <constraint firstItem="1IC-NC-MKC" firstAttribute="leading" secondItem="yuX-s0-pil" secondAttribute="leading" constant="16" id="FLo-b8-Rme"/>
@@ -73,9 +73,6 @@
         </namedColor>
         <namedColor name="MineShaft">
             <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-        </namedColor>
-        <namedColor name="PeriglacialBlue">
-            <color red="0.87099999189376831" green="0.89800000190734863" blue="0.83099997043609619" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

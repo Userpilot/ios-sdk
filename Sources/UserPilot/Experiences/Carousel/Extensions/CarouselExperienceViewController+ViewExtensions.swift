@@ -21,7 +21,12 @@ internal extension CarouselExperienceViewController {
     /// Sets up background color, dismiss button visibility, and step progress indicator.
     func setupGeneralStyle() {
         // Get the theme for the current step index.
-        guard let theme = carouselExperienceViewModel.mergedTheme[safe: collectionView.currentIndex] else { return }
+        guard
+            let theme = carouselExperienceViewModel.mergedTheme[safe: collectionView.currentIndex]
+        else { return }
+
+        // update status bar color
+        setNeedsStatusBarAppearanceUpdate()
 
         // Set the background color for the view.
         self.view.backgroundColor = theme.backgroundColor

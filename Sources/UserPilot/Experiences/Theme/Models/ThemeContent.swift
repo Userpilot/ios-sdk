@@ -14,10 +14,12 @@ import UIKit
 // MARK: - ThemeResponse
 
 internal struct ThemeContent: Codable {
-    let mobileTheme: MobileTheme?
+    let id: Int?
+    let themeData: ThemeData?
 
     private enum CodingKeys: String, CodingKey {
-        case mobileTheme = "mobile_theme"
+        case id
+        case themeData = "theme_data"
     }
 }
 
@@ -28,7 +30,7 @@ internal struct MobileTheme: Codable {
     let themeData: ThemeData?
 
     private enum CodingKeys: String, CodingKey {
-        case id
+        case id = "theme_id"
         case themeData = "theme_data"
     }
 }
@@ -53,6 +55,10 @@ internal struct ThemeData: Codable {
 
     var backgroundColorAsString: String {
         carousel?.colors?.backgroundColor ?? ""
+    }
+
+    var isLightTheme: Bool {
+        backgroundColor.isLightColor()
     }
 
     // Text

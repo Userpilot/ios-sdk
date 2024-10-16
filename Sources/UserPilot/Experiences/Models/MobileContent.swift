@@ -16,32 +16,33 @@ import UIKit
  steps, theme, and configuration settings.
 
  - Properties:
-    - `type`: The type of the carousel, represented as a `CarouselType`.
+    - `type`: The type of the carousel, represented as a `ContentType`.
     - `order`: The display order of the carousel.
     - `steps`: A list of `Step` objects that make up the carousel's content.
     - `mobileTheme`: An optional `MobileTheme` that defines the visual style for the carousel.
     - `configuration`: The `Configuration` settings that apply to the carousel.
-
- - Parameters:
-    - `type`: The type of the carousel.
-    - `order`: The order in which the carousel should be displayed.
-    - `steps`: A list of steps in the carousel.
-    - `mobileTheme`: An optional theme for mobile representation.
-    - `configuration`: The configuration settings for the carousel.
  */
 
 // MARK: - CarouselData
 
-internal struct CarouselContent: Codable {
-    let type: CarouselType
+internal struct MobileContentData: Codable {
+    let mobileContent: MobileContent
+
+    private enum CodingKeys: String, CodingKey {
+        case mobileContent = "mobile_contents"
+    }
+}
+
+internal struct MobileContent: Codable {
+    let type: ContentType
     let order: Int
     let steps: [Step]
     let mobileTheme: MobileTheme
-    let configuration: Configuration
+    let configuration: Configuration?
 
     private enum CodingKeys: String, CodingKey {
         case type, order, steps
-        case mobileTheme = "mobile_theme"
+        case mobileTheme = "theme_data"
         case configuration
     }
 
@@ -51,7 +52,7 @@ internal struct CarouselContent: Codable {
     }
     // General
     var carouselScreen: [String] {
-        configuration.targeting.screens
+        configuration?.targeting.screens ?? []
     }
 
 }
@@ -166,7 +167,7 @@ internal struct ButtonAction: Codable {
 
 // MARK: - CarouselType
 
-internal enum CarouselType: String, Codable {
+internal enum ContentType: String, Codable {
     case carousel
     case slider
 }
@@ -186,11 +187,13 @@ internal enum LineType: String, Codable {
 internal enum HeaderType: String, Codable {
     case headerOne = "h1"
     case headerTwo = "h2"
+    case headerThree = "h3"
 
     func fontSize() -> Int {
         switch self {
         case .headerOne: return 25
         case .headerTwo: return 20
+        case .headerThree: return 24
         }
     }
 }
@@ -223,14 +226,14 @@ internal enum TextAlignmentType: String, Codable {
 
 extension String {
     /// Converts a JSON string into a `CarouselData` object using `JSONDecoder`.
-    func toCarousel() -> CarouselContent? {
+    func toMobileContent() -> MobileContentData? {
         let decoder = JSONDecoder()
-        return try? decoder.decode(CarouselContent.self, from: Data(self.utf8))
+        return try? decoder.decode(MobileContentData.self, from: Data(self.utf8))
     }
 
     /// Converts a JSON string into an array of `CarouselData` objects using `JSONDecoder`.
-    func toCarouselList() -> [CarouselContent]? {
-        if let carouselDataList: [CarouselContent] = self.toArray() {
+    func toCarouselList() -> [MobileContentData]? {
+        if let carouselDataList: [MobileContentData] = self.toArray() {
             return carouselDataList
         } else {
             return nil

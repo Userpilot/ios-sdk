@@ -53,7 +53,7 @@ internal class ThemeHandler: ThemeHandling {
     /// Default values for various text styles and attributes.
     struct DefaultValues {
         static let headerTextSize = 16
-        static let normalTextSize = 14
+        static let normalTextSize = 16
         static let blackColor = "#000000"
 
         /// Default text style mark with predefined attributes.
@@ -80,7 +80,7 @@ internal class ThemeHandler: ThemeHandling {
     /// Additional style values.
     struct StyleValues {
         static let manual = "manual"
-        static let borderRadius = 8
+        static let borderRadius = 0
     }
 
     // MARK: - Properties
@@ -95,9 +95,9 @@ internal class ThemeHandler: ThemeHandling {
 
      - Parameter themeResponse: The response containing the theme data to be saved.
      */
-    func saveTheme(_ themeResponse: ThemeContent) {
-        if let id = themeResponse.mobileTheme?.id {
-            themes[id] = themeResponse.mobileTheme?.themeData
+    func saveTheme(_ themeContent: ThemeContent) {
+        if let id = themeContent.id, let themeData = themeContent.themeData {
+            themes[id] = themeData
         }
     }
 

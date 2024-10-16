@@ -25,7 +25,7 @@ internal class CarouselExperienceViewModel {
     let imageLoader: ImageLoading
 
     private(set) var mergedTheme = [ThemeData]()
-    private(set) var carouselContent: CarouselContent?
+    private(set) var carouselContent: MobileContent?
 
     var bindData: (() -> Void)?
     private var lastStep = 0
@@ -50,17 +50,16 @@ internal class CarouselExperienceViewModel {
      */
     func onStart() {
         guard
-            let carouselContent = experiencesPublisher.getActiveCarousel()
+            let mobileContent = experiencesPublisher.getActiveCarousel()
         else { return }
+        self.carouselContent = mobileContent
+        let baseTheme = themeHandler.getThemeById(mobileContent.baseThemeID)
 
-        self.carouselContent = carouselContent
-        let baseTheme = themeHandler.getThemeById(carouselContent.baseThemeID)
-
-        carouselContent.steps.forEach { step in
+        mobileContent.steps.forEach { step in
             mergedTheme.append(
                 themeHandler.mergeThemes(
                     baseTheme,
-                    carouselContent.mobileTheme.themeData,
+                    mobileContent.mobileTheme.themeData,
                     step.mobileTheme?.themeData
                 )
             )
@@ -85,13 +84,13 @@ internal class CarouselExperienceViewModel {
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
-        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+        // mobileContentDataexperiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceSeenEvent(
             mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID)
-        experiencesPublisher.sendSocketRequest(eventStepSeen)
+        // experiencesPublisher.sendSocketRequest(eventStepSeen)
     }
 
     /**
@@ -103,13 +102,13 @@ internal class CarouselExperienceViewModel {
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
-        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+        // experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceCompletedEvent(
             mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID)
-        experiencesPublisher.sendSocketRequest(eventStepSeen)
+        // experiencesPublisher.sendSocketRequest(eventStepSeen)
     }
 
     /**
@@ -126,14 +125,14 @@ internal class CarouselExperienceViewModel {
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
-        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+        // experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceStepSeenEvent(
             mobileContentID: 4,
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
-        experiencesPublisher.sendSocketRequest(eventStepSeen)
+        // experiencesPublisher.sendSocketRequest(eventStepSeen)
     }
 
     /**
@@ -147,13 +146,13 @@ internal class CarouselExperienceViewModel {
             appToken: config.token,
             userID: storage.userID,
             stepID: "")
-        experiencesPublisher.sendSocketRequest(eventStepDismissed)
+        // experiencesPublisher.sendSocketRequest(eventStepDismissed)
 
         let eventCarouselDismissed = ExperienceDismissedEvent(
             mobileContentID: 0,
             appToken: config.token,
             userID: storage.userID)
-        experiencesPublisher.sendSocketRequest(eventCarouselDismissed)
+        // experiencesPublisher.sendSocketRequest(eventCarouselDismissed)
     }
 
     // MARK: - Deep Link Handling

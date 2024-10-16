@@ -55,4 +55,20 @@ extension UIColor {
         let blue = CGFloat.random(in: 0...1)
         return UIColor(red: red, green: green, blue: blue, alpha: 1.0)
     }
+
+    func isLightColor() -> Bool {
+        // Get the red, green, blue, and alpha components of the color
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        self.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+
+        // Calculate luminance using the same formula
+        let luminance = (0.299 * red + 0.587 * green + 0.114 * blue)
+
+        // Return true if the color is dark, false otherwise
+        return luminance > 0.5
+    }
 }

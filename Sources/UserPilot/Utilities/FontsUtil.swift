@@ -27,13 +27,15 @@ extension UIFont {
                          fontWeight: [UIFontDescriptor.SymbolicTraits],
                          fontSize: CGFloat) -> UIFont {
         guard let fontName = fontName else {
-            return getSystemFont(fontName, fontWeight, fontSize)
+            return UIFont.systemFont(ofSize: fontSize, weight: .regular)
         }
 
-        if let customFont = UIFont.loadCustomFont(fontName, fontWeight, fontSize) {
+        if let systemFont = getSystemFont(fontName, fontWeight, fontSize) {
+            return systemFont
+        } else if let customFont = UIFont.loadCustomFont(fontName, fontWeight, fontSize) {
             return customFont
         } else {
-            return getSystemFont(fontName, fontWeight, fontSize)
+            return UIFont.systemFont(ofSize: fontSize, weight: .regular)
         }
     }
 
@@ -46,7 +48,7 @@ extension UIFont {
     /// - Returns: A UIFont object that matches the system font with the specified traits.
     static func getSystemFont(_ fontName: String?,
                               _ fontWeight: [UIFontDescriptor.SymbolicTraits],
-                              _ fontSize: CGFloat) -> UIFont {
+                              _ fontSize: CGFloat) -> UIFont? {
         let systemFont = UIFont.systemFont(ofSize: fontSize)
         let design = UIFontDescriptor.SystemDesign(string: fontName) ?? .default
 
@@ -59,9 +61,8 @@ extension UIFont {
         // Create and return a new font with the combined descriptor
         if let combinedFontDescriptor = combinedFontDescriptor {
             return UIFont(descriptor: combinedFontDescriptor, size: fontSize)
-        } else {
-            return UIFont.systemFont(ofSize: fontSize, weight: .regular)
         }
+        return nil
     }
 
     /// Checks if a font with the specified name is already registered.

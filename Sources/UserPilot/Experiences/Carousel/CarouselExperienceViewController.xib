@@ -31,7 +31,7 @@
                             <rect key="frame" x="0.0" y="0.0" width="393" height="37"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="77F-mu-doi" customClass="UPCloseButton" customModule="UserPilot">
-                                    <rect key="frame" x="342" y="0.0" width="35" height="35"/>
+                                    <rect key="frame" x="338" y="0.0" width="35" height="35"/>
                                     <constraints>
                                         <constraint firstAttribute="height" constant="35" id="LiJ-Lt-sPh"/>
                                         <constraint firstAttribute="width" constant="35" id="VR9-Au-xBh"/>
@@ -47,7 +47,7 @@
                             <constraints>
                                 <constraint firstItem="77F-mu-doi" firstAttribute="top" secondItem="OAC-jE-Go0" secondAttribute="top" id="LS3-sE-4tF"/>
                                 <constraint firstAttribute="height" constant="37" id="heb-d8-UQh"/>
-                                <constraint firstAttribute="trailing" secondItem="77F-mu-doi" secondAttribute="trailing" constant="16" id="xX1-Wz-Igg"/>
+                                <constraint firstAttribute="trailing" secondItem="77F-mu-doi" secondAttribute="trailing" constant="20" id="xX1-Wz-Igg"/>
                             </constraints>
                         </view>
                         <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="none" translatesAutoresizingMaskIntoConstraints="NO" id="rAc-Qs-gI2">
@@ -74,7 +74,7 @@
                             <rect key="frame" x="0.0" y="687" width="393" height="45"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="3gt-N5-NdR" customClass="UPButtonView" customModule="UserPilot">
-                                    <rect key="frame" x="24" y="0.0" width="345" height="45"/>
+                                    <rect key="frame" x="20" y="0.0" width="353" height="45"/>
                                     <constraints>
                                         <constraint firstAttribute="height" constant="45" id="DPh-t1-VuO"/>
                                     </constraints>
@@ -84,8 +84,8 @@
                             </subviews>
                             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                             <constraints>
-                                <constraint firstItem="3gt-N5-NdR" firstAttribute="leading" secondItem="zf4-O3-Buf" secondAttribute="leading" constant="24" id="9Tz-8q-Sv8"/>
-                                <constraint firstAttribute="trailing" secondItem="3gt-N5-NdR" secondAttribute="trailing" constant="24" id="D2D-eX-ukj"/>
+                                <constraint firstItem="3gt-N5-NdR" firstAttribute="leading" secondItem="zf4-O3-Buf" secondAttribute="leading" constant="20" id="9Tz-8q-Sv8"/>
+                                <constraint firstAttribute="trailing" secondItem="3gt-N5-NdR" secondAttribute="trailing" constant="20" id="D2D-eX-ukj"/>
                                 <constraint firstAttribute="height" constant="45" id="JSk-l0-PxQ"/>
                                 <constraint firstItem="3gt-N5-NdR" firstAttribute="top" secondItem="zf4-O3-Buf" secondAttribute="top" id="caV-vP-NRT"/>
                                 <constraint firstAttribute="bottom" secondItem="3gt-N5-NdR" secondAttribute="bottom" id="luL-dT-6ZB"/>
