@@ -26,9 +26,6 @@ internal protocol DataStoring: AnyObject {
     /// The socket URL used to connect the SDK to the backend services.
     var socketURL: String { get set }
 
-    /// A unique identifier for the device, generated during the SDK's first initialization.
-    var deviceID: String { get set }
-
     /// The current user ID, which could be either a generated anonymous ID or a value provided
     ///  by the application upon authentication.
     var userID: String { get set }
@@ -61,11 +58,9 @@ internal class Storage: DataStoring {
      */
     private enum Key: String {
         case socketURL
-        case deviceID
         case userID
         case user
         case temporaryUser
-        case isAnonymous
         case imagesCache
     }
 
@@ -86,17 +81,6 @@ internal class Storage: DataStoring {
         }
         set {
             write(.socketURL, newValue: newValue)
-        }
-    }
-
-    /// The unique device identifier, generated when the SDK is initialized for the first time. The value
-    ///  is cached for subsequent access.
-    internal var deviceID: String {
-        get {
-            return read(.deviceID, defaultValue: "")
-        }
-        set {
-            write(.deviceID, newValue: newValue)
         }
     }
 
@@ -149,7 +133,6 @@ internal class Storage: DataStoring {
      */
     init(container: DIContainer) {
         self.config = container.resolve(UserPilot.Config.self)
-        self.deviceID = UIDevice.identifier // Generate and assign the device identifier.
     }
 
     // MARK: - Helper Methods
