@@ -96,7 +96,7 @@ internal extension SlideOutBottomSheetViewController {
     /// including the background color and step progress.
     func setupGeneralStyle() {
         // Set the background color of the bottom sheet based on the theme provided by the view model.
-        setBackgroundColor(experienceViewModel.slideOutTheme.backgroundColor)
+        setBackgroundColor(experienceViewModel.slideOutTheme)
     }
 }
 

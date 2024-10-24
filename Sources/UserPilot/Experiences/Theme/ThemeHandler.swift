@@ -55,7 +55,7 @@ internal class ThemeHandler: ThemeHandling {
     struct DefaultValues {
         static let headerTextSize = 16
         static let normalTextSize = 16
-        static let dimDegree = 0.4
+        static let dimDegree = 40
         static let slideOutContentMaxHeightPercentage = 0.55
         static let blackColor = "#000000"
         static let whiteColor = "#FFFFFF"

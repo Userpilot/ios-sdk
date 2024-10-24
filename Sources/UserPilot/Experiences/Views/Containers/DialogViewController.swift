@@ -40,7 +40,7 @@ internal class DialogViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .black
-        view.alpha = ThemeHandler.DefaultValues.dimDegree
+        view.alpha = 0
         return view
     }()
 
@@ -145,8 +145,13 @@ extension DialogViewController {
 
     /// Sets the background color of the main container view.
     /// - Parameter color: The UIColor to set as the background color.
-    func setBackgroundColor(_ color: UIColor) {
-        mainContainerView.backgroundColor = color
+    func setBackgroundColor(_ theme: ExperienceTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        dimmedView.isHidden = !theme.backdropEnabled
+        if theme.backdropEnabled {
+            dimmedView.alpha = theme.backdropOpacity
+            // dimmedView.backgroundColor = theme.backdropColor
+        }
     }
 }
 

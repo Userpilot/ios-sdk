@@ -80,7 +80,7 @@ extension SlideOutDialogViewController {
     /// Sets up the general style for the dialog, including background color.
     func setupGeneralStyle() {
         // Set the background color for the view based on the theme.
-        setBackgroundColor(experienceViewModel.slideOutTheme.backgroundColor)
+        setBackgroundColor(experienceViewModel.slideOutTheme)
     }
 }
 

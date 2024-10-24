@@ -55,7 +55,7 @@ internal class BottomSheetViewController: UIViewController {
     // MARK: - Properties
 
     /// Maximum opacity for the dimmed background view
-    private let maxDimmedAlpha: CGFloat = ThemeHandler.DefaultValues.dimDegree
+    private let maxDimmedAlpha: CGFloat = 0
     /// Minimum vertical drag height required to dismiss the bottom sheet
     private let minDismissiblePanHeight: CGFloat = 20
     /// Minimum spacing between the top edge of the view and the bottom sheet
@@ -216,8 +216,13 @@ internal extension BottomSheetViewController {
     }
 
     /// Customize the background color of the bottom sheet
-    func setBackgroundColor(_ color: UIColor) {
-        mainContainerView.backgroundColor = color
+    func setBackgroundColor(_ theme: ExperienceTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        dimmedView.isHidden = !theme.backdropEnabled
+        if theme.backdropEnabled {
+            dimmedView.alpha = theme.backdropOpacity
+            // dimmedView.backgroundColor = theme.backdropColor
+        }
     }
 }
 
