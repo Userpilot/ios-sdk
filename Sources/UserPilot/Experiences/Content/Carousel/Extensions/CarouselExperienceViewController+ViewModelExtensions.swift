@@ -20,7 +20,11 @@ internal extension CarouselExperienceViewController {
     /// Sets up closures for data binding and dismiss actions.
     func bindViewModel() {
         // Bind data from the view model and update the view accordingly.
-        carouselExperienceViewModel.bindData = { [weak self] in
+        experienceViewModel.bindData = { [weak self] canBindData in
+            if !canBindData {
+                self?.dismiss(animated: false, completion: nil)
+                return
+            }
             // Set up the general style and reload data when view model data changes.
             self?.setupGeneralStyle()
             self?.collectionView.reloadData()
@@ -29,6 +33,6 @@ internal extension CarouselExperienceViewController {
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
-        carouselExperienceViewModel.onStart()
+        experienceViewModel.onStart()
     }
 }

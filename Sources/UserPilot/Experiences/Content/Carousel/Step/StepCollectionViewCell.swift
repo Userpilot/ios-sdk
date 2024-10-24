@@ -33,7 +33,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         view.axis = .vertical
         view.alignment = .fill
         view.distribution = .fill
-        view.spacing = 12
+        view.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
         return view
     }()
 
@@ -45,13 +45,12 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      
      - Parameters:
        - step: The `Step` object containing the step data to bind to the cell.
-       - themeData: The `ThemeData` that contains styling attributes for the step.
+       - theme: The `ExperienceTheme` that contains styling attributes for the step.
        - experienceContentProtocol: A listener for handling interactions related to experience content.
        - imageLoader: An object responsible for loading images.
      */
     func bindStep(_ step: Step,
-                  withThemeData themeData: ThemeData,
-                  andExperienceContentListener experienceContentProtocol: ExperienceContentProtocol,
+                  withTheme theme: ExperienceTheme,
                   andImageLoader imageLoader: ImageLoading) {
         // Clear existing views in the stack view
         stackView.arrangedSubviews.forEach { view in
@@ -60,10 +59,9 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         }
 
         // Setup UI and bind sections to the stack view
-        setupUI(withThemeData: themeData)
+        setupUI(withTheme: theme)
         bindSections(step,
-                     withThemeData: themeData,
-                     andExperienceContentProtocol: experienceContentProtocol,
+                     withTheme: theme,
                      andImageLoader: imageLoader
         )
     }
@@ -75,13 +73,12 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      
      - Parameters:
        - step: The `Step` object containing sections to bind to the cell.
-       - themeData: The `ThemeData` containing styling attributes for the step.
+       - theme: The `ExperienceTheme` containing styling attributes for the step.
        - experienceContentProtocol: A listener for handling interactions related to experience content.
        - imageLoader: An object responsible for loading images.
      */
     private func bindSections(_ step: Step,
-                              withThemeData themeData: ThemeData,
-                              andExperienceContentProtocol experienceContentProtocol: ExperienceContentProtocol,
+                              withTheme theme: ExperienceTheme,
                               andImageLoader imageLoader: ImageLoading) {
         // Iterate over each section of the step
         step.sections.forEach { section in
@@ -92,26 +89,23 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             case .heading:
                 let header = UPTextView()
                 header.setupView(line: firstLine,
-                                 style: themeData,
-                                 experienceContentProtocol: experienceContentProtocol)
+                                 theme: theme)
                 stackView.addArrangedSubview(header)
             case .paragraph:
                 let paragraph = UPTextContainerView()
                 paragraph.setupView(lines: section.lines,
-                                    style: themeData,
-                                    experienceContentProtocol: experienceContentProtocol)
+                                    theme: theme)
                 stackView.addArrangedSubview(paragraph)
             case .image:
                 let image = UPImageView(frame: .zero)
                 image.heightAnchor.constraint(equalToConstant: 200).isActive = true
-                image.widthAnchor.constraint(equalToConstant: 200).isActive = true
+                // image.widthAnchor.constraint(equalToConstant: 200).isActive = true
                 image.setupView(line: firstLine, imageLoader: imageLoader)
                 stackView.addArrangedSubview(image)
             case .iconText:
                 let iconText = UPIconTextContainerView()
                 iconText.setupView(lines: section.lines,
-                                   style: themeData,
-                                   experienceContentProtocol: experienceContentProtocol,
+                                   theme: theme,
                                    imageLoader: imageLoader)
                 iconText.translatesAutoresizingMaskIntoConstraints = false
                 stackView.addArrangedSubview(iconText)
@@ -127,9 +121,9 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      Sets up the UI components of the cell with the provided theme data.
      
      - Parameters:
-       - themeData: The `ThemeData` that contains styling attributes for the cell's UI components.
+       - theme: The `TheExperienceThememeData` that contains styling attributes for the cell's UI components.
      */
-    private func setupUI(withThemeData themeData: ThemeData) {
+    private func setupUI(withTheme theme: ExperienceTheme) {
         // Disable autoresizing mask constraints for custom layout
         [theScrollView, contentContainerView, stackView].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
@@ -162,13 +156,15 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor, constant: 0.0),
             contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor, constant: 0.0),
             stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor, constant: -8.0),
-            stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -20),
+            stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor,
+                                               constant: ThemeHandler.DefaultValues.contentMargin),
+            stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor,
+                                                constant: ThemeHandler.DefaultValues.contentMargin.negative),
             contentViewHeightConstraint
         ])
 
         // Conditional layout based on content alignment
-        if themeData.contentAlignment == .center {
+        if theme.contentAlignment == .center {
             NSLayoutConstraint.activate([
                 stackView.topAnchor.constraint(greaterThanOrEqualTo: contentContainerView.topAnchor, constant: 0.0),
                 stackView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor, constant: 0.0)

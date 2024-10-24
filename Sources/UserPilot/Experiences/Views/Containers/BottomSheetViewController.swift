@@ -23,7 +23,7 @@ internal class BottomSheetViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .systemBackground
-        view.layer.cornerRadius = 20
+        view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view
     }()
@@ -55,7 +55,7 @@ internal class BottomSheetViewController: UIViewController {
     // MARK: - Properties
 
     /// Maximum opacity for the dimmed background view
-    private let maxDimmedAlpha: CGFloat = 0.6
+    private let maxDimmedAlpha: CGFloat = ThemeHandler.DefaultValues.dimDegree
     /// Minimum vertical drag height required to dismiss the bottom sheet
     private let minDismissiblePanHeight: CGFloat = 20
     /// Minimum spacing between the top edge of the view and the bottom sheet
@@ -113,10 +113,16 @@ private extension BottomSheetViewController {
         // Add content view
         mainContainerView.addSubview(contentView)
         NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor, constant: 20),
-            contentView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor, constant: -20),
+            contentView.leadingAnchor.constraint(
+                equalTo: mainContainerView.leadingAnchor,
+                constant: ThemeHandler.DefaultValues.contentMargin),
+            contentView.trailingAnchor.constraint(
+                equalTo: mainContainerView.trailingAnchor,
+                constant: ThemeHandler.DefaultValues.contentMargin.negative),
             contentView.topAnchor.constraint(equalTo: topBarView.bottomAnchor),
-            contentView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
+            contentView.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
         ])
     }
 }

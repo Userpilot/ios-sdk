@@ -1,36 +1,41 @@
 //
-//  File.swift
-//
+//  SlideOutDialogViewController.swift
+//  UserPilot SDK
 //
 //  Created by Motasem Hamed on 20/10/2024.
+//  Copyright © 2024 UserPilot. All rights reserved.
+//
+//  [Brief Description]
+//  A view controller that presents a dialog with a slide-out container view.
+//  It is designed to display content related to the user experience and allows for
+//  dynamic updates via a provided view model.
 //
 
 import Foundation
 import UIKit
 
-internal class SlideOutDialog: UIViewController, ExperienceContentProtocol {
+internal class SlideOutDialogViewController: DialogViewController {
 
-    @IBOutlet weak private var slideOutDialogView: UIView!
-    
-    /// Close button to dismiss the carousel experience.
-    @IBOutlet internal weak var buttonDismiss: UPCloseButton!
+    // MARK: - UI Elements
+    /// Container view that holds the slide-out content
+    internal lazy var slideOutContainerView: SlideOutContainerView = {
+        let slideOutContainerView = SlideOutContainerView()
+        slideOutContainerView.translatesAutoresizingMaskIntoConstraints = false
+        return slideOutContainerView
+    }()
 
-    /// Action button used for various step interactions.
-    @IBOutlet internal weak var buttonAction: UPButtonView!
-    
-    @IBOutlet weak private var slideOutContainerView: SlideOutContainerView! {
-        didSet {
-            slideOutContainerView.heightAnchor.constraint(lessThanOrEqualToConstant: 400).isActive = true
-        }
-    }
+    // MARK: - Properties
 
-    /// View model managing the carousel experience state and actions.
+    /// View model managing the carousel experience state and actions
     internal let experienceViewModel: ExperienceViewModel
 
+    // MARK: - Initializers
+
     /// Initializes the view controller with the given view model.
+    /// - Parameter experienceViewModel: The view model to bind with the dialog.
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
-        super.init(nibName: "SlideOutDialog", bundle: .module)
+        super.init(nibName: nil, bundle: nil)
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
@@ -38,88 +43,63 @@ internal class SlideOutDialog: UIViewController, ExperienceContentProtocol {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        slideOutDialogView.applySlideOutDialogStyle()
         bindViewModel()
+        setContent(content: slideOutContainerView)
     }
+}
 
+// MARK: - View Model Binding
+extension SlideOutDialogViewController {
+
+    /// Binds the view model data to the view.
     func bindViewModel() {
         // Bind data from the view model and update the view accordingly.
-        experienceViewModel.bindData = { [weak self] in
-            guard let self = self, let slideOutContent = self.experienceViewModel.slideOutContent else { return }
-            // Set up the general style and reload data when view model data changes.
-            self.setupGeneralStyle()
+        experienceViewModel.bindData = { [weak self] canBindData in
+            guard
+                let self = self,
+                canBindData,
+                let slideOutContent = self.experienceViewModel.slideOutContent
+            else {
+                self?.dismissDialog()
+                return
+            }
             self.slideOutContainerView.bindStep(
                 slideOutContent,
-                withThemeData: self.experienceViewModel.slideOutTheme,
-                andExperienceContentListener: self,
+                withTheme: self.experienceViewModel.slideOutTheme,
+                andSlideOutContainerViewDelegate: self,
                 andImageLoader: self.experienceViewModel.imageLoader)
-            // Bind the action button for the first step.
-            // self?.bindActionButton(0)
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
         experienceViewModel.onStart()
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        slideOutDialogView.applySlideOutDialogAnimation()
-    }
-    
-    /// Configures the general style for the carousel experience view.
-    /// Sets up background color, dismiss button visibility, and step progress indicator.
+    /// Sets up the general style for the dialog, including background color.
     func setupGeneralStyle() {
-        
-        // Set the background color for the view.
-        self.slideOutDialogView.backgroundColor = experienceViewModel.slideOutTheme.backgroundColor
+        // Set the background color for the view based on the theme.
+        setBackgroundColor(experienceViewModel.slideOutTheme.backgroundColor)
+    }
+}
 
-        // Configure the dismiss button based on the theme settings.
-        if theme.isDismissButtonEnabled {
-            buttonDismiss.setupView(style: experienceViewModel.slideOutTheme)
-        } else {
-            buttonDismissContainerView.isHidden = true
-        }
+// MARK: - SlideOutContainerViewDelegate
+extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
+
+    /// Handles the close action from the slide-out container.
+    func onClose() {
+        dismissDialog()
     }
 
-    /// Binds the action button for a given step index.
-    /// Sets up the button with its properties and configures the action when tapped.
-    /// - Parameter index: The index of the step to bind the action button for.
-    func bindActionButton(_ index: Int) {
-        guard
-            let theme = experienceViewModel.mergedTheme[safe: index],
-            let step = experienceViewModel.carouselContent?.steps[safe: index],
-            let lastSection = step.sections.last,
-            let button = lastSection.lines.last,
-            button.type == .button
-        else {
-            return
-        }
-
-        // Set up the action button with the step's button configuration and style.
-        buttonAction.setupViews(
-            line: button,
-            action: step.buttonAction,
-            style: theme
-        ) { [weak self] action in
-            guard let self = self else { return }
-
-            // If it's the last step, handle dismissal and trigger actions accordingly.
-            if self.isLastStep() {
-                self.dismiss(animated: true, completion: {
-                    if action.deepLink != nil {
-                        self.experienceViewModel.onDeepLinkTriggered()
-                    }
-                    self.experienceViewModel.onExperienceCompleted()
-                })
+    /// Handles actions triggered by buttons in the slide-out container.
+    /// - Parameter action: The action triggered by the button.
+    func onAction(_ action: ButtonAction) {
+        dismissDialog {
+            if action.deepLink != nil {
+                self.experienceViewModel.onDeepLinkTriggered()
             }
+            self.experienceViewModel.onExperienceCompleted()
         }
     }
-    
-
-    @IBAction private func onDismissButtonClicked(_ sender: Any) {
-        self.dismiss(animated: true, completion: nil)
-    }
-
 }

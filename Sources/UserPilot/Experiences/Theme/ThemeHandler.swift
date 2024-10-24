@@ -12,6 +12,7 @@
 //
 
 import Foundation
+import UIKit
 
 // MARK: - ThemeHandling Protocol
 
@@ -24,12 +25,12 @@ internal protocol ThemeHandling: AnyObject {
     /// Retrieves theme data for the specified theme ID.
     /// - Parameter themeId: The ID of the theme to retrieve.
     /// - Returns: The theme data if found, otherwise `nil`.
-    func getThemeById(_ themeId: Int) -> ThemeData?
+    func getThemeById(_ themeId: Int, _ type: ContentType) -> ThemeData?
 
     /// Checks if the specified theme ID is already cached.
     /// - Parameter themeId: The ID of the theme to check.
     /// - Returns: `true` if the theme ID is cached, `false` otherwise.
-    func containsTheme(_ themeId: Int) -> Bool
+    func containsTheme(_ themeId: Int, _ type: ContentType) -> Bool
 
     /// Merges multiple themes into a unified theme.
     /// - Parameters:
@@ -54,7 +55,14 @@ internal class ThemeHandler: ThemeHandling {
     struct DefaultValues {
         static let headerTextSize = 16
         static let normalTextSize = 16
+        static let dimDegree = 0.4
+        static let slideOutContentMaxHeightPercentage = 0.55
         static let blackColor = "#000000"
+        static let whiteColor = "#FFFFFF"
+        static let distanceBetweenSections = CGFloat(12)
+        static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(20)
+        static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
+        static let slideOutCornerRadius = CGFloat(20)
 
         /// Default text style mark with predefined attributes.
         static var defaultTextStyleMark: Mark {
@@ -86,7 +94,8 @@ internal class ThemeHandler: ThemeHandling {
     // MARK: - Properties
 
     /// Cached theme data mapped by their IDs.
-    private var themes: [Int: ThemeData] = [:]
+    private var carouselThemes: [Int: ThemeData] = [:]
+    private var slideOutThemes: [Int: ThemeData] = [:]
 
     // MARK: - ThemeHandling Implementation
 
@@ -97,7 +106,11 @@ internal class ThemeHandler: ThemeHandling {
      */
     func saveTheme(_ themeContent: ThemeContent) {
         if let id = themeContent.id, let themeData = themeContent.themeData {
-            themes[id] = themeData
+            if themeContent.themeData?.carousel != nil {
+                carouselThemes[id] = themeData
+            } else if themeContent.themeData?.slideOut != nil {
+                slideOutThemes[id] = themeData
+            }
         }
     }
 
@@ -107,8 +120,12 @@ internal class ThemeHandler: ThemeHandling {
      - Parameter themeId: The ID of the theme to retrieve.
      - Returns: The theme data if found, or `nil` if no theme with the given ID is cached.
      */
-    func getThemeById(_ themeId: Int) -> ThemeData? {
-        return themes[themeId]
+    func getThemeById(_ themeId: Int, _ type: ContentType) -> ThemeData? {
+        if type == .carousel {
+            return carouselThemes[themeId]
+        } else {
+            return slideOutThemes[themeId]
+        }
     }
 
     /**
@@ -117,8 +134,12 @@ internal class ThemeHandler: ThemeHandling {
      - Parameter themeId: The set of theme IDs to check.
      - Returns: `true` if the theme ID is cached, `false` otherwise.
      */
-    func containsTheme(_ themeId: Int) -> Bool {
-        return themes.keys.contains(themeId)
+    func containsTheme(_ themeId: Int, _ type: ContentType) -> Bool {
+        if type == .carousel {
+            return carouselThemes.keys.contains(themeId)
+        } else {
+            return slideOutThemes.keys.contains(themeId)
+        }
     }
 
     /*
@@ -140,7 +161,7 @@ internal class ThemeHandler: ThemeHandling {
         _ stepTheme: ThemeData?
     ) -> ThemeData {
         return ThemeData(
-            carousel: CarouselTheme(
+            carousel: ExperienceTheme(
                 button: ButtonStyle(
                     backgroundColor: stepTheme?.carousel?.button?.backgroundColor
                         ?? globalTheme?.carousel?.button?.backgroundColor
@@ -198,6 +219,66 @@ internal class ThemeHandler: ThemeHandling {
                     enabled: stepTheme?.carousel?.progress?.enabled
                         ?? globalTheme?.carousel?.progress?.enabled
                         ?? baseTheme?.carousel?.progress?.enabled
+                )
+            ),
+            slideOut: ExperienceTheme(
+                button: ButtonStyle(
+                    backgroundColor: stepTheme?.slideOut?.button?.backgroundColor
+                        ?? globalTheme?.slideOut?.button?.backgroundColor
+                        ?? baseTheme?.slideOut?.button?.backgroundColor,
+                    labelColor: stepTheme?.slideOut?.button?.labelColor
+                        ?? globalTheme?.slideOut?.button?.labelColor
+                        ?? baseTheme?.slideOut?.button?.labelColor,
+                    borderColor: stepTheme?.slideOut?.button?.borderColor
+                        ?? globalTheme?.slideOut?.button?.borderColor
+                        ?? baseTheme?.slideOut?.button?.borderColor,
+                    borderWidth: stepTheme?.slideOut?.button?.borderWidth
+                        ?? globalTheme?.slideOut?.button?.borderWidth
+                        ?? baseTheme?.slideOut?.button?.borderWidth,
+                    borderRadius: stepTheme?.slideOut?.button?.borderRadius
+                        ?? globalTheme?.slideOut?.button?.borderRadius
+                        ?? baseTheme?.slideOut?.button?.borderRadius
+                ),
+                colors: ColorsStyle(
+                    backgroundColor: stepTheme?.slideOut?.colors?.backgroundColor
+                        ?? globalTheme?.slideOut?.colors?.backgroundColor
+                        ?? baseTheme?.slideOut?.colors?.backgroundColor,
+                    textColor: stepTheme?.slideOut?.colors?.textColor
+                        ?? globalTheme?.slideOut?.colors?.textColor
+                        ?? baseTheme?.slideOut?.colors?.textColor,
+                    titleColor: stepTheme?.slideOut?.colors?.titleColor
+                        ?? globalTheme?.slideOut?.colors?.titleColor
+                        ?? baseTheme?.slideOut?.colors?.titleColor
+                ),
+                dismissContent: DismissContentStyle(
+                    color: stepTheme?.slideOut?.dismissContent?.color
+                        ?? globalTheme?.slideOut?.dismissContent?.color
+                        ?? baseTheme?.slideOut?.dismissContent?.color,
+                    colorType: stepTheme?.slideOut?.dismissContent?.colorType
+                        ?? globalTheme?.slideOut?.dismissContent?.colorType
+                        ?? baseTheme?.slideOut?.dismissContent?.colorType,
+                    enabled: stepTheme?.slideOut?.dismissContent?.enabled
+                        ?? globalTheme?.slideOut?.dismissContent?.enabled
+                        ?? baseTheme?.slideOut?.dismissContent?.enabled
+                ),
+                general: GeneralStyle(
+                    contentAlignment: stepTheme?.slideOut?.general?.contentAlignment
+                        ?? globalTheme?.slideOut?.general?.contentAlignment
+                        ?? baseTheme?.slideOut?.general?.contentAlignment,
+                    fontFamily: stepTheme?.slideOut?.general?.fontFamily
+                        ?? globalTheme?.slideOut?.general?.fontFamily
+                        ?? baseTheme?.slideOut?.general?.fontFamily
+                ),
+                backdrop: Backdrop(
+                    color: stepTheme?.slideOut?.backdrop?.color
+                        ?? globalTheme?.slideOut?.backdrop?.color
+                        ?? baseTheme?.slideOut?.backdrop?.color,
+                    enabled: stepTheme?.slideOut?.backdrop?.enabled
+                        ?? globalTheme?.slideOut?.backdrop?.enabled
+                        ?? baseTheme?.slideOut?.backdrop?.enabled,
+                    opacity: stepTheme?.slideOut?.backdrop?.opacity
+                    ?? globalTheme?.slideOut?.backdrop?.opacity
+                    ?? baseTheme?.slideOut?.backdrop?.opacity
                 )
             )
         )

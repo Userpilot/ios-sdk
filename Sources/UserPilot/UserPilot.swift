@@ -172,7 +172,8 @@ extension UserPilot {
        - company: An optional dictionary containing company-specific properties for users associated with company.
      */
     public func identify(userID: String, properties: Payload = nil, company: Payload = nil) {
-        let event = Event(type: .identify(userID), properties: properties, company: company)
+        if userID.trim().isEmpty { return }
+        let event = Event(type: .identify(userID.trim()), properties: properties, company: company)
         analyticsPublisher.publish(event)
     }
 
@@ -183,7 +184,7 @@ extension UserPilot {
      even when the user has not explicitly signed in or identified themselves.
      */
     public func anonymous() {
-        let userID = "\(config.token)_\(anonymousFactory)"
+        let userID = "\(config.token)_\(anonymousFactory())"
         identify(userID: userID)
     }
 
@@ -253,8 +254,6 @@ extension UserPilot {
             // swiftlint:disable:next non_optional_string_data_conversion
             let jsonString = String(data: jsonData, encoding: .utf8)
             logger.debug("⚙️ Settings -> %{public}@", jsonString ?? "")
-        } else {
-            logger.error("Failed to create JSON string")
         }
     }
 

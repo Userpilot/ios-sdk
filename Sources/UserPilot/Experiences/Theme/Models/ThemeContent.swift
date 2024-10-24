@@ -38,23 +38,45 @@ internal struct MobileTheme: Codable {
 // MARK: - ThemeData
 
 internal struct ThemeData: Codable {
-    let carousel: CarouselTheme?
+    let carousel: ExperienceTheme?
+    let slideOut: ExperienceTheme?
+
+    private enum CodingKeys: String, CodingKey {
+        case carousel
+        case slideOut = "slideout"
+    }
+}
+
+// MARK: - CarouselTheme
+
+internal struct ExperienceTheme: Codable {
+    var button: ButtonStyle?
+    var colors: ColorsStyle?
+    var dismissContent: DismissContentStyle?
+    var general: GeneralStyle?
+    var progress: ProgressStyle?
+    var backdrop: Backdrop?
+
+    private enum CodingKeys: String, CodingKey {
+        case button, colors, general, progress, backdrop
+        case dismissContent = "dismiss_content"
+    }
 
     // General
     var fontFamily: String? {
-        carousel?.general?.fontFamily
+        general?.fontFamily
     }
 
     var contentAlignment: ContentAlignmentType {
-        carousel?.general?.contentAlignment ?? .top
+        general?.contentAlignment ?? .top
     }
 
     var backgroundColor: UIColor {
-        carousel?.colors?.backgroundColor?.color ?? .white
+        colors?.backgroundColor?.color ?? .white
     }
 
     var backgroundColorAsString: String {
-        carousel?.colors?.backgroundColor ?? ""
+        colors?.backgroundColor ?? ThemeHandler.DefaultValues.whiteColor
     }
 
     var isLightTheme: Bool {
@@ -63,82 +85,71 @@ internal struct ThemeData: Codable {
 
     // Text
     var textColor: UIColor {
-        carousel?.colors?.textColor?.color ?? .black
+        colors?.textColor?.color ?? .black
     }
 
     var titleTextColor: UIColor {
-        carousel?.colors?.titleColor?.color ?? .black
+        colors?.titleColor?.color ?? .black
     }
 
     // Button
     var buttonBackgroundColor: UIColor {
-        carousel?.button?.backgroundColor?.color ?? .black
+        button?.backgroundColor?.color ?? .black
     }
 
     var buttonTextColor: UIColor {
-        carousel?.button?.labelColor?.color ?? .white
+        button?.labelColor?.color ?? .white
     }
 
     var buttonBorderColor: UIColor {
-        carousel?.button?.borderColor?.color ?? .black
+        button?.borderColor?.color ?? .black
     }
 
     var buttonBorderRadius: CGFloat {
-        CGFloat(carousel?.button?.borderRadius ?? ThemeHandler.StyleValues.borderRadius)
+        CGFloat(button?.borderRadius ?? ThemeHandler.StyleValues.borderRadius)
     }
 
     var buttonBorderWidth: CGFloat {
-        CGFloat(carousel?.button?.borderWidth ?? 0)
+        CGFloat(button?.borderWidth ?? 0)
     }
 
     // Dismiss Content
     var isDismissButtonEnabled: Bool {
-        carousel?.dismissContent?.enabled ?? false
+        dismissContent?.enabled ?? false
     }
 
     var isDismissButtonColorManual: Bool {
-        carousel?.dismissContent?.colorType == ThemeHandler.StyleValues.manual
+        dismissContent?.colorType == ThemeHandler.StyleValues.manual
     }
 
     var dismissButtonColor: UIColor {
-        carousel?.dismissContent?.color?.color ?? .black
+        dismissContent?.color?.color ?? .black
     }
 
     // Progress
     var isStepsProgressEnabled: Bool {
-        carousel?.progress?.enabled ?? false
+        progress?.enabled ?? false
     }
 
     var isStepsProgressColorManual: Bool {
-        carousel?.progress?.colorType == ThemeHandler.StyleValues.manual
+        progress?.colorType == ThemeHandler.StyleValues.manual
     }
 
     var stepsProgressColor: UIColor {
-        carousel?.progress?.color?.color ?? .black
+        progress?.color?.color ?? .black
     }
 
     var stepsProgressColorAsString: String {
-        carousel?.progress?.color ?? ThemeHandler.DefaultValues.blackColor
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case carousel
+        progress?.color ?? ThemeHandler.DefaultValues.blackColor
     }
 }
 
-// MARK: - CarouselTheme
+// MARK: - ButtonStyle
 
-internal struct CarouselTheme: Codable {
-    let button: ButtonStyle?
-    let colors: ColorsStyle?
-    let dismissContent: DismissContentStyle?
-    let general: GeneralStyle?
-    let progress: ProgressStyle?
-
-    private enum CodingKeys: String, CodingKey {
-        case button, colors, general, progress
-        case dismissContent = "dismiss_content"
-    }
+internal struct Backdrop: Codable {
+    let color: String?
+    let enabled: Bool?
+    let opacity: Int?
 }
 
 // MARK: - ButtonStyle

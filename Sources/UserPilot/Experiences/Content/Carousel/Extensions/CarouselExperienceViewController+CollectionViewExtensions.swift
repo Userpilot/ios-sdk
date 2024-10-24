@@ -25,7 +25,7 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
     /// Returns the number of items in the specified section of the collection view.
     func collectionView(_ collectionView: UICollectionView,
                         numberOfItemsInSection section: Int) -> Int {
-        return carouselExperienceViewModel.carouselStepsCount
+        return experienceViewModel.carouselStepsCount
     }
 
     /// Returns a cell configured for the item at the specified index path.
@@ -34,8 +34,8 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
         // Attempt to dequeue a reusable cell
         guard
             let stepCollectionViewCell: StepCollectionViewCell = collectionView.dequeueReusableCell(for: indexPath),
-            let step = carouselExperienceViewModel.carouselContent?.steps[safe: indexPath.item],
-            let themeData = carouselExperienceViewModel.mergedTheme[safe: indexPath.item]
+            let step = experienceViewModel.mobileContent?.steps[safe: indexPath.item],
+            let theme = experienceViewModel.carouselTheme[safe: indexPath.item]
         else {
             // Return an empty cell if configuration fails
             return UICollectionViewCell()
@@ -43,9 +43,8 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
 
         // Bind the step data to the cell
         stepCollectionViewCell.bindStep(step,
-                                        withThemeData: themeData,
-                                        andExperienceContentListener: self,
-                                        andImageLoader: carouselExperienceViewModel.imageLoader)
+                                        withTheme: theme,
+                                        andImageLoader: experienceViewModel.imageLoader)
         return stepCollectionViewCell
     }
 
@@ -64,10 +63,4 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
         let step = Int(scrollView.contentOffset.x / collectionView.frame.width)
         onNewStepViewed(step)
     }
-}
-
-// MARK: - ExperienceContentProtocol Conformance
-
-extension CarouselExperienceViewController: ExperienceContentProtocol {
-
 }

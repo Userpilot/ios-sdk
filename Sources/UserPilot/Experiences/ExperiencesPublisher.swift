@@ -21,7 +21,7 @@ import SwiftPhoenixClient
  */
 internal protocol ExperiencesPublishing: AnyObject {
     func start()
-    func getActiveCarousel() -> MobileContent?
+    func getActiveMobileContent() -> MobileContent?
     func sendSocketRequest(_ sdkEvent: SDKEvent)
 }
 
@@ -82,12 +82,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         socketManager.registerCallback(self)
     }
 
-    /**
-     Return the current active carousel content.
-
-     - Returns: The current `MobileContent`, or `nil` if no active carousel is present.
-     */
-    func getActiveCarousel() -> MobileContent? {
+    /// Return the current active carousel content.
+    func getActiveMobileContent() -> MobileContent? {
         let currentContent = mobileContent
         mobileContent = nil
         return currentContent
@@ -95,14 +91,24 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /**
      Sends a socket request based on the provided event interface.
-
+     
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
     func sendSocketRequest(_ sdkEvent: SDKEvent) {
-        socketManager.publish(sdkEvent.eventName, payload: sdkEvent.eventPayload, socketSubscription: self)
+        socketManager.publish(sdkEvent.eventName,
+                              payload: sdkEvent.eventPayload,
+                              socketSubscription: self)
+
+        if sdkEvent.eventName == "mobile_content" &&
+            (sdkEvent.eventPayload["act"] as? String == "dismissed" ||
+             sdkEvent.eventPayload["act"] as? String == "completed") {
+            var payload: [String: Any] = [:]
+            payload[AnalyticsPublisher.identifyScreenProperty] = currentScreen
+            socketManager.publish(EventType.screenEvent, payload: payload)
+        }
     }
 
-    // MARK: - Private Methods
+    // MARK: - Fetch & Parse experience content
 
     /**
      Starts the experience for a given experience ID. This method can be used to
@@ -119,9 +125,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
      - Parameter themeID: A theme ID to check against the cached themes.
      */
-    private func checkCachedThemes(_ themeID: Int) {
-        if themeHandler.getThemeById(themeID) != nil {
-            openCarouselScreen()
+    private func checkCachedThemes(_ themeID: Int, _ type: ContentType) {
+        if themeHandler.getThemeById(themeID, type) != nil {
+            openExperienceFlow()
         } else {
             fetchThemeData(themeID)
         }
@@ -133,16 +139,26 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      Presents the `CarouselExperienceViewController` with the active carousel content
      if the conditions for displaying the carousel are met.
      */
-    private func openCarouselScreen() {
+    private func openExperienceFlow() {
         performOn(.main) { [weak self] in
             guard let self = self else { return }
-            // if !canShowCarousel() { return }
-            let carouselExperienceViewModel = CarouselExperienceViewModel(container: self.container)
-            let carouselExperienceViewController = CarouselExperienceViewController(
-                carouselExperienceViewModel: carouselExperienceViewModel)
-            carouselExperienceViewController.modalPresentationStyle = .fullScreen
-            if let topViewController = UIApplication.shared.topViewController() {
-                topViewController.present(carouselExperienceViewController, animated: true)
+        guard
+            let topViewController = UIApplication.shared.topViewController()
+        else { return }
+            let experienceViewModel = ExperienceViewModel(container: self.container)
+            if let mobileContent = mobileContent {
+                switch mobileContent.type {
+                case .carousel:
+                    openCarouselExperience(topViewController, experienceViewModel)
+                case .slider:
+                    if let theme = themeHandler.getThemeById(
+                        mobileContent.baseThemeID, .slider),
+                        theme.slideOut?.general?.contentAlignment == .center {
+                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+                    } else {
+                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+                    }
+                }
             }
         }
     }
@@ -159,21 +175,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         }
         sendSocketRequest(ThemeContentEvent(themeID: themeID, token: config.token))
     }
-
-    /**
-     Validates whether the carousel can be shown based on the current application state.
-
-     - Returns: `true` if the carousel can be shown; otherwise, `false`.
-     */
-    private func canShowCarousel() -> Bool {
-        if let topViewController = UIApplication.shared.topViewController(),
-           !topViewController.isKind(of: CarouselExperienceViewController.self),
-           mobileContent?.carouselScreen.contains(currentScreen) == true,
-           mobileContent?.type == .carousel {
-            return true
-        }
-        return false
-    }
 }
 
 // MARK: - SocketSubscription
@@ -182,8 +183,6 @@ extension ExperiencesPublisher: SocketSubscription {
 
     /**
      Handles the socket event when a message is sent.
-
-     Processes the incoming message to check carousel data and themes.
 
      - Parameters:
        - eventName: The name of the event sent over the socket.
@@ -209,7 +208,7 @@ extension ExperiencesPublisher: SocketSubscription {
         }
 
         if let mobileContent = mobileContent {
-            checkCachedThemes(mobileContent.baseThemeID)
+            checkCachedThemes(mobileContent.baseThemeID, mobileContent.type)
         }
     }
 
@@ -233,4 +232,77 @@ extension ExperiencesPublisher: SocketSubscription {
 //        }
 //
 //    }
+}
+
+// MARK: - Launch experiences
+
+extension ExperiencesPublisher {
+
+    /// Validates whether the carousel can be shown based on the current application state.
+    private func canShowCarousel() -> Bool {
+        if let topViewController = UIApplication.shared.topViewController(),
+           !topViewController.isKind(of: CarouselExperienceViewController.self),
+           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           mobileContent?.type == .carousel {
+            return true
+        }
+        return false
+    }
+
+    func openCarouselExperience(_ viewController: UIViewController,
+                                _ experienceViewModel: ExperienceViewModel) {
+        if !canShowCarousel() { return }
+        let carouselExperienceViewController = CarouselExperienceViewController(
+            experienceViewModel: experienceViewModel)
+        carouselExperienceViewController.modalPresentationStyle = .fullScreen
+        viewController.present(carouselExperienceViewController, animated: true)
+    }
+
+    /// Validates whether the carousel can be shown based on the current application state.
+    private func canShowDialogSlideOut() -> Bool {
+        if let topViewController = UIApplication.shared.topViewController(),
+           !topViewController.isKind(of: SlideOutDialogViewController.self),
+           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           mobileContent?.type == .slider {
+            return true
+        }
+        return false
+    }
+
+    func openSlideOutDialogExperience(_ viewController: UIViewController,
+                                      _ experienceViewModel: ExperienceViewModel) {
+        // if !canShowDialogSlideOut() { return }
+        let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
+        /**
+         slideOutDialogViewController.providesPresentationContextTransitionStyle = true
+         slideOutDialogViewController.definesPresentationContext = true
+         slideOutDialogViewController.modalPresentationStyle = .overCurrentContext
+         slideOutDialogViewController.modalTransitionStyle = .crossDissolve
+         */
+        delay(1) {
+            viewController.presentDialog(viewController: slideOutDialogViewController)
+        }
+    }
+
+    /// Validates whether the carousel can be shown based on the current application state.
+    private func canShowBottomSheetSlideOut() -> Bool {
+        if let topViewController = UIApplication.shared.topViewController(),
+           !topViewController.isKind(of: BottomSheetViewController.self),
+           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           mobileContent?.type == .slider {
+            return true
+        }
+        return false
+    }
+
+    func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
+                                           _ experienceViewModel: ExperienceViewModel) {
+        // if !canShowBottomSheetSlideOut() { return }
+        let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
+            experienceViewModel: experienceViewModel)
+        delay(1) {
+            viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
+        }
+    }
+
 }

@@ -15,6 +15,10 @@ import UIKit
 
 internal class UPCloseButton: UIButton {
 
+    // MARK: - Properties
+
+    static let buttonSize = CGFloat(35)
+
     // MARK: - Initializers
 
     override init(frame: CGRect) {
@@ -52,11 +56,12 @@ internal class UPCloseButton: UIButton {
      `ThemeData` instance. If manual color is enabled, it uses the specified dismiss button color; otherwise,
      it uses an inverted color of the theme's background.
      
-     - Parameter style: The `ThemeData` containing the configuration for the close button, such as color and visibility.
+     - Parameter theme: The `ExperienceTheme` containing the configuration for the close
+     button, such as color and visibility.
      */
-    func setupView(style: ThemeData) {
-        if !style.isDismissButtonEnabled { return }
-        tintColor = style.isDismissButtonColorManual ?
-                    style.dismissButtonColor : style.backgroundColorAsString.invertColor().color
+    func setupView(theme: ExperienceTheme) {
+        if !theme.isDismissButtonEnabled { return }
+        tintColor = theme.isDismissButtonColorManual ?
+        theme.dismissButtonColor : theme.backgroundColorAsString.invertColor().color
     }
 }

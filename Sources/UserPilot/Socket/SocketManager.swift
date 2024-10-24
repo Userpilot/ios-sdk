@@ -189,7 +189,7 @@ extension SocketManager {
             if self.socketState != .shuttingDown {
                 self.$socketSubscription.invoke { $0.onSocketClosed() }
             }
-            self.socketState = .closed
+            // self.socketState = .closed
         }
 
         phoenixSocket.delegateOnError(to: self) { (self, error) in
@@ -199,10 +199,10 @@ extension SocketManager {
             self.closeSocket()
         }
 
-        phoenixSocket.onMessage(callback: { [weak self] message in
-            if message.isInvalidMessage { return }
-             // self?.$socketSubscription.invoke { $0.onNewMessage(message) }
-        })
+//        phoenixSocket.onMessage(callback: { [weak self] message in
+//            if message.isInvalidMessage { return }
+//             // self?.$socketSubscription.invoke { $0.onNewMessage(message) }
+//        })
 
         phoenixSocket.logger = { [weak self] message in
             self?.logger.debug("✈️ SOCKET message: %{public}@", message)
@@ -246,7 +246,7 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        socketState = .closed
+        // socketState = .closed
         if let channel = self.phoenixChannel, !channel.isClosed {
             channel.leave(timeout: 0.0)
             phoenixSocket?.remove(channel)

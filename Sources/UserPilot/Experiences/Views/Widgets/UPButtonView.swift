@@ -16,6 +16,8 @@ internal class UPButtonView: UIButton {
 
     // MARK: - Properties
 
+    static let buttonHeight = CGFloat(45)
+
     /// The action to be triggered when the button is tapped.
     private var action: ButtonAction?
 
@@ -46,21 +48,21 @@ internal class UPButtonView: UIButton {
      Sets up the button view properties based on the provided configuration.
 
      This function configures the button text, text alignment, background, border, and other styles using the
-     provided `Line` content and `ThemeData` attributes. It also sets up a click listener to handle
+     provided `Line` content and `ExperienceTheme` attributes. It also sets up a click listener to handle
      the specified action.
 
      - Parameters:
        - line: The `Line` configuration that provides content and style attributes for the button.
        - action: The button action to be performed on click.
-       - style: The `ThemeData` that provides styling attributes such as colors and border properties.
+       - theme: The `ExperienceTheme` that provides styling attributes such as colors and border properties.
        - callback: Optional callback function to handle button actions.
      */
-    func setupViews(line: Line?, action: ButtonAction?, style: ThemeData, callback: ((ButtonAction) -> Void)?) {
+    func setupViews(line: Line?, action: ButtonAction?, theme: ExperienceTheme, callback: ((ButtonAction) -> Void)?) {
         self.action = action
         self.callback = callback
 
         configureContent(with: line)
-        applyStyle(using: style)
+        applyStyle(using: theme)
         configureContentAlignment(with: line?.attrs?.textAlign)
 
         // Set click listener to trigger the action's callback if provided
@@ -89,14 +91,14 @@ internal class UPButtonView: UIButton {
     /// Applies styling attributes to the button based on the provided `ThemeData`.
     ///
     /// - Parameter style: The `ThemeData` object that contains button styling properties.
-    private func applyStyle(using style: ThemeData) {
-        backgroundColor = style.buttonBackgroundColor
-        setTitleColor(style.buttonTextColor, for: .normal)
-        layer.cornerRadius = style.buttonBorderRadius
-        layer.borderWidth = style.buttonBorderWidth
-        layer.borderColor = style.buttonBorderColor.cgColor
+    private func applyStyle(using theme: ExperienceTheme) {
+        backgroundColor = theme.buttonBackgroundColor
+        setTitleColor(theme.buttonTextColor, for: .normal)
+        layer.cornerRadius = theme.buttonBorderRadius
+        layer.borderWidth = theme.buttonBorderWidth
+        layer.borderColor = theme.buttonBorderColor.cgColor
 
-        let font = UIFont.matching(fontName: style.fontFamily,
+        let font = UIFont.matching(fontName: theme.fontFamily,
                                    fontWeight: [],
                                    fontSize: CGFloat(ThemeHandler.DefaultValues.normalTextSize))
         titleLabel?.font = font

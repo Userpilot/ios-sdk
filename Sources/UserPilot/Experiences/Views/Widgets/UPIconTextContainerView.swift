@@ -42,11 +42,11 @@ internal class UPIconTextContainerView: UIStackView {
      
      - Parameters:
         - lines: A list of `Line` objects representing the content to be displayed.
-        - style: The theme data used to style each `UPIconTextView` child in the container.
+        - theme: The `ExperienceTheme` used to style each `UPIconTextView` child in the container.
         - experienceContentListener: An event listener to handle interactions with each `UPIconTextView`.
      */
     func setupView(lines: [Line],
-                   style: ThemeData,
+                   theme: ExperienceTheme,
                    imageLoader: ImageLoading) {
         // Remove existing views before adding new ones.
         arrangedSubviews.forEach { $0.removeFromSuperview() }
@@ -56,7 +56,7 @@ internal class UPIconTextContainerView: UIStackView {
             // Create and set up a new `UPIconTextView` for the current line.
             let iconText = UPIconTextView()
             iconText.setupView(line: line,
-                               style: style,
+                               theme: theme,
                                imageLoader: imageLoader)
             addArrangedSubview(iconText)
 

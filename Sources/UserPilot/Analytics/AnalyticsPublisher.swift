@@ -286,10 +286,9 @@ extension AnalyticsPublisher {
     private func flushPriorityEvents() {
         if !socketManager.isSocketOpened || socketManager.isJoiningSocket { return }
 
-        var payload: [String: Any] = [:]
-
         /// Identify event
         if let identifyEvent = cachedIdentifyEvent {
+            var payload: [String: Any] = [:]
             guard let userID = identifyEvent.userID else { return }
             // In-case identify event called again when joining socket channel
             if storage.userID.isNotEmpty && userID != storage.userID {
@@ -305,6 +304,7 @@ extension AnalyticsPublisher {
 
         /// Screen event
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
+            var payload: [String: Any] = [:]
             payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenTitle
             socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
@@ -392,7 +392,7 @@ extension AnalyticsPublisher: SocketSubscription {
         }
         if let eventToPublish = cachedIdentifyEvent {
             userPilot?.clean()
-            identify(eventToPublish)
+            publish(eventToPublish)
         } else {
             clearAllCachedProperties()
         }

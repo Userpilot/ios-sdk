@@ -191,9 +191,9 @@ internal enum HeaderType: String, Codable {
 
     func fontSize() -> Int {
         switch self {
-        case .headerOne: return 25
-        case .headerTwo: return 20
-        case .headerThree: return 24
+        case .headerOne: return 28
+        case .headerTwo: return 24
+        case .headerThree: return 20
         }
     }
 }

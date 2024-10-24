@@ -45,10 +45,10 @@ internal class UPTextView: UILabel {
      
      - Parameters:
        - line: The `Line` object containing the text content and styling information.
-       - style: The `ThemeData` that provides styling attributes for the text.
+       - theme: The `ExperienceTheme` that provides styling attributes for the text.
        - experienceContentProtocol: A listener for handling link clicks.
      */
-    func setupView(line: Line, style: ThemeData) {
+    func setupView(line: Line, theme: ExperienceTheme) {
         let attributedString = NSMutableAttributedString()
 
         // Process each content item in the line
@@ -60,10 +60,10 @@ internal class UPTextView: UILabel {
 
             if line.type == .heading {
                 // Apply header styles if the line is a heading
-                applyHeaderStyles(to: attributedString, line: line, style: style, range: NSRange(start..<end))
+                applyHeaderStyles(to: attributedString, line: line, theme: theme, range: NSRange(start..<end))
             } else {
                 applyTextStyle(to: attributedString, marks: content.marks ?? [],
-                               style: style, range: NSRange(start..<end))
+                               theme: theme, range: NSRange(start..<end))
             }
 
             // Apply additional marks (link, bold, italic)
@@ -82,13 +82,13 @@ internal class UPTextView: UILabel {
     /// Function to apply text style (e.g., font size, color) from a Mark to an attributed string.
     private func applyTextStyle(to attributedString: NSMutableAttributedString,
                                 marks: [Mark],
-                                style: ThemeData,
+                                theme: ExperienceTheme,
                                 range: NSRange) {
         // Retrieve text style mark or use a default one
         let textStyleMark = marks.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
         ?? ThemeHandler.DefaultValues.defaultTextStyleMark
         let fontSize = CGFloat(textStyleMark.attrs?.fontSize ?? Int(ThemeHandler.DefaultValues.normalTextSize))
-        let textColor = textStyleMark.attrs?.color?.color ?? style.textColor
+        let textColor = textStyleMark.attrs?.color?.color ?? theme.textColor
 
         var traits = [UIFontDescriptor.SymbolicTraits]()
         if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
@@ -97,7 +97,7 @@ internal class UPTextView: UILabel {
         if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
             traits.append(.traitItalic)
         }
-        let font = UIFont.matching(fontName: style.fontFamily, fontWeight: traits, fontSize: fontSize)
+        let font = UIFont.matching(fontName: theme.fontFamily, fontWeight: traits, fontSize: fontSize)
 
         attributedString.addAttribute(.font, value: font, range: range)
         attributedString.addAttribute(.foregroundColor, value: textColor, range: range)
@@ -106,11 +106,11 @@ internal class UPTextView: UILabel {
     /// Function to apply header styles (e.g., larger font size) for heading lines.
     private func applyHeaderStyles(to attributedString: NSMutableAttributedString,
                                    line: Line,
-                                   style: ThemeData,
+                                   theme: ExperienceTheme,
                                    range: NSRange) {
-        let textColor = style.titleTextColor
+        let textColor = theme.titleTextColor
         let headerFont = line.attrs?.level?.fontSize() ?? ThemeHandler.DefaultValues.headerTextSize
-        let font = UIFont.matching(fontName: style.fontFamily, fontWeight: [.traitBold], fontSize: CGFloat(headerFont))
+        let font = UIFont.matching(fontName: theme.fontFamily, fontWeight: [.traitBold], fontSize: CGFloat(headerFont))
 
         attributedString.addAttribute(.foregroundColor, value: textColor, range: range)
         attributedString.addAttribute(.font, value: font, range: range)

@@ -11,10 +11,15 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="CarouselExperienceViewController" customModule="UserPilot">
             <connections>
+                <outlet property="actionLeftMargin" destination="9Tz-8q-Sv8" id="rpU-8h-x3F"/>
+                <outlet property="actionRightMargin" destination="D2D-eX-ukj" id="whu-rG-U45"/>
                 <outlet property="buttonAction" destination="3gt-N5-NdR" id="l5n-md-sps"/>
                 <outlet property="buttonDismiss" destination="77F-mu-doi" id="hNw-xy-giN"/>
                 <outlet property="buttonDismissContainerView" destination="OAC-jE-Go0" id="ble-wc-P5k"/>
+                <outlet property="buttonDismissRightMargin" destination="xX1-Wz-Igg" id="Lzv-1I-zoC"/>
                 <outlet property="collectionView" destination="rAc-Qs-gI2" id="Yxt-e3-7dw"/>
+                <outlet property="contentBottomMargin" destination="q5E-PZ-Q3C" id="kiy-Zq-zzA"/>
+                <outlet property="contentTopMargin" destination="9rk-4w-hWf" id="yW1-Le-MFu"/>
                 <outlet property="view" destination="iN0-l3-epB" id="Phi-ar-ZxS"/>
                 <outlet property="viewStepsProgress" destination="Gv2-Kb-wZm" id="dKd-cJ-tQz"/>
             </connections>
@@ -24,11 +29,11 @@
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="SfO-Cs-KvK">
-                    <rect key="frame" x="0.0" y="59" width="393" height="759"/>
+                <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="12" translatesAutoresizingMaskIntoConstraints="NO" id="SfO-Cs-KvK">
+                    <rect key="frame" x="0.0" y="79" width="393" height="719"/>
                     <subviews>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="OAC-jE-Go0">
-                            <rect key="frame" x="0.0" y="0.0" width="393" height="37"/>
+                            <rect key="frame" x="0.0" y="0.0" width="393" height="35"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="77F-mu-doi" customClass="UPCloseButton" customModule="UserPilot">
                                     <rect key="frame" x="338" y="0.0" width="35" height="35"/>
@@ -46,12 +51,12 @@
                             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                             <constraints>
                                 <constraint firstItem="77F-mu-doi" firstAttribute="top" secondItem="OAC-jE-Go0" secondAttribute="top" id="LS3-sE-4tF"/>
-                                <constraint firstAttribute="height" constant="37" id="heb-d8-UQh"/>
+                                <constraint firstAttribute="height" constant="35" id="heb-d8-UQh"/>
                                 <constraint firstAttribute="trailing" secondItem="77F-mu-doi" secondAttribute="trailing" constant="20" id="xX1-Wz-Igg"/>
                             </constraints>
                         </view>
                         <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="none" translatesAutoresizingMaskIntoConstraints="NO" id="rAc-Qs-gI2">
-                            <rect key="frame" x="0.0" y="37" width="393" height="634"/>
+                            <rect key="frame" x="0.0" y="47" width="393" height="588"/>
                             <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="oEb-bB-sux">
                                 <size key="itemSize" width="128" height="128"/>
                                 <size key="headerReferenceSize" width="0.0" height="0.0"/>
@@ -63,15 +68,8 @@
                                 <outlet property="delegate" destination="-1" id="6gJ-Tg-bSm"/>
                             </connections>
                         </collectionView>
-                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="eUu-Yb-HX3" userLabel="Space">
-                            <rect key="frame" x="0.0" y="671" width="393" height="16"/>
-                            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                            <constraints>
-                                <constraint firstAttribute="height" constant="16" id="jv1-di-yIO"/>
-                            </constraints>
-                        </view>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="zf4-O3-Buf">
-                            <rect key="frame" x="0.0" y="687" width="393" height="45"/>
+                            <rect key="frame" x="0.0" y="647" width="393" height="45"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="3gt-N5-NdR" customClass="UPButtonView" customModule="UserPilot">
                                     <rect key="frame" x="20" y="0.0" width="353" height="45"/>
@@ -91,15 +89,8 @@
                                 <constraint firstAttribute="bottom" secondItem="3gt-N5-NdR" secondAttribute="bottom" id="luL-dT-6ZB"/>
                             </constraints>
                         </view>
-                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="k2N-Z8-Ewm" userLabel="Space">
-                            <rect key="frame" x="0.0" y="732" width="393" height="12"/>
-                            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                            <constraints>
-                                <constraint firstAttribute="height" constant="12" id="R4P-9V-Scn"/>
-                            </constraints>
-                        </view>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Gv2-Kb-wZm" customClass="UPStepsProgressView" customModule="UserPilot">
-                            <rect key="frame" x="0.0" y="744" width="393" height="15"/>
+                            <rect key="frame" x="0.0" y="704" width="393" height="15"/>
                             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                             <constraints>
                                 <constraint firstAttribute="height" constant="15" id="X6r-Zd-6IL"/>
@@ -112,9 +103,9 @@
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="SfO-Cs-KvK" secondAttribute="trailing" id="3oK-4c-3De"/>
-                <constraint firstItem="SfO-Cs-KvK" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" id="9rk-4w-hWf"/>
+                <constraint firstItem="SfO-Cs-KvK" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="20" id="9rk-4w-hWf"/>
                 <constraint firstItem="SfO-Cs-KvK" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" id="PuT-AS-AR8"/>
-                <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="SfO-Cs-KvK" secondAttribute="bottom" id="q5E-PZ-Q3C"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="SfO-Cs-KvK" secondAttribute="bottom" constant="20" id="q5E-PZ-Q3C"/>
             </constraints>
             <point key="canvasLocation" x="140" y="21"/>
         </view>

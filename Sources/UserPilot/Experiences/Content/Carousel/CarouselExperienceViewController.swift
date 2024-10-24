@@ -9,7 +9,7 @@
 //  This class is responsible for managing and displaying the carousel experience.
 //  It contains UI components such as a dismiss button, action button, step progress view,
 //  and a collection view to show the steps. The class integrates with the
-//  `CarouselExperienceViewModel` to handle data binding and user interactions.
+//  `ExperienceViewModel` to handle data binding and user interactions.
 //
 
 import Foundation
@@ -18,6 +18,13 @@ import UIKit
 internal class CarouselExperienceViewController: UIViewController {
 
     // MARK: - IBOutlets
+
+    /// Views constraints.
+    @IBOutlet internal weak var buttonDismissRightMargin: NSLayoutConstraint!
+    @IBOutlet internal weak var actionLeftMargin: NSLayoutConstraint!
+    @IBOutlet internal weak var actionRightMargin: NSLayoutConstraint!
+    @IBOutlet internal weak var contentTopMargin: NSLayoutConstraint!
+    @IBOutlet internal weak var contentBottomMargin: NSLayoutConstraint!
 
     /// Container view for the dismiss button.
     @IBOutlet internal weak var buttonDismissContainerView: UIView!
@@ -45,13 +52,13 @@ internal class CarouselExperienceViewController: UIViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions.
-    internal let carouselExperienceViewModel: CarouselExperienceViewModel
+    internal let experienceViewModel: ExperienceViewModel
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
-    init(carouselExperienceViewModel: CarouselExperienceViewModel) {
-        self.carouselExperienceViewModel = carouselExperienceViewModel
+    init(experienceViewModel: ExperienceViewModel) {
+        self.experienceViewModel = experienceViewModel
         super.init(nibName: "CarouselExperienceViewController", bundle: .module)
     }
 
@@ -65,15 +72,14 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Called after the view has been loaded. Sets up initial UI configurations and binds the view model.
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        setupViews()
         bindViewModel()
-        isModalInPresentation = true
     }
 
     // Override the preferredStatusBarStyle based on the current style
     override var preferredStatusBarStyle: UIStatusBarStyle {
         guard
-            let theme = carouselExperienceViewModel.mergedTheme[safe: collectionView.currentIndex]
+            let theme = experienceViewModel.carouselTheme[safe: collectionView.currentIndex]
         else { return .lightContent }
         return theme.isLightTheme ? .darkContent : .lightContent
     }

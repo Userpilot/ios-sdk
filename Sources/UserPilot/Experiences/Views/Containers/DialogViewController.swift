@@ -14,7 +14,7 @@
 import Foundation
 import UIKit
 
-class DialogViewController: UIViewController {
+internal class DialogViewController: UIViewController {
 
     // MARK: - UI Elements
 
@@ -23,7 +23,7 @@ class DialogViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .white
-        view.layer.cornerRadius = 20
+        view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view
     }()
@@ -40,14 +40,9 @@ class DialogViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .black
-        view.alpha = 0.6
+        view.alpha = ThemeHandler.DefaultValues.dimDegree
         return view
     }()
-
-    // MARK: - Properties
-
-    /// Maximum alpha value for the dimmed view
-    private let maxDimmedAlpha: CGFloat = 0.8
 
     // MARK: - View Lifecycle
 
@@ -89,10 +84,18 @@ class DialogViewController: UIViewController {
         mainContainerView.addSubview(contentView)
         contentView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor, constant: 20),
-            contentView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor, constant: -20),
-            contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor, constant: 20),
-            contentView.bottomAnchor.constraint(equalTo: mainContainerView.bottomAnchor, constant: -20)
+            contentView.leadingAnchor.constraint(
+                equalTo: mainContainerView.leadingAnchor,
+                constant: ThemeHandler.DefaultValues.contentMargin),
+            contentView.trailingAnchor.constraint(
+                equalTo: mainContainerView.trailingAnchor,
+                constant: ThemeHandler.DefaultValues.contentMargin.negative),
+            contentView.topAnchor.constraint(
+                equalTo: mainContainerView.topAnchor,
+                constant: ThemeHandler.DefaultValues.contentMargin),
+            contentView.bottomAnchor.constraint(
+                equalTo: mainContainerView.bottomAnchor,
+                constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
         ])
     }
 }
@@ -149,7 +152,7 @@ extension DialogViewController {
 
 // MARK: - Show Dialog view controller
 
-extension UIViewController {
+internal extension UIViewController {
     /// Presents a dialog view controller modally.
     /// - Parameter viewController: The DialogViewController to present.
     func presentDialog(viewController: DialogViewController) {

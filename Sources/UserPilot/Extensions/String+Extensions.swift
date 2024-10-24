@@ -27,6 +27,10 @@ internal extension String {
         return !isEmpty
     }
 
+    func trim() -> String {
+        return self.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
 }
 
 // MARK: - Colors
