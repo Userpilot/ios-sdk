@@ -65,7 +65,7 @@ internal class UPImageView: UIImageView {
         isAccessibilityElement = true
         accessibilityLabel = "Submit Button"
         accessibilityHint = "Tap to submit the form"
-        accessibilityTraits = .button
+        accessibilityTraits = .image
     }
 
 }

@@ -15,11 +15,6 @@ import UIKit
 
 internal class UPTextView: UILabel {
 
-    // MARK: - Properties
-
-    /// Listener for handling content-related actions such as link clicks.
-    private weak var experienceContentProtocol: ExperienceContentProtocol?
-
     // MARK: - Initializers
 
     /// Initializes the label with a specified frame.
@@ -53,9 +48,7 @@ internal class UPTextView: UILabel {
        - style: The `ThemeData` that provides styling attributes for the text.
        - experienceContentProtocol: A listener for handling link clicks.
      */
-    func setupView(line: Line, style: ThemeData, experienceContentProtocol: ExperienceContentProtocol) {
-        self.experienceContentProtocol = experienceContentProtocol
-
+    func setupView(line: Line, style: ThemeData) {
         let attributedString = NSMutableAttributedString()
 
         // Process each content item in the line

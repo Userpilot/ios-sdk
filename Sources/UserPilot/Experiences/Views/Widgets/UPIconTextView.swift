@@ -75,12 +75,11 @@ internal class UPIconTextView: UIStackView {
      */
     func setupView(line: Line,
                    style: ThemeData,
-                   experienceContentProtocol: ExperienceContentProtocol,
                    imageLoader: ImageLoading) {
         // Configure the imageView using the provided line data.
         imageView.setupView(line: line, imageLoader: imageLoader)
 
         // Configure the textView using the line data, style, and listener.
-        textView.setupView(line: line, style: style, experienceContentProtocol: experienceContentProtocol)
+        textView.setupView(line: line, style: style)
     }
 }

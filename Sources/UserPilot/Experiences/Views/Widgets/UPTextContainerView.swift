@@ -43,14 +43,14 @@ internal class UPTextContainerView: UIStackView {
        - style: The theme data containing styling attributes for the text views.
        - experienceContentListener: A listener for handling content-related actions.
      */
-    func setupView(lines: [Line], style: ThemeData, experienceContentProtocol: ExperienceContentProtocol) {
+    func setupView(lines: [Line], style: ThemeData) {
         // Clear existing views before adding new ones
         arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         // Iterate through each line and create a corresponding UPTextView
         for line in lines {
             let textView = UPTextView()
-            textView.setupView(line: line, style: style, experienceContentProtocol: experienceContentProtocol)
+            textView.setupView(line: line, style: style)
             addArrangedSubview(textView)
         }
     }

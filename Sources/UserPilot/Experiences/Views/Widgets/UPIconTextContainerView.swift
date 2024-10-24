@@ -47,7 +47,6 @@ internal class UPIconTextContainerView: UIStackView {
      */
     func setupView(lines: [Line],
                    style: ThemeData,
-                   experienceContentProtocol: ExperienceContentProtocol,
                    imageLoader: ImageLoading) {
         // Remove existing views before adding new ones.
         arrangedSubviews.forEach { $0.removeFromSuperview() }
@@ -58,7 +57,6 @@ internal class UPIconTextContainerView: UIStackView {
             let iconText = UPIconTextView()
             iconText.setupView(line: line,
                                style: style,
-                               experienceContentProtocol: experienceContentProtocol,
                                imageLoader: imageLoader)
             addArrangedSubview(iconText)
 
