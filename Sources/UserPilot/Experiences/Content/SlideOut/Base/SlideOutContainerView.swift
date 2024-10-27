@@ -107,7 +107,7 @@ internal class SlideOutContainerView: UIView {
         contentContainerView.addSubview(stepSectionsStackView)
 
         let safeAreaLayoutGuide = safeAreaLayoutGuide
-        let contentLayoutGuide = scrollView.contentLayoutGuide
+        // let contentLayoutGuide = scrollView.contentLayoutGuide
         let frameLayoutGuide = scrollView.frameLayoutGuide
 
         // Constraint for the content container view height

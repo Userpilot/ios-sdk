@@ -18,7 +18,7 @@ class UserPilotManager {
     // MARK: - Private Properties
 
     private lazy var userPilot = UserPilot(config: UserPilot
-        .Config(token: "NX-b7b285fd")
+        .Config(token: "NX-84ccf54a")
         .logging(true)
         .setNavigationHandler(navigationDelegate: self))
 

@@ -142,7 +142,7 @@ internal struct ExperienceTheme: Codable {
     var stepsProgressColorAsString: String {
         progress?.color ?? ThemeHandler.DefaultValues.blackColor
     }
-    
+
     // Backdrop
     var backdropColor: UIColor {
         backdrop?.color?.color ?? .black

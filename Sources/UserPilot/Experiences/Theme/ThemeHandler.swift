@@ -40,8 +40,8 @@ internal protocol ThemeHandling: AnyObject {
     /// - Returns: A unified theme that combines all provided themes.
     func mergeThemes(
         _ baseTheme: ThemeData?,
-        _ globalTheme: ThemeData?,
-        _ stepTheme: ThemeData?
+        _ globalTheme: ExperienceTheme?,
+        _ stepTheme: ExperienceTheme?
     ) -> ThemeData
 }
 
@@ -157,127 +157,127 @@ internal class ThemeHandler: ThemeHandling {
     // swiftlint:disable:next function_body_length
     func mergeThemes(
         _ baseTheme: ThemeData?,
-        _ globalTheme: ThemeData?,
-        _ stepTheme: ThemeData?
+        _ globalTheme: ExperienceTheme?,
+        _ stepTheme: ExperienceTheme?
     ) -> ThemeData {
         return ThemeData(
             carousel: ExperienceTheme(
                 button: ButtonStyle(
-                    backgroundColor: stepTheme?.carousel?.button?.backgroundColor
-                        ?? globalTheme?.carousel?.button?.backgroundColor
+                    backgroundColor: stepTheme?.button?.backgroundColor
+                        ?? globalTheme?.button?.backgroundColor
                         ?? baseTheme?.carousel?.button?.backgroundColor,
-                    labelColor: stepTheme?.carousel?.button?.labelColor
-                        ?? globalTheme?.carousel?.button?.labelColor
+                    labelColor: stepTheme?.button?.labelColor
+                        ?? globalTheme?.button?.labelColor
                         ?? baseTheme?.carousel?.button?.labelColor,
-                    borderColor: stepTheme?.carousel?.button?.borderColor
-                        ?? globalTheme?.carousel?.button?.borderColor
+                    borderColor: stepTheme?.button?.borderColor
+                        ?? globalTheme?.button?.borderColor
                         ?? baseTheme?.carousel?.button?.borderColor,
-                    borderWidth: stepTheme?.carousel?.button?.borderWidth
-                        ?? globalTheme?.carousel?.button?.borderWidth
+                    borderWidth: stepTheme?.button?.borderWidth
+                        ?? globalTheme?.button?.borderWidth
                         ?? baseTheme?.carousel?.button?.borderWidth,
-                    borderRadius: stepTheme?.carousel?.button?.borderRadius
-                        ?? globalTheme?.carousel?.button?.borderRadius
+                    borderRadius: stepTheme?.button?.borderRadius
+                        ?? globalTheme?.button?.borderRadius
                         ?? baseTheme?.carousel?.button?.borderRadius
                 ),
                 colors: ColorsStyle(
-                    backgroundColor: stepTheme?.carousel?.colors?.backgroundColor
-                        ?? globalTheme?.carousel?.colors?.backgroundColor
+                    backgroundColor: stepTheme?.colors?.backgroundColor
+                        ?? globalTheme?.colors?.backgroundColor
                         ?? baseTheme?.carousel?.colors?.backgroundColor,
-                    textColor: stepTheme?.carousel?.colors?.textColor
-                        ?? globalTheme?.carousel?.colors?.textColor
+                    textColor: stepTheme?.colors?.textColor
+                        ?? globalTheme?.colors?.textColor
                         ?? baseTheme?.carousel?.colors?.textColor,
-                    titleColor: stepTheme?.carousel?.colors?.titleColor
-                        ?? globalTheme?.carousel?.colors?.titleColor
+                    titleColor: stepTheme?.colors?.titleColor
+                        ?? globalTheme?.colors?.titleColor
                         ?? baseTheme?.carousel?.colors?.titleColor
                 ),
                 dismissContent: DismissContentStyle(
-                    color: stepTheme?.carousel?.dismissContent?.color
-                        ?? globalTheme?.carousel?.dismissContent?.color
+                    color: stepTheme?.dismissContent?.color
+                        ?? globalTheme?.dismissContent?.color
                         ?? baseTheme?.carousel?.dismissContent?.color,
-                    colorType: stepTheme?.carousel?.dismissContent?.colorType
-                        ?? globalTheme?.carousel?.dismissContent?.colorType
+                    colorType: stepTheme?.dismissContent?.colorType
+                        ?? globalTheme?.dismissContent?.colorType
                         ?? baseTheme?.carousel?.dismissContent?.colorType,
-                    enabled: stepTheme?.carousel?.dismissContent?.enabled
-                        ?? globalTheme?.carousel?.dismissContent?.enabled
+                    enabled: stepTheme?.dismissContent?.enabled
+                        ?? globalTheme?.dismissContent?.enabled
                         ?? baseTheme?.carousel?.dismissContent?.enabled
                 ),
                 general: GeneralStyle(
-                    contentAlignment: stepTheme?.carousel?.general?.contentAlignment
-                        ?? globalTheme?.carousel?.general?.contentAlignment
+                    contentAlignment: stepTheme?.general?.contentAlignment
+                        ?? globalTheme?.general?.contentAlignment
                         ?? baseTheme?.carousel?.general?.contentAlignment,
-                    fontFamily: stepTheme?.carousel?.general?.fontFamily
-                        ?? globalTheme?.carousel?.general?.fontFamily
+                    fontFamily: stepTheme?.general?.fontFamily
+                        ?? globalTheme?.general?.fontFamily
                         ?? baseTheme?.carousel?.general?.fontFamily
                 ),
                 progress: ProgressStyle(
-                    color: stepTheme?.carousel?.progress?.color
-                        ?? globalTheme?.carousel?.progress?.color
+                    color: stepTheme?.progress?.color
+                        ?? globalTheme?.progress?.color
                         ?? baseTheme?.carousel?.progress?.color,
-                    colorType: stepTheme?.carousel?.progress?.colorType
-                        ?? globalTheme?.carousel?.progress?.colorType
+                    colorType: stepTheme?.progress?.colorType
+                        ?? globalTheme?.progress?.colorType
                         ?? baseTheme?.carousel?.progress?.colorType,
-                    enabled: stepTheme?.carousel?.progress?.enabled
-                        ?? globalTheme?.carousel?.progress?.enabled
+                    enabled: stepTheme?.progress?.enabled
+                        ?? globalTheme?.progress?.enabled
                         ?? baseTheme?.carousel?.progress?.enabled
                 )
             ),
             slideOut: ExperienceTheme(
                 button: ButtonStyle(
-                    backgroundColor: stepTheme?.slideOut?.button?.backgroundColor
-                        ?? globalTheme?.slideOut?.button?.backgroundColor
+                    backgroundColor: stepTheme?.button?.backgroundColor
+                        ?? globalTheme?.button?.backgroundColor
                         ?? baseTheme?.slideOut?.button?.backgroundColor,
-                    labelColor: stepTheme?.slideOut?.button?.labelColor
-                        ?? globalTheme?.slideOut?.button?.labelColor
+                    labelColor: stepTheme?.button?.labelColor
+                        ?? globalTheme?.button?.labelColor
                         ?? baseTheme?.slideOut?.button?.labelColor,
-                    borderColor: stepTheme?.slideOut?.button?.borderColor
-                        ?? globalTheme?.slideOut?.button?.borderColor
+                    borderColor: stepTheme?.button?.borderColor
+                        ?? globalTheme?.button?.borderColor
                         ?? baseTheme?.slideOut?.button?.borderColor,
-                    borderWidth: stepTheme?.slideOut?.button?.borderWidth
-                        ?? globalTheme?.slideOut?.button?.borderWidth
+                    borderWidth: stepTheme?.button?.borderWidth
+                        ?? globalTheme?.button?.borderWidth
                         ?? baseTheme?.slideOut?.button?.borderWidth,
-                    borderRadius: stepTheme?.slideOut?.button?.borderRadius
-                        ?? globalTheme?.slideOut?.button?.borderRadius
+                    borderRadius: stepTheme?.button?.borderRadius
+                        ?? globalTheme?.button?.borderRadius
                         ?? baseTheme?.slideOut?.button?.borderRadius
                 ),
                 colors: ColorsStyle(
-                    backgroundColor: stepTheme?.slideOut?.colors?.backgroundColor
-                        ?? globalTheme?.slideOut?.colors?.backgroundColor
+                    backgroundColor: stepTheme?.colors?.backgroundColor
+                        ?? globalTheme?.colors?.backgroundColor
                         ?? baseTheme?.slideOut?.colors?.backgroundColor,
-                    textColor: stepTheme?.slideOut?.colors?.textColor
-                        ?? globalTheme?.slideOut?.colors?.textColor
+                    textColor: stepTheme?.colors?.textColor
+                        ?? globalTheme?.colors?.textColor
                         ?? baseTheme?.slideOut?.colors?.textColor,
-                    titleColor: stepTheme?.slideOut?.colors?.titleColor
-                        ?? globalTheme?.slideOut?.colors?.titleColor
+                    titleColor: stepTheme?.colors?.titleColor
+                        ?? globalTheme?.colors?.titleColor
                         ?? baseTheme?.slideOut?.colors?.titleColor
                 ),
                 dismissContent: DismissContentStyle(
-                    color: stepTheme?.slideOut?.dismissContent?.color
-                        ?? globalTheme?.slideOut?.dismissContent?.color
+                    color: stepTheme?.dismissContent?.color
+                        ?? globalTheme?.dismissContent?.color
                         ?? baseTheme?.slideOut?.dismissContent?.color,
-                    colorType: stepTheme?.slideOut?.dismissContent?.colorType
-                        ?? globalTheme?.slideOut?.dismissContent?.colorType
+                    colorType: stepTheme?.dismissContent?.colorType
+                        ?? globalTheme?.dismissContent?.colorType
                         ?? baseTheme?.slideOut?.dismissContent?.colorType,
-                    enabled: stepTheme?.slideOut?.dismissContent?.enabled
-                        ?? globalTheme?.slideOut?.dismissContent?.enabled
+                    enabled: stepTheme?.dismissContent?.enabled
+                        ?? globalTheme?.dismissContent?.enabled
                         ?? baseTheme?.slideOut?.dismissContent?.enabled
                 ),
                 general: GeneralStyle(
-                    contentAlignment: stepTheme?.slideOut?.general?.contentAlignment
-                        ?? globalTheme?.slideOut?.general?.contentAlignment
+                    contentAlignment: stepTheme?.general?.contentAlignment
+                        ?? globalTheme?.general?.contentAlignment
                         ?? baseTheme?.slideOut?.general?.contentAlignment,
-                    fontFamily: stepTheme?.slideOut?.general?.fontFamily
-                        ?? globalTheme?.slideOut?.general?.fontFamily
+                    fontFamily: stepTheme?.general?.fontFamily
+                        ?? globalTheme?.general?.fontFamily
                         ?? baseTheme?.slideOut?.general?.fontFamily
                 ),
                 backdrop: Backdrop(
-                    color: stepTheme?.slideOut?.backdrop?.color
-                        ?? globalTheme?.slideOut?.backdrop?.color
+                    color: stepTheme?.backdrop?.color
+                        ?? globalTheme?.backdrop?.color
                         ?? baseTheme?.slideOut?.backdrop?.color,
-                    enabled: stepTheme?.slideOut?.backdrop?.enabled
-                        ?? globalTheme?.slideOut?.backdrop?.enabled
+                    enabled: stepTheme?.backdrop?.enabled
+                        ?? globalTheme?.backdrop?.enabled
                         ?? baseTheme?.slideOut?.backdrop?.enabled,
-                    opacity: stepTheme?.slideOut?.backdrop?.opacity
-                    ?? globalTheme?.slideOut?.backdrop?.opacity
+                    opacity: stepTheme?.backdrop?.opacity
+                    ?? globalTheme?.backdrop?.opacity
                     ?? baseTheme?.slideOut?.backdrop?.opacity
                 )
             )

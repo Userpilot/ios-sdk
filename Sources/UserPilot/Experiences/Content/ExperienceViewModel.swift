@@ -80,7 +80,7 @@ internal class ExperienceViewModel {
                 themeHandler.mergeThemes(
                     baseTheme,
                     mobileContent.mobileTheme.themeData,
-                    step.mobileTheme?.themeData
+                    step.mobileTheme
                 )
             )
         }
