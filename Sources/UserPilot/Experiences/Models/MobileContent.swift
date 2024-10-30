@@ -155,7 +155,7 @@ internal struct Mark: Codable {
 // MARK: - MarkAttributes
 
 internal struct MarkAttributes: Codable {
-    let fontSize: Int?
+    let fontSize: String?
     let href: String?
     let color: String?
 

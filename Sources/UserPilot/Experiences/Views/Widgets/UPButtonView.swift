@@ -62,7 +62,7 @@ internal class UPButtonView: UIButton {
         self.callback = callback
 
         configureContent(with: line)
-        applyStyle(using: theme)
+        applyStyle(with: line, and: theme)
         configureContentAlignment(with: line?.attrs?.textAlign)
 
         // Set click listener to trigger the action's callback if provided
@@ -91,16 +91,31 @@ internal class UPButtonView: UIButton {
     /// Applies styling attributes to the button based on the provided `ThemeData`.
     ///
     /// - Parameter style: The `ThemeData` object that contains button styling properties.
-    private func applyStyle(using theme: ExperienceTheme) {
+    private func applyStyle(with line: Line?, and theme: ExperienceTheme) {
         backgroundColor = theme.buttonBackgroundColor
         setTitleColor(theme.buttonTextColor, for: .normal)
         layer.cornerRadius = theme.buttonBorderRadius
         layer.borderWidth = theme.buttonBorderWidth
         layer.borderColor = theme.buttonBorderColor.cgColor
 
+        // Retrieve text style mark or use a default one
+        let textStyleMark = line?.content?.first?.marks?.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
+        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+
+        var traits = [UIFontDescriptor.SymbolicTraits]()
+        if let marks = line?.content?.first?.marks {
+            if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
+                traits.append(.traitBold)
+            }
+            if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
+                traits.append(.traitItalic)
+            }
+        }
+
         let font = UIFont.matching(fontName: theme.fontFamily,
-                                   fontWeight: [],
-                                   fontSize: CGFloat(ThemeHandler.DefaultValues.normalTextSize))
+                                   fontWeight: traits,
+                                   fontSize: fontSize)
+
         titleLabel?.font = font
     }
 

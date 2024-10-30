@@ -86,9 +86,8 @@ internal class UPTextView: UILabel {
                                 range: NSRange) {
         // Retrieve text style mark or use a default one
         let textStyleMark = marks.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
-        ?? ThemeHandler.DefaultValues.defaultTextStyleMark
-        let fontSize = CGFloat(textStyleMark.attrs?.fontSize ?? Int(ThemeHandler.DefaultValues.normalTextSize))
-        let textColor = textStyleMark.attrs?.color?.color ?? theme.textColor
+        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+        let textColor = textStyleMark?.attrs?.color?.color ?? theme.textColor
 
         var traits = [UIFontDescriptor.SymbolicTraits]()
         if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {

@@ -31,6 +31,16 @@ internal extension String {
         return self.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    var toFontSize: CGFloat {
+        if self.contains("px"), let value = Int(self.dropLast(2)) {
+            return CGFloat(value)
+        } else if let value = Int(self) {
+            return CGFloat(value)
+        } else {
+            return CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+        }
+    }
+
 }
 
 // MARK: - Colors

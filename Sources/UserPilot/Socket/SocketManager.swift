@@ -22,6 +22,7 @@ internal protocol SocketEvents: AnyObject {
     var isJoiningSocket: Bool { get }
     var didErrorOccurred: Bool { get }
     var isShutdownState: Bool { get }
+    var isSocketConnectedWithUnknownChannel: Bool { get }
 
     func updateSocketState(_ socketState: SocketManager.SocketState)
 
@@ -282,9 +283,14 @@ extension SocketManager: SocketEvents {
         socketState == .shuttingDown
     }
 
-    /// Update socket state.
+    /// Update socket state
     func updateSocketState(_ socketState: SocketManager.SocketState) {
         self.socketState = socketState
+    }
+
+    /// Checks if the socket is currently opened without channel
+    var isSocketConnectedWithUnknownChannel: Bool {
+        phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == false
     }
 
     /// Implementation to open a WebSocket connection

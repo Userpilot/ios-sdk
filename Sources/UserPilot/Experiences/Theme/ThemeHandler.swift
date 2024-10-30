@@ -63,18 +63,6 @@ internal class ThemeHandler: ThemeHandling {
         static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let slideOutCornerRadius = CGFloat(20)
-
-        /// Default text style mark with predefined attributes.
-        static var defaultTextStyleMark: Mark {
-            return Mark(
-                type: StyleName.textStyle,
-                attrs: MarkAttributes(
-                    fontSize: Int(normalTextSize),
-                    href: nil,
-                    color: blackColor
-                )
-            )
-        }
     }
 
     /// Style names used for text formatting in themes.

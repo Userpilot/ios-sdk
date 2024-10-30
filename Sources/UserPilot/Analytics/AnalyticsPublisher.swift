@@ -155,13 +155,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
     }
 
-    /**
+    /*
      Publishes an event to the backend based on its type (identify, screen, or custom event).
      
      - Parameter event: The event to publish.
      */
+    // swiftlint:disable:next cyclomatic_complexity
     func publish(_ event: Event) {
         if event.isIdentifyEvent {
+            if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
             storage.temporaryUser = event.toUser().toJson()
             cachedIdentifyEvent = event
             socketManager.updateSocketState(.closed)
@@ -225,8 +227,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             userPilot?.clean()
             logout(socketState: .switchingUser)
         } else {
-            // In-case new user ID
-            if User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
             flushPriorityEvents()
         }
     }
@@ -284,7 +284,10 @@ extension AnalyticsPublisher {
      opens the socket.
      */
     private func flushPriorityEvents() {
-        if !socketManager.isSocketOpened || socketManager.isJoiningSocket { return }
+        if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
+            checkFallbackState()
+            return
+        }
 
         /// Identify event
         if let identifyEvent = cachedIdentifyEvent {
@@ -331,7 +334,10 @@ extension AnalyticsPublisher {
      */
     private func flushQueue(shouldCloseSocket: Bool = false, flushImmediately: Bool = false) {
         readWriteLock.read {
-            if !socketManager.isSocketOpened || socketManager.isJoiningSocket { return }
+            if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
+                checkFallbackState()
+                return
+            }
             if self.eventsToFlush.isEmpty {
                 if shouldCloseSocket { closeSocket() }
                 return
@@ -382,6 +388,11 @@ extension AnalyticsPublisher: SocketSubscription {
     func onSocketOpened() {
         clearCachedEvents()
         flushPriorityEvents()
+    }
+
+    // Fallback state to close socket if channel not opened
+    private func checkFallbackState() {
+        if socketManager.isSocketConnectedWithUnknownChannel { closeSocket() }
     }
 
     /// Socket closed callback.
