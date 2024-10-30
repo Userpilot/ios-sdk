@@ -43,6 +43,16 @@
                     <nil key="textColor"/>
                     <nil key="highlightedColor"/>
                 </label>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Dmf-Y6-2UJ">
+                    <rect key="frame" x="329" y="77" width="48" height="30"/>
+                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                    <state key="normal" title="Logout">
+                        <color key="titleColor" systemColor="systemRedColor"/>
+                    </state>
+                    <connections>
+                        <action selector="onLogout:" destination="-1" eventType="touchUpInside" id="FbD-jr-5yE"/>
+                    </connections>
+                </button>
                 <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="xOX-pA-Rln">
                     <rect key="frame" x="0.0" y="120" width="393" height="568"/>
                     <subviews>
@@ -90,6 +100,7 @@
                                         <constraint firstItem="BRf-AR-gsJ" firstAttribute="leading" secondItem="B2T-pL-ifF" secondAttribute="leading" constant="16" id="4ax-fE-dLY"/>
                                         <constraint firstItem="DZc-hu-a3a" firstAttribute="leading" secondItem="B2T-pL-ifF" secondAttribute="leading" constant="16" id="BMT-fP-OPA"/>
                                         <constraint firstItem="SQa-8T-fls" firstAttribute="centerY" secondItem="BRf-AR-gsJ" secondAttribute="centerY" id="Dkp-Dq-YfB"/>
+                                        <constraint firstItem="SQa-8T-fls" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="BRf-AR-gsJ" secondAttribute="trailing" constant="8" symbolic="YES" id="G3a-rK-Uf4"/>
                                         <constraint firstItem="fuP-K5-rdN" firstAttribute="top" secondItem="B2T-pL-ifF" secondAttribute="top" constant="16" id="HCV-od-CUa"/>
                                         <constraint firstAttribute="height" constant="150" id="M4v-rE-pid"/>
                                         <constraint firstItem="DZc-hu-a3a" firstAttribute="top" secondItem="fuP-K5-rdN" secondAttribute="bottom" constant="10" id="TSV-6X-THb"/>
@@ -97,6 +108,7 @@
                                         <constraint firstItem="fuP-K5-rdN" firstAttribute="leading" secondItem="B2T-pL-ifF" secondAttribute="leading" constant="16" id="lsc-2Y-9JB"/>
                                         <constraint firstAttribute="trailing" secondItem="DZc-hu-a3a" secondAttribute="trailing" constant="16" id="sba-P7-26p"/>
                                         <constraint firstItem="BRf-AR-gsJ" firstAttribute="top" secondItem="DZc-hu-a3a" secondAttribute="bottom" constant="16" id="szm-PK-z3E"/>
+                                        <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="fuP-K5-rdN" secondAttribute="trailing" constant="20" symbolic="YES" id="vty-22-c1a"/>
                                     </constraints>
                                 </view>
                                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="pV0-fK-eN7">
@@ -133,6 +145,7 @@
                                         <constraint firstAttribute="height" constant="55" id="W6O-cI-KQf"/>
                                         <constraint firstItem="Va8-fh-GDQ" firstAttribute="leading" secondItem="bNQ-Dm-X6h" secondAttribute="leading" constant="16" id="XJX-4p-nRT"/>
                                         <constraint firstItem="Va8-fh-GDQ" firstAttribute="top" secondItem="bNQ-Dm-X6h" secondAttribute="top" constant="16" id="aGs-As-6mu"/>
+                                        <constraint firstItem="HZN-bc-84H" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Va8-fh-GDQ" secondAttribute="trailing" constant="8" symbolic="YES" id="d7y-8F-yAM"/>
                                         <constraint firstItem="HZN-bc-84H" firstAttribute="centerY" secondItem="Va8-fh-GDQ" secondAttribute="centerY" id="dlr-PG-xmX"/>
                                     </constraints>
                                 </view>
@@ -173,16 +186,6 @@
                         <action selector="onIdentifyButtonClicked:" destination="-1" eventType="touchUpInside" id="OCR-iR-C6L"/>
                     </connections>
                 </button>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Dmf-Y6-2UJ">
-                    <rect key="frame" x="329" y="77" width="48" height="30"/>
-                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
-                    <state key="normal" title="Logout">
-                        <color key="titleColor" systemColor="systemRedColor"/>
-                    </state>
-                    <connections>
-                        <action selector="onLogout:" destination="-1" eventType="touchUpInside" id="FbD-jr-5yE"/>
-                    </connections>
-                </button>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Dew-rY-RoJ">
                     <rect key="frame" x="16" y="757" width="361" height="45"/>
                     <constraints>
@@ -214,6 +217,7 @@
                 <constraint firstItem="ZdB-mZ-qEQ" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="cYs-mP-9Qr"/>
                 <constraint firstItem="xOX-pA-Rln" firstAttribute="top" secondItem="1JW-us-yJb" secondAttribute="bottom" constant="8" id="dpV-bb-I6t"/>
                 <constraint firstItem="ZdB-mZ-qEQ" firstAttribute="top" secondItem="xOX-pA-Rln" secondAttribute="bottom" constant="16" id="eIa-M8-gvO"/>
+                <constraint firstItem="Dmf-Y6-2UJ" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="DMR-Yt-jkv" secondAttribute="trailing" constant="8" symbolic="YES" id="frG-l8-5Tv"/>
                 <constraint firstItem="Dew-rY-RoJ" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="gj8-CQ-Hef"/>
                 <constraint firstItem="DMR-Yt-jkv" firstAttribute="centerY" secondItem="1JW-us-yJb" secondAttribute="centerY" id="iQy-JZ-HHN"/>
                 <constraint firstItem="xOX-pA-Rln" firstAttribute="trailing" secondItem="vUN-kp-3ea" secondAttribute="trailing" id="rqt-70-kNm"/>

@@ -1,0 +1,24 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "0rx-ji-MFa.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Copyright © 2024 UserPilot. All rights reserved.\"; ObjectID = \"0rx-ji-MFa\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حقوق النشر © 2024 UserPilot. جميع الحقوق محفوظة."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copyright © 2024 UserPilot. All rights reserved."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

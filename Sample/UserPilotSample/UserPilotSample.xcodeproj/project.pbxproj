@@ -9,43 +9,44 @@
 /* Begin PBXBuildFile section */
 		AB01CB0E2C8497900069937C /* UICollectionView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */; };
 		AB01CB102C84985B0069937C /* Screen+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */; };
+		AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942A82CD25CD700924844 /* MainViewController.xib */; };
+		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
+		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
+		AB1942B32CD2609700924844 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942B22CD2609700924844 /* ScreenOneViewController.xib */; };
+		AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942B62CD260CA00924844 /* DeepLinkViewController.xib */; };
+		AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942BA2CD260F000924844 /* IdentifyViewController.xib */; };
+		AB1942BF2CD2615800924844 /* AddPropertyDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942BE2CD2615800924844 /* AddPropertyDialogViewController.xib */; };
+		AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C22CD261F100924844 /* CustomEventViewController.xib */; };
+		AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C62CD2624000924844 /* EventsViewController.xib */; };
+		AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942CA2CD2626C00924844 /* EventTableViewCell.xib */; };
 		AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */; };
 		AB6DBD382C68CD560009BB11 /* BaseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD372C68CD560009BB11 /* BaseViewController.swift */; };
 		AB6DBD3D2C68CE9D0009BB11 /* FlowRoutingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */; };
-		AB6DBD3F2C68CEF70009BB11 /* IdentifyViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB6DBD3E2C68CEF70009BB11 /* IdentifyViewController.xib */; };
 		AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */; };
 		AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD442C68D8560009BB11 /* Utils.swift */; };
 		AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */; };
 		ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85A2C96D5AF006C9B77 /* PropertyView.swift */; };
 		ABACA85D2C96D5B7006C9B77 /* PropertyView.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABACA85C2C96D5B7006C9B77 /* PropertyView.xib */; };
 		ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */; };
-		ABACA8622C96E0E7006C9B77 /* AddPropertyDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABACA8612C96E0E7006C9B77 /* AddPropertyDialogViewController.xib */; };
 		ABACA8652C96E3F5006C9B77 /* DialogManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA8642C96E3F5006C9B77 /* DialogManager.swift */; };
 		ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */; };
 		ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */; };
 		ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */; };
 		ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */; };
 		ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */; };
-		ABCDBF442CAEABCE0083DF1D /* DeepLinkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABCDBF432CAEABCE0083DF1D /* DeepLinkViewController.xib */; };
 		ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
 		ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */; };
 		ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */; };
 		ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F682C985E2000004D1C /* CustomEventViewController.swift */; };
-		ABED3F6B2C985E2A00004D1C /* CustomEventViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABED3F6A2C985E2A00004D1C /* CustomEventViewController.xib */; };
 		ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */; };
 		ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C7B2C73688000013F18 /* MainViewController.swift */; };
-		ABF38C7E2C73688900013F18 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C7D2C73688900013F18 /* MainViewController.xib */; };
 		ABF38C812C73719300013F18 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C802C73719300013F18 /* Content.swift */; };
 		ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C862C73889100013F18 /* ScreenOneViewController.swift */; };
-		ABF38C892C73889A00013F18 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C882C73889A00013F18 /* ScreenOneViewController.xib */; };
 		ABF38C8B2C7388AA00013F18 /* ScreenTwoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C8A2C7388AA00013F18 /* ScreenTwoViewController.swift */; };
-		ABF38C8D2C7388B200013F18 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABF38C8C2C7388B200013F18 /* ScreenTwoViewController.xib */; };
 		ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FD72C916E500054E142 /* EventsViewController.swift */; };
-		ABFB5FDA2C916E590054E142 /* EventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABFB5FD92C916E590054E142 /* EventsViewController.xib */; };
 		ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */; };
-		ABFB5FDF2C9171600054E142 /* EventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABFB5FDD2C9171600054E142 /* EventTableViewCell.xib */; };
 		ABFB5FE42C9173D60054E142 /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE32C9173D60054E142 /* CardView.swift */; };
 		ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE52C91743B0054E142 /* OutlineButton.swift */; };
 		ABFB5FE82C9175030054E142 /* UITableReusableView+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */; };
@@ -59,43 +60,53 @@
 /* Begin PBXFileReference section */
 		AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UICollectionView+Extensions.swift"; sourceTree = "<group>"; };
 		AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Screen+Extensions.swift"; sourceTree = "<group>"; };
+		AB1942A72CD25CD700924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainViewController.xib; sourceTree = "<group>"; };
+		AB1942AA2CD25CD700924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/MainViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		AB1942AD2CD25FD200924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ScreenTwoViewController.xib; sourceTree = "<group>"; };
+		AB1942B02CD25FD200924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/ScreenTwoViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942B12CD2609700924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ScreenOneViewController.xib; sourceTree = "<group>"; };
+		AB1942B42CD2609700924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/ScreenOneViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942B52CD260CA00924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/DeepLinkViewController.xib; sourceTree = "<group>"; };
+		AB1942B82CD260CA00924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/DeepLinkViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942B92CD260F000924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/IdentifyViewController.xib; sourceTree = "<group>"; };
+		AB1942BC2CD260F000924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/IdentifyViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942BD2CD2615800924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/AddPropertyDialogViewController.xib; sourceTree = "<group>"; };
+		AB1942C02CD2615800924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/AddPropertyDialogViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942C12CD261F100924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/CustomEventViewController.xib; sourceTree = "<group>"; };
+		AB1942C42CD261F100924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/CustomEventViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942C52CD2624000924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/EventsViewController.xib; sourceTree = "<group>"; };
+		AB1942C82CD2624000924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventsViewController.xcstrings; sourceTree = "<group>"; };
+		AB1942C92CD2626C00924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/EventTableViewCell.xib; sourceTree = "<group>"; };
+		AB1942CC2CD2626C00924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventTableViewCell.xcstrings; sourceTree = "<group>"; };
 		AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifyViewController.swift; sourceTree = "<group>"; };
 		AB6DBD372C68CD560009BB11 /* BaseViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseViewController.swift; sourceTree = "<group>"; };
 		AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRoutingManager.swift; sourceTree = "<group>"; };
-		AB6DBD3E2C68CEF70009BB11 /* IdentifyViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = IdentifyViewController.xib; sourceTree = "<group>"; };
 		AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseNavigationController.swift; sourceTree = "<group>"; };
 		AB6DBD442C68D8560009BB11 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Exensions.swift"; sourceTree = "<group>"; };
 		ABACA85A2C96D5AF006C9B77 /* PropertyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyView.swift; sourceTree = "<group>"; };
 		ABACA85C2C96D5B7006C9B77 /* PropertyView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = PropertyView.xib; sourceTree = "<group>"; };
 		ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPropertyDialogViewController.swift; sourceTree = "<group>"; };
-		ABACA8612C96E0E7006C9B77 /* AddPropertyDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = AddPropertyDialogViewController.xib; sourceTree = "<group>"; };
 		ABACA8642C96E3F5006C9B77 /* DialogManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogManager.swift; sourceTree = "<group>"; };
 		ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-BoldItalic.ttf"; sourceTree = "<group>"; };
 		ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPilotManager.swift; sourceTree = "<group>"; };
 		ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Regular.ttf"; sourceTree = "<group>"; };
 		ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwitcher-Grypen-Regular.ttf"; sourceTree = "<group>"; };
 		ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkViewController.swift; sourceTree = "<group>"; };
-		ABCDBF432CAEABCE0083DF1D /* DeepLinkViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = DeepLinkViewController.xib; sourceTree = "<group>"; };
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+UserProperties.swift"; sourceTree = "<group>"; };
 		ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+CompanyProperties.swift"; sourceTree = "<group>"; };
 		ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIStackView+Extensions.swift"; sourceTree = "<group>"; };
 		ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+TableView.swift"; sourceTree = "<group>"; };
 		ABED3F682C985E2000004D1C /* CustomEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomEventViewController.swift; sourceTree = "<group>"; };
-		ABED3F6A2C985E2A00004D1C /* CustomEventViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = CustomEventViewController.xib; sourceTree = "<group>"; };
 		ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Bold.ttf"; sourceTree = "<group>"; };
 		ABF38C7B2C73688000013F18 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
-		ABF38C7D2C73688900013F18 /* MainViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainViewController.xib; sourceTree = "<group>"; };
 		ABF38C802C73719300013F18 /* Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Content.swift; sourceTree = "<group>"; };
 		ABF38C862C73889100013F18 /* ScreenOneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenOneViewController.swift; sourceTree = "<group>"; };
-		ABF38C882C73889A00013F18 /* ScreenOneViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ScreenOneViewController.xib; sourceTree = "<group>"; };
 		ABF38C8A2C7388AA00013F18 /* ScreenTwoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTwoViewController.swift; sourceTree = "<group>"; };
-		ABF38C8C2C7388B200013F18 /* ScreenTwoViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ScreenTwoViewController.xib; sourceTree = "<group>"; };
 		ABFB5FD72C916E500054E142 /* EventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsViewController.swift; sourceTree = "<group>"; };
-		ABFB5FD92C916E590054E142 /* EventsViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = EventsViewController.xib; sourceTree = "<group>"; };
 		ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTableViewCell.swift; sourceTree = "<group>"; };
-		ABFB5FDD2C9171600054E142 /* EventTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = EventTableViewCell.xib; sourceTree = "<group>"; };
 		ABFB5FE32C9173D60054E142 /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		ABFB5FE52C91743B0054E142 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
 		ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITableReusableView+Extension.swift"; sourceTree = "<group>"; };
@@ -124,7 +135,7 @@
 			children = (
 				ABED3F5C2C9803AD00004D1C /* Extensions */,
 				AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */,
-				AB6DBD3E2C68CEF70009BB11 /* IdentifyViewController.xib */,
+				AB1942BA2CD260F000924844 /* IdentifyViewController.xib */,
 			);
 			path = Identify;
 			sourceTree = "<group>";
@@ -175,7 +186,7 @@
 				ABED3F632C9831AC00004D1C /* Extensions */,
 				ABF38C7F2C73713100013F18 /* Models */,
 				ABF38C7B2C73688000013F18 /* MainViewController.swift */,
-				ABF38C7D2C73688900013F18 /* MainViewController.xib */,
+				AB1942A82CD25CD700924844 /* MainViewController.xib */,
 			);
 			path = Main;
 			sourceTree = "<group>";
@@ -224,7 +235,7 @@
 			isa = PBXGroup;
 			children = (
 				ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */,
-				ABACA8612C96E0E7006C9B77 /* AddPropertyDialogViewController.xib */,
+				AB1942BE2CD2615800924844 /* AddPropertyDialogViewController.xib */,
 			);
 			path = Dialogs;
 			sourceTree = "<group>";
@@ -268,7 +279,7 @@
 			isa = PBXGroup;
 			children = (
 				ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */,
-				ABCDBF432CAEABCE0083DF1D /* DeepLinkViewController.xib */,
+				AB1942B62CD260CA00924844 /* DeepLinkViewController.xib */,
 			);
 			path = DeepLink;
 			sourceTree = "<group>";
@@ -294,7 +305,7 @@
 			isa = PBXGroup;
 			children = (
 				ABED3F682C985E2000004D1C /* CustomEventViewController.swift */,
-				ABED3F6A2C985E2A00004D1C /* CustomEventViewController.xib */,
+				AB1942C22CD261F100924844 /* CustomEventViewController.xib */,
 			);
 			path = CustomEvent;
 			sourceTree = "<group>";
@@ -304,7 +315,7 @@
 			children = (
 				ABFB5FDB2C91713B0054E142 /* Cells */,
 				ABFB5FD72C916E500054E142 /* EventsViewController.swift */,
-				ABFB5FD92C916E590054E142 /* EventsViewController.xib */,
+				AB1942C62CD2624000924844 /* EventsViewController.xib */,
 			);
 			path = Eventslist;
 			sourceTree = "<group>";
@@ -330,7 +341,7 @@
 			isa = PBXGroup;
 			children = (
 				ABF38C862C73889100013F18 /* ScreenOneViewController.swift */,
-				ABF38C882C73889A00013F18 /* ScreenOneViewController.xib */,
+				AB1942B22CD2609700924844 /* ScreenOneViewController.xib */,
 			);
 			path = ScreenOne;
 			sourceTree = "<group>";
@@ -339,7 +350,7 @@
 			isa = PBXGroup;
 			children = (
 				ABF38C8A2C7388AA00013F18 /* ScreenTwoViewController.swift */,
-				ABF38C8C2C7388B200013F18 /* ScreenTwoViewController.xib */,
+				AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */,
 			);
 			path = ScreenTwo;
 			sourceTree = "<group>";
@@ -357,7 +368,7 @@
 			isa = PBXGroup;
 			children = (
 				ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */,
-				ABFB5FDD2C9171600054E142 /* EventTableViewCell.xib */,
+				AB1942CA2CD2626C00924844 /* EventTableViewCell.xib */,
 			);
 			path = Cells;
 			sourceTree = "<group>";
@@ -381,6 +392,7 @@
 		C5C897B72C5CFFFA0083928E /* UserPilotSample */ = {
 			isa = PBXGroup;
 			children = (
+				AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */,
 				ABC0B5142CB3CBB200139174 /* Resources */,
 				ABACA85E2C96E0C2006C9B77 /* Dialogs */,
 				AB6DBD492C68DA370009BB11 /* Extensions */,
@@ -443,6 +455,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ar,
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
@@ -462,22 +475,23 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ABFB5FDF2C9171600054E142 /* EventTableViewCell.xib in Resources */,
-				AB6DBD3F2C68CEF70009BB11 /* IdentifyViewController.xib in Resources */,
-				ABCDBF442CAEABCE0083DF1D /* DeepLinkViewController.xib in Resources */,
-				ABF38C8D2C7388B200013F18 /* ScreenTwoViewController.xib in Resources */,
-				ABED3F6B2C985E2A00004D1C /* CustomEventViewController.xib in Resources */,
+				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
+				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
+				AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
+				AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
+				AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */,
+				AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */,
 				C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */,
-				ABFB5FDA2C916E590054E142 /* EventsViewController.xib in Resources */,
+				AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */,
 				ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */,
-				ABF38C7E2C73688900013F18 /* MainViewController.xib in Resources */,
+				AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */,
 				ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */,
 				ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */,
-				ABACA8622C96E0E7006C9B77 /* AddPropertyDialogViewController.xib in Resources */,
+				AB1942BF2CD2615800924844 /* AddPropertyDialogViewController.xib in Resources */,
 				C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */,
 				ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */,
 				ABACA85D2C96D5B7006C9B77 /* PropertyView.xib in Resources */,
-				ABF38C892C73889A00013F18 /* ScreenOneViewController.xib in Resources */,
+				AB1942B32CD2609700924844 /* ScreenOneViewController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -547,6 +561,87 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
+		AB1942A82CD25CD700924844 /* MainViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942A72CD25CD700924844 /* Base */,
+				AB1942AA2CD25CD700924844 /* mul */,
+			);
+			name = MainViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942AD2CD25FD200924844 /* Base */,
+				AB1942B02CD25FD200924844 /* mul */,
+			);
+			name = ScreenTwoViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942B22CD2609700924844 /* ScreenOneViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942B12CD2609700924844 /* Base */,
+				AB1942B42CD2609700924844 /* mul */,
+			);
+			name = ScreenOneViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942B62CD260CA00924844 /* DeepLinkViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942B52CD260CA00924844 /* Base */,
+				AB1942B82CD260CA00924844 /* mul */,
+			);
+			name = DeepLinkViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942BA2CD260F000924844 /* IdentifyViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942B92CD260F000924844 /* Base */,
+				AB1942BC2CD260F000924844 /* mul */,
+			);
+			name = IdentifyViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942BE2CD2615800924844 /* AddPropertyDialogViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942BD2CD2615800924844 /* Base */,
+				AB1942C02CD2615800924844 /* mul */,
+			);
+			name = AddPropertyDialogViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942C22CD261F100924844 /* CustomEventViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942C12CD261F100924844 /* Base */,
+				AB1942C42CD261F100924844 /* mul */,
+			);
+			name = CustomEventViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942C62CD2624000924844 /* EventsViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942C52CD2624000924844 /* Base */,
+				AB1942C82CD2624000924844 /* mul */,
+			);
+			name = EventsViewController.xib;
+			sourceTree = "<group>";
+		};
+		AB1942CA2CD2626C00924844 /* EventTableViewCell.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AB1942C92CD2626C00924844 /* Base */,
+				AB1942CC2CD2626C00924844 /* mul */,
+			);
+			name = EventTableViewCell.xib;
+			sourceTree = "<group>";
+		};
 		C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -563,6 +658,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -626,6 +722,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";

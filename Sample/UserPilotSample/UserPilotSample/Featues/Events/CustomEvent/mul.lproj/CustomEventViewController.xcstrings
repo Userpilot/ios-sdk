@@ -1,0 +1,114 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "0gb-3x-vo7.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Event name\"; ObjectID = \"0gb-3x-vo7\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسم الحدث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Event name"
+          }
+        }
+      }
+    },
+    "Cit-w0-0Ta.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"Cit-w0-0Ta\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رجوع"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "IGA-Rp-Nj4.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"User Properties\"; ObjectID = \"IGA-Rp-Nj4\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خصائص المستخدم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "User Properties"
+          }
+        }
+      }
+    },
+    "ILl-gN-uJb.placeholder" : {
+      "comment" : "Class = \"UITextField\"; placeholder = \"Enter event name\"; ObjectID = \"ILl-gN-uJb\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أدخل اسم الحدث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter event name"
+          }
+        }
+      }
+    },
+    "k8g-dE-4cf.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Track event\"; ObjectID = \"k8g-dE-4cf\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتبع الحدث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Track event"
+          }
+        }
+      }
+    },
+    "UcY-5a-lOY.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Track event\"; ObjectID = \"UcY-5a-lOY\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتبع الحدث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Track event"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

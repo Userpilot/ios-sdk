@@ -1,0 +1,96 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "cxu-UJ-F3l.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Track event\"; ObjectID = \"cxu-UJ-F3l\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتبع الحدث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Track event"
+          }
+        }
+      }
+    },
+    "d2V-kt-mEm.placeholder" : {
+      "comment" : "Class = \"UITextField\"; placeholder = \"Title\"; ObjectID = \"d2V-kt-mEm\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "العنوان"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Title"
+          }
+        }
+      }
+    },
+    "Ns3-8r-IJM.placeholder" : {
+      "comment" : "Class = \"UITextField\"; placeholder = \"Value\"; ObjectID = \"Ns3-8r-IJM\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "القيمة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value"
+          }
+        }
+      }
+    },
+    "SLb-E0-eD6.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Row #1\"; ObjectID = \"SLb-E0-eD6\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الصف رقم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Row #1"
+          }
+        }
+      }
+    },
+    "XsH-Un-zUo.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Event properties\"; ObjectID = \"XsH-Un-zUo\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خصائص الحدث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Event properties"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

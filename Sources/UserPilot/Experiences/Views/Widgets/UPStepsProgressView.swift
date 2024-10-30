@@ -65,14 +65,18 @@ internal class UPStepsProgressView: UIView {
     /// - Parameter frame: The frame for the view.
     override init(frame: CGRect) {
         super.init(frame: frame)
-        translatesAutoresizingMaskIntoConstraints = false
-        backgroundColor = .clear
+        initView()
     }
 
     /// Initializes a new UPStepsProgressView from a storyboard or XIB.
     /// - Parameter coder: The coder used to decode the view.
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        initView()
+    }
+
+    /// Generic init
+    func initView() {
         translatesAutoresizingMaskIntoConstraints = false
         backgroundColor = .clear
     }
@@ -131,6 +135,9 @@ internal class UPStepsProgressView: UIView {
         numberOfSteps = stepsCount
         updateColors(from: theme)
         setCurrentStep(0)
+        if UIView.userInterfaceLayoutDirection(for: self.semanticContentAttribute) == .rightToLeft {
+            transform = CGAffineTransform(scaleX: -1, y: 1)
+        }
     }
 
     /// Updates the active and inactive circle colors based on the provided theme data.

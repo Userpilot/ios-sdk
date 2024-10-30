@@ -23,6 +23,12 @@ class MainViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         UserPilotManager.shared.settings()
+        /*
+        UserPilotManager.shared.identify(
+            userID: "NX-333",
+            properties: ["locale": Locale.preferredLanguages.first ?? "en"]
+        )
+         */
     }
 }
 

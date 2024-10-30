@@ -15,11 +15,16 @@ enum Content {
     var title: String {
         switch self {
         case .identify:
-            return "User & Anonymous"
+            return "identify_title".localized
         case .screens:
-            return "Track screens"
+            return "screens_title".localized
         case .events:
-            return "Track events"
+            return "events_title".localized
         }
     }
+}
+
+postfix operator ~
+postfix func ~ (string: String) -> String {
+    return NSLocalizedString(string, comment: "")
 }

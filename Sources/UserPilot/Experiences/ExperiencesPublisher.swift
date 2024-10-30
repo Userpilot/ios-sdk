@@ -146,6 +146,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             let topViewController = UIApplication.shared.topViewController()
         else { return }
             let experienceViewModel = ExperienceViewModel(container: self.container)
+            openCarouselExperience(topViewController, experienceViewModel)
             if let mobileContent = mobileContent {
                 switch mobileContent.type {
                 case .carousel:
@@ -251,7 +252,7 @@ extension ExperiencesPublisher {
 
     func openCarouselExperience(_ viewController: UIViewController,
                                 _ experienceViewModel: ExperienceViewModel) {
-        if !canShowCarousel() { return }
+        // if !canShowCarousel() { return }
         let carouselExperienceViewController = CarouselExperienceViewController(
             experienceViewModel: experienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen

@@ -21,10 +21,19 @@ internal extension CarouselExperienceViewController {
     func setupViews() {
         isModalInPresentation = true
         buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentBottomMargin
+        actionLeftMargin.constant = ThemeHandler.DefaultValues.contentMargin
+        actionRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
+        contentTopMargin.constant = ThemeHandler.DefaultValues.contentMargin
+        contentBottomMargin.constant = ThemeHandler.DefaultValues.contentBottomMargin
+
+        let collectionViewLayout = UIView.userInterfaceLayoutDirection(
+            for: self.view.semanticContentAttribute) == .rightToLeft ?
+        UPCollectionViewLayout() : UICollectionViewFlowLayout()
+        collectionViewLayout.sectionInset = UIEdgeInsets.zero
+        collectionViewLayout.minimumLineSpacing = 0
+        collectionViewLayout.minimumInteritemSpacing = 0
+        collectionViewLayout.scrollDirection = .horizontal
+        collectionView.collectionViewLayout = collectionViewLayout
     }
 
     /// Configures the general style for the carousel experience view.

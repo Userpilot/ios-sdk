@@ -32,7 +32,7 @@
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="12" translatesAutoresizingMaskIntoConstraints="NO" id="SfO-Cs-KvK">
                     <rect key="frame" x="0.0" y="79" width="393" height="719"/>
                     <subviews>
-                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="OAC-jE-Go0">
+                        <view tag="1" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="OAC-jE-Go0">
                             <rect key="frame" x="0.0" y="0.0" width="393" height="35"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="77F-mu-doi" customClass="UPCloseButton" customModule="UserPilot">

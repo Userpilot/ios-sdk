@@ -16,6 +16,7 @@ class EventTableViewCell: UITableViewCell, ReusableTableCellView, TableViewCellF
     var onTrackEvent: ((String?, String?) -> Void)?
 
     func bindCell(_ indexPath: IndexPath) {
+        eventName.text = "\("event_title".localized) \(indexPath.row)"
     }
 
     @IBAction func onTrackEventButtonClicked(_ sender: UIButton) {
