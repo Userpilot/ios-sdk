@@ -59,7 +59,13 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Initializes the view controller with the given view model.
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
-        super.init(nibName: "CarouselExperienceViewController", bundle: .module)
+        var bundle: Bundle
+        #if SWIFT_PACKAGE
+        bundle = Bundle.module
+        #else
+        bundle = Bundle(for: CarouselExperienceViewController.self)
+        #endif
+        super.init(nibName: "CarouselExperienceViewController", bundle: bundle)
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
