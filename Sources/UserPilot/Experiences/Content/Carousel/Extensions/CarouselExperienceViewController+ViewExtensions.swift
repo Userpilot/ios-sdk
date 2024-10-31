@@ -25,7 +25,13 @@ internal extension CarouselExperienceViewController {
         actionRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
         contentTopMargin.constant = ThemeHandler.DefaultValues.contentMargin
         contentBottomMargin.constant = ThemeHandler.DefaultValues.contentBottomMargin
+    }
 
+    /// Setup UI locale depending on Experience content
+    private func setupLocale() {
+        if "".isRTL {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
+        }
         let collectionViewLayout = UIView.userInterfaceLayoutDirection(
             for: self.view.semanticContentAttribute) == .rightToLeft ?
         UPCollectionViewLayout() : UICollectionViewFlowLayout()

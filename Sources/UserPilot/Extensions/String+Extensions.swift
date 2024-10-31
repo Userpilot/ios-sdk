@@ -41,6 +41,10 @@ internal extension String {
         }
     }
 
+    var isRTL: Bool {
+        let rtlLanguages = ["ar", "he", "fa", "ur", "yi", "ps"]
+        return rtlLanguages.contains(self)
+    }
 }
 
 // MARK: - Colors

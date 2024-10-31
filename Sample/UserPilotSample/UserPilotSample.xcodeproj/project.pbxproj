@@ -191,15 +191,6 @@
 			path = Main;
 			sourceTree = "<group>";
 		};
-		AB6DBD432C68D83B0009BB11 /* Helpers */ = {
-			isa = PBXGroup;
-			children = (
-				AB6DBD442C68D8560009BB11 /* Utils.swift */,
-				ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */,
-			);
-			name = Helpers;
-			sourceTree = "<group>";
-		};
 		AB6DBD462C68D9350009BB11 /* CustomViews */ = {
 			isa = PBXGroup;
 			children = (
@@ -220,6 +211,15 @@
 				ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */,
 			);
 			path = Extensions;
+			sourceTree = "<group>";
+		};
+		AB8056D22CD36D8300EB581C /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				AB6DBD442C68D8560009BB11 /* Utils.swift */,
+				ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */,
+			);
+			path = Utils;
 			sourceTree = "<group>";
 		};
 		ABACA8592C96D591006C9B77 /* PropertyView */ = {
@@ -397,8 +397,8 @@
 				ABACA85E2C96E0C2006C9B77 /* Dialogs */,
 				AB6DBD492C68DA370009BB11 /* Extensions */,
 				AB6DBD462C68D9350009BB11 /* CustomViews */,
-				AB6DBD432C68D83B0009BB11 /* Helpers */,
 				AB6DBD352C68CD3B0009BB11 /* Featues */,
+				AB8056D22CD36D8300EB581C /* Utils */,
 				AB6DBD322C68BF660009BB11 /* Managers */,
 				C5C897B82C5CFFFA0083928E /* AppDelegate.swift */,
 				C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */,
