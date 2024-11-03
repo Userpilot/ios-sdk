@@ -133,8 +133,8 @@ private extension BottomSheetViewController {
 
     /// Set up tap and pan gestures for dismissing the bottom sheet
     func setupGestures() {
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapDimmedView))
-        dimmedView.addGestureRecognizer(tapGesture)
+//        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapDimmedView))
+//        dimmedView.addGestureRecognizer(tapGesture)
 
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
         panGesture.delaysTouchesBegan = false
