@@ -30,11 +30,9 @@ internal protocol Logging {
  */
 extension OSLog: Logging {
 
-    private static var subsystem = Bundle.main.bundleIdentifier!
-
-    /// Create an userpilot-specific logger.
+    /// Create an userpilot logger.
     convenience init(userpilotCategory category: String) {
-        self.init(subsystem: Self.subsystem, category: category)
+        self.init(subsystem: "com.userpilot.sdk", category: category)
     }
 
     /*

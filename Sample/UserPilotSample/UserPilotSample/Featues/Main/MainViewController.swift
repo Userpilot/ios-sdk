@@ -18,17 +18,43 @@ class MainViewController: BaseViewController {
     }
 
     // MARK: - Properties
-    lazy var content: [Content] = [.identify, .screens, .events]
+    internal lazy var content: [Content] = {
+        var content: [Content] = [.identify, .screens, .events]
+        if let isInternalRelease = readConfigValue(forKey: "IS_INTERNAL_RELEASE") as? String,
+            isInternalRelease == "true" {
+            content.append(.configurations)
+        }
+        return content
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         UserPilotManager.shared.settings()
         /*
         UserPilotManager.shared.identify(
-            userID: "NX-333",
-            properties: ["locale": Locale.preferredLanguages.first ?? "en"]
+            userID: "112233",
+            properties: ["locale_code": Locale.current.languageCode ?? "en"]
         )
          */
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if
+            let isInternalRelease = readConfigValue(forKey: "IS_INTERNAL_RELEASE") as? String,
+            isInternalRelease == "true",
+            let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken),
+            appToken == nil {
+            showConfigurationDialog()
+        }
+    }
+
+    internal func showConfigurationDialog() {
+        DialogManager.shared().showConfigurationDialog { [weak self] in
+            guard self != nil else { return }
+            UserPilotManager.shared.logout()
+            UserPilotManager.shared.initialize()
+        }
     }
 }
 

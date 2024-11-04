@@ -31,7 +31,7 @@ class DialogManager {
                             propertyValue: String,
                             doneButtonHandler: ((String, String) -> Void)?) {
 
-        let dialog: AddPropertyDialogViewController = AddPropertyDialogViewController(
+        let dialog = AddPropertyDialogViewController(
             propertyTitle: propertyTitle,
             propertyValue: propertyValue,
             doneButtonHandler: doneButtonHandler)
@@ -41,6 +41,22 @@ class DialogManager {
 
         if let topMostController = FlowRoutingManager.topMostController() {
             if !topMostController.isKind(of: AddPropertyDialogViewController.self) {
+                topMostController.present(dialog, animated: false, completion: nil)
+            }
+        }
+    }
+
+    // MARK: - Configuration Dialog
+    func showConfigurationDialog(doneButtonHandler: (() -> Void)?) {
+
+        let dialog = ConfigurationsDialogViewController(
+            doneButtonHandler: doneButtonHandler)
+
+        dialog.modalPresentationStyle = .overCurrentContext
+        dialog.modalTransitionStyle = .crossDissolve
+
+        if let topMostController = FlowRoutingManager.topMostController() {
+            if !topMostController.isKind(of: ConfigurationsDialogViewController.self) {
                 topMostController.present(dialog, animated: false, completion: nil)
             }
         }

@@ -19,6 +19,9 @@
 		AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C22CD261F100924844 /* CustomEventViewController.xib */; };
 		AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C62CD2624000924844 /* EventsViewController.xib */; };
 		AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942CA2CD2626C00924844 /* EventTableViewCell.xib */; };
+		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
+		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
+		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
 		AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */; };
 		AB6DBD382C68CD560009BB11 /* BaseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD372C68CD560009BB11 /* BaseViewController.swift */; };
 		AB6DBD3D2C68CE9D0009BB11 /* FlowRoutingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */; };
@@ -79,6 +82,10 @@
 		AB1942C82CD2624000924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventsViewController.xcstrings; sourceTree = "<group>"; };
 		AB1942C92CD2626C00924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/EventTableViewCell.xib; sourceTree = "<group>"; };
 		AB1942CC2CD2626C00924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventTableViewCell.xcstrings; sourceTree = "<group>"; };
+		AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationsDialogViewController.swift; sourceTree = "<group>"; };
+		AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ConfigurationsDialogViewController.xib; sourceTree = "<group>"; };
+		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
+		AB585F672CD79EF400E2A66D /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifyViewController.swift; sourceTree = "<group>"; };
 		AB6DBD372C68CD560009BB11 /* BaseViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseViewController.swift; sourceTree = "<group>"; };
 		AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRoutingManager.swift; sourceTree = "<group>"; };
@@ -130,6 +137,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AB585F5F2CD79C0400E2A66D /* Properties */ = {
+			isa = PBXGroup;
+			children = (
+				ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */,
+				AB1942BE2CD2615800924844 /* AddPropertyDialogViewController.xib */,
+			);
+			path = Properties;
+			sourceTree = "<group>";
+		};
+		AB585F602CD79C1100E2A66D /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */,
+				AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */,
+			);
+			path = Configurations;
+			sourceTree = "<group>";
+		};
 		AB6DBD2D2C68BF450009BB11 /* Identify */ = {
 			isa = PBXGroup;
 			children = (
@@ -146,6 +171,7 @@
 				ABACA8632C96E3E9006C9B77 /* UI */,
 				ABC0AE162C7205BA00BB9F62 /* UserPilot */,
 				AB6DBD3B2C68CDB90009BB11 /* Routing */,
+				AB585F652CD79D8C00E2A66D /* StorageManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -234,8 +260,8 @@
 		ABACA85E2C96E0C2006C9B77 /* Dialogs */ = {
 			isa = PBXGroup;
 			children = (
-				ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */,
-				AB1942BE2CD2615800924844 /* AddPropertyDialogViewController.xib */,
+				AB585F602CD79C1100E2A66D /* Configurations */,
+				AB585F5F2CD79C0400E2A66D /* Properties */,
 			);
 			path = Dialogs;
 			sourceTree = "<group>";
@@ -405,6 +431,7 @@
 				C5C897C12C5CFFFB0083928E /* Assets.xcassets */,
 				C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */,
 				C5C897C62C5CFFFB0083928E /* Info.plist */,
+				AB585F672CD79EF400E2A66D /* Config.xcconfig */,
 			);
 			path = UserPilotSample;
 			sourceTree = "<group>";
@@ -478,6 +505,7 @@
 				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
 				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
 				AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
+				AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */,
 				AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
 				AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */,
 				AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */,
@@ -536,6 +564,7 @@
 				ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */,
 				ABF38C812C73719300013F18 /* Content.swift in Sources */,
 				ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */,
+				AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
 				ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */,
 				ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */,
@@ -555,6 +584,7 @@
 				ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */,
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
+				AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -776,6 +806,7 @@
 		};
 		C5C897CA2C5CFFFB0083928E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = AB585F672CD79EF400E2A66D /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

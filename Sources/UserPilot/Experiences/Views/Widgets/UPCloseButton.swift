@@ -41,7 +41,7 @@ internal class UPCloseButton: UIButton {
     /// Applies the UIButton configuration available for iOS 15 and later.
     private func applyConfiguration() {
         var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "xmark")
+        config.image = UIImage(named: "icon_close", in: Bundle.module, compatibleWith: nil)
         config.imagePlacement = .leading
         config.imagePadding = 0
         self.configuration = config

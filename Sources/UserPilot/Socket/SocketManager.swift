@@ -177,7 +177,7 @@ extension SocketManager {
                 SocketManager.appPropertiesKey: appProperties
         ]
 
-        phoenixSocket = Socket(socketURL, params: socketProperties)
+        phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
         guard let phoenixSocket = phoenixSocket else { return }
 
         // Setup delegates for socket events
@@ -221,6 +221,7 @@ extension SocketManager {
                 self.$socketSubscription.invoke { $0.onSocketOpened() }
             })
             .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
+                self.isErrorOccurred = true
                 self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
                 self.closeSocket()
             })

@@ -11,6 +11,7 @@ enum Content {
     case identify
     case screens
     case events
+    case configurations
 
     var title: String {
         switch self {
@@ -20,11 +21,8 @@ enum Content {
             return "screens_title".localized
         case .events:
             return "events_title".localized
+        case .configurations:
+            return "configurations_title".localized
         }
     }
-}
-
-postfix operator ~
-postfix func ~ (string: String) -> String {
-    return NSLocalizedString(string, comment: "")
 }

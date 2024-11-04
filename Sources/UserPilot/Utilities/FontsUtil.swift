@@ -20,112 +20,102 @@ extension UIFont {
     ///
     /// - Parameters:
     ///   - fontName: The name of the custom font. If nil, the system font is used.
-    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's weight.
+    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's traits (e.g., bold, italic).
     ///   - fontSize: The size of the font.
     /// - Returns: A UIFont object matching the specified criteria.
     static func matching(fontName: String?,
                          fontWeight: [UIFontDescriptor.SymbolicTraits],
                          fontSize: CGFloat) -> UIFont {
-        guard let fontName = fontName else {
-            return UIFont.systemFont(ofSize: fontSize, weight: .regular)
+        // If no font name is provided, fallback to system font with specified traits.
+        if fontName == nil {
+            return systemFont(for: fontWeight, size: fontSize)
         }
 
-        if let systemFont = getSystemFont(fontName, fontWeight, fontSize) {
-            return systemFont
-        } else if let customFont = UIFont.loadCustomFont(fontName, fontWeight, fontSize) {
-            return customFont
-        } else {
-            return UIFont.systemFont(ofSize: fontSize, weight: .regular)
-        }
+        // Try to load a custom font, system design font, or fallback to system font.
+        return loadCustomFont(fontName: fontName!, fontWeight: fontWeight, fontSize: fontSize) ??
+               getDefaultSystemFont(fontName: fontName!, fontWeight: fontWeight, size: fontSize) ??
+               systemFont(for: fontWeight, size: fontSize)
     }
 
-    /// Returns the system font based on the provided parameters.
-    ///
-    /// - Parameters:
-    ///   - fontName: The name of the font.
-    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's weight.
-    ///   - fontSize: The size of the font.
-    /// - Returns: A UIFont object that matches the system font with the specified traits.
-    static func getSystemFont(_ fontName: String?,
-                              _ fontWeight: [UIFontDescriptor.SymbolicTraits],
-                              _ fontSize: CGFloat) -> UIFont? {
-        let systemFont = UIFont.systemFont(ofSize: fontSize)
-        let design = UIFontDescriptor.SystemDesign(string: fontName) ?? .default
-
-        let fontDescriptor = systemFont.fontDescriptor.withDesign(design)
-
-        // Combine font traits into a single descriptor
-        let traits: UIFontDescriptor.SymbolicTraits = fontWeight.reduce(.init(), { $0.union($1) })
-        let combinedFontDescriptor = fontDescriptor?.withSymbolicTraits(traits)
-
-        // Create and return a new font with the combined descriptor
-        if let combinedFontDescriptor = combinedFontDescriptor {
-            return UIFont(descriptor: combinedFontDescriptor, size: fontSize)
+    /// Returns the system font with specified symbolic traits (bold, italic, etc.)
+    private static func systemFont(for fontWeight: [UIFontDescriptor.SymbolicTraits], size: CGFloat) -> UIFont {
+        var systemFont = UIFont.systemFont(ofSize: size)
+        let symbolicTraits = UIFontDescriptor.SymbolicTraits(fontWeight)
+        if let descriptor = systemFont.fontDescriptor.withSymbolicTraits(symbolicTraits) {
+            return UIFont(descriptor: descriptor, size: size)
         }
-        return nil
+        return systemFont
     }
 
-    /// Checks if a font with the specified name is already registered.
-    ///
-    /// - Parameter fontName: The name of the font to check.
-    /// - Returns: A Boolean value indicating whether the font is registered.
-    static func isFontRegistered(fontName: String) -> Bool {
-        for family in UIFont.familyNames {
-            let fontNames = UIFont.fontNames(forFamilyName: family)
-            if fontNames.contains(fontName) {
-                return true
-            }
+    /// Returns the system font with a specific design and traits.
+    private static func getDefaultSystemFont(fontName: String,
+                                             fontWeight: [UIFontDescriptor.SymbolicTraits],
+                                             size: CGFloat) -> UIFont? {
+        guard let design = UIFontDescriptor.SystemDesign(string: fontName) else {
+            return nil
         }
-        return false
+
+        var descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body)
+        descriptor = descriptor.withDesign(design) ?? descriptor
+
+        let symbolicTraits = UIFontDescriptor.SymbolicTraits(fontWeight)
+        if let finalDescriptor = descriptor.withSymbolicTraits(symbolicTraits) {
+            return UIFont(descriptor: finalDescriptor, size: size)
+        }
+
+        return UIFont(descriptor: descriptor, size: size)
     }
 
     /// Loads a custom font from the main bundle if it is not already registered.
     ///
     /// - Parameters:
     ///   - fontName: The name of the custom font to load.
-    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's weight.
+    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's traits.
     ///   - fontSize: The size of the font.
     /// - Returns: A UIFont object if the font was successfully loaded; otherwise, nil.
-    static func loadCustomFont(_ fontName: String,
-                               _ fontWeight: [UIFontDescriptor.SymbolicTraits],
-                               _ fontSize: CGFloat) -> UIFont? {
-        // Determine the appropriate font weight suffix
-        var customFontWeight = "-Regular"
-
+    private static func loadCustomFont(fontName: String,
+                                       fontWeight: [UIFontDescriptor.SymbolicTraits],
+                                       fontSize: CGFloat) -> UIFont? {
+        // Determine the appropriate font weight suffix based on traits
+        var suffix = "-Regular"
         if fontWeight.contains(.traitBold) && fontWeight.contains(.traitItalic) {
-            customFontWeight = "-BoldItalic"
-        } else if fontWeight.contains(.traitItalic) {
-            customFontWeight = "-Italic"
+            suffix = "-BoldItalic"
         } else if fontWeight.contains(.traitBold) {
-            customFontWeight = "-Bold"
+            suffix = "-Bold"
+        } else if fontWeight.contains(.traitItalic) {
+            suffix = "-Italic"
         }
 
+        let fullFontName = fontName + suffix
+
         // Check if the font is already registered
-        if isFontRegistered(fontName: fontName + customFontWeight) {
-            return UIFont(name: fontName + customFontWeight, size: fontSize)
+        if isFontRegistered(fontName: fullFontName) {
+            return UIFont(name: fullFontName, size: fontSize)
         }
 
         // Load the font from the bundle
-        guard let fontURL = Bundle.main.url(forResource: fontName + customFontWeight, withExtension: "ttf") else {
-            print("Failed to find font in bundle.")
-            return nil
-        }
-
-        guard let fontDataProvider = CGDataProvider(url: fontURL as CFURL),
+        guard let fontURL = Bundle.main.url(forResource: fullFontName, withExtension: "ttf"),
+              let fontDataProvider = CGDataProvider(url: fontURL as CFURL),
               let cgFont = CGFont(fontDataProvider) else {
-            print("Failed to load font data.")
             return nil
         }
 
         // Register the font with Core Text
         var error: Unmanaged<CFError>?
         if !CTFontManagerRegisterGraphicsFont(cgFont, &error) {
-            print("Error registering font: \(String(describing: error))")
             return nil
         }
 
-        // Return UIFont with the custom font name
-        return UIFont(name: cgFont.postScriptName as String? ?? "", size: fontSize)
+        // Return the custom font
+        return UIFont(name: fullFontName, size: fontSize)
+    }
+
+    /// Checks if a font with the specified name is already registered.
+    /// Checks if a font with the specified name is already registered.
+    private static func isFontRegistered(fontName: String) -> Bool {
+        return UIFont.familyNames.contains { family in
+            UIFont.fontNames(forFamilyName: family).contains(fontName)
+        }
     }
 }
 
@@ -135,7 +125,6 @@ extension UIFont.Weight {
     /// Initializes a UIFont.Weight from a string representing a font weight.
     ///
     /// - Parameter string: The string representing the font weight.
-    /// - Returns: A UIFont.Weight object if the string matches a known weight; otherwise, nil.
     init?(string: String?) {
         switch string {
         case "Black": self = .black
@@ -158,7 +147,6 @@ extension UIFontDescriptor.SystemDesign {
     /// Initializes a UIFontDescriptor.SystemDesign from a string representing a design.
     ///
     /// - Parameter string: The string representing the font design.
-    /// - Returns: A UIFontDescriptor.SystemDesign object if the string matches a known design; otherwise, nil.
     init?(string: String?) {
         switch string {
         case "Default": self = .default

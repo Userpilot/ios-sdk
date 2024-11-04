@@ -1,0 +1,11 @@
+//
+//  Config.xcconfig
+//  UserPilotSample
+//
+//  Created by Motasem Hamed on 03/11/2024.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://help.apple.com/xcode/#/dev745c5c974
+
+IS_INTERNAL_RELEASE = true

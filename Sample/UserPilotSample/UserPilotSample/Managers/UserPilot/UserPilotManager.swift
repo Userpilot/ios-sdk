@@ -17,10 +17,7 @@ class UserPilotManager {
 
     // MARK: - Private Properties
 
-    private lazy var userPilot = UserPilot(config: UserPilot
-        .Config(token: "NX-84ccf54a")
-        .logging(true)
-        .setNavigationHandler(navigationDelegate: self))
+    private var userPilot: UserPilot?
 
     // MARK: - Life Cycle
 
@@ -28,39 +25,44 @@ class UserPilotManager {
 
     // MARK: - UserPilot SDK APIs
 
-    /// setup SDK, get client SDK status...
-    func setup() {
-        userPilot.initialize()
+    func initialize() {
+        guard
+            let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
+        else { return }
+        userPilot = UserPilot(config: UserPilot
+            .Config(token: appToken)
+            .logging(true)
+            .setNavigationHandler(navigationDelegate: self))
     }
 
     /// UserPilot Settings
     func settings() {
-        userPilot.settings()
+        userPilot?.settings()
     }
 
     /// Identify user
     func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
-        userPilot.identify(userID: userID, properties: properties, company: company)
+        userPilot?.identify(userID: userID, properties: properties, company: company)
     }
 
     /// login as Anonymous
     func anonymous() {
-        userPilot.anonymous()
+        userPilot?.anonymous()
     }
 
     /// Logout user
     func logout() {
-        userPilot.logout()
+        userPilot?.logout()
     }
 
     /// Track screens
     func screen(_ screenTitle: String) {
-        userPilot.screen(screenTitle)
+        userPilot?.screen(screenTitle)
     }
 
     /// Track user events
     func track(eventName: String, properties: [String: Any]? = nil) {
-        userPilot.track(eventName: eventName, properties: properties)
+        userPilot?.track(eventName: eventName, properties: properties)
     }
 
     // MARK: - Test Log multiEvents
@@ -225,7 +227,7 @@ class UserPilotManager {
                         ]
                     )
 
-                    self.userPilot.settings()
+                    self.userPilot?.settings()
                 }
             }
         }

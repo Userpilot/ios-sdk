@@ -16,11 +16,10 @@ internal class UPIconTextView: UIStackView {
 
     // MARK: - Constants
 
-    private let textLeftMargin: CGFloat = 8
-
     private struct Constants {
         static let iconWidth: CGFloat = 38
         static let iconHeight: CGFloat = 38
+        static let textLeftMargin: CGFloat = 8
     }
     // MARK: - Subviews
 
@@ -56,7 +55,7 @@ internal class UPIconTextView: UIStackView {
     private func setupViewProperties() {
         axis = .horizontal
         alignment = .center
-        spacing = textLeftMargin
+        spacing = Constants.textLeftMargin
 
         // Add the subviews to the stack view
         addArrangedSubview(imageView)
