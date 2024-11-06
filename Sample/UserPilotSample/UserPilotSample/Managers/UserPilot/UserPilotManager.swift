@@ -65,6 +65,10 @@ class UserPilotManager {
         userPilot?.track(eventName: eventName, properties: properties)
     }
 
+    func triggerExperience(token: String) {
+        userPilot?.triggerExperience(experienceId: token)
+    }
+
     // MARK: - Test Log multiEvents
 
     /**

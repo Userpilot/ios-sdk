@@ -110,36 +110,49 @@ internal class ExperienceViewModel {
      Sends a socket event indicating that an experience has been opened.
      */
     private func onExperienceOpened() {
-//        let eventStepCompleted = ExperienceStepSeenEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID,
-//            stepID: "")
-//        // experiencesPublisher.sendSocketRequest(eventStepCompleted)
-//
-//        let eventStepSeen = ExperienceSeenEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID)
-//        // experiencesPublisher.sendSocketRequest(eventStepSeen)
+        guard
+            let mobileContent = mobileContent,
+            let step = mobileContent.steps.first
+        else { return }
+
+        let eventStepSeen = ExperienceStepSeenEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID,
+            stepID: step.id)
+        experiencesPublisher.sendSocketRequest(eventStepSeen)
+
+        let eventExperienceSeen = ExperienceSeenEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID)
+        experiencesPublisher.sendSocketRequest(eventExperienceSeen)
     }
 
     /**
      Sends a socket event indicating that the experience has been completed.
      */
     func onExperienceCompleted() {
-//        let eventStepCompleted = ExperienceStepCompletedEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID,
-//            stepID: "")
-//        // experiencesPublisher.sendSocketRequest(eventStepCompleted)
-//
-//        let eventStepSeen = ExperienceCompletedEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID)
-//        // experiencesPublisher.sendSocketRequest(eventStepSeen)
+        guard
+            let mobileContent = mobileContent,
+            let step = mobileContent.steps.last
+        else { return }
+
+        let hasDeepLink = !(mobileContent.steps.last?.buttonAction?.deepLink?.isEmpty ?? true)
+
+        let eventStepCompleted = ExperienceStepCompletedEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID,
+            stepID: step.id)
+        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+
+        let eventContentCompleted = ExperienceCompletedEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID,
+            hasDeepLinkContent: hasDeepLink)
+        experiencesPublisher.sendSocketRequest(eventContentCompleted)
     }
 
     /**
@@ -147,23 +160,25 @@ internal class ExperienceViewModel {
      
      - Parameter step: The current step number.
      */
-    func onStepChanged(step: Int) {
-//        guard step > lastStep else { return }
-//        lastStep = step
-//
-//        let eventStepCompleted = ExperienceStepCompletedEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID,
-//            stepID: "")
-//        // experiencesPublisher.sendSocketRequest(eventStepCompleted)
-//
-//        let eventStepSeen = ExperienceStepSeenEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID,
-//            stepID: "")
-//        // experiencesPublisher.sendSocketRequest(eventStepSeen)
+    func onStepChanged(_ step: Int) {
+        guard step > lastStep else { return }
+        lastStep = step
+
+        guard let mobileContent = mobileContent else { return }
+
+        let eventStepCompleted = ExperienceStepCompletedEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID,
+            stepID: mobileContent.steps[step - 1].id)
+        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+
+        let eventStepSeen = ExperienceStepSeenEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID,
+            stepID: mobileContent.steps[step].id)
+        experiencesPublisher.sendSocketRequest(eventStepSeen)
     }
 
     /**
@@ -172,18 +187,13 @@ internal class ExperienceViewModel {
      - Parameter step: The step number that was dismissed.
      */
     func onDismissStep(step: Int) {
-//        let eventStepDismissed = ExperienceStepDismissedEvent(
-//            mobileContentID: 4,
-//            appToken: config.token,
-//            userID: storage.userID,
-//            stepID: "")
-//        // experiencesPublisher.sendSocketRequest(eventStepDismissed)
-//
-//        let eventCarouselDismissed = ExperienceDismissedEvent(
-//            mobileContentID: 0,
-//            appToken: config.token,
-//            userID: storage.userID)
-//        // experiencesPublisher.sendSocketRequest(eventCarouselDismissed)
+        guard let mobileContent = mobileContent else { return }
+        let eventExperienceDismissed = ExperienceDismissedEvent(
+            mobileContentID: mobileContent.id,
+            appToken: config.token,
+            userID: storage.userID,
+            stepId: mobileContent.steps[step].id)
+        experiencesPublisher.sendSocketRequest(eventExperienceDismissed)
     }
 
     // MARK: - Deep Link Handling

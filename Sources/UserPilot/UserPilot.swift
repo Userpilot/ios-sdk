@@ -34,12 +34,6 @@ public class UserPilot: NSObject {
     /// Configuration object that holds initialization parameters for the SDK.
     let config: Config
 
-    /// A UUID representing the current user session. If `nil`, there is no active session.
-    var sessionID: UUID?
-
-    /// A Boolean indicating whether the SDK is active (i.e., a session is active). True if `sessionID` is not `nil`.
-    var isActive: Bool { sessionID != nil }
-
     /// Lazy loading of the `AnalyticsPublishing` instance responsible for publishing user tracking events.
     private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
 
@@ -60,6 +54,9 @@ public class UserPilot: NSObject {
 
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(UserPilot.Config.self).logger
+
+    /// to hold session start state
+    private(set) var sessionStarted = false
 
     // MARK: - Initialization
 
@@ -84,7 +81,7 @@ public class UserPilot: NSObject {
 
         // start experience listener
         experiencesPublisher.start()
-
+        sessionStarted = true
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
     }
@@ -270,6 +267,11 @@ extension UserPilot {
         storage.userID = ""
         storage.user = User().toJson() ?? ""
     }
+
+    /// Hold SDK state for first initialization
+    internal func updateSessionStartState() {
+        sessionStarted = false
+    }
 }
 
 // MARK: - Experiences
@@ -288,8 +290,8 @@ extension UserPilot {
        - experienceId: unique identifier for the experience to be launched, this ID should be provided
         by the backend or obtained during experience configuration.
      */
-    func triggerExperience(experienceId: String) {
-        // experiencesPublisher.triggerExperience(experienceId)
+    public func triggerExperience(experienceId: String) {
+        experiencesPublisher.triggerExperience(experienceId)
     }
 
 }

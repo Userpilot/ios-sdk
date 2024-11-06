@@ -23,6 +23,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func start()
     func getActiveMobileContent() -> MobileContent?
     func sendSocketRequest(_ sdkEvent: SDKEvent)
+    func triggerExperience(_ experienceToken: String)
 }
 
 internal class ExperiencesPublisher: ExperiencesPublishing {
@@ -55,7 +56,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Holds the active carousel content, if any, that is being displayed.
     private var mobileContent: MobileContent?
-
     // MARK: - Initializer
 
     /**
@@ -101,10 +101,20 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
         if sdkEvent.eventName == "mobile_content" &&
             (sdkEvent.eventPayload["act"] as? String == "dismissed" ||
-             sdkEvent.eventPayload["act"] as? String == "completed") {
-            var payload: [String: Any] = [:]
-            payload[AnalyticsPublisher.identifyScreenProperty] = currentScreen
-            socketManager.publish(EventType.screenEvent, payload: payload)
+                sdkEvent.eventPayload["act"] as? String == "completed") {
+
+            if sdkEvent.hasDeepLink {
+                mobileContent = nil
+                return
+            }
+
+            if let mobileTheme = mobileContent {
+                checkCachedThemes(mobileTheme.baseThemeID, mobileTheme.type)
+            } else {
+                var payload: [String: Any] = [:]
+                payload[AnalyticsPublisher.identifyScreenProperty] = currentScreen
+                socketManager.publish(EventType.screenEvent, payload: payload)
+            }
         }
     }
 
@@ -116,8 +126,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
      - Parameter experienceId: The ID of the experience to start.
      */
-    private func startExperience(experienceId: String) {
-        // Implementation for starting an experience
+    func triggerExperience(_ experienceToken: String) {
+        if mobileContent != nil { return }
+        sendSocketRequest(ExperienceContentEvent(experienceToken: experienceToken))
     }
 
     /**
@@ -141,10 +152,12 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     private func openExperienceFlow() {
         performOn(.main) { [weak self] in
-            guard let self = self else { return }
         guard
-            let topViewController = UIApplication.shared.topViewController()
+            let self = self,
+            let topViewController = UIApplication.shared.topViewController(),
+            canTriggerManualExperience()
         else { return }
+
             let experienceViewModel = ExperienceViewModel(container: self.container)
             openCarouselExperience(topViewController, experienceViewModel)
             if let mobileContent = mobileContent {
@@ -303,6 +316,17 @@ extension ExperiencesPublisher {
             experienceViewModel: experienceViewModel)
         delay(1) {
             viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
+        }
+    }
+
+    func canTriggerManualExperience() -> Bool {
+        if let topViewController = UIApplication.shared.topViewController(),
+           !topViewController.isKind(of: SlideOutDialogViewController.self),
+           !topViewController.isKind(of: BottomSheetViewController.self),
+           !topViewController.isKind(of: CarouselExperienceViewController.self) {
+            return true
+        } else {
+            return false
         }
     }
 

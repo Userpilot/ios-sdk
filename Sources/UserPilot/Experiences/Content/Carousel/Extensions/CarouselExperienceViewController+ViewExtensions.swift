@@ -122,6 +122,8 @@ internal extension CarouselExperienceViewController {
     /// Updates the step progress indicator and binds the action button for the new step.
     /// - Parameter step: The index of the new step viewed.
     func onNewStepViewed(_ step: Int) {
+        experienceViewModel.onStepChanged(step)
+
         // Update the progress view to indicate the new step.
         viewStepsProgress.setCurrentStep(step)
 

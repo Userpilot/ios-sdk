@@ -39,7 +39,7 @@ extension UIFont {
 
     /// Returns the system font with specified symbolic traits (bold, italic, etc.)
     private static func systemFont(for fontWeight: [UIFontDescriptor.SymbolicTraits], size: CGFloat) -> UIFont {
-        var systemFont = UIFont.systemFont(ofSize: size)
+        let systemFont = UIFont.systemFont(ofSize: size)
         let symbolicTraits = UIFontDescriptor.SymbolicTraits(fontWeight)
         if let descriptor = systemFont.fontDescriptor.withSymbolicTraits(symbolicTraits) {
             return UIFont(descriptor: descriptor, size: size)

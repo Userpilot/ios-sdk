@@ -241,6 +241,7 @@ internal struct ProgressStyle: Codable {
 internal enum ContentAlignmentType: String, Codable {
     case center
     case top
+    case bottom
 }
 
 // MARK: - Extension to deserialize a String into a ThemeResponse object

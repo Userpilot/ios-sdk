@@ -309,6 +309,10 @@ extension AnalyticsPublisher {
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
             var payload: [String: Any] = [:]
             payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenTitle
+            if userPilot?.sessionStarted == true {
+                userPilot?.updateSessionStartState()
+                payload[AnalyticsPublisher.metaDataProperty] = [AnalyticsPublisher.isSessionStartedProperty: true]
+            }
             socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
 
@@ -476,5 +480,6 @@ internal extension AnalyticsPublisher {
     static var identifyCompanyProperty: String { return "company" }
 
     static var identifyScreenProperty: String { return "title" }
+    static var isSessionStartedProperty: String { return "is_session_start" }
     static var eventNameProperty = "event_name"
 }

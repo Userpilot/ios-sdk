@@ -34,6 +34,7 @@ internal struct MobileContentData: Codable {
 }
 
 internal struct MobileContent: Codable {
+    let id: Int
     let type: ContentType
     let order: Int
     let steps: [Step]
@@ -41,7 +42,7 @@ internal struct MobileContent: Codable {
     let configuration: Configuration?
 
     private enum CodingKeys: String, CodingKey {
-        case type, order, steps
+        case id, type, order, steps
         case mobileTheme = "theme_data"
         case configuration
     }

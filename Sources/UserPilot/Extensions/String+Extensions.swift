@@ -42,7 +42,7 @@ internal extension String {
     }
 
     var isRTL: Bool {
-        let rtlLanguages = ["ar", "he", "fa", "ur", "yi", "ps"]
+        let rtlLanguages = ["ar", "arc", "dv", "fa", "ha", "he", "khw", "ks", "ku", "ps", "ur", "yi", "iw", "ji"]
         return rtlLanguages.contains(self)
     }
 }

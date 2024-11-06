@@ -95,7 +95,7 @@ internal class SocketManager {
     }
 
     /// URL for the WebSocket connection.
-    private let socketURL = "wss://analytex-dev-nxtapp-9915.userpilot.io/mobile/v1/events/websocket"
+    private let socketURL = "wss://analytex-dev-nxtapp-9990.userpilot.io/mobile/v1/events/websocket"
 
     /// The WebSocket instance for handling connections.
     private var phoenixSocket: Socket?

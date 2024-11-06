@@ -22,7 +22,7 @@ import Foundation
    - stepID: The ID of the step associated with the event.
  */
 internal class ExperienceStepActionEvent: ExperienceActionEvent {
-    let stepID: String
+    let stepID: Int
 
     override var eventName: String {
         return "mobile_content_step"
@@ -33,11 +33,11 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, user ID, and step ID.
     override func toMap() -> [String: Any] {
         var map = super.toMap()
-        map["stepId"] = stepID
+        map["step_id"] = stepID
         return map
     }
 
-    init(mobileContentID: Int, appToken: String, userID: String, stepID: String) {
+    init(mobileContentID: Int, appToken: String, userID: String, stepID: Int) {
         self.stepID = stepID
         super.init(mobileContentID: mobileContentID, appToken: appToken, userID: userID)
     }
@@ -49,16 +49,7 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
  */
 internal class ExperienceStepSeenEvent: ExperienceStepActionEvent {
     override var act: String {
-        return "seen"
-    }
-}
-
-/**
- Represents the 'dismissed' step action event.
- */
-internal class ExperienceStepDismissedEvent: ExperienceStepActionEvent {
-    override var act: String {
-        return "dismissed"
+        return "seen_mobile_content_step"
     }
 }
 
@@ -67,6 +58,6 @@ internal class ExperienceStepDismissedEvent: ExperienceStepActionEvent {
  */
 internal class ExperienceStepCompletedEvent: ExperienceStepActionEvent {
     override var act: String {
-        return "completed"
+        return "completed_mobile_content_step"
     }
 }
