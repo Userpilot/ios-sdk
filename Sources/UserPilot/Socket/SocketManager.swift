@@ -18,19 +18,27 @@ import SwiftPhoenixClient
  `SocketEvents` defines methods and properties for managing WebSocket connections and events.
  */
 internal protocol SocketEvents: AnyObject {
+    /// Return socket state
     var isSocketOpened: Bool { get }
     var isJoiningSocket: Bool { get }
     var didErrorOccurred: Bool { get }
     var isShutdownState: Bool { get }
     var isSocketConnectedWithUnknownChannel: Bool { get }
 
+    /// Update socket state
     func updateSocketState(_ socketState: SocketManager.SocketState)
 
+    /// Handle socket open & close
     func connect()
     func close()
 
-    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool,
+    /// Publish socket events
+    func publish(_ eventName: String,
+                 payload: Payload,
+                 shouldCloseSocket: Bool,
                  socketSubscription: SocketSubscription?)
+
+    /// Register socket subscription
     func registerCallback(_ socketSubscription: SocketSubscription)
 }
 
@@ -49,9 +57,15 @@ internal extension SocketEvents {
  `SocketSubscription` defines a callback interface for handling socket event notifications.
  */
 internal protocol SocketSubscription: AnyObject {
+    /// Listen to socket state
     func onSocketClosed()
     func onSocketOpened()
-    func onSocketEventSent(_ event: String, _ payload: Payload, _ message: Message, _ status: Bool)
+    func onSocketEventSent(_ event: String,
+                           _ payload: Payload,
+                           _ message: Message,
+                           _ status: Bool)
+
+    /// Receive new socket message
     func onNewMessage(_ message: Message)
 }
 
@@ -170,11 +184,11 @@ extension SocketManager {
         socketState = .connecting
 
         let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: config.token,
-                SocketManager.userIDKey: storage.userID,
-                SocketManager.sdkVersionKey: userPilot?.version() ?? "",
-                SocketManager.autoPropertiesKey: autoProperties,
-                SocketManager.appPropertiesKey: appProperties
+            SocketManager.tokenKey: "NX-44d03690",
+            SocketManager.userIDKey: storage.userID,
+            SocketManager.sdkVersionKey: userPilot?.version() ?? "",
+            SocketManager.autoPropertiesKey: autoProperties,
+            SocketManager.appPropertiesKey: appProperties
         ]
 
         phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)

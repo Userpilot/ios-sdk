@@ -48,6 +48,7 @@ internal class UPIconTextContainerView: UIStackView {
     func setupView(lines: [Line],
                    theme: ExperienceTheme,
                    imageLoader: ImageLoading) {
+        if !arrangedSubviews.isEmpty { return }
         // Remove existing views before adding new ones.
         arrangedSubviews.forEach { $0.removeFromSuperview() }
 

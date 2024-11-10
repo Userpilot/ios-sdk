@@ -18,6 +18,5 @@ internal protocol SlideOutContainerViewDelegate: AnyObject {
     func onClose()
 
     /// Called when the action button is clicked, triggering the specified action.
-    /// - Parameter action: The `ButtonAction` representing the action to be handled.
     func onAction(_ action: ButtonAction)
 }

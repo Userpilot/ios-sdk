@@ -132,19 +132,7 @@ extension UserPilot {
         container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
-    }
-
-    /**
-     Initializes the SDK session and applies necessary configurations.
-     
-     This method should be called when the application is launched to set up the SDK environment
-     and verify settings using the `SettingsVerifier` service.
-     */
-    public func initialize() {
-        // Placeholder for settings verification logic
-        // settingsVerifier.verifySettings {
-        // checkUserStatus()
-        // }
+        container.registerLazy(FileStoring.self, initializer: FileStorageManager.init)
     }
 
     private func checkUserStatus() {

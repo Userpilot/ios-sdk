@@ -45,6 +45,31 @@ internal extension String {
         let rtlLanguages = ["ar", "arc", "dv", "fa", "ha", "he", "khw", "ks", "ku", "ps", "ur", "yi", "iw", "ji"]
         return rtlLanguages.contains(self)
     }
+
+    var toSize: CGFloat? {
+        if self.contains("px"), let value = Int(self.dropLast(2)) {
+            return CGFloat(value)
+        } else if let value = Int(self) {
+            return CGFloat(value)
+        } else {
+            return nil
+        }
+    }
+
+    func height(width: CGFloat, font: UIFont) -> CGFloat {
+        let label =  UILabel(frame: CGRect(x: 0, y: 0, width: width, height: .greatestFiniteMagnitude))
+        label.numberOfLines = 0
+        label.text = self
+        label.font = font
+        label.sizeToFit()
+
+        return label.frame.height
+     }
+
+    func getImageNameWithoutExtension() -> String? {
+        guard let url = URL(string: self) else { return nil }
+        return url.deletingPathExtension().lastPathComponent
+    }
 }
 
 // MARK: - Colors

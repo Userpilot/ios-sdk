@@ -220,8 +220,7 @@ internal extension BottomSheetViewController {
         mainContainerView.backgroundColor = theme.backgroundColor
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {
-            dimmedView.alpha = theme.backdropOpacity
-            // dimmedView.backgroundColor = theme.backdropColor
+            dimmedView.backgroundColor = theme.backdropBackground
         }
     }
 }

@@ -12,18 +12,30 @@
 import Foundation
 import UIKit
 
-internal class UPImageView: UIImageView {
+internal class UPImageView: UIView {
+
+    // MARK: - Properties
+
+    /// A UIStackView that arranges its arranged subviews vertically with specified spacing.
+    private let imageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.backgroundColor = .clear
+        imageView.layer.masksToBounds = true
+        imageView.clipsToBounds = true
+        return imageView
+    }()
 
     // MARK: - Initializers
 
-    /// Initializes the image view with a specified frame.
-    /// - Parameter frame: The frame rectangle for the image view, measured in points.
+    /// Initializes the custom view with a specified frame.
+    /// - Parameter frame: The frame rectangle for the view, measured in points.
     override init(frame: CGRect) {
         super.init(frame: frame)
         initializeView()
     }
 
-    /// Initializes the image view from a storyboard or XIB.
+    /// Initializes the custom view from a storyboard or XIB.
     /// - Parameter coder: An unarchiver object.
     required init?(coder: NSCoder) {
         super.init(coder: coder)
@@ -33,8 +45,8 @@ internal class UPImageView: UIImageView {
     /// Common initializer for setting up view properties.
     private func initializeView() {
         translatesAutoresizingMaskIntoConstraints = false
-        contentMode = .scaleAspectFit // Set content mode to scale aspect fit
-        backgroundColor = .clear       // Set background color to clear
+        backgroundColor = .clear
+        addSubview(imageView)
     }
 
     // MARK: - Setup Methods
@@ -46,25 +58,44 @@ internal class UPImageView: UIImageView {
      - Parameter imageLoader: An instance conforming to `ImageLoading` protocol to handle image loading.
      */
     func setupView(line: Line, imageLoader: ImageLoading) {
+        guard
+            let attrs = line.attrs,
+            let url = line.type == .image ? attrs.src : attrs.icon
+        else { return }
+
         setupAccessibility(line)
 
-        guard let attrs = line.attrs else { return } // Ensure attributes are available
-
-        // Determine the URL based on the line type
-        let url = line.type == .image ? attrs.src : attrs.icon
-        guard let url = url else { return }
-
-        imageLoader.loadImage(target: self,
-                              url: url,
+        if line.type == .image {
+            NSLayoutConstraint.activate([
+                imageView.topAnchor.constraint(equalTo: topAnchor),
+                imageView.bottomAnchor.constraint(equalTo: bottomAnchor),
+                imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: 300)
+            ])
+            imageView.contentMode = .scaleToFill
+            imageView.layer.cornerRadius = 20
+        } else {
+            NSLayoutConstraint.activate([
+                imageView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: UPIconTextView.Constants.iconWidth),
+                imageView.heightAnchor.constraint(equalToConstant: UPIconTextView.Constants.iconHeight)
+            ])
+            imageView.contentMode = .scaleToFill
+        }
+        // Load the image into the UIImageView
+        imageLoader.loadImage(target: imageView,
+                              url: "https://i.imgur.com/5simaPh.jpeg",
                               placeholder: .lightGray,
-                              blurHash: "",
-                              size: CGSize(width: 200, height: 200))
+                              blurHash: "UlH.7wozbckC_NoekCW=%zoJWBof%fofoes.",
+                              size: CGSize(width: 300, height: 200))
     }
 
     private func setupAccessibility(_ line: Line) {
+        guard let alt = line.attrs?.alt else { return }
         isAccessibilityElement = true
-        accessibilityLabel = "Submit Button"
-        accessibilityHint = "Tap to submit the form"
+        accessibilityLabel = alt
+        accessibilityHint = alt
         accessibilityTraits = .image
     }
 

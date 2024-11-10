@@ -71,4 +71,9 @@ extension UIColor {
         // Return true if the color is dark, false otherwise
         return luminance > 0.5
     }
+
+    func withOpacity(_ opacity: CGFloat) -> UIColor {
+        return self.withAlphaComponent(opacity)
+    }
+
 }

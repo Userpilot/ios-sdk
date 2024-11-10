@@ -20,9 +20,16 @@ import SwiftPhoenixClient
  such as starting the service, retrieving active carousel content, and sending socket requests.
  */
 internal protocol ExperiencesPublishing: AnyObject {
+    /// Start new experience
     func start()
+
+    /// Get current experience
     func getActiveMobileContent() -> MobileContent?
+
+    /// Send experience event to backend
     func sendSocketRequest(_ sdkEvent: SDKEvent)
+
+    /// Manually trigger experience
     func triggerExperience(_ experienceToken: String)
 }
 
@@ -160,20 +167,20 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
             let experienceViewModel = ExperienceViewModel(container: self.container)
             openCarouselExperience(topViewController, experienceViewModel)
-            if let mobileContent = mobileContent {
-                switch mobileContent.type {
-                case .carousel:
-                    openCarouselExperience(topViewController, experienceViewModel)
-                case .slider:
-                    if let theme = themeHandler.getThemeById(
-                        mobileContent.baseThemeID, .slider),
-                        theme.slideOut?.general?.contentAlignment == .center {
-                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
-                    } else {
-                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
-                    }
-                }
-            }
+//            if let mobileContent = mobileContent {
+//                switch mobileContent.type {
+//                case .carousel:
+//                    openCarouselExperience(topViewController, experienceViewModel)
+//                case .slider:
+//                    if let theme = themeHandler.getThemeById(
+//                        mobileContent.baseThemeID, .slider),
+//                        theme.slideOut?.general?.contentAlignment == .center {
+//                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+//                    } else {
+//                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+//                    }
+//                }
+//            }
         }
     }
 

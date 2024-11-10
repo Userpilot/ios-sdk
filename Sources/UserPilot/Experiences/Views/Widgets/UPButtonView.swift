@@ -42,6 +42,19 @@ internal class UPButtonView: UIButton {
     private func initializeView() {
         translatesAutoresizingMaskIntoConstraints = false
         layer.masksToBounds = true
+        titleLabel?.numberOfLines = 0
+        titleLabel?.lineBreakMode = .byWordWrapping
+        setupEdgeInsets()
+    }
+
+    func setupEdgeInsets() {
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.filled()
+            config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
+            configuration = config
+        } else {
+            contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        }
     }
 
     /**
@@ -86,6 +99,21 @@ internal class UPButtonView: UIButton {
             }
             layoutIfNeeded()
         }
+        // invalidateIntrinsicContentSize()
+    }
+
+    override var intrinsicContentSize: CGSize {
+        guard
+            let titleLabel = self.titleLabel,
+            let text = titleLabel.text,
+            let font = titleLabel.font
+        else {
+            return CGSize(width: self.bounds.width, height: UPButtonView.buttonHeight)
+        }
+
+        let margin = ThemeHandler.DefaultValues.contentMargin + 100 // 160
+        let actualHight = text.height(width: UIScreen.main.bounds.width - margin, font: font)
+        return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
     }
 
     /// Applies styling attributes to the button based on the provided `ThemeData`.

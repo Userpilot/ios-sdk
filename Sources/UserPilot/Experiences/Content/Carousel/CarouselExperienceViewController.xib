@@ -74,7 +74,7 @@
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="3gt-N5-NdR" customClass="UPButtonView" customModule="UserPilot">
                                     <rect key="frame" x="20" y="0.0" width="353" height="45"/>
                                     <constraints>
-                                        <constraint firstAttribute="height" constant="45" id="DPh-t1-VuO"/>
+                                        <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="45" id="DPh-t1-VuO"/>
                                     </constraints>
                                     <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
                                     <state key="normal" title="Button"/>
@@ -84,7 +84,7 @@
                             <constraints>
                                 <constraint firstItem="3gt-N5-NdR" firstAttribute="leading" secondItem="zf4-O3-Buf" secondAttribute="leading" constant="20" id="9Tz-8q-Sv8"/>
                                 <constraint firstAttribute="trailing" secondItem="3gt-N5-NdR" secondAttribute="trailing" constant="20" id="D2D-eX-ukj"/>
-                                <constraint firstAttribute="height" constant="45" id="JSk-l0-PxQ"/>
+                                <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="45" id="JSk-l0-PxQ"/>
                                 <constraint firstItem="3gt-N5-NdR" firstAttribute="top" secondItem="zf4-O3-Buf" secondAttribute="top" id="caV-vP-NRT"/>
                                 <constraint firstAttribute="bottom" secondItem="3gt-N5-NdR" secondAttribute="bottom" id="luL-dT-6ZB"/>
                             </constraints>

@@ -18,18 +18,20 @@ import SwiftPhoenixClient
 /**
  The `AnalyticsPublishing` protocol defines the methods necessary
  to publish analytic events and manage the event lifecycle.
- 
- - Methods:
- - `publish(_:)`: Sends an event to the backend.
- - `clean()`: Clears any cached events or session data.
- - `flush()`: Flushs any cached events or session data.
- - `resume()`: Open socket connection.
  */
 internal protocol AnalyticsPublishing: AnyObject {
+    /// Sends an event to the backend.
     func publish(_ event: Event)
+
+    /// Flush any cached events or session data.
     func flush()
+
+    /// Open socket connection.
     func resume()
-    func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool)
+
+    /// Logout user from socket
+    func logout(socketState: SocketManager.SocketState,
+                shouldClearCachedIdentifyEvent: Bool)
 }
 
 /**

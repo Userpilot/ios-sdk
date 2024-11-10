@@ -52,6 +52,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
     func bindStep(_ step: Step,
                   withTheme theme: ExperienceTheme,
                   andImageLoader imageLoader: ImageLoading) {
+        if !stackView.arrangedSubviews.isEmpty { return }
         // Clear existing views in the stack view
         stackView.arrangedSubviews.forEach { view in
             stackView.removeArrangedSubview(view)
@@ -99,7 +100,6 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             case .image:
                 let image = UPImageView(frame: .zero)
                 image.heightAnchor.constraint(equalToConstant: 200).isActive = true
-                // image.widthAnchor.constraint(equalToConstant: 200).isActive = true
                 image.setupView(line: firstLine, imageLoader: imageLoader)
                 stackView.addArrangedSubview(image)
             case .iconText:
@@ -121,7 +121,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      Sets up the UI components of the cell with the provided theme data.
      
      - Parameters:
-       - theme: The `TheExperienceThememeData` that contains styling attributes for the cell's UI components.
+       - theme: The `TheExperienceThemeData` that contains styling attributes for the cell's UI components.
      */
     private func setupUI(withTheme theme: ExperienceTheme) {
         // Disable autoresizing mask constraints for custom layout

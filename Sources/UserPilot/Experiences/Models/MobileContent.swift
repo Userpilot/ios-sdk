@@ -123,10 +123,28 @@ internal struct Attributes: Codable {
     let level: HeaderType?
     let src: String?
     let icon: String?
+    let alt: String?
+    let hash: String?
+    let style: Style?
 
     private enum CodingKeys: String, CodingKey {
         case textAlign = "text_align"
-        case level, src, icon
+        case level, src, icon, alt, hash, style
+    }
+}
+
+// MARK: - Style
+
+internal struct Style: Codable {
+    let height: String?
+    let width: String?
+    let objectFit: String?
+    let borderRadius: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case objectFit = "object_fit"
+        case borderRadius = "border_radius"
+        case height, width
     }
 }
 

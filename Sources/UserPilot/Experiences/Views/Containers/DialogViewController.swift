@@ -22,7 +22,7 @@ internal class DialogViewController: UIViewController {
     private lazy var mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .white
+        view.backgroundColor = .clear
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view
@@ -149,8 +149,7 @@ extension DialogViewController {
         mainContainerView.backgroundColor = theme.backgroundColor
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {
-            dimmedView.alpha = theme.backdropOpacity
-            // dimmedView.backgroundColor = theme.backdropColor
+            dimmedView.backgroundColor = theme.backdropBackground
         }
     }
 }

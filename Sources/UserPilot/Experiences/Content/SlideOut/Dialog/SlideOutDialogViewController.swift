@@ -66,6 +66,7 @@ extension SlideOutDialogViewController {
                 self?.dismissDialog()
                 return
             }
+            self.setupGeneralStyle()
             self.slideOutContainerView.bindStep(
                 slideOutContent,
                 withTheme: self.experienceViewModel.slideOutTheme,

@@ -16,7 +16,7 @@ internal class UPIconTextView: UIStackView {
 
     // MARK: - Constants
 
-    private struct Constants {
+    struct Constants {
         static let iconWidth: CGFloat = 38
         static let iconHeight: CGFloat = 38
         static let textLeftMargin: CGFloat = 8

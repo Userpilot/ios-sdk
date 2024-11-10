@@ -12,6 +12,9 @@
 import Foundation
 import os.log
 
+/**
+ Logging protocol to log SDK logs
+ */
 internal protocol Logging {
     func debug(_ message: StaticString, _ args: CVarArg...)
     func info(_ message: StaticString, _ args: CVarArg...)

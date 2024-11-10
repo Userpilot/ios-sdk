@@ -12,18 +12,16 @@
 import Foundation
 import UIKit
 
-/// Protocol defining session monitoring behavior.
-/// Objects that conform to `SessionMonitoring` are expected to handle lifecycle events such as
-/// app entering the background or foreground.
+/**
+Protocol defining session monitoring behavior.
+Objects that conform to `SessionMonitoring` are expected to handle lifecycle events such as
+app entering the background or foreground.
+ */
 internal protocol SessionMonitoring: AnyObject {
     /// Starts the session monitoring process, setting up observers for app lifecycle events.
     func start()
 }
 
-/// A concrete implementation of `SessionMonitoring` that monitors app lifecycle changes
-/// and interacts with an analytics publisher to flush or resume analytics connection state.
-/// - `SessionMonitor` listens for app background and foreground transitions and triggers analytics
-/// operations accordingly.
 internal class SessionMonitor: SessionMonitoring {
 
     /// The analytics publisher responsible for flushing and resuming events.

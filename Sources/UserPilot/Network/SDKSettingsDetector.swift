@@ -18,11 +18,7 @@ import Foundation
  * responsible for fetching SDK settings.
  */
 internal protocol SDKSettingsDetectoring: AnyObject {
-    /**
-     * Fetches SDK settings and invokes the provided callback upon completion.
-     *
-     * - Parameter callback: A closure to be executed after the settings have been fetched.
-     */
+    /// Fetches SDK settings and invokes the provided callback upon completion.
     func fetchSettings(callback: @escaping () -> Void)
 }
 

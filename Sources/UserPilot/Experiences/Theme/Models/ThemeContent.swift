@@ -156,6 +156,10 @@ internal struct ExperienceTheme: Codable {
         CGFloat((backdrop?.opacity ?? ThemeHandler.DefaultValues.dimDegree / 100))
     }
 
+    var backdropBackground: UIColor {
+        backdropColor.withOpacity(backdropOpacity)
+    }
+
 }
 
 // MARK: - ButtonStyle

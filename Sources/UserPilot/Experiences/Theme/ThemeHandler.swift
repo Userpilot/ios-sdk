@@ -19,25 +19,15 @@ import UIKit
 internal protocol ThemeHandling: AnyObject {
 
     /// Saves the provided theme data.
-    /// - Parameter themeResponse: The response containing the theme data to be saved.
     func saveTheme(_ themeResponse: ThemeContent)
 
     /// Retrieves theme data for the specified theme ID.
-    /// - Parameter themeId: The ID of the theme to retrieve.
-    /// - Returns: The theme data if found, otherwise `nil`.
     func getThemeById(_ themeId: Int, _ type: ContentType) -> ThemeData?
 
     /// Checks if the specified theme ID is already cached.
-    /// - Parameter themeId: The ID of the theme to check.
-    /// - Returns: `true` if the theme ID is cached, `false` otherwise.
     func containsTheme(_ themeId: Int, _ type: ContentType) -> Bool
 
     /// Merges multiple themes into a unified theme.
-    /// - Parameters:
-    ///   - baseTheme: The base theme data.
-    ///   - globalTheme: The global theme data.
-    ///   - stepTheme: The step-specific theme data.
-    /// - Returns: A unified theme that combines all provided themes.
     func mergeThemes(
         _ baseTheme: ThemeData?,
         _ globalTheme: ExperienceTheme?,
@@ -63,6 +53,7 @@ internal class ThemeHandler: ThemeHandling {
         static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let slideOutCornerRadius = CGFloat(20)
+        static let blurHash = "U2pF^b@%MdR+^qj[NFjC0GozX9Kr"
     }
 
     /// Style names used for text formatting in themes.

@@ -18,16 +18,12 @@ import UIKit
 /**
  The `AutoPropertyDecoratoring` protocol defines methods for adding automatic properties to
  events and application-related properties.
- 
- - Properties:
-   - `autoProperties`: Dictionary of automatic properties related to the system and device.
-   - `appProperties`: Dictionary of properties related to the application.
- 
- - Methods:
-   - `decorate(_:)`: Method to decorate events with additional properties.
  */
 internal protocol AutoPropertyDecoratoring: AnyObject {
+    /// Dictionary of automatic properties related to the system and device.
     var autoProperties: [String: Any] { get }
+
+    /// Dictionary of properties related to the application.
     var appProperties: [String: Any] { get }
 }
 

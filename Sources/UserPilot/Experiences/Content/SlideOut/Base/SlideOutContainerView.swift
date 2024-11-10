@@ -34,9 +34,8 @@ internal class SlideOutContainerView: UIView {
     /// The action button at the bottom of the view.
     private lazy var actionButton: UPButtonView = {
         let button = UPButtonView()
-        button.backgroundColor = .black
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
+        button.heightAnchor.constraint(greaterThanOrEqualToConstant: UPButtonView.buttonHeight).isActive = true
         return button
     }()
 
@@ -236,10 +235,10 @@ internal class SlideOutContainerView: UIView {
                 stepSectionsStackView.addArrangedSubview(paragraph)
 
             case .image:
-                let imageView = UPImageView(frame: .zero)
-                imageView.heightAnchor.constraint(equalToConstant: 150).isActive = true
-                imageView.setupView(line: firstLine, imageLoader: imageLoader)
-                stepSectionsStackView.addArrangedSubview(imageView)
+                let image = UPImageView(frame: .zero)
+                image.heightAnchor.constraint(equalToConstant: 200).isActive = true
+                image.setupView(line: firstLine, imageLoader: imageLoader)
+                stepSectionsStackView.addArrangedSubview(image)
 
             case .iconText:
                 let iconText = UPIconTextContainerView()
