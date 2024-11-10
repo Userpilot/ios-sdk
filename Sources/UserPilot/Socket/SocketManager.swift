@@ -184,7 +184,7 @@ extension SocketManager {
         socketState = .connecting
 
         let socketProperties: [String: Any] = [
-            SocketManager.tokenKey: "NX-44d03690",
+            SocketManager.tokenKey: config.token,
             SocketManager.userIDKey: storage.userID,
             SocketManager.sdkVersionKey: userPilot?.version() ?? "",
             SocketManager.autoPropertiesKey: autoProperties,
@@ -366,13 +366,13 @@ extension SocketManager: SocketEvents {
 internal extension SocketManager {
 
     // Static constants
-    static var channelTopic: String { return "events:*" }
-    static var successKey: String { return "ok" }
-    static var errorKey: String { return "error" }
+    private static let channelTopic = "events:*"
+    private static let successKey = "ok"
+    private static let errorKey = "error"
 
-    static var tokenKey: String { return "app_token" }
-    static var userIDKey: String { return "user_id" }
-    static var autoPropertiesKey: String { return "auto_properties" }
-    static var appPropertiesKey: String { return "app_properties" }
-    static var sdkVersionKey: String { return "sdk_version" }
+    private static let tokenKey = "app_token"
+    private static let userIDKey = "user_id"
+    private static let autoPropertiesKey = "auto_properties"
+    private static let appPropertiesKey = "app_properties"
+    private static let sdkVersionKey = "sdk_version"
 }

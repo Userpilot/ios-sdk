@@ -119,7 +119,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 checkCachedThemes(mobileTheme.baseThemeID, mobileTheme.type)
             } else {
                 var payload: [String: Any] = [:]
-                payload[AnalyticsPublisher.identifyScreenProperty] = currentScreen
+                payload[AnalyticsPublisher.screenTitleProperty] = currentScreen
                 socketManager.publish(EventType.screenEvent, payload: payload)
             }
         }
@@ -213,7 +213,7 @@ extension ExperiencesPublisher: SocketSubscription {
      */
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
         if eventName == EventType.screenEvent {
-            currentScreen = payload?[AnalyticsPublisher.identifyScreenProperty] as? String ?? ""
+            currentScreen = payload?[AnalyticsPublisher.screenTitleProperty] as? String ?? ""
         }
 
         guard

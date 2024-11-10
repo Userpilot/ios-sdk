@@ -127,8 +127,8 @@ internal enum EventType: Equatable {
 internal extension EventType {
 
     // Static constants
-    static var identifyEvent: String { return "user_identify" }
-    static var identifyCaseEvent: String { return "identify" }
-    static var screenEvent: String { return "screen" }
-    static var trackEvent: String { return "track" }
+    static let identifyEvent = "user_identify"
+    private static let identifyCaseEvent = "identify"
+    static let screenEvent = "screen"
+    private static let trackEvent = "track"
 }

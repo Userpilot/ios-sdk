@@ -310,7 +310,7 @@ extension AnalyticsPublisher {
         /// Screen event
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
             var payload: [String: Any] = [:]
-            payload[AnalyticsPublisher.identifyScreenProperty] = screenEvent.1.screenTitle
+            payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.1.screenTitle
             if userPilot?.sessionStarted == true {
                 userPilot?.updateSessionStartState()
                 payload[AnalyticsPublisher.metaDataProperty] = [AnalyticsPublisher.isSessionStartedProperty: true]
@@ -478,10 +478,10 @@ private extension AnalyticsPublisher {
 internal extension AnalyticsPublisher {
 
     // Static constants
-    static var metaDataProperty: String { return "metadata" }
-    static var identifyCompanyProperty: String { return "company" }
+    private static let metaDataProperty = "metadata"
+    private static let identifyCompanyProperty = "company"
 
-    static var identifyScreenProperty: String { return "title" }
-    static var isSessionStartedProperty: String { return "is_session_start" }
-    static var eventNameProperty = "event_name"
+    static let screenTitleProperty = "title"
+    private static let isSessionStartedProperty = "is_session_start"
+    private static let eventNameProperty = "event_name"
 }
