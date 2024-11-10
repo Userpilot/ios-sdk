@@ -31,7 +31,7 @@ internal class UPIconTextContainerView: UIStackView {
         axis = .vertical
         alignment = .fill
         spacing = 4
-        distribution = .fillProportionally
+        distribution = .fill
     }
 
     // MARK: - Configuration
