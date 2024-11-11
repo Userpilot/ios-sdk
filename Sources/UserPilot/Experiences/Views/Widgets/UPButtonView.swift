@@ -36,6 +36,21 @@ internal class UPButtonView: UIButton {
         initializeView()
     }
 
+    override var intrinsicContentSize: CGSize {
+        guard
+            let titleLabel = self.titleLabel,
+            let text = titleLabel.text,
+            let font = titleLabel.font
+        else {
+            return CGSize(width: self.bounds.width, height: UPButtonView.buttonHeight)
+        }
+        let edgeInsets = CGFloat(16) // 8 top, 8 bottom ,8 left, 8 right
+        let actualHight = text.height(
+            withFont: font,
+            width: self.bounds.width - edgeInsets) + edgeInsets
+        return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
+    }
+
     // MARK: - Setup Methods
 
     /// Configures initial properties for the button.
@@ -70,10 +85,14 @@ internal class UPButtonView: UIButton {
        - theme: The `ExperienceTheme` that provides styling attributes such as colors and border properties.
        - callback: Optional callback function to handle button actions.
      */
-    func setupViews(line: Line?, action: ButtonAction?, theme: ExperienceTheme, callback: ((ButtonAction) -> Void)?) {
+    func setupViews(line: Line?,
+                    action: ButtonAction?,
+                    theme: ExperienceTheme,
+                    callback: ((ButtonAction) -> Void)?) {
         self.action = action
         self.callback = callback
 
+        applyStyle(with: line, and: theme)
         configureContent(with: line)
         applyStyle(with: line, and: theme)
         configureContentAlignment(with: line?.attrs?.textAlign)
@@ -99,21 +118,6 @@ internal class UPButtonView: UIButton {
             }
             layoutIfNeeded()
         }
-        // invalidateIntrinsicContentSize()
-    }
-
-    override var intrinsicContentSize: CGSize {
-        guard
-            let titleLabel = self.titleLabel,
-            let text = titleLabel.text,
-            let font = titleLabel.font
-        else {
-            return CGSize(width: self.bounds.width, height: UPButtonView.buttonHeight)
-        }
-
-        let margin = ThemeHandler.DefaultValues.contentMargin + 100 // 160
-        let actualHight = text.height(width: UIScreen.main.bounds.width - margin, font: font)
-        return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
     }
 
     /// Applies styling attributes to the button based on the provided `ThemeData`.

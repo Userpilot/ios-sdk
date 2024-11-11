@@ -56,15 +56,19 @@ internal extension String {
         }
     }
 
-    func height(width: CGFloat, font: UIFont) -> CGFloat {
-        let label =  UILabel(frame: CGRect(x: 0, y: 0, width: width, height: .greatestFiniteMagnitude))
-        label.numberOfLines = 0
-        label.text = self
-        label.font = font
-        label.sizeToFit()
+    func height(withFont font: UIFont, width: CGFloat) -> CGFloat {
+        let maxSize = CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
 
-        return label.frame.height
-     }
+        let boundingBox = self.boundingRect(
+            with: maxSize,
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: attributes,
+            context: nil
+        )
+
+        return ceil(boundingBox.height)
+    }
 
     func getImageNameWithoutExtension() -> String? {
         guard let url = URL(string: self) else { return nil }
