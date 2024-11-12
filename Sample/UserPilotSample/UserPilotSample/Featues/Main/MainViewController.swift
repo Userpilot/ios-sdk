@@ -37,9 +37,9 @@ class MainViewController: BaseViewController {
         )
          */
 
-        delay(4) {
-            UserPilotManager.shared.triggerExperience(token: "mobile:IEebGyacOX")
-        }
+//        delay(4) {
+//            UserPilotManager.shared.triggerExperience(token: "mobile:IEebGyacOX")
+//        }
     }
 
     override func viewDidAppear(_ animated: Bool) {

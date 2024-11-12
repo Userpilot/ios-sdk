@@ -16,7 +16,7 @@ internal class UPButtonView: UIButton {
 
     // MARK: - Properties
 
-    static let buttonHeight = CGFloat(45)
+    static let buttonHeight = CGFloat(50)
 
     /// The action to be triggered when the button is tapped.
     private var action: ButtonAction?
@@ -59,17 +59,7 @@ internal class UPButtonView: UIButton {
         layer.masksToBounds = true
         titleLabel?.numberOfLines = 0
         titleLabel?.lineBreakMode = .byWordWrapping
-        setupEdgeInsets()
-    }
-
-    func setupEdgeInsets() {
-        if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.filled()
-            config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
-            configuration = config
-        } else {
-            contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        }
+        addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
     }
 
     /**
@@ -80,10 +70,10 @@ internal class UPButtonView: UIButton {
      the specified action.
 
      - Parameters:
-       - line: The `Line` configuration that provides content and style attributes for the button.
-       - action: The button action to be performed on click.
-       - theme: The `ExperienceTheme` that provides styling attributes such as colors and border properties.
-       - callback: Optional callback function to handle button actions.
+     - line: The `Line` configuration that provides content and style attributes for the button.
+     - action: The button action to be performed on click.
+     - theme: The `ExperienceTheme` that provides styling attributes such as colors and border properties.
+     - callback: Optional callback function to handle button actions.
      */
     func setupViews(line: Line?,
                     action: ButtonAction?,
@@ -92,47 +82,16 @@ internal class UPButtonView: UIButton {
         self.action = action
         self.callback = callback
 
+        setFont(with: line, and: theme)
         applyStyle(with: line, and: theme)
-        configureContent(with: line)
-        applyStyle(with: line, and: theme)
-        configureContentAlignment(with: line?.attrs?.textAlign)
-
-        // Set click listener to trigger the action's callback if provided
-        addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
     }
 
-    // MARK: - Configuration Helpers
-
-    /// Configures the button's content based on the provided `Line`.
-    ///
-    /// - Parameter line: The `Line` containing content and style attributes for the button.
-    private func configureContent(with line: Line?) {
-        guard let firstContent = line?.content?.first else {
-            setTitle("", for: .normal)
-            return
-        }
-
-        UIView.performWithoutAnimation {
-            for state in [UIControl.State.normal, .highlighted, .selected, .disabled] {
-               self.setTitle(firstContent.text, for: state)
-            }
-            layoutIfNeeded()
-        }
-    }
-
-    /// Applies styling attributes to the button based on the provided `ThemeData`.
-    ///
-    /// - Parameter style: The `ThemeData` object that contains button styling properties.
-    private func applyStyle(with line: Line?, and theme: ExperienceTheme) {
-        backgroundColor = theme.buttonBackgroundColor
-        setTitleColor(theme.buttonTextColor, for: .normal)
-        layer.cornerRadius = theme.buttonBorderRadius
-        layer.borderWidth = theme.buttonBorderWidth
-        layer.borderColor = theme.buttonBorderColor.cgColor
-
-        // Retrieve text style mark or use a default one
-        let textStyleMark = line?.content?.first?.marks?.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
-        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+    /// Applies font.
+    func setFont(with line: Line?, and theme: ExperienceTheme) {
+        let textStyleMark = line?.content?.first?.marks?.first(
+            where: { $0.type == ThemeHandler.StyleName.textStyle })
+        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize
+        ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
 
         var traits = [UIFontDescriptor.SymbolicTraits]()
         if let marks = line?.content?.first?.marks {
@@ -143,21 +102,24 @@ internal class UPButtonView: UIButton {
                 traits.append(.traitItalic)
             }
         }
-
-        let font = UIFont.matching(fontName: theme.fontFamily,
-                                   fontWeight: traits,
-                                   fontSize: fontSize)
-
-        titleLabel?.font = font
+        titleLabel?.font = UIFont.matching(fontName: theme.fontFamily,
+                                           fontWeight: traits,
+                                           fontSize: fontSize)
     }
 
-    /// - Parameter alignment: The `TextAlignment` that defines the button's text alignment.
-    private func configureContentAlignment(with alignment: TextAlignmentType?) {
-        contentHorizontalAlignment = alignment?.buttonAlignment() ?? .center
-        titleLabel?.textAlignment = alignment?.textAlignment() ?? .center
-    }
+    /// Applies text and styling.
+    private func applyStyle(with line: Line?, and theme: ExperienceTheme) {
+        guard let line = line else { return }
+        setTitle(line.buttonTitle, for: .normal)
+        contentHorizontalAlignment = line.buttonAlignment
 
-    // MARK: - Action Handlers
+        setTitleColor(theme.buttonTextColor, for: .normal)
+        tintColor = theme.buttonBackgroundColor
+        backgroundColor = theme.buttonBackgroundColor
+        layer.cornerRadius = theme.buttonBorderRadius
+        layer.borderWidth = theme.buttonBorderWidth
+        layer.borderColor = theme.buttonBorderColor.cgColor
+    }
 
     /// Handler for button tap action.
     @objc private func buttonTapped() {

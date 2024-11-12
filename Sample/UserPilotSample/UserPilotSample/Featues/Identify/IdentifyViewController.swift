@@ -12,7 +12,11 @@ class IdentifyViewController: BaseViewController {
 
     // MARK: - IBOutlet
 
-    @IBOutlet weak var textFieldUserID: UITextField!
+    @IBOutlet weak var textFieldUserID: UITextField! {
+        didSet {
+            textFieldUserID.delegate = self
+        }
+    }
     @IBOutlet weak var userPropertiesStackView: UIStackView!
     @IBOutlet weak var companyPropertiesStackView: UIStackView!
     @IBOutlet weak var anonymousButton: UIButton! {
@@ -51,6 +55,15 @@ class IdentifyViewController: BaseViewController {
         UserPilotManager.shared.anonymous()
     }
 
+}
+
+// MARK: - UITextFieldDelegate
+
+extension IdentifyViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
+    }
 }
 
 // MARK: - Helper methods

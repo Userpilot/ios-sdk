@@ -94,7 +94,7 @@ internal struct Step: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, order, sections
         case buttonAction = "button_action"
-        case mobileTheme = "mobile_theme"
+        case mobileTheme = "theme_data"
     }
 }
 
@@ -113,6 +113,20 @@ internal struct Line: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case type, attrs, content
+    }
+
+    var buttonAlignment: UIControl.ContentHorizontalAlignment {
+        return attrs?.textAlign?.buttonAlignment() ?? .center
+    }
+
+    var buttonTitle: String {
+        if buttonAlignment == .left {
+            return "\(ThemeHandler.DefaultValues.defaultTextMargin)\(content?.first?.text ?? "")"
+        } else if buttonAlignment == .right {
+            return "\(content?.first?.text ?? "")\(ThemeHandler.DefaultValues.defaultTextMargin)"
+        } else {
+            return content?.first?.text ?? ""
+        }
     }
 }
 
@@ -258,8 +272,11 @@ internal enum TextAlignmentType: String, Codable {
 extension String {
     /// Converts a JSON string into a `CarouselData` object using `JSONDecoder`.
     func toMobileContent() -> MobileContentData? {
-        let decoder = JSONDecoder()
-        return try? decoder.decode(MobileContentData.self, from: Data(self.utf8))
+        if let mobileContent: MobileContentData = self.toObject() {
+            return mobileContent
+        } else {
+            return nil
+        }
     }
 
     /// Converts a JSON string into an array of `CarouselData` objects using `JSONDecoder`.

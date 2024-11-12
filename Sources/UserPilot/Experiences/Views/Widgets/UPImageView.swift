@@ -85,7 +85,7 @@ internal class UPImageView: UIView {
         }
         // Load the image into the UIImageView
         imageLoader.loadImage(target: imageView,
-                              url: "https://i.imgur.com/5simaPh.jpeg",
+                              url: url, // "https://i.imgur.com/5simaPh.jpeg",
                               placeholder: .lightGray,
                               blurHash: "UlH.7wozbckC_NoekCW=%zoJWBof%fofoes.",
                               size: CGSize(width: 300, height: 200))

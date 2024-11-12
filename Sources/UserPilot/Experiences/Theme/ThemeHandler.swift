@@ -54,6 +54,7 @@ internal class ThemeHandler: ThemeHandling {
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let slideOutCornerRadius = CGFloat(20)
         static let blurHash = "U2pF^b@%MdR+^qj[NFjC0GozX9Kr"
+        static let defaultTextMargin = "   "
     }
 
     /// Style names used for text formatting in themes.

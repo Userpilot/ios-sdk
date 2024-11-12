@@ -53,7 +53,7 @@ internal class UPCloseButton: UIButton {
      Configures the visibility and appearance of the close button based on the provided theme data.
      
      This function sets the button's visibility and color properties according to the values specified in the
-     `ThemeData` instance. If manual color is enabled, it uses the specified dismiss button color; otherwise,
+     `ExperienceTheme` instance. If manual color is enabled, it uses the specified dismiss button color; otherwise,
      it uses an inverted color of the theme's background.
      
      - Parameter theme: The `ExperienceTheme` containing the configuration for the close

@@ -162,7 +162,7 @@ internal struct ExperienceTheme: Codable {
 
 }
 
-// MARK: - ButtonStyle
+// MARK: - BackdropStyle
 
 internal struct Backdrop: Codable {
     let color: String?

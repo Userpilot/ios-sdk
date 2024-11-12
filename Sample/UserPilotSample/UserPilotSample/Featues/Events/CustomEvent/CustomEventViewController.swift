@@ -12,7 +12,11 @@ class CustomEventViewController: BaseViewController {
 
     // MARK: - IBOutlet
 
-    @IBOutlet weak var textFieldEventName: UITextField!
+    @IBOutlet weak var textFieldEventName: UITextField! {
+        didSet {
+            textFieldEventName.delegate = self
+        }
+    }
     @IBOutlet weak var eventPropertiesStackView: UIStackView!
 
     internal var eventPropertiesViews: [String: PropertyView] = [:]
@@ -86,6 +90,15 @@ extension CustomEventViewController {
         propertyView.bindData(propertyName: propertyTitle, propertyValue: propertyValue)
         eventPropertiesStackView.addItemToStackView(propertyView)
         eventPropertiesViews[propertyTitle] = propertyView
+    }
+}
+
+// MARK: - UITextFieldDelegate
+
+extension CustomEventViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
     }
 }
 

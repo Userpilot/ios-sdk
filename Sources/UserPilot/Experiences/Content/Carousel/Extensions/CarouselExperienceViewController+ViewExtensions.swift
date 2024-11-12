@@ -135,7 +135,6 @@ internal extension CarouselExperienceViewController {
     func closeExperience() {
         dismiss(animated: true, completion: { [weak self] in
             guard let self = self else { return }
-            // Notify the view model that the step was dismissed.
             self.experienceViewModel.onDismissStep(step: self.collectionView.currentIndex)
         })
     }

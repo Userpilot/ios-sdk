@@ -12,8 +12,16 @@ class AddPropertyDialogViewController: UIViewController {
 
     // MARK: - IBOutlets
 
-    @IBOutlet weak var propertyTitle: UITextField!
-    @IBOutlet weak var propertyValue: UITextField!
+    @IBOutlet weak var propertyTitle: UITextField! {
+        didSet {
+            propertyTitle.delegate = self
+        }
+    }
+    @IBOutlet weak var propertyValue: UITextField! {
+        didSet {
+            propertyValue.delegate = self
+        }
+    }
 
     // MARK: - Properties
 
@@ -47,20 +55,22 @@ class AddPropertyDialogViewController: UIViewController {
     // MARK: - Actions
 
     @IBAction func cancelButtonHandler(_ sender: UIButton) {
-        self.excuteCancelButton()
+        self.executeCancelButton()
     }
 
     @IBAction func doneButtonHandler(_ sender: UIButton) {
-        self.excuteDoneButton()
+        self.executeDoneButton()
     }
 
     // MARK: - Helper methods
 
-    func excuteCancelButton() {
+    func executeCancelButton() {
+        view.endEditing(true)
         self.dismiss(animated: true)
     }
 
-    func excuteDoneButton() {
+    func executeDoneButton() {
+        view.endEditing(true)
         if !self.isViewLoaded {
             self.executeDoneButtonHandler()
             return
@@ -80,4 +90,13 @@ class AddPropertyDialogViewController: UIViewController {
         dismiss(animated: true)
     }
 
+}
+
+// MARK: - UITextFieldDelegate
+
+extension AddPropertyDialogViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
+    }
 }

@@ -56,7 +56,7 @@
                             </constraints>
                         </view>
                         <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="none" translatesAutoresizingMaskIntoConstraints="NO" id="rAc-Qs-gI2">
-                            <rect key="frame" x="0.0" y="47" width="393" height="588"/>
+                            <rect key="frame" x="0.0" y="47" width="393" height="583"/>
                             <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="oEb-bB-sux">
                                 <size key="itemSize" width="128" height="128"/>
                                 <size key="headerReferenceSize" width="0.0" height="0.0"/>
@@ -69,12 +69,12 @@
                             </connections>
                         </collectionView>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="zf4-O3-Buf">
-                            <rect key="frame" x="0.0" y="647" width="393" height="45"/>
+                            <rect key="frame" x="0.0" y="642" width="393" height="50"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="3gt-N5-NdR" customClass="UPButtonView" customModule="UserPilot">
-                                    <rect key="frame" x="20" y="0.0" width="353" height="45"/>
+                                    <rect key="frame" x="20" y="0.0" width="353" height="50"/>
                                     <constraints>
-                                        <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="45" id="DPh-t1-VuO"/>
+                                        <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="50" id="DPh-t1-VuO"/>
                                     </constraints>
                                     <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
                                     <state key="normal" title="Button"/>
@@ -84,7 +84,7 @@
                             <constraints>
                                 <constraint firstItem="3gt-N5-NdR" firstAttribute="leading" secondItem="zf4-O3-Buf" secondAttribute="leading" constant="20" id="9Tz-8q-Sv8"/>
                                 <constraint firstAttribute="trailing" secondItem="3gt-N5-NdR" secondAttribute="trailing" constant="20" id="D2D-eX-ukj"/>
-                                <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="45" id="JSk-l0-PxQ"/>
+                                <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="50" id="JSk-l0-PxQ"/>
                                 <constraint firstItem="3gt-N5-NdR" firstAttribute="top" secondItem="zf4-O3-Buf" secondAttribute="top" id="caV-vP-NRT"/>
                                 <constraint firstAttribute="bottom" secondItem="3gt-N5-NdR" secondAttribute="bottom" id="luL-dT-6ZB"/>
                             </constraints>

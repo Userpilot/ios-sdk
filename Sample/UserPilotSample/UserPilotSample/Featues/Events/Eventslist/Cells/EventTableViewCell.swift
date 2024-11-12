@@ -10,8 +10,16 @@ import UIKit
 class EventTableViewCell: UITableViewCell, ReusableTableCellView, TableViewCellFromNib {
 
     @IBOutlet weak var eventName: UILabel!
-    @IBOutlet weak var eventTitle: UITextField!
-    @IBOutlet weak var eventValue: UITextField!
+    @IBOutlet weak var eventTitle: UITextField! {
+        didSet {
+            eventTitle.delegate = self
+        }
+    }
+    @IBOutlet weak var eventValue: UITextField! {
+        didSet {
+            eventValue.delegate = self
+        }
+    }
 
     var onTrackEvent: ((String?, String?) -> Void)?
 
@@ -23,4 +31,13 @@ class EventTableViewCell: UITableViewCell, ReusableTableCellView, TableViewCellF
         onTrackEvent?(eventTitle.text, eventValue.text)
     }
 
+}
+
+// MARK: - UITextFieldDelegate
+
+extension EventTableViewCell: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
+    }
 }

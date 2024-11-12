@@ -37,6 +37,14 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         return view
     }()
 
+    // MARK: - Override
+
+    // Clear existing views in the stack view
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        stackView.clearViews()
+    }
+
     // MARK: - Binding Methods
 
     /**
@@ -52,13 +60,6 @@ internal class StepCollectionViewCell: UICollectionViewCell {
     func bindStep(_ step: Step,
                   withTheme theme: ExperienceTheme,
                   andImageLoader imageLoader: ImageLoading) {
-        if !stackView.arrangedSubviews.isEmpty { return }
-        // Clear existing views in the stack view
-        stackView.arrangedSubviews.forEach { view in
-            stackView.removeArrangedSubview(view)
-            view.removeFromSuperview()
-        }
-
         // Setup UI and bind sections to the stack view
         setupUI(withTheme: theme)
         bindSections(step,
@@ -83,9 +84,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                               andImageLoader imageLoader: ImageLoading) {
         // Iterate over each section of the step
         step.sections.forEach { section in
-            // Determine the type of the first line in the section
             guard let firstLine = section.lines.first else { return }
-
             switch firstLine.type {
             case .heading:
                 let header = UPTextView()
@@ -107,7 +106,6 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 iconText.setupView(lines: section.lines,
                                    theme: theme,
                                    imageLoader: imageLoader)
-                iconText.translatesAutoresizingMaskIntoConstraints = false
                 stackView.addArrangedSubview(iconText)
             default:
                 break

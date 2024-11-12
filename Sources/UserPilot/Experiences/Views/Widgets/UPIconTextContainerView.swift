@@ -30,7 +30,7 @@ internal class UPIconTextContainerView: UIStackView {
     private func setupViewProperties() {
         axis = .vertical
         alignment = .fill
-        spacing = 4
+        spacing = 8
         distribution = .fill
     }
 
@@ -48,9 +48,8 @@ internal class UPIconTextContainerView: UIStackView {
     func setupView(lines: [Line],
                    theme: ExperienceTheme,
                    imageLoader: ImageLoading) {
-        if !arrangedSubviews.isEmpty { return }
         // Remove existing views before adding new ones.
-        arrangedSubviews.forEach { $0.removeFromSuperview() }
+        clearViews()
 
         // Iterate through each line and add corresponding `UPIconTextView` components to the container.
         lines.forEach { line in

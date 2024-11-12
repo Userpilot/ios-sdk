@@ -50,15 +50,28 @@ internal class ImageLoader: ImageLoading {
     }
 
     func loadImage(target: UIImageView, url: String, placeholder: UIColor?, blurHash: String?, size: CGSize) {
-        guard let url = URL(string: url) else { return }
-        if let blurHash = blurHash, let image = UIImage(blurHash: blurHash, size: size) {
-            target.image = image
-        } else {
-            target.image = imageFromColor(color: placeholder ?? UIColor.clear, size: size)
-        }
+        performOn(.background) { [weak self] in
+            guard let self = self else { return }
+            guard let url = URL(string: url) else { return }
+            if let image = loadImageFromDisk(url: url) {
+                setImage(target, image)
+                return
+            }
 
-        loadImage(from: url) { [weak self] image in
-            guard self != nil, let image = image else { return }
+            if let blurHash = blurHash, let image = UIImage(blurHash: blurHash, size: size) {
+                setImage(target, image)
+            }
+
+            self.loadImage(from: url) { [weak self] image in
+                guard let image = image else { return }
+                self?.setImage(target, image)
+            }
+        }
+    }
+
+    func setImage(_ target: UIImageView, _ image: UIImage) {
+        performOn(.main) { [weak self] in
+            guard self != nil else { return }
             target.setImageWithCrossfade(image)
         }
     }
@@ -69,12 +82,6 @@ internal class ImageLoader: ImageLoading {
     ///   - url: The URL of the image to load.
     ///   - completion: A completion handler with the loaded `UIImage` (optional).
     private func loadImage(from url: URL, completion: @escaping (UIImage?) -> Void) {
-        // Check if the image is stored on disk (file system)
-//        if let cachedImage = loadImageFromDisk(url: url) {
-//            completion(cachedImage)
-//            return
-//        }
-
         // Download the image asynchronously
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self, let data = data, error == nil else {
@@ -85,14 +92,9 @@ internal class ImageLoader: ImageLoading {
             let newImage = self.createImage(from: data)
             if let image = newImage {
                 self.saveImageToDisk(image: data, url: url)
-
-                DispatchQueue.main.async {
-                    completion(image)
-                }
+                completion(image)
             } else {
-                DispatchQueue.main.async {
-                    completion(nil)
-                }
+                completion(nil)
             }
         }.resume()
     }
