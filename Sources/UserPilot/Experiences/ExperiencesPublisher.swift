@@ -164,23 +164,20 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             let topViewController = UIApplication.shared.topViewController(),
             canTriggerManualExperience()
         else { return }
-
             let experienceViewModel = ExperienceViewModel(container: self.container)
-            openCarouselExperience(topViewController, experienceViewModel)
-//            if let mobileContent = mobileContent {
-//                switch mobileContent.type {
-//                case .carousel:
-//                    openCarouselExperience(topViewController, experienceViewModel)
-//                case .slider:
-//                    if let theme = themeHandler.getThemeById(
-//                        mobileContent.baseThemeID, .slider),
-//                        theme.slideOut?.general?.contentAlignment == .center {
-//                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
-//                    } else {
-//                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
-//                    }
-//                }
-//            }
+            if let mobileContent = mobileContent {
+                switch mobileContent.type {
+                case .carousel:
+                    openCarouselExperience(topViewController, experienceViewModel)
+                case .slider:
+                    if let theme = themeHandler.getThemeById(mobileContent.baseThemeID, .slider),
+                        theme.isDialogExperience {
+                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+                    } else {
+                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+                    }
+                }
+            }
         }
     }
 
@@ -263,7 +260,7 @@ extension ExperiencesPublisher {
     private func canShowCarousel() -> Bool {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: CarouselExperienceViewController.self),
-           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           // mobileContent?.carouselScreen.contains(currentScreen) == true,
            mobileContent?.type == .carousel {
             return true
         }
@@ -272,7 +269,7 @@ extension ExperiencesPublisher {
 
     func openCarouselExperience(_ viewController: UIViewController,
                                 _ experienceViewModel: ExperienceViewModel) {
-        // if !canShowCarousel() { return }
+        if !canShowCarousel() { return }
         let carouselExperienceViewController = CarouselExperienceViewController(
             experienceViewModel: experienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen
@@ -283,7 +280,7 @@ extension ExperiencesPublisher {
     private func canShowDialogSlideOut() -> Bool {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: SlideOutDialogViewController.self),
-           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           // mobileContent?.carouselScreen.contains(currentScreen) == true,
            mobileContent?.type == .slider {
             return true
         }
@@ -292,24 +289,16 @@ extension ExperiencesPublisher {
 
     func openSlideOutDialogExperience(_ viewController: UIViewController,
                                       _ experienceViewModel: ExperienceViewModel) {
-        // if !canShowDialogSlideOut() { return }
+        if !canShowDialogSlideOut() { return }
         let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
-        /**
-         slideOutDialogViewController.providesPresentationContextTransitionStyle = true
-         slideOutDialogViewController.definesPresentationContext = true
-         slideOutDialogViewController.modalPresentationStyle = .overCurrentContext
-         slideOutDialogViewController.modalTransitionStyle = .crossDissolve
-         */
-        delay(1) {
-            viewController.presentDialog(viewController: slideOutDialogViewController)
-        }
+        viewController.presentDialog(viewController: slideOutDialogViewController)
     }
 
     /// Validates whether the carousel can be shown based on the current application state.
     private func canShowBottomSheetSlideOut() -> Bool {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: BottomSheetViewController.self),
-           mobileContent?.carouselScreen.contains(currentScreen) == true,
+           // mobileContent?.carouselScreen.contains(currentScreen) == true,
            mobileContent?.type == .slider {
             return true
         }
@@ -318,15 +307,13 @@ extension ExperiencesPublisher {
 
     func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
                                            _ experienceViewModel: ExperienceViewModel) {
-        // if !canShowBottomSheetSlideOut() { return }
+        if !canShowBottomSheetSlideOut() { return }
         let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
             experienceViewModel: experienceViewModel)
-        delay(1) {
-            viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
-        }
+        viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
     }
 
-    func canTriggerManualExperience() -> Bool {
+    private func canTriggerManualExperience() -> Bool {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: SlideOutDialogViewController.self),
            !topViewController.isKind(of: BottomSheetViewController.self),

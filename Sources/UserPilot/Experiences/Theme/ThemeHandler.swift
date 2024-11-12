@@ -101,11 +101,7 @@ internal class ThemeHandler: ThemeHandling {
      - Returns: The theme data if found, or `nil` if no theme with the given ID is cached.
      */
     func getThemeById(_ themeId: Int, _ type: ContentType) -> ThemeData? {
-        if type == .carousel {
-            return carouselThemes[themeId]
-        } else {
-            return slideOutThemes[themeId]
-        }
+        return type == .carousel ? carouselThemes[themeId] : slideOutThemes[themeId]
     }
 
     /**
@@ -115,11 +111,7 @@ internal class ThemeHandler: ThemeHandling {
      - Returns: `true` if the theme ID is cached, `false` otherwise.
      */
     func containsTheme(_ themeId: Int, _ type: ContentType) -> Bool {
-        if type == .carousel {
-            return carouselThemes.keys.contains(themeId)
-        } else {
-            return slideOutThemes.keys.contains(themeId)
-        }
+        return type == .carousel ? carouselThemes.keys.contains(themeId) : slideOutThemes.keys.contains(themeId)
     }
 
     /*

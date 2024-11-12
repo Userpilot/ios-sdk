@@ -81,7 +81,10 @@ public class UserPilot: NSObject {
 
         // start experience listener
         experiencesPublisher.start()
+
+        // session start indicator
         sessionStarted = true
+
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
     }

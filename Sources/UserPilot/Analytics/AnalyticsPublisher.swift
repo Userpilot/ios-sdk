@@ -311,10 +311,10 @@ extension AnalyticsPublisher {
         if let screenEvent = lastScreenViewed, screenEvent.0 == false {
             var payload: [String: Any] = [:]
             payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.1.screenTitle
-            if userPilot?.sessionStarted == true {
-                userPilot?.updateSessionStartState()
-                payload[AnalyticsPublisher.metaDataProperty] = [AnalyticsPublisher.isSessionStartedProperty: true]
-            }
+            payload[AnalyticsPublisher.metaDataProperty] = [
+                AnalyticsPublisher.isSessionStartedProperty: userPilot?.sessionStarted ?? false
+            ]
+            userPilot?.updateSessionStartState()
             socketManager.publish(screenEvent.1.eventName, payload: payload)
         }
 

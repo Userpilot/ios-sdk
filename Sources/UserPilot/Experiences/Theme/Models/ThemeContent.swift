@@ -45,6 +45,10 @@ internal struct ThemeData: Codable {
         case carousel
         case slideOut = "slideout"
     }
+
+    var isDialogExperience: Bool {
+        slideOut?.general?.contentAlignment == .center
+    }
 }
 
 // MARK: - CarouselTheme
