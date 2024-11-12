@@ -169,8 +169,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 switch mobileContent.type {
                 case .carousel:
                     openCarouselExperience(topViewController, experienceViewModel)
-                case .slider:
-                    if let theme = themeHandler.getThemeById(mobileContent.baseThemeID, .slider),
+                case .slideout:
+                    if let theme = themeHandler.getThemeById(mobileContent.baseThemeID, .slideout),
                         theme.isDialogExperience {
                         self.openSlideOutDialogExperience(topViewController, experienceViewModel)
                     } else {
@@ -281,7 +281,7 @@ extension ExperiencesPublisher {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: SlideOutDialogViewController.self),
            // mobileContent?.carouselScreen.contains(currentScreen) == true,
-           mobileContent?.type == .slider {
+           mobileContent?.type == .slideout {
             return true
         }
         return false
@@ -299,7 +299,7 @@ extension ExperiencesPublisher {
         if let topViewController = UIApplication.shared.topViewController(),
            !topViewController.isKind(of: BottomSheetViewController.self),
            // mobileContent?.carouselScreen.contains(currentScreen) == true,
-           mobileContent?.type == .slider {
+           mobileContent?.type == .slideout {
             return true
         }
         return false

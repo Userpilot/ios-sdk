@@ -89,7 +89,7 @@ internal class ExperienceViewModel {
         // Handle safe area region in case there is an issue with the data
         if mobileContent.steps.isEmpty ||
             (mobileContent.type == .carousel && carouselTheme.isEmpty) ||
-            (mobileContent.type == .slider && (mergedTheme.isEmpty || mergedTheme.first?.slideOut == nil)) {
+            (mobileContent.type == .slideout && (mergedTheme.isEmpty || mergedTheme.first?.slideOut == nil)) {
             shouldBindCarousel = false
         }
 

@@ -214,7 +214,7 @@ internal struct ButtonAction: Codable {
 
 internal enum ContentType: String, Codable {
     case carousel
-    case slider
+    case slideout
 }
 
 // MARK: - LineType
