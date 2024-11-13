@@ -79,7 +79,7 @@ extension KeyedEncodingContainer where K == DynamicCodingKeys {
 
 extension CodingKey {
     var pretty: String {
-        if let intValue = intValue {
+        if let intValue {
             return "\(intValue)"
         }
 

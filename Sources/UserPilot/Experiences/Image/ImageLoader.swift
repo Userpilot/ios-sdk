@@ -51,19 +51,19 @@ internal class ImageLoader: ImageLoading {
 
     func loadImage(target: UIImageView, url: String, placeholder: UIColor?, blurHash: String?, size: CGSize) {
         performOn(.background) { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             guard let url = URL(string: url) else { return }
             if let image = loadImageFromDisk(url: url) {
                 setImage(target, image)
                 return
             }
 
-            if let blurHash = blurHash, let image = UIImage(blurHash: blurHash, size: size) {
+            if let blurHash, let image = UIImage(blurHash: blurHash, size: size) {
                 setImage(target, image)
             }
 
             self.loadImage(from: url) { [weak self] image in
-                guard let image = image else { return }
+                guard let image else { return }
                 self?.setImage(target, image)
             }
         }
@@ -89,8 +89,7 @@ internal class ImageLoader: ImageLoading {
                 return
             }
 
-            let newImage = self.createImage(from: data)
-            if let image = newImage {
+            if let image = self.createImage(from: data) {
                 self.saveImageToDisk(image: data, url: url)
                 completion(image)
             } else {
@@ -105,8 +104,8 @@ internal class ImageLoader: ImageLoading {
     private func createImage(from data: Data) -> UIImage? {
         if let gifImage = createAnimatedImage(from: data) {
             return gifImage
-        } else if let staticImage = UIImage(data: data) {
-            return staticImage
+        } else if let image = UIImage(data: data) {
+            return image
         }
         return nil
     }

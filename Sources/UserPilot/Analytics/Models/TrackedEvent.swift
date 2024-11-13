@@ -63,7 +63,7 @@ internal struct TrackedPayloadEvent {
         var dict: [String: Any] = ["title": title]
 
         // Add metadata to the dictionary if it exists
-        if let meta = meta {
+        if let meta {
             dict["meta"] = meta
         }
 

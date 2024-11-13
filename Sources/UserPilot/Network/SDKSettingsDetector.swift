@@ -78,7 +78,7 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
         // Perform the network request asynchronously on a background thread
         DispatchQueue.global(qos: .background).async {
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
+                if let error {
                     self.logger.error("Request failed: %{public}@", error.localizedDescription)
                     callback()
                     return
@@ -93,7 +93,7 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
                 }
 
                 // swiftlint:disable:next non_optional_string_data_conversion
-                if let data = data, let responseBody = String(data: data, encoding: .utf8) {
+                if let data, let responseBody = String(data: data, encoding: .utf8) {
                     self.logger.info("RSDK Settings response: %{public}@", responseBody)
                     do {
                         if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],

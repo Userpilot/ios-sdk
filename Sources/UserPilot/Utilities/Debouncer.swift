@@ -51,7 +51,7 @@ internal class Debouncer {
         workItem = DispatchWorkItem(block: action)
 
         // Schedule the new work item after the delay
-        if let workItem = workItem {
+        if let workItem {
             queue.asyncAfter(deadline: .now() + delay, execute: workItem)
         }
     }

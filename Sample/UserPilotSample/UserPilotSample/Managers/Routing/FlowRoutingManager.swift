@@ -125,13 +125,15 @@ extension FlowRoutingManager: FlowRoutingManagerProtocol {
                 return self.navigationController
             }
         }()
-        guard let nvc = navigationController else { return }
+        guard let navigationController else { return }
 
-        nvc.setViewControllers(Array(nvc.viewControllers.dropLast()) + [controller], animated: true)
+        navigationController.setViewControllers(
+            Array(navigationController.viewControllers.dropLast()) +
+            [controller], animated: true)
     }
 
     public func jumpBack(to controller: UIViewController?) {
-        if let controller = controller {
+        if let controller {
             if let topNav = visibleViewController.navigationController,
                topNav.viewControllers.contains(controller) {
                 topNav.popToViewController(controller, animated: true)

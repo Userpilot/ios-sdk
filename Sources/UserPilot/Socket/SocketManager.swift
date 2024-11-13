@@ -192,7 +192,7 @@ extension SocketManager {
         ]
 
         phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
-        guard let phoenixSocket = phoenixSocket else { return }
+        guard let phoenixSocket else { return }
 
         // Setup delegates for socket events
         phoenixSocket.delegateOnOpen(to: self) { (self) in
@@ -263,11 +263,11 @@ extension SocketManager {
      */
     private func closeSocket() {
         // socketState = .closed
-        if let channel = self.phoenixChannel, !channel.isClosed {
-            channel.leave(timeout: 0.0)
-            phoenixSocket?.remove(channel)
+        if let phoenixChannel, !phoenixChannel.isClosed {
+            phoenixChannel.leave(timeout: 0.0)
+            phoenixSocket?.remove(phoenixChannel)
         }
-        if let phoenixSocket = phoenixSocket, phoenixSocket.isConnected {
+        if let phoenixSocket, phoenixSocket.isConnected {
             phoenixSocket.disconnect()
         }
     }
@@ -313,7 +313,7 @@ extension SocketManager: SocketEvents {
         isGettingSettings = true
         isErrorOccurred = false
         sdkSettingsDetector.fetchSettings { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.isGettingSettings = false
             self.openSocket()
         }

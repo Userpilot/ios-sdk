@@ -158,7 +158,7 @@ internal class Storage: DataStoring {
        - newValue: The value to store. If `nil`, the key is removed from `UserDefaults`.
      */
     private func write<T>(_ key: Key, newValue: T?) {
-        guard let newValue = newValue else {
+        guard let newValue else {
             defaults?.removeObject(forKey: key.rawValue)
             return
         }

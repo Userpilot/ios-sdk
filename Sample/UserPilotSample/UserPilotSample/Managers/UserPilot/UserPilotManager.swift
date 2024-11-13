@@ -132,7 +132,7 @@ class UserPilotManager {
 
         // delay for 3 seconds
         delay(4.0, closure: { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
 
             // track user event
             self.track(eventName: "App Open")
@@ -196,7 +196,7 @@ class UserPilotManager {
         )
 
         delay(4) { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.identify(
                 userID: "NX-33333",
                 properties: [

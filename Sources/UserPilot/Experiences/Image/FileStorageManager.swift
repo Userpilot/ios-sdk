@@ -116,12 +116,12 @@ extension FileStorageManager {
     private func removeExcessFiles(toFitSize currentSize: Int64) {
         let files = try? fileManager.contentsOfDirectory(
             at: storageDirectory, includingPropertiesForKeys: nil, options: [])
-        guard let filesList = files else { return }
+        guard let files else { return }
 
         var totalSize = currentSize
         var fileDetails: [(URL, Int64)] = []
 
-        for file in filesList {
+        for file in files {
             let fileSize = (try? file.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
             fileDetails.append((file, Int64(fileSize)))
         }

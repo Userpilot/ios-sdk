@@ -164,7 +164,7 @@ internal class ExperienceViewModel {
         guard step > lastStep else { return }
         lastStep = step
 
-        guard let mobileContent = mobileContent else { return }
+        guard let mobileContent else { return }
 
         let eventStepCompleted = ExperienceStepCompletedEvent(
             mobileContentID: mobileContent.id,
@@ -187,7 +187,7 @@ internal class ExperienceViewModel {
      - Parameter step: The step number that was dismissed.
      */
     func onDismissStep(step: Int) {
-        guard let mobileContent = mobileContent else { return }
+        guard let mobileContent else { return }
         let eventExperienceDismissed = ExperienceDismissedEvent(
             mobileContentID: mobileContent.id,
             appToken: config.token,

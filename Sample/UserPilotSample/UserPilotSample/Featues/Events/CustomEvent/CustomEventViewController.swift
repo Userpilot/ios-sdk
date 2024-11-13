@@ -65,7 +65,7 @@ extension CustomEventViewController {
         DialogManager.shared().showAPIAlertDialog(propertyTitle: propertyTitle,
                                                   propertyValue: propertyValue,
                                                   doneButtonHandler: { [weak self] propertyTitle, propertyValue in
-            guard let self = self else { return }
+            guard let self else { return }
             self.addUserProperty(propertyTitle, propertyValue)
         })
     }
@@ -74,12 +74,12 @@ extension CustomEventViewController {
         let propertyView = PropertyView()
 
         propertyView.onEditProperty = { [weak self] propertyTitle, propertyValue in
-            guard let self = self else { return }
+            guard let self else { return }
             self.showAddEventPropertyDiaog(propertyTitle, propertyValue)
         }
 
         propertyView.onDeleteProperty = { [weak self] propertyTitle, _ in
-            guard let self = self else { return }
+            guard let self else { return }
             if let view = eventPropertiesViews[propertyTitle] {
                 self.eventPropertiesStackView.removeItemFromStackView(view)
                 view.removeFromSuperview()

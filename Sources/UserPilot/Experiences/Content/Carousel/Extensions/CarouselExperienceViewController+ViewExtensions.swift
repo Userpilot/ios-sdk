@@ -90,7 +90,7 @@ internal extension CarouselExperienceViewController {
             action: step.buttonAction,
             theme: theme
         ) { [weak self] action in
-            guard let self = self else { return }
+            guard let self else { return }
 
             // If it's the last step, handle dismissal and trigger actions accordingly.
             if self.isLastStep() {
@@ -134,7 +134,7 @@ internal extension CarouselExperienceViewController {
     /// Closes the carousel experience view and triggers the onDismiss event.
     func closeExperience() {
         dismiss(animated: true, completion: { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.experienceViewModel.onDismissStep(step: self.collectionView.currentIndex)
         })
     }

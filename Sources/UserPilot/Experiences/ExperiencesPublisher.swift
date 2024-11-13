@@ -115,8 +115,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 return
             }
 
-            if let mobileTheme = mobileContent {
-                checkCachedThemes(mobileTheme.baseThemeID, mobileTheme.type)
+            if let mobileContent {
+                checkCachedThemes(mobileContent.baseThemeID, mobileContent.type)
             } else {
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = currentScreen
@@ -165,7 +165,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             canTriggerManualExperience()
         else { return }
             let experienceViewModel = ExperienceViewModel(container: self.container)
-            if let mobileContent = mobileContent {
+            if let mobileContent {
                 switch mobileContent.type {
                 case .carousel:
                     openCarouselExperience(topViewController, experienceViewModel)

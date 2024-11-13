@@ -109,7 +109,7 @@ internal class UPButtonView: UIButton {
 
     /// Applies text and styling.
     private func applyStyle(with line: Line?, and theme: ExperienceTheme) {
-        guard let line = line else { return }
+        guard let line else { return }
         setTitle(line.buttonTitle, for: .normal)
         contentHorizontalAlignment = line.buttonAlignment
 
@@ -123,7 +123,7 @@ internal class UPButtonView: UIButton {
 
     /// Handler for button tap action.
     @objc private func buttonTapped() {
-        guard let action = action else { return }
+        guard let action else { return }
         callback?(action)
     }
 }

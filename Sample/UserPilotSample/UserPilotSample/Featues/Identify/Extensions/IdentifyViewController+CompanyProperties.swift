@@ -15,7 +15,7 @@ extension IdentifyViewController {
         DialogManager.shared().showAPIAlertDialog(propertyTitle: propertyTitle,
                                                   propertyValue: propertyValue,
                                                   doneButtonHandler: { [weak self] propertyTitle, propertyValue in
-            guard let self = self else { return }
+            guard let self else { return }
             self.addCompanyProperty(propertyTitle, propertyValue)
         })
     }
@@ -24,12 +24,12 @@ extension IdentifyViewController {
         let propertyView = PropertyView()
 
         propertyView.onEditProperty = { [weak self] propertyTitle, propertyValue in
-            guard let self = self else { return }
+            guard let self else { return }
             self.showAddCompanyPropertyDialog(propertyTitle, propertyValue)
         }
 
         propertyView.onDeleteProperty = { [weak self] propertyTitle, _ in
-            guard let self = self else { return }
+            guard let self else { return }
             if let view = companyPropertiesViews[propertyTitle] {
                 self.companyPropertiesStackView.removeItemFromStackView(view)
                 view.removeFromSuperview()

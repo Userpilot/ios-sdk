@@ -261,7 +261,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func trackEvent(_ event: Event) {
         readWriteLock.write { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             guard
                 !eventsName.contains(event.eventTitle),
                 eventsCount < GeneralConstants.MAX_EVENTS_PER_SCREEN
@@ -292,36 +292,36 @@ extension AnalyticsPublisher {
         }
 
         /// Identify event
-        if let identifyEvent = cachedIdentifyEvent {
+        if let cachedIdentifyEvent {
             var payload: [String: Any] = [:]
-            guard let userID = identifyEvent.userID else { return }
+            guard let userID = cachedIdentifyEvent.userID else { return }
             // In-case identify event called again when joining socket channel
             if storage.userID.isNotEmpty && userID != storage.userID {
-                identify(identifyEvent)
+                identify(cachedIdentifyEvent)
                 return
             }
-            payload[AnalyticsPublisher.metaDataProperty] = identifyEvent.properties ?? [:]
-            if let company = identifyEvent.company, !company.isEmpty {
+            payload[AnalyticsPublisher.metaDataProperty] = cachedIdentifyEvent.properties ?? [:]
+            if let company = cachedIdentifyEvent.company, !company.isEmpty {
                 payload[AnalyticsPublisher.identifyCompanyProperty] = company
             }
-            socketManager.publish(identifyEvent.eventName, payload: payload)
+            socketManager.publish(cachedIdentifyEvent.eventName, payload: payload)
         }
 
         /// Screen event
-        if let screenEvent = lastScreenViewed, screenEvent.0 == false {
+        if let lastScreenViewed, lastScreenViewed.0 == false {
             var payload: [String: Any] = [:]
-            payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.1.screenTitle
+            payload[AnalyticsPublisher.screenTitleProperty] = lastScreenViewed.1.screenTitle
             payload[AnalyticsPublisher.metaDataProperty] = [
                 AnalyticsPublisher.isSessionStartedProperty: userPilot?.sessionStarted ?? false
             ]
             userPilot?.updateSessionStartState()
-            socketManager.publish(screenEvent.1.eventName, payload: payload)
+            socketManager.publish(lastScreenViewed.1.eventName, payload: payload)
         }
 
         /// Track event
-        if let event = cachedEvent {
+        if let cachedEvent {
             clearCachedEvent()
-            self.eventsToFlush.append(event)
+            self.eventsToFlush.append(cachedEvent)
             flushTrackedEvents()
         }
     }

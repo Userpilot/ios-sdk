@@ -7,9 +7,8 @@
 
 import Foundation
 
-
 class EnvironmentManager {
-    
+
     static let shared = EnvironmentManager()
 
     private init() {}

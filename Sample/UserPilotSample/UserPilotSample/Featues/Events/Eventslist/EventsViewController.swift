@@ -38,7 +38,7 @@ class EventsViewController: BaseViewController {
     private func trackEvent(_ position: Int, _ title: String?, _ value: String?) {
         var properties: [String: Any] = [:]
 
-        if let title = title, !title.isEmpty, let value = value, !value.isEmpty {
+        if let title, !title.isEmpty, let value = value, !value.isEmpty {
             properties[title] = value
         }
 

@@ -116,7 +116,7 @@ extension DialogViewController {
     /// Dismisses the dialog with a fade-out animation.
     func dismissDialog(completion: (() -> Void)? = nil) {
         UIView.animate(withDuration: 0.2, animations: { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.dimmedView.alpha = 0
             self.mainContainerView.alpha = 0
         }, completion: { [weak self] _ in
