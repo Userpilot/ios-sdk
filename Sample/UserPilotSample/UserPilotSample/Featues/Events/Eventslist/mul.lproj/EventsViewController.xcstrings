@@ -3,7 +3,7 @@
   "strings" : {
     "hpT-Jc-gdz.normalTitle" : {
       "comment" : "Class = \"UIButton\"; normalTitle = \"Custom event\"; ObjectID = \"hpT-Jc-gdz\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

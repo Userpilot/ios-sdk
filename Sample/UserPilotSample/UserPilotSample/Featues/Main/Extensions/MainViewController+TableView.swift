@@ -31,7 +31,7 @@ extension MainViewController: UITableViewDelegate, UITableViewDataSource {
         case .screens:
             FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
         case .events:
-            FlowRoutingManager.shared.openViewController(EventsViewController.newInstance())
+            FlowRoutingManager.shared.openViewController(CustomEventViewController.newInstance())
         case .configurations:
             showConfigurationDialog()
         }

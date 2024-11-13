@@ -2,6 +2,7 @@
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
+        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
@@ -22,9 +23,8 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Cit-w0-0Ta">
-                    <rect key="frame" x="16" y="72" width="40" height="40"/>
+                    <rect key="frame" x="16.000000000000004" y="72" width="49.333333333333343" height="40"/>
                     <constraints>
-                        <constraint firstAttribute="width" constant="40" id="CzW-wr-WW5"/>
                         <constraint firstAttribute="height" constant="40" id="fQy-lM-Ha4"/>
                     </constraints>
                     <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -94,6 +94,8 @@
                                         <constraint firstItem="krt-uB-xj3" firstAttribute="centerY" secondItem="IGA-Rp-Nj4" secondAttribute="centerY" id="ZtV-4N-zqe"/>
                                         <constraint firstAttribute="trailing" secondItem="krt-uB-xj3" secondAttribute="trailing" constant="16" id="eZD-15-hCM"/>
                                         <constraint firstItem="IGA-Rp-Nj4" firstAttribute="leading" secondItem="xGU-yU-cUW" secondAttribute="leading" constant="16" id="jap-6n-efY"/>
+                                        <constraint firstItem="krt-uB-xj3" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="IGA-Rp-Nj4" secondAttribute="trailing" constant="8" symbolic="YES" id="qtb-Nd-vnv"/>
+                                        <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="0gb-3x-vo7" secondAttribute="trailing" constant="20" symbolic="YES" id="tpn-Cx-Exl"/>
                                     </constraints>
                                 </view>
                                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="vHm-cp-5ln">
@@ -133,6 +135,17 @@
                         <action selector="onTrackEventButtonClicked:" destination="-1" eventType="touchUpInside" id="vsH-Nz-x2t"/>
                     </connections>
                 </button>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mWB-sB-Srg">
+                    <rect key="frame" x="291" y="78.666666666666671" width="86" height="27"/>
+                    <fontDescription key="fontDescription" type="system" weight="medium" pointSize="12"/>
+                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                    <state key="normal" title="Advance event">
+                        <color key="titleColor" name="AccentColor"/>
+                    </state>
+                    <connections>
+                        <action selector="onAdvanceEventButtonClicked:" destination="-1" eventType="touchUpInside" id="5Sy-KZ-KRE"/>
+                    </connections>
+                </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="ukI-9b-ZLq"/>
             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
@@ -143,10 +156,14 @@
                 <constraint firstItem="UcY-5a-lOY" firstAttribute="centerX" secondItem="1Nf-lv-g8u" secondAttribute="centerX" id="Gmx-Iv-YAm"/>
                 <constraint firstItem="Cit-w0-0Ta" firstAttribute="leading" secondItem="ukI-9b-ZLq" secondAttribute="leading" constant="16" id="HOl-yd-Ogs"/>
                 <constraint firstItem="UVy-jv-DWl" firstAttribute="top" secondItem="Cit-w0-0Ta" secondAttribute="bottom" constant="8" id="IxK-gV-fpw"/>
+                <constraint firstItem="UcY-5a-lOY" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Cit-w0-0Ta" secondAttribute="trailing" constant="8" symbolic="YES" id="Mva-C0-Ezz"/>
                 <constraint firstItem="UVy-jv-DWl" firstAttribute="trailing" secondItem="ukI-9b-ZLq" secondAttribute="trailing" id="Qxd-TZ-Lac"/>
                 <constraint firstItem="VPL-jX-OB7" firstAttribute="width" secondItem="1Nf-lv-g8u" secondAttribute="width" id="Zus-Kw-hhB"/>
+                <constraint firstItem="mWB-sB-Srg" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="UcY-5a-lOY" secondAttribute="trailing" constant="8" symbolic="YES" id="h5j-9a-UqZ"/>
                 <constraint firstItem="ukI-9b-ZLq" firstAttribute="trailing" secondItem="k8g-dE-4cf" secondAttribute="trailing" constant="16" id="heA-eI-cjC"/>
                 <constraint firstItem="k8g-dE-4cf" firstAttribute="leading" secondItem="ukI-9b-ZLq" secondAttribute="leading" constant="16" id="iPp-rv-D0g"/>
+                <constraint firstItem="ukI-9b-ZLq" firstAttribute="trailing" secondItem="mWB-sB-Srg" secondAttribute="trailing" constant="16" id="nK7-2d-58d"/>
+                <constraint firstItem="mWB-sB-Srg" firstAttribute="centerY" secondItem="UcY-5a-lOY" secondAttribute="centerY" id="pJ3-Rt-SAQ"/>
                 <constraint firstItem="UcY-5a-lOY" firstAttribute="centerY" secondItem="Cit-w0-0Ta" secondAttribute="centerY" id="uzY-aF-aKs"/>
                 <constraint firstItem="UVy-jv-DWl" firstAttribute="leading" secondItem="ukI-9b-ZLq" secondAttribute="leading" id="zxq-Hf-xjL"/>
             </constraints>

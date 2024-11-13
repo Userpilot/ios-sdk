@@ -36,6 +36,7 @@
 		ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */; };
 		ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */; };
 		ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */; };
+		ABCD7E312CE48212008393E5 /* EnvironmentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */; };
 		ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */; };
 		ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
@@ -100,6 +101,7 @@
 		ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPilotManager.swift; sourceTree = "<group>"; };
 		ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Regular.ttf"; sourceTree = "<group>"; };
 		ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwitcher-Grypen-Regular.ttf"; sourceTree = "<group>"; };
+		ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentManager.swift; sourceTree = "<group>"; };
 		ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkViewController.swift; sourceTree = "<group>"; };
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+UserProperties.swift"; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 				ABC0AE162C7205BA00BB9F62 /* UserPilot */,
 				AB6DBD3B2C68CDB90009BB11 /* Routing */,
 				AB585F652CD79D8C00E2A66D /* StorageManager.swift */,
+				ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -566,6 +569,7 @@
 				ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */,
 				AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
+				ABCD7E312CE48212008393E5 /* EnvironmentManager.swift in Sources */,
 				ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */,
 				ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */,
 				ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */,
@@ -810,9 +814,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YXTPH2TH3D;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -829,6 +836,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "UserPilotSample12-11-2024";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -840,9 +849,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YXTPH2TH3D;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -859,6 +871,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "UserPilotSample12-11-2024";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

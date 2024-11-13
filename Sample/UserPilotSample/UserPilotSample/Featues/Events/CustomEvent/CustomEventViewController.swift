@@ -35,6 +35,10 @@ class CustomEventViewController: BaseViewController {
         showAddEventPropertyDiaog()
     }
 
+    @IBAction func onAdvanceEventButtonClicked(_ sender: UIButton) {
+        FlowRoutingManager.shared.openViewController(EventsViewController.newInstance())
+    }
+
 }
 
 // MARK: - Helper methods

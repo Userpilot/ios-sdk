@@ -22,10 +22,7 @@ internal protocol ThemeHandling: AnyObject {
     func saveTheme(_ themeResponse: ThemeContent)
 
     /// Retrieves theme data for the specified theme ID.
-    func getThemeById(_ themeId: Int, _ type: ContentType) -> ThemeData?
-
-    /// Checks if the specified theme ID is already cached.
-    func containsTheme(_ themeId: Int, _ type: ContentType) -> Bool
+    func getThemeById(_ themeId: Int) -> ThemeData?
 
     /// Merges multiple themes into a unified theme.
     func mergeThemes(
@@ -74,8 +71,7 @@ internal class ThemeHandler: ThemeHandling {
     // MARK: - Properties
 
     /// Cached theme data mapped by their IDs.
-    private var carouselThemes: [Int: ThemeData] = [:]
-    private var slideOutThemes: [Int: ThemeData] = [:]
+    private var themes: [Int: ThemeData] = [:]
 
     // MARK: - ThemeHandling Implementation
 
@@ -86,11 +82,7 @@ internal class ThemeHandler: ThemeHandling {
      */
     func saveTheme(_ themeContent: ThemeContent) {
         if let id = themeContent.id, let themeData = themeContent.themeData {
-            if themeContent.themeData?.carousel != nil {
-                carouselThemes[id] = themeData
-            } else if themeContent.themeData?.slideOut != nil {
-                slideOutThemes[id] = themeData
-            }
+            themes[id] = themeData
         }
     }
 
@@ -100,18 +92,8 @@ internal class ThemeHandler: ThemeHandling {
      - Parameter themeId: The ID of the theme to retrieve.
      - Returns: The theme data if found, or `nil` if no theme with the given ID is cached.
      */
-    func getThemeById(_ themeId: Int, _ type: ContentType) -> ThemeData? {
-        return type == .carousel ? carouselThemes[themeId] : slideOutThemes[themeId]
-    }
-
-    /**
-     Checks if the provided set of theme IDs is fully contained within the cached themes.
-
-     - Parameter themeId: The set of theme IDs to check.
-     - Returns: `true` if the theme ID is cached, `false` otherwise.
-     */
-    func containsTheme(_ themeId: Int, _ type: ContentType) -> Bool {
-        return type == .carousel ? carouselThemes.keys.contains(themeId) : slideOutThemes.keys.contains(themeId)
+    func getThemeById(_ themeId: Int) -> ThemeData? {
+        return themes[themeId]
     }
 
     /*

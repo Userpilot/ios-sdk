@@ -19,11 +19,7 @@ class MainViewController: BaseViewController {
 
     // MARK: - Properties
     internal lazy var content: [Content] = {
-        var content: [Content] = [.identify, .screens, .events]
-        if let isInternalRelease = readConfigValue(forKey: "IS_INTERNAL_RELEASE") as? String,
-            isInternalRelease == "true" {
-            content.append(.configurations)
-        }
+        var content: [Content] = [.identify, .screens, .events, .configurations]
         return content
     }()
 
@@ -37,17 +33,16 @@ class MainViewController: BaseViewController {
         )
          */
 
-//        delay(4) {
-//            UserPilotManager.shared.triggerExperience(token: "mobile:IEebGyacOX")
-//        }
+        /*
+        delay(4) {
+            UserPilotManager.shared.triggerExperience(token: "mobile:IEebGyacOX")
+        }
+         */
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if
-            let isInternalRelease = readConfigValue(forKey: "IS_INTERNAL_RELEASE") as? String,
-            isInternalRelease == "true",
-            let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken),
+        if let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken),
             appToken == nil {
             showConfigurationDialog()
         }

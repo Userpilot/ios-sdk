@@ -73,7 +73,7 @@ internal class ExperienceViewModel {
             return
         }
         self.mobileContent = mobileContent
-        let baseTheme = themeHandler.getThemeById(mobileContent.baseThemeID, mobileContent.type)
+        let baseTheme = themeHandler.getThemeById(mobileContent.baseThemeID)
 
         mobileContent.steps.forEach { step in
             mergedTheme.append(

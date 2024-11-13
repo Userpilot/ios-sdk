@@ -33,10 +33,6 @@ class EventsViewController: BaseViewController {
         close()
     }
 
-    @IBAction func onCustomEventButtonClicked(_ sender: UIButton) {
-        FlowRoutingManager.shared.openViewController(CustomEventViewController.newInstance())
-    }
-
     // MARK: - Track Event
 
     private func trackEvent(_ position: Int, _ title: String?, _ value: String?) {

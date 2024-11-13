@@ -144,7 +144,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      - Parameter themeID: A theme ID to check against the cached themes.
      */
     private func checkCachedThemes(_ themeID: Int, _ type: ContentType) {
-        if themeHandler.getThemeById(themeID, type) != nil {
+        if themeHandler.getThemeById(themeID) != nil {
             openExperienceFlow()
         } else {
             fetchThemeData(themeID)
@@ -170,7 +170,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 case .carousel:
                     openCarouselExperience(topViewController, experienceViewModel)
                 case .slideout:
-                    if let theme = themeHandler.getThemeById(mobileContent.baseThemeID, .slideout),
+                    if let theme = themeHandler.getThemeById(mobileContent.baseThemeID),
                         theme.isDialogExperience {
                         self.openSlideOutDialogExperience(topViewController, experienceViewModel)
                     } else {

@@ -91,6 +91,36 @@
         }
       }
     },
+    "mWB-sB-Srg" : {
+      "comment" : "Advance event",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حدث مخصص"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Advance event"
+          }
+        }
+      }
+    },
+    "mWB-sB-Srg.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Advance event\"; ObjectID = \"mWB-sB-Srg\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Advance event"
+          }
+        }
+      }
+    },
     "UcY-5a-lOY.text" : {
       "comment" : "Class = \"UILabel\"; text = \"Track event\"; ObjectID = \"UcY-5a-lOY\";",
       "extractionState" : "extracted_with_value",
