@@ -69,6 +69,23 @@
         }
       }
     },
+    "logs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سجل الأحداث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events log"
+          }
+        }
+      }
+    },
     "screens_title" : {
       "extractionState" : "manual",
       "localizations" : {

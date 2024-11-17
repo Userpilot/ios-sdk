@@ -15,17 +15,10 @@ import UIKit
 
 /// `UserPilot` manages the lifecycle of the UserPilot SDK and tracks user activity, enabling 
 /// personalized content delivery.
+@objc(UserPilot)
 public class UserPilot: NSObject {
 
     // MARK: - Properties
-
-    // Socket state enums
-    enum SocketState {
-        case shuttingDown
-        case switchingUser
-        case opened
-        case closed
-    }
 
     /// A dependency injection container that stores and provides necessary services like analytics,
     /// storage, and networking.
@@ -69,6 +62,7 @@ public class UserPilot: NSObject {
      - Parameter config: A `Config` object that contains various initialization settings like logging, 
      API keys, and anonymous user tracking settings.
      */
+    @objc
     public init(config: Config) {
         self.config = config
         super.init()
@@ -102,11 +96,13 @@ extension UserPilot {
      
      - Returns: A string representing the current version of the UserPilot SDK.
      */
+    @objc(sdkVersion)
     public static func version() -> String {
         return userPilotVersion
     }
 
     /// Retrieves the current version of the SDK for this instance.
+    @objc
     public func version() -> String {
         return UserPilot.version()
     }
@@ -138,10 +134,6 @@ extension UserPilot {
         container.registerLazy(FileStoring.self, initializer: FileStorageManager.init)
     }
 
-    private func checkUserStatus() {
-        analyticsPublisher.resume()
-    }
-
 }
 
 // MARK: - Tracking APIs
@@ -159,6 +151,7 @@ extension UserPilot {
        - properties: An optional dictionary containing user-specific properties like email, role, or age.
        - company: An optional dictionary containing company-specific properties for users associated with company.
      */
+    @objc
     public func identify(userID: String, properties: Payload = nil, company: Payload = nil) {
         if userID.trim().isEmpty { return }
         let event = Event(type: .identify(userID.trim()), properties: properties, company: company)
@@ -171,6 +164,7 @@ extension UserPilot {
      This method generates a unique anonymous ID, allowing the SDK to track behavior and trigger relevant content
      even when the user has not explicitly signed in or identified themselves.
      */
+    @objc
     public func anonymous() {
         let userID = "\(config.token)_\(anonymousFactory())"
         identify(userID: userID)
@@ -184,6 +178,7 @@ extension UserPilot {
       
      - Parameter title: The title of the screen that the user has viewed.
      */
+    @objc
     public func screen(_ title: String) {
         analyticsPublisher.publish(Event(type: .screen(title)))
     }
@@ -199,6 +194,7 @@ extension UserPilot {
        - name: The name of the custom event (e.g., "purchase", "button_click").
        - properties: An optional dictionary containing additional context or metadata related to the event.
      */
+    @objc
     public func track(eventName: String, properties: Payload = nil) {
         analyticsPublisher.publish(Event(type: .event(eventName), properties: properties))
     }
@@ -209,6 +205,7 @@ extension UserPilot {
      This method should be called when the user logs out of the application.
      It calls clean method and close user socket.
      */
+    @objc
     public func logout() {
         clean()
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
@@ -218,31 +215,43 @@ extension UserPilot {
      This function gathers application settings (such as the SDK version and user data) into a dictionary,
      converts it into a JSON string, and logs it for debugging purposes.
      */
-    public func settings() {
+    @objc
+    public func settings() -> [String: Any] {
+        var autoPropertiesDict: [String: Any]?
+        var appPropertiesDict: [String: Any]?
+        var user: [String: Any]?
+
         // Convert the JSON strings to dictionaries
-        let autoPropertiesDict = try? JSONSerialization.jsonObject(with: Data(
-            autoPropertyDecorator.autoProperties.toJSONString()?.utf8
-            ?? "".utf8), options: []) as? [String: Any]
-        let appPropertiesDict = try? JSONSerialization.jsonObject(with: Data(
-            autoPropertyDecorator.appProperties.toJSONString()?.utf8 ?? "".utf8),
-            options: []) as? [String: Any]
-        let user = try? JSONSerialization.jsonObject(with: Data(
-            storage.user.utf8), options: []) as? [String: Any]
+        if let autoPropertiesData = autoPropertyDecorator.autoProperties.toJSONString()?.data(using: .utf8) {
+            autoPropertiesDict = (try? JSONSerialization.jsonObject(
+                with: autoPropertiesData, options: [])) as? [String: Any]
+        }
+
+        if let appPropertiesData = autoPropertyDecorator.appProperties.toJSONString()?.data(using: .utf8) {
+            appPropertiesDict = (try? JSONSerialization.jsonObject(
+                with: appPropertiesData, options: [])) as? [String: Any]
+        }
+
+        if let userData = storage.user.data(using: .utf8) {
+            user = (try? JSONSerialization.jsonObject(with: userData, options: [])) as? [String: Any]
+        }
 
         // Create the dictionary for settings
-        let settings: [String: Any?] = [
+        let settings: [String: Any] = [
             "SDK version": version(),
-            "User": user,
-            "Auto properties": autoPropertiesDict,
-            "App properties": appPropertiesDict
+            "User": user ?? [:],
+            "Auto properties": autoPropertiesDict ?? [:],
+            "App properties": appPropertiesDict ?? [:]
         ]
 
-        // Convert the dictionary to JSON string
         if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .withoutEscapingSlashes) {
             // swiftlint:disable:next non_optional_string_data_conversion
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            logger.debug("⚙️ Settings -> %{public}@", jsonString ?? "")
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                logger.debug("⚙️ Settings -> %{public}@", jsonString)
+            }
         }
+
+        return settings
     }
 
     // MARK: - SDK APIs
@@ -281,8 +290,9 @@ extension UserPilot {
        - experienceId: unique identifier for the experience to be launched, this ID should be provided
         by the backend or obtained during experience configuration.
      */
-    public func triggerExperience(experienceId: String) {
-        experiencesPublisher.triggerExperience(experienceId)
+    @objc
+    public func triggerExperience(_ experienceToken: String) {
+        experiencesPublisher.triggerExperience(experienceToken)
     }
 
 }

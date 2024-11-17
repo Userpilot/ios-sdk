@@ -272,33 +272,6 @@ extension FlowRoutingManager {
 
 }
 
-extension UIWindow {
-
-    func visibleViewController() -> UIViewController? {
-        if let rootViewController: UIViewController = self.rootViewController {
-            return UIWindow.getVisibleViewControllerFrom(viewController: rootViewController)
-        }
-        return nil
-    }
-
-    static func getVisibleViewControllerFrom(viewController: UIViewController) -> UIViewController {
-        if let navigationController = viewController as? UINavigationController,
-           let visibleController = navigationController.visibleViewController {
-            return UIWindow.getVisibleViewControllerFrom(viewController: visibleController )
-        } else if let tabBarController = viewController as? UITabBarController,
-                  let selectedTabController = tabBarController.selectedViewController {
-            return UIWindow.getVisibleViewControllerFrom(viewController: selectedTabController )
-        } else {
-            if let presentedViewController = viewController.presentedViewController {
-                return UIWindow.getVisibleViewControllerFrom(viewController: presentedViewController)
-            } else {
-                return viewController
-            }
-        }
-    }
-
-}
-
 extension UIViewController {
 
     static func topMostViewController() -> UIViewController? {
@@ -327,6 +300,50 @@ extension UIViewController {
             return presentedViewController.topMostViewController()
         } else {
             return self
+        }
+    }
+
+}
+
+extension FlowRoutingManager {
+
+    func showAlertMessage(_ message: String) {
+        guard
+            let viewController = FlowRoutingManager.topMostController()
+        else { return }
+        let alertStyle: UIAlertController.Style = UIDevice.current.userInterfaceIdiom == .pad ? .actionSheet : .alert
+        let alert = UIAlertController(title: "Userpilot",
+                                      message: message,
+                                      preferredStyle: alertStyle)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
+        }))
+        viewController.present(alert, animated: true, completion: nil)
+    }
+
+}
+
+extension UIWindow {
+
+    func visibleViewController() -> UIViewController? {
+        if let rootViewController: UIViewController = self.rootViewController {
+            return UIWindow.getVisibleViewControllerFrom(viewController: rootViewController)
+        }
+        return nil
+    }
+
+    static func getVisibleViewControllerFrom(viewController: UIViewController) -> UIViewController {
+        if let navigationController = viewController as? UINavigationController,
+           let visibleController = navigationController.visibleViewController {
+            return UIWindow.getVisibleViewControllerFrom(viewController: visibleController )
+        } else if let tabBarController = viewController as? UITabBarController,
+                  let selectedTabController = tabBarController.selectedViewController {
+            return UIWindow.getVisibleViewControllerFrom(viewController: selectedTabController )
+        } else {
+            if let presentedViewController = viewController.presentedViewController {
+                return UIWindow.getVisibleViewControllerFrom(viewController: presentedViewController)
+            } else {
+                return viewController
+            }
         }
     }
 

@@ -214,10 +214,10 @@ extension SocketManager {
             self.closeSocket()
         }
 
-//        phoenixSocket.onMessage(callback: { [weak self] message in
-//            if message.isInvalidMessage { return }
-//             // self?.$socketSubscription.invoke { $0.onNewMessage(message) }
-//        })
+        phoenixSocket.onMessage(callback: { [weak self] message in
+            if message.isInvalidMessage { return }
+            self?.$socketSubscription.invoke { $0.onNewMessage(message) }
+        })
 
         phoenixSocket.logger = { [weak self] message in
             self?.logger.debug("✈️ SOCKET message: %{public}@", message)

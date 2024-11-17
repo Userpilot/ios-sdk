@@ -22,12 +22,16 @@
 		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
 		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
+		AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */; };
+		AB6ABAAC2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */; };
 		AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */; };
 		AB6DBD382C68CD560009BB11 /* BaseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD372C68CD560009BB11 /* BaseViewController.swift */; };
 		AB6DBD3D2C68CE9D0009BB11 /* FlowRoutingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */; };
 		AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */; };
 		AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD442C68D8560009BB11 /* Utils.swift */; };
 		AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */; };
+		ABAC8E6A2CE9CF21005EEC9D /* SDKEventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABAC8E692CE9CF21005EEC9D /* SDKEventsViewController.xib */; };
+		ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABAC8E6D2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib */; };
 		ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85A2C96D5AF006C9B77 /* PropertyView.swift */; };
 		ABACA85D2C96D5B7006C9B77 /* PropertyView.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABACA85C2C96D5B7006C9B77 /* PropertyView.xib */; };
 		ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */; };
@@ -87,12 +91,18 @@
 		AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ConfigurationsDialogViewController.xib; sourceTree = "<group>"; };
 		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		AB585F672CD79EF400E2A66D /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventsViewController.swift; sourceTree = "<group>"; };
+		AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventTableViewCell.swift; sourceTree = "<group>"; };
 		AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifyViewController.swift; sourceTree = "<group>"; };
 		AB6DBD372C68CD560009BB11 /* BaseViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseViewController.swift; sourceTree = "<group>"; };
 		AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRoutingManager.swift; sourceTree = "<group>"; };
 		AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseNavigationController.swift; sourceTree = "<group>"; };
 		AB6DBD442C68D8560009BB11 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Exensions.swift"; sourceTree = "<group>"; };
+		ABAC8E682CE9CF21005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventsViewController.xib; sourceTree = "<group>"; };
+		ABAC8E6B2CE9CF21005EEC9D /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/SDKEventsViewController.xcstrings; sourceTree = "<group>"; };
+		ABAC8E6C2CE9E9D0005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventTableViewCell.xib; sourceTree = "<group>"; };
+		ABAC8E6F2CE9E9D0005EEC9D /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/SDKEventTableViewCell.xcstrings; sourceTree = "<group>"; };
 		ABACA85A2C96D5AF006C9B77 /* PropertyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyView.swift; sourceTree = "<group>"; };
 		ABACA85C2C96D5B7006C9B77 /* PropertyView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = PropertyView.xib; sourceTree = "<group>"; };
 		ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPropertyDialogViewController.swift; sourceTree = "<group>"; };
@@ -157,6 +167,25 @@
 			path = Configurations;
 			sourceTree = "<group>";
 		};
+		AB6ABAA42CE8890700FB72A8 /* SDKEvents */ = {
+			isa = PBXGroup;
+			children = (
+				AB6ABAA92CE88FC400FB72A8 /* Cells */,
+				AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */,
+				ABAC8E692CE9CF21005EEC9D /* SDKEventsViewController.xib */,
+			);
+			path = SDKEvents;
+			sourceTree = "<group>";
+		};
+		AB6ABAA92CE88FC400FB72A8 /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */,
+				ABAC8E6D2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib */,
+			);
+			path = Cells;
+			sourceTree = "<group>";
+		};
 		AB6DBD2D2C68BF450009BB11 /* Identify */ = {
 			isa = PBXGroup;
 			children = (
@@ -182,23 +211,24 @@
 		AB6DBD352C68CD3B0009BB11 /* Featues */ = {
 			isa = PBXGroup;
 			children = (
+				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
 				ABFB5FD62C916E410054E142 /* Events */,
 				ABF38C822C73886300013F18 /* ScreensFlow */,
 				AB6DBD402C68D2180009BB11 /* Main */,
-				AB6DBD362C68CD450009BB11 /* core */,
+				AB6DBD362C68CD450009BB11 /* Core */,
 				AB6DBD2D2C68BF450009BB11 /* Identify */,
 			);
 			path = Featues;
 			sourceTree = "<group>";
 		};
-		AB6DBD362C68CD450009BB11 /* core */ = {
+		AB6DBD362C68CD450009BB11 /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				AB6DBD372C68CD560009BB11 /* BaseViewController.swift */,
 				AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */,
 			);
-			path = core;
+			path = Core;
 			sourceTree = "<group>";
 		};
 		AB6DBD3B2C68CDB90009BB11 /* Routing */ = {
@@ -505,6 +535,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */,
 				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
 				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
 				AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
@@ -515,6 +546,7 @@
 				C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */,
 				AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */,
 				ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */,
+				ABAC8E6A2CE9CF21005EEC9D /* SDKEventsViewController.xib in Resources */,
 				AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */,
 				ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */,
 				ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */,
@@ -576,7 +608,9 @@
 				AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */,
 				AB01CB102C84985B0069937C /* Screen+Extensions.swift in Sources */,
 				ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */,
+				AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */,
 				ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */,
+				AB6ABAAC2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift in Sources */,
 				AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */,
 				ABACA8652C96E3F5006C9B77 /* DialogManager.swift in Sources */,
 				AB6DBD382C68CD560009BB11 /* BaseViewController.swift in Sources */,
@@ -676,6 +710,24 @@
 			name = EventTableViewCell.xib;
 			sourceTree = "<group>";
 		};
+		ABAC8E692CE9CF21005EEC9D /* SDKEventsViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				ABAC8E682CE9CF21005EEC9D /* Base */,
+				ABAC8E6B2CE9CF21005EEC9D /* mul */,
+			);
+			name = SDKEventsViewController.xib;
+			sourceTree = "<group>";
+		};
+		ABAC8E6D2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				ABAC8E6C2CE9E9D0005EEC9D /* Base */,
+				ABAC8E6F2CE9E9D0005EEC9D /* mul */,
+			);
+			name = SDKEventTableViewCell.xib;
+			sourceTree = "<group>";
+		};
 		C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -740,7 +792,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -798,7 +850,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -814,12 +866,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_IDENTITY = "Apple Distribution";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YXTPH2TH3D;
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -837,7 +887,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "UserPilotSample12-11-2024";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -849,12 +898,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_IDENTITY = "Apple Distribution";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YXTPH2TH3D;
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -872,7 +919,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "UserPilotSample12-11-2024";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

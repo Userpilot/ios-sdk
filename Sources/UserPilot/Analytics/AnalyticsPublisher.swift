@@ -316,6 +316,7 @@ extension AnalyticsPublisher {
             ]
             userPilot?.updateSessionStartState()
             socketManager.publish(lastScreenViewed.1.eventName, payload: payload)
+            broadcastEvent(lastScreenViewed.1, lastScreenViewed.1.screenTitle ?? "", properties: nil)
         }
 
         /// Track event
@@ -357,6 +358,7 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle
                 payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
 
+                broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
                 socketManager.publish(
                     eventToSend.eventName,
                     payload: payload,
@@ -430,6 +432,7 @@ extension AnalyticsPublisher: SocketSubscription {
                 storage.user = newUser.updateUser(event: cachedIdentifyEvent).toJson() ?? ""
                 self.logger.info("👤 USER %{public}@", storage.user)
                 clearCachedIdentifyEvent()
+                broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userID ?? "", properties: payload)
             }
         }
         flushTrackedEvents()
@@ -469,6 +472,21 @@ private extension AnalyticsPublisher {
     /// Clears the cached identify event after it has been successfully sent.
     private func clearCachedEvent() {
         cachedEvent = nil
+    }
+
+}
+
+// MARK: - broadcast event
+
+internal extension AnalyticsPublisher {
+
+    func broadcastEvent(_ event: Event, _ value: String, properties: [String: Any]?) {
+        performOn(.main) { [weak self] in
+            self?.userPilot?.config.analyticsDelegate?.didTrack(
+                analytic: event.userPilotAnalytic,
+                value: value,
+                properties: properties)
+        }
     }
 
 }

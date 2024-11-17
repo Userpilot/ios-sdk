@@ -66,6 +66,17 @@ internal struct Event {
     var userID: String? {
         return type.userID
     }
+
+    var userPilotAnalytic: UserPilotAnalytic {
+        switch type {
+        case .identify:
+            return .identify
+        case .screen:
+            return .screen
+        case .event:
+            return .event
+        }
+    }
 }
 
 // MARK: - Event Logging

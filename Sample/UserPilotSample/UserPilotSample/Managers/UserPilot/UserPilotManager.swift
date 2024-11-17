@@ -19,6 +19,8 @@ class UserPilotManager {
 
     private var userPilot: UserPilot?
 
+    private(set) var userPilotSDKEvents = [UserPilotSDKEvents]()
+
     // MARK: - Life Cycle
 
     private init() { }
@@ -29,15 +31,17 @@ class UserPilotManager {
         guard
             let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
         else { return }
-        userPilot = UserPilot(config: UserPilot
-            .Config(token: appToken)
+        userPilot = UserPilot(config: UserPilot.Config(token: appToken)
             .logging(true)
-            .setNavigationHandler(navigationDelegate: self))
+            .setNavigationHandler(navigationDelegate: self)
+            .setAnalyticsDelegate(analyticsDelegate: self)
+        )
     }
 
     /// UserPilot Settings
-    func settings() {
-        userPilot?.settings()
+    @discardableResult
+    func settings() -> [String: Any] {
+        return userPilot?.settings() ?? [:]
     }
 
     /// Identify user
@@ -66,7 +70,7 @@ class UserPilotManager {
     }
 
     func triggerExperience(token: String) {
-        userPilot?.triggerExperience(experienceId: token)
+        userPilot?.triggerExperience(token)
     }
 
     // MARK: - Test Log multiEvents
@@ -231,13 +235,15 @@ class UserPilotManager {
                         ]
                     )
 
-                    self.userPilot?.settings()
+                    _ = self.userPilot?.settings()
                 }
             }
         }
     }
 
 }
+
+// MARK: - UserPilotNavigationDelegate
 
 extension UserPilotManager: UserPilotNavigationDelegate {
 
@@ -253,4 +259,28 @@ extension UserPilotManager: UserPilotNavigationDelegate {
         }
     }
 
+}
+
+// MARK: - UserPilotAnalyticsDelegate
+
+extension UserPilotManager: UserPilotAnalyticsDelegate {
+
+    func didTrack(analytic: UserPilotAnalytic, value: String, properties: [String: Any]?) {
+        userPilotSDKEvents.insert(UserPilotSDKEvents(analytic: analytic, value: value, properties: properties), at: 0)
+        if analytic == .identify {
+            showIdentifyAlert()
+        }
+    }
+
+    func showIdentifyAlert() {
+        FlowRoutingManager.shared.showAlertMessage("User identify successfully!\nUser details:\n\(settings())")
+    }
+}
+
+// MARK: - Hold SDK events
+
+struct UserPilotSDKEvents {
+    let analytic: UserPilotAnalytic
+    let value: String
+    let properties: [String: Any]?
 }

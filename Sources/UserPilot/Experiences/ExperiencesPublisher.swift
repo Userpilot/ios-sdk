@@ -116,7 +116,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             }
 
             if let mobileContent {
-                checkCachedThemes(mobileContent.baseThemeID, mobileContent.type)
+                checkCachedThemes(mobileContent.baseThemeID)
             } else {
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = currentScreen
@@ -143,7 +143,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
      - Parameter themeID: A theme ID to check against the cached themes.
      */
-    private func checkCachedThemes(_ themeID: Int, _ type: ContentType) {
+    private func checkCachedThemes(_ themeID: Int) {
         if themeHandler.getThemeById(themeID) != nil {
             openExperienceFlow()
         } else {
@@ -226,7 +226,7 @@ extension ExperiencesPublisher: SocketSubscription {
         }
 
         if let mobileContent = mobileContent {
-            checkCachedThemes(mobileContent.baseThemeID, mobileContent.type)
+            checkCachedThemes(mobileContent.baseThemeID)
         }
     }
 
@@ -235,21 +235,21 @@ extension ExperiencesPublisher: SocketSubscription {
 
      - Parameter message: The message object containing payload data.
      */
-//    func onNewMessage(_ message: Message) {
-//        guard let response = message.payload.toJSONString() else { return }
-//
-//        if let mobileContentData = response.toMobileContent() {
-//            mobileContent = mobileContentData.mobileContent
-//        }
-//        if let themeData = response.toMobileTheme() {
-//            themeHandler.saveTheme(themeData)
-//        }
-//
-//        if let mobileContent = mobileContent {
-//            checkCachedThemes(mobileContent.baseThemeID)
-//        }
-//
-//    }
+    func onNewMessage(_ message: Message) {
+        if let payload = message.payload["payload"] as? [String: Any] {
+            guard
+                payload.keys.contains("request_id"),
+                payload["request_id"] as? Int == nil,
+                let mobileContents = payload["mobile_contents"] as? [String: Any],
+                !mobileContents.isEmpty,
+                let mobileContentData = payload.toJSONString()?.toMobileContent()
+            else {
+                return
+            }
+            mobileContent = mobileContentData.mobileContent
+            checkCachedThemes(mobileContentData.mobileContent.baseThemeID)
+        }
+    }
 }
 
 // MARK: - Launch experiences

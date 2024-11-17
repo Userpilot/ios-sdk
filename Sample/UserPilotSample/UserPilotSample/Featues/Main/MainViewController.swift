@@ -18,10 +18,7 @@ class MainViewController: BaseViewController {
     }
 
     // MARK: - Properties
-    internal lazy var content: [Content] = {
-        var content: [Content] = [.identify, .screens, .events, .configurations]
-        return content
-    }()
+    internal lazy var content: [Content] = [.identify, .screens, .events, .configurations, .eventsLog]
 
     override func viewDidLoad() {
         super.viewDidLoad()

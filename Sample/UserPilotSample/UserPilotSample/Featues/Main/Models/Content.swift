@@ -12,6 +12,7 @@ enum Content {
     case screens
     case events
     case configurations
+    case eventsLog
 
     var title: String {
         switch self {
@@ -23,6 +24,8 @@ enum Content {
             return "events_title".localized
         case .configurations:
             return "configurations_title".localized
+        case .eventsLog:
+            return "logs".localized
         }
     }
 }

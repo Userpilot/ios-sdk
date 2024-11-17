@@ -48,6 +48,7 @@ class IdentifyViewController: BaseViewController {
     }
 
     @IBAction func onLogout(_ sender: UIButton) {
+        FlowRoutingManager.shared.showAlertMessage("User logged out successfully!")
         UserPilotManager.shared.logout()
     }
 
@@ -71,8 +72,12 @@ extension IdentifyViewController: UITextFieldDelegate {
 extension IdentifyViewController {
 
     private func identifyUser() {
-        guard let userID = textFieldUserID.text, !userID.isEmpty
-        else { return }
+        guard
+            let userID = textFieldUserID.text, !userID.isEmpty
+        else {
+            FlowRoutingManager.shared.showAlertMessage("Please insert User ID!")
+            return
+        }
         var userProperties: [String: String] = [:]
         for (_, propertyView) in userPropertiesViews {
             userProperties[propertyView.getParams().0] = propertyView.getParams().1
