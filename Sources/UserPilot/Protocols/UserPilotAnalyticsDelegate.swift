@@ -34,8 +34,8 @@ public protocol UserPilotAnalyticsDelegate: AnyObject {
     ///   - analytic: The type of the analytic.
     ///   - value: Contains the primary value of the analytic being tracked.
     ///    For events - the event name, for screens - the screen title,
-    ///   for identify - the user ID.
+    ///    for identify - the user ID.
     ///   - properties: Optional properties that provide additional context
-    ///    about the analytic.
+    ///     about the analytic.
     func didTrack(analytic: UserPilotAnalytic, value: String, properties: [String: Any]?)
 }
