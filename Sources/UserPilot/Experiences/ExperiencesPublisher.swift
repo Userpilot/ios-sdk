@@ -26,11 +26,17 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Get current experience
     func getActiveMobileContent() -> MobileContent?
 
+    /// Get current experience
+    func getSeenExperience(_ screenTitle: String) -> Set<Int>
+
     /// Send experience event to backend
     func sendSocketRequest(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceToken: String)
+
+    /// manually end experience
+    func endExperience()
 }
 
 internal class ExperiencesPublisher: ExperiencesPublishing {
@@ -61,8 +67,15 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// The current screen name in the application, used to track active screens.
     private var currentScreen: String = ""
 
+    /// Cache seen experiences per screen.
+    private var seenExperiences = Set<Int>()
+
     /// Holds the active carousel content, if any, that is being displayed.
     private var mobileContent: MobileContent?
+
+    /// Holds current displayed experience, Array to support more than one experience
+    private var experiences: [WeakContent] = []
+
     // MARK: - Initializer
 
     /**
@@ -96,6 +109,13 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         return currentContent
     }
 
+    func getSeenExperience(_ screenTitle: String) -> Set<Int> {
+        if screenTitle != currentScreen {
+            seenExperiences.removeAll()
+        }
+        return seenExperiences
+    }
+
     /**
      Sends a socket request based on the provided event interface.
      
@@ -106,10 +126,12 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                               payload: sdkEvent.eventPayload,
                               socketSubscription: self)
 
-        if sdkEvent.eventName == "mobile_content" &&
-            (sdkEvent.eventPayload["act"] as? String == "dismissed" ||
-                sdkEvent.eventPayload["act"] as? String == "completed") {
+        if sdkEvent.eventName == "dismissed_mobile_content" ||
+            sdkEvent.eventName == "complete_mobile_content" {
 
+            let isCarouselExperience = experiences.first?
+                .value?.isKind(of: CarouselExperienceViewController.self) == true
+            experiences.removeAll()
             if sdkEvent.hasDeepLink {
                 mobileContent = nil
                 return
@@ -118,8 +140,14 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             if let mobileContent {
                 checkCachedThemes(mobileContent.baseThemeID)
             } else {
+                if isCarouselExperience { return }
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = currentScreen
+                payload[AnalyticsPublisher.metaDataProperty] = [
+                    AnalyticsPublisher.isSessionStartedProperty: false,
+                    AnalyticsPublisher.fakeReload: true,
+                    AnalyticsPublisher.seenContents: Array(seenExperiences)
+                ]
                 socketManager.publish(EventType.screenEvent, payload: payload)
             }
         }
@@ -136,6 +164,25 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     func triggerExperience(_ experienceToken: String) {
         if mobileContent != nil { return }
         sendSocketRequest(ExperienceContentEvent(experienceToken: experienceToken))
+    }
+
+    /*
+     End experience manually
+     */
+    func endExperience() {
+        if experiences.isEmpty { return }
+        experiences.forEach { experience in
+            if experience.value?.isKind(of: CarouselExperienceViewController.self) == true {
+                // swiftlint:disable:next force_cast
+                (experience.value as! CarouselExperienceViewController).closeExperience()
+            } else if experience.value?.isKind(of: SlideOutBottomSheetViewController.self) == true {
+                // swiftlint:disable:next force_cast
+                (experience.value as! SlideOutBottomSheetViewController).dismissBottomSheet()
+            } else if experience.value?.isKind(of: SlideOutDialogViewController.self) == true {
+                // swiftlint:disable:next force_cast
+                (experience.value as! SlideOutDialogViewController).dismissDialog()
+            }
+        }
     }
 
     /**
@@ -160,15 +207,16 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     private func openExperienceFlow() {
         performOn(.main) { [weak self] in
         guard
-            let self = self,
+            let self,
             let topViewController = UIApplication.shared.topViewController(),
-            canTriggerManualExperience()
+            self.canShowExperience()
         else { return }
             let experienceViewModel = ExperienceViewModel(container: self.container)
             if let mobileContent {
+                self.seenExperiences.insert(mobileContent.id)
                 switch mobileContent.type {
                 case .carousel:
-                    openCarouselExperience(topViewController, experienceViewModel)
+                    self.openCarouselExperience(topViewController, experienceViewModel)
                 case .slideout:
                     if let theme = themeHandler.getThemeById(mobileContent.baseThemeID),
                         theme.isDialogExperience {
@@ -211,18 +259,25 @@ extension ExperiencesPublisher: SocketSubscription {
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
         if eventName == EventType.screenEvent {
             currentScreen = payload?[AnalyticsPublisher.screenTitleProperty] as? String ?? ""
+            getSeenExperience(currentScreen)
         }
 
         guard
+            !hasActiveExperience(),
             !message.payload.isEmpty,
             let response = message.payload.toJSONString()
         else { return }
 
-        if let mobileContentData = response.toMobileContent() {
+        if eventName == EventType.screenEvent,
+           let contentPayload = message.payload["mobile_contents"] as? [String: Any],
+           !contentPayload.isEmpty,
+           let mobileContentData = response.toMobileContent() {
             mobileContent = mobileContentData.mobileContent
         }
-        if let themeData = response.toMobileTheme() {
-            themeHandler.saveTheme(themeData)
+        if eventName == "fetch_theme" {
+            if let themeData = response.toMobileTheme(), themeData.id != nil {
+                themeHandler.saveTheme(themeData)
+            }
         }
 
         if let mobileContent = mobileContent {
@@ -238,6 +293,7 @@ extension ExperiencesPublisher: SocketSubscription {
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
             guard
+                !hasActiveExperience(),
                 payload.keys.contains("request_id"),
                 payload["request_id"] as? Int == nil,
                 let mobileContents = payload["mobile_contents"] as? [String: Any],
@@ -256,72 +312,53 @@ extension ExperiencesPublisher: SocketSubscription {
 
 extension ExperiencesPublisher {
 
-    /// Validates whether the carousel can be shown based on the current application state.
-    private func canShowCarousel() -> Bool {
-        if let topViewController = UIApplication.shared.topViewController(),
-           !topViewController.isKind(of: CarouselExperienceViewController.self),
-           // mobileContent?.carouselScreen.contains(currentScreen) == true,
-           mobileContent?.type == .carousel {
-            return true
-        }
-        return false
+    private func hasActiveExperience() -> Bool {
+        return !experiences.isEmpty
     }
 
-    func openCarouselExperience(_ viewController: UIViewController,
-                                _ experienceViewModel: ExperienceViewModel) {
-        if !canShowCarousel() { return }
+    /// Validates whether the experience can be shown based on the current application state.
+    private func canShowExperience() -> Bool {
+        guard
+            experiences.isEmpty,
+            let mobileContent
+        else { return false }
+
+        return mobileContent.isForAllScreens || mobileContent.screens.contains(currentScreen)
+    }
+
+    /// Open carousel
+    private func openCarouselExperience(_ viewController: UIViewController,
+                                        _ experienceViewModel: ExperienceViewModel) {
         let carouselExperienceViewController = CarouselExperienceViewController(
             experienceViewModel: experienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen
+        experiences.append(WeakContent(carouselExperienceViewController))
         viewController.present(carouselExperienceViewController, animated: true)
     }
 
-    /// Validates whether the carousel can be shown based on the current application state.
-    private func canShowDialogSlideOut() -> Bool {
-        if let topViewController = UIApplication.shared.topViewController(),
-           !topViewController.isKind(of: SlideOutDialogViewController.self),
-           // mobileContent?.carouselScreen.contains(currentScreen) == true,
-           mobileContent?.type == .slideout {
-            return true
-        }
-        return false
-    }
-
-    func openSlideOutDialogExperience(_ viewController: UIViewController,
-                                      _ experienceViewModel: ExperienceViewModel) {
-        if !canShowDialogSlideOut() { return }
+    /// Open dialog
+    private func openSlideOutDialogExperience(_ viewController: UIViewController,
+                                              _ experienceViewModel: ExperienceViewModel) {
         let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
+        experiences.append(WeakContent(slideOutDialogViewController))
         viewController.presentDialog(viewController: slideOutDialogViewController)
     }
 
-    /// Validates whether the carousel can be shown based on the current application state.
-    private func canShowBottomSheetSlideOut() -> Bool {
-        if let topViewController = UIApplication.shared.topViewController(),
-           !topViewController.isKind(of: BottomSheetViewController.self),
-           // mobileContent?.carouselScreen.contains(currentScreen) == true,
-           mobileContent?.type == .slideout {
-            return true
-        }
-        return false
-    }
-
-    func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
-                                           _ experienceViewModel: ExperienceViewModel) {
-        if !canShowBottomSheetSlideOut() { return }
+    /// Open bottom sheet
+    private func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
+                                                   _ experienceViewModel: ExperienceViewModel) {
         let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
             experienceViewModel: experienceViewModel)
+        experiences.append(WeakContent(slideOutBottomSheetViewController))
         viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
     }
 
-    private func canTriggerManualExperience() -> Bool {
-        if let topViewController = UIApplication.shared.topViewController(),
-           !topViewController.isKind(of: SlideOutDialogViewController.self),
-           !topViewController.isKind(of: BottomSheetViewController.self),
-           !topViewController.isKind(of: CarouselExperienceViewController.self) {
-            return true
-        } else {
-            return false
-        }
-    }
+}
 
+private extension ExperiencesPublisher {
+    class WeakContent {
+        weak var value: UIViewController?
+
+        init (_ wrapping: UIViewController) { self.value = wrapping }
+    }
 }

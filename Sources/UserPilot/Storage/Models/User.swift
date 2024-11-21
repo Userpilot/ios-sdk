@@ -139,7 +139,7 @@ extension User {
  * Extension for `Dictionary` where the key is a `String` and the value is `Any`.
  * Adds the ability to deeply compare dictionaries to determine if they are equal.
  */
-extension Dictionary where Key == String, Value == Any {
+internal extension Dictionary where Key == String, Value == Any {
 
     /**
      * Compares the current dictionary to another dictionary.
@@ -240,7 +240,7 @@ extension User: Encodable {
 }
 
 /// Extension function to deserialize a `String` into a `User` object
-extension String {
+internal extension String {
 
     func toUser() -> User {
         return  User.fromJson(self)

@@ -90,17 +90,18 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
 
     /// Handles the close action from the slide-out container.
     func onClose() {
+        experienceViewModel.onDismissStep(step: 0)
         dismissDialog()
     }
 
     /// Handles actions triggered by buttons in the slide-out container.
     /// - Parameter action: The action triggered by the button.
     func onAction(_ action: ButtonAction) {
+        experienceViewModel.onExperienceCompleted()
         dismissDialog {
             if action.deepLink != nil {
                 self.experienceViewModel.onDeepLinkTriggered()
             }
-            self.experienceViewModel.onExperienceCompleted()
         }
     }
 }

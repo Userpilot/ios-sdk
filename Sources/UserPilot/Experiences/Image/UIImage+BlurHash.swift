@@ -139,7 +139,7 @@ private let decodeCharacters: [String: Int] = {
     return dict
 }()
 
-extension String {
+internal extension String {
     func decode83() -> Int {
         var value: Int = 0
         for character in self {

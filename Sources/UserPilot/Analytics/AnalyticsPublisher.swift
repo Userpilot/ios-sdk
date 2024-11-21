@@ -55,6 +55,9 @@ internal class AnalyticsPublisher {
     /// The storage used to store user-related data.
     private var storage: DataStoring
 
+    /// The experience publisher.
+    private var experiencesPublisher: ExperiencesPublishing
+
     /// Decorator used to modify event properties before sending.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
 
@@ -78,14 +81,11 @@ internal class AnalyticsPublisher {
     /// Cached identify event, to be sent when the socket is ready.
     private var cachedIdentifyEvent: Event?
 
-    /// Tracks the last screen viewed and whether it was processed.
+    /// Tracks the last screen viewed, bool for fake reload state.
     private var lastScreenViewed: (Bool, Event)?
 
     /// Tracks the first event to open the socket.
     private var cachedEvent: Event?
-
-    /// Counter for events per screen.
-    private var eventsCount = 0
 
     // MARK: - Initialization
 
@@ -97,6 +97,7 @@ internal class AnalyticsPublisher {
     init(container: DIContainer) {
         self.userPilot = container.owner
         self.storage = container.resolve(DataStoring.self)
+        self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.socketManager = container.resolve(SocketEvents.self)
         self.logger = container.resolve(UserPilot.Config.self).logger
@@ -242,13 +243,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The screen event to process.
      */
     private func screen(_ event: Event) {
-        guard
-            lastScreenViewed == nil ||
-                lastScreenViewed?.1.screenTitle != event.screenTitle
-        else { return }
-
-        eventsCount = 0
-        lastScreenViewed = (false, event)
+        if lastScreenViewed?.1.screenTitle != event.screenTitle {
+            lastScreenViewed = (false, event)
+        } else {
+            lastScreenViewed = (true, event)
+        }
         flushPriorityEvents()
     }
 
@@ -261,15 +260,12 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func trackEvent(_ event: Event) {
         readWriteLock.write { [weak self] in
-            guard let self else { return }
             guard
-                !eventsName.contains(event.eventTitle),
-                eventsCount < GeneralConstants.MAX_EVENTS_PER_SCREEN
+                let self,
+                !self.eventsName.contains(event.eventTitle)
             else { return }
 
-            eventsCount.increment()
-            eventsName.insert(event.eventTitle)
-
+            self.eventsName.insert(event.eventTitle)
             self.debouncer.cancel()
             self.eventsToFlush.append(event)
             self.flushTrackedEvents()
@@ -308,11 +304,14 @@ extension AnalyticsPublisher {
         }
 
         /// Screen event
-        if let lastScreenViewed, lastScreenViewed.0 == false {
+        if let lastScreenViewed {
             var payload: [String: Any] = [:]
             payload[AnalyticsPublisher.screenTitleProperty] = lastScreenViewed.1.screenTitle
             payload[AnalyticsPublisher.metaDataProperty] = [
-                AnalyticsPublisher.isSessionStartedProperty: userPilot?.sessionStarted ?? false
+                AnalyticsPublisher.isSessionStartedProperty: userPilot?.sessionStarted ?? false,
+                AnalyticsPublisher.fakeReload: lastScreenViewed.0,
+                AnalyticsPublisher.seenContents: Array( experiencesPublisher.getSeenExperience(
+                    lastScreenViewed.1.screenTitle ?? ""))
             ]
             userPilot?.updateSessionStartState()
             socketManager.publish(lastScreenViewed.1.eventName, payload: payload)
@@ -395,7 +394,14 @@ extension AnalyticsPublisher: SocketSubscription {
     /// Socket opened callback.
     func onSocketOpened() {
         clearCachedEvents()
+        reloadScreen()
         flushPriorityEvents()
+    }
+
+    private func reloadScreen() {
+        if let lastScreenViewed {
+            self.lastScreenViewed = (false, lastScreenViewed.1)
+        }
     }
 
     // Fallback state to close socket if channel not opened
@@ -430,7 +436,7 @@ extension AnalyticsPublisher: SocketSubscription {
                 cachedIdentifyEvent.userID == storage.userID {
                 var newUser = User.fromJson(storage.user)
                 storage.user = newUser.updateUser(event: cachedIdentifyEvent).toJson() ?? ""
-                self.logger.info("👤 USER %{public}@", storage.user)
+                logger.info("👤 USER %{public}@", storage.user)
                 clearCachedIdentifyEvent()
                 broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userID ?? "", properties: payload)
             }
@@ -447,7 +453,6 @@ private extension AnalyticsPublisher {
     /// Clear all cached properties in case we get closed callback from socket.
     private func clearAllCachedProperties(_ shouldClearCachedIdentifyEvent: Bool = false) {
         clearCachedEvents()
-        clearLastScreenViewedEvent()
         clearCachedEvent()
         if shouldClearCachedIdentifyEvent { clearCachedIdentifyEvent() }
     }
@@ -462,11 +467,6 @@ private extension AnalyticsPublisher {
     private func clearCachedIdentifyEvent() {
         cachedIdentifyEvent = nil
         storage.temporaryUser = nil
-    }
-
-    /// Clears the cached last screen viewed on new identify event.
-    private func clearLastScreenViewedEvent() {
-        lastScreenViewed = nil
     }
 
     /// Clears the cached identify event after it has been successfully sent.
@@ -496,10 +496,12 @@ internal extension AnalyticsPublisher {
 internal extension AnalyticsPublisher {
 
     // Static constants
-    private static let metaDataProperty = "metadata"
+    static let metaDataProperty = "metadata"
     private static let identifyCompanyProperty = "company"
 
     static let screenTitleProperty = "title"
-    private static let isSessionStartedProperty = "is_session_start"
+    static let isSessionStartedProperty = "is_session_start"
+    static let fakeReload = "fake_reload"
+    static let seenContents = "seen_contents"
     private static let eventNameProperty = "event_name"
 }

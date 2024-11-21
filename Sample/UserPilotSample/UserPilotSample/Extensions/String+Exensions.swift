@@ -13,7 +13,7 @@
 import Foundation
 import UIKit
 
-extension Optional where Wrapped == String {
+internal extension Optional where Wrapped == String {
 
     var isNilOrEmpty: Bool {
         return self?.isEmpty ?? true
@@ -29,7 +29,7 @@ extension Optional where Wrapped == String {
 
 }
 
-extension String {
+internal extension String {
     var localized: String {
         return NSLocalizedString(self, comment: "")
     }

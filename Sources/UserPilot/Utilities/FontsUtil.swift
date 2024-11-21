@@ -13,7 +13,7 @@ import Foundation
 import UIKit
 
 @available(iOS 13.0, *)
-extension UIFont {
+internal extension UIFont {
 
     /// Returns a UIFont that matches the specified name, weight, and size.
     /// If the custom font is not available, it falls back to the system font.
@@ -120,7 +120,7 @@ extension UIFont {
 }
 
 @available(iOS 13.0, *)
-extension UIFont.Weight {
+internal extension UIFont.Weight {
 
     /// Initializes a UIFont.Weight from a string representing a font weight.
     ///
@@ -142,7 +142,7 @@ extension UIFont.Weight {
 }
 
 @available(iOS 13.0, *)
-extension UIFontDescriptor.SystemDesign {
+internal extension UIFontDescriptor.SystemDesign {
 
     /// Initializes a UIFontDescriptor.SystemDesign from a string representing a design.
     ///

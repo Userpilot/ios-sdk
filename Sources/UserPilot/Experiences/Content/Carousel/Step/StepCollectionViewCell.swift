@@ -88,19 +88,21 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             switch firstLine.type {
             case .heading:
                 let header = UPTextView()
-                header.setupView(line: firstLine,
-                                 theme: theme)
+                header.setupView(line: firstLine, theme: theme)
                 stackView.addArrangedSubview(header)
+
             case .paragraph:
                 let paragraph = UPTextContainerView()
-                paragraph.setupView(lines: section.lines,
-                                    theme: theme)
+                paragraph.setupView(lines: section.lines, theme: theme)
                 stackView.addArrangedSubview(paragraph)
+
             case .image:
+                let size = getImageSize(for: firstLine)
                 let image = UPImageView(frame: .zero)
-                image.heightAnchor.constraint(equalToConstant: 200).isActive = true
+                image.heightAnchor.constraint(equalToConstant: size.height).isActive = true
                 image.setupView(line: firstLine, imageLoader: imageLoader)
                 stackView.addArrangedSubview(image)
+
             case .iconText:
                 let iconText = UPIconTextContainerView()
                 iconText.setupView(lines: section.lines,
@@ -162,7 +164,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         ])
 
         // Conditional layout based on content alignment
-        if theme.contentAlignment == .center {
+        if theme.contentAlignment == .middle {
             NSLayoutConstraint.activate([
                 stackView.topAnchor.constraint(greaterThanOrEqualTo: contentContainerView.topAnchor, constant: 0.0),
                 stackView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor, constant: 0.0)

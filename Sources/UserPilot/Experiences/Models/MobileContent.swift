@@ -16,8 +16,8 @@ import UIKit
  steps, theme, and configuration settings.
 
  - Properties:
-    - `type`: The type of the carousel, represented as a `ContentType`.
-    - `order`: The display order of the carousel.
+    - `token`: The experience token.
+    - `type`: The type of the experience, represented as a `ContentType`.
     - `steps`: A list of `Step` objects that make up the carousel's content.
     - `mobileTheme`: An optional `MobileTheme` that defines the visual style for the carousel.
     - `configuration`: The `Configuration` settings that apply to the carousel.
@@ -35,16 +35,18 @@ internal struct MobileContentData: Codable {
 
 internal struct MobileContent: Codable {
     let id: Int
+    let token: String
     let type: ContentType
-    let order: Int
     let steps: [Step]
     let mobileTheme: ContentMobileTheme
-    let configuration: Configuration?
+    let screens: [String]
+    let screenType: ScreenType
 
     private enum CodingKeys: String, CodingKey {
-        case id, type, order, steps
+        case id, token, type, steps
         case mobileTheme = "theme_data"
-        case configuration
+        case screens
+        case screenType = "screen_type"
     }
 
     // General
@@ -52,8 +54,8 @@ internal struct MobileContent: Codable {
         mobileTheme.id
     }
     // General
-    var carouselScreen: [String] {
-        configuration?.targeting.screens ?? []
+    var isForAllScreens: Bool {
+        screenType == .all
     }
 
 }
@@ -68,18 +70,6 @@ internal struct ContentMobileTheme: Codable {
         case id = "theme_id"
         case themeData = "theme_data"
     }
-}
-
-// MARK: - Configuration
-
-internal struct Configuration: Codable {
-    let targeting: Targeting
-}
-
-// MARK: - Targeting
-
-internal struct Targeting: Codable {
-    let screens: [String]
 }
 
 // MARK: - Step
@@ -140,11 +130,29 @@ internal struct Attributes: Codable {
     let alt: String?
     let hash: String?
     let style: Style?
+    let actualSize: ActualSize?
 
     private enum CodingKeys: String, CodingKey {
         case textAlign = "text_align"
+        case actualSize = "actual_size"
         case level, src, icon, alt, hash, style
     }
+
+    var imageScale: UIView.ContentMode {
+        style?.objectFit == "fill" ? .scaleToFill : .scaleAspectFit
+    }
+
+    var imageRadius: CGFloat {
+        CGFloat(style?.borderRadius?.toSize ?? 0)
+    }
+
+}
+
+// MARK: - ActualSize
+
+internal struct ActualSize: Codable {
+    let height: Int?
+    let width: Int?
 }
 
 // MARK: - Style
@@ -153,7 +161,7 @@ internal struct Style: Codable {
     let height: String?
     let width: String?
     let objectFit: String?
-    let borderRadius: Int?
+    let borderRadius: String?
 
     private enum CodingKeys: String, CodingKey {
         case objectFit = "object_fit"
@@ -212,6 +220,11 @@ internal struct ButtonAction: Codable {
 
 // MARK: - CarouselType
 
+internal enum ScreenType: String, Codable {
+    case all
+    case selected
+}
+
 internal enum ContentType: String, Codable {
     case carousel
     case slideout
@@ -269,7 +282,7 @@ internal enum TextAlignmentType: String, Codable {
 
 // MARK: - String Extension for JSON Deserialization
 
-extension String {
+internal extension String {
     /// Converts a JSON string into a `CarouselData` object using `JSONDecoder`.
     func toMobileContent() -> MobileContentData? {
         if let mobileContent: MobileContentData = self.toObject() {

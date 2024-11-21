@@ -106,6 +106,13 @@ extension UserPilot {
     public func version() -> String {
         return UserPilot.version()
     }
+
+    @objc
+    public func destroy() {
+        logout()
+        sessionStarted = false
+        sessionMonitor.reset()
+    }
 }
 
 // MARK: - Setup Methods
@@ -207,6 +214,7 @@ extension UserPilot {
      */
     @objc
     public func logout() {
+        updateSessionStartState()
         clean()
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
     }
@@ -239,6 +247,7 @@ extension UserPilot {
         // Create the dictionary for settings
         let settings: [String: Any] = [
             "SDK version": version(),
+            "Token": config.token,
             "User": user ?? [:],
             "Auto properties": autoPropertiesDict ?? [:],
             "App properties": appPropertiesDict ?? [:]
@@ -275,19 +284,14 @@ extension UserPilot {
 }
 
 // MARK: - Experiences
+
 extension UserPilot {
 
     /**
-     Manually starts an experience within the client application using the provided experience ID.
-     
-     This method triggers the SDK to fetch the content associated with the given experience ID
-     from the backend, and displays it directly to the user if the content is available.
-     
-     Use this method to programmatically launch an experience when certain conditions are met,
-     such as after user login, navigating to a specific screen, or when a custom event occurs.
+     Manually starts an experience within the client application using the provided experience token.
      
      - Parameters:
-       - experienceId: unique identifier for the experience to be launched, this ID should be provided
+       - experienceToken: unique identifier for the experience to be launched, this ID should be provided
         by the backend or obtained during experience configuration.
      */
     @objc
@@ -295,4 +299,11 @@ extension UserPilot {
         experiencesPublisher.triggerExperience(experienceToken)
     }
 
+    /**
+     Manually ends an experience within from the client application.
+     */
+    @objc
+    public func endExperience() {
+        experiencesPublisher.endExperience()
+    }
 }

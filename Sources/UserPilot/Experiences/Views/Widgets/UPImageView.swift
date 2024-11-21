@@ -65,16 +65,21 @@ internal class UPImageView: UIView {
 
         setupAccessibility(line)
 
+        let size: CGSize
         if line.type == .image {
+            size = getImageSize(for: line)
             NSLayoutConstraint.activate([
                 imageView.topAnchor.constraint(equalTo: topAnchor),
                 imageView.bottomAnchor.constraint(equalTo: bottomAnchor),
                 imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: 300)
+                imageView.widthAnchor.constraint(equalToConstant: size.width)
             ])
-            imageView.contentMode = .scaleToFill
-            imageView.layer.cornerRadius = 20
+            imageView.contentMode = attrs.imageScale
+            imageView.layer.cornerRadius = attrs.imageRadius
+            imageView.adjustsImageSizeForAccessibilityContentSizeCategory = true
         } else {
+            size = CGSize(width: UPIconTextView.Constants.iconWidth,
+                          height: UPIconTextView.Constants.iconWidth)
             NSLayoutConstraint.activate([
                 imageView.centerYAnchor.constraint(equalTo: centerYAnchor),
                 imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
@@ -85,12 +90,13 @@ internal class UPImageView: UIView {
         }
         // Load the image into the UIImageView
         imageLoader.loadImage(target: imageView,
-                              url: url, // "https://i.imgur.com/5simaPh.jpeg",
+                              url: url,
                               placeholder: .lightGray,
-                              blurHash: "UlH.7wozbckC_NoekCW=%zoJWBof%fofoes.",
-                              size: CGSize(width: 300, height: 200))
+                              blurHash: line.attrs?.hash,
+                              size: size)
     }
 
+    /// set image accessibility
     private func setupAccessibility(_ line: Line) {
         guard let alt = line.attrs?.alt else { return }
         isAccessibilityElement = true

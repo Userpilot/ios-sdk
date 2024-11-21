@@ -35,7 +35,14 @@ class UserPilotManager {
             .logging(true)
             .setNavigationHandler(navigationDelegate: self)
             .setAnalyticsDelegate(analyticsDelegate: self)
+            .setExperienceDelegate(experienceDelegate: self)
         )
+    }
+
+    /// Destroy UserPilot instance
+    func destroy() {
+        userPilot?.destroy()
+        userPilot = nil
     }
 
     /// UserPilot Settings
@@ -71,6 +78,10 @@ class UserPilotManager {
 
     func triggerExperience(token: String) {
         userPilot?.triggerExperience(token)
+    }
+
+    func endExperience() {
+        userPilot?.endExperience()
     }
 
     // MARK: - Test Log multiEvents
@@ -275,6 +286,20 @@ extension UserPilotManager: UserPilotAnalyticsDelegate {
     func showIdentifyAlert() {
         FlowRoutingManager.shared.showAlertMessage("User identify successfully!\nUser details:\n\(settings())")
     }
+}
+
+// MARK: - UserPilotAnalyticsDelegate
+
+extension UserPilotManager: UserPilotExperienceDelegate {
+
+    func onExperienceStateChanged(state: UserPilotExperienceState, id: Int, experienceToken: String) {
+        print("ExperienceDelegate -> \(state.rawValue), experienceToken -> \(experienceToken)")
+    }
+
+    func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int) {
+        print("ExperienceDelegate -> step -> \(step), experienceToken -> \(experienceToken)")
+    }
+
 }
 
 // MARK: - Hold SDK events

@@ -69,6 +69,7 @@ internal class UPCloseButton: UIButton {
     func setupView(theme: ExperienceTheme) {
         if !theme.isDismissButtonEnabled { return }
         tintColor = theme.isDismissButtonColorManual ?
-        theme.dismissButtonColor : theme.backgroundColorAsString.invertColor().color
+        theme.dismissButtonColor : theme.backgroundColorAsString.invertColor().color.withAlphaComponent(
+            ThemeHandler.DefaultValues.closeButtonAlpha)
     }
 }

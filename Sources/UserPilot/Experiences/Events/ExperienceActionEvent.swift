@@ -35,23 +35,20 @@ extension SDKEvent {
 
  - Parameters:
    - mobileContentId: The ID of the mobile content associated with the event.
-   - appToken: The client SDK token.
-   - userID: The ID of the user associated with the event.
+   - hasDeepLinkContent: To allow fetch next experience or open deep link screen.
  */
 internal class ExperienceActionEvent: SDKEvent {
     let mobileContentID: Int
-    let appToken: String
-    let userID: String
     let hasDeepLinkContent: Bool
 
     /// The action type of the event.
-    var act: String {
+    var name: String {
         fatalError("Subclasses need to implement the `act` property.")
     }
 
     /// Event name, defaulted to "mobile_content".
     var eventName: String {
-        return "mobile_content"
+        return name
     }
 
     /// Payload for the event represented as a dictionary.
@@ -68,17 +65,12 @@ internal class ExperienceActionEvent: SDKEvent {
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
     func toMap() -> [String: Any] {
         return [
-            "act": act,
-            "mobile_content_id": mobileContentID,
-            "app_token": appToken,
-            "user_id": userID
+            "mobile_content_id": mobileContentID
         ]
     }
 
-    init(mobileContentID: Int, appToken: String, userID: String, hasDeepLinkContent: Bool = false) {
+    init(mobileContentID: Int, hasDeepLinkContent: Bool = false) {
         self.mobileContentID = mobileContentID
-        self.appToken = appToken
-        self.userID = userID
         self.hasDeepLinkContent = hasDeepLinkContent
     }
 }
@@ -88,7 +80,7 @@ internal class ExperienceActionEvent: SDKEvent {
  Represents the 'seen' action event.
  */
 internal class ExperienceSeenEvent: ExperienceActionEvent {
-    override var act: String {
+    override var name: String {
         return "seen_mobile_content"
     }
 }
@@ -101,19 +93,19 @@ internal class ExperienceDismissedEvent: ExperienceActionEvent {
     // Custom parameters for the dismissed event
     let stepId: Int
 
-    init(mobileContentID: Int, appToken: String, userID: String, stepId: Int) {
+    init(mobileContentID: Int, stepId: Int) {
         self.stepId = stepId
-        super.init(mobileContentID: mobileContentID, appToken: appToken, userID: userID)
+        super.init(mobileContentID: mobileContentID)
     }
 
-    override var act: String {
+    override var name: String {
         return "dismissed_mobile_content"
     }
 
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
-        basePayload["stepId"] = stepId
+        basePayload["step_id"] = stepId
         return basePayload
     }
 }
@@ -122,7 +114,7 @@ internal class ExperienceDismissedEvent: ExperienceActionEvent {
  Represents the 'completed' action event.
  */
 internal class ExperienceCompletedEvent: ExperienceActionEvent {
-    override var act: String {
+    override var name: String {
         return "complete_mobile_content"
     }
 }

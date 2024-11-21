@@ -94,11 +94,11 @@ internal extension CarouselExperienceViewController {
 
             // If it's the last step, handle dismissal and trigger actions accordingly.
             if self.isLastStep() {
+                self.experienceViewModel.onExperienceCompleted()
                 self.dismiss(animated: true, completion: {
                     if action.deepLink != nil {
                         self.experienceViewModel.onDeepLinkTriggered()
                     }
-                    self.experienceViewModel.onExperienceCompleted()
                 })
             }
         }
@@ -133,9 +133,7 @@ internal extension CarouselExperienceViewController {
 
     /// Closes the carousel experience view and triggers the onDismiss event.
     func closeExperience() {
-        dismiss(animated: true, completion: { [weak self] in
-            guard let self else { return }
-            self.experienceViewModel.onDismissStep(step: self.collectionView.currentIndex)
-        })
+        self.experienceViewModel.onDismissStep(step: self.collectionView.currentIndex)
+        dismiss(animated: true)
     }
 }

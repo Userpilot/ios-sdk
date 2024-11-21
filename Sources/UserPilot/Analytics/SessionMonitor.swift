@@ -20,6 +20,7 @@ app entering the background or foreground.
 internal protocol SessionMonitoring: AnyObject {
     /// Starts the session monitoring process, setting up observers for app lifecycle events.
     func start()
+    func reset()
 }
 
 internal class SessionMonitor: SessionMonitoring {
@@ -50,6 +51,17 @@ internal class SessionMonitor: SessionMonitoring {
             name: UIApplication.willEnterForegroundNotification,
             object: nil
         )
+    }
+
+    func reset() {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil)
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil)
     }
 
     /// Called when the app enters the background.

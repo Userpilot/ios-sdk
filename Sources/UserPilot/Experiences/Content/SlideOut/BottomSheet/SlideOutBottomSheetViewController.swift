@@ -105,6 +105,7 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
 
     /// Dismisses the bottom sheet when the close action is triggered.
     func onClose() {
+        experienceViewModel.onDismissStep(step: 0)
         dismissBottomSheet()
     }
 
@@ -112,11 +113,11 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
     ///
     /// - Parameter action: A `ButtonAction` that defines the type of action triggered (e.g., deep-linking).
     func onAction(_ action: ButtonAction) {
+        experienceViewModel.onExperienceCompleted()
         dismissBottomSheet {
             if action.deepLink != nil {
                 self.experienceViewModel.onDeepLinkTriggered()
             }
-            self.experienceViewModel.onExperienceCompleted()
         }
     }
 }

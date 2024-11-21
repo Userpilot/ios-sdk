@@ -89,7 +89,8 @@ internal class ExperienceViewModel {
         // Handle safe area region in case there is an issue with the data
         if mobileContent.steps.isEmpty ||
             (mobileContent.type == .carousel && carouselTheme.isEmpty) ||
-            (mobileContent.type == .slideout && (mergedTheme.isEmpty || mergedTheme.first?.slideOut == nil)) {
+            (mobileContent.type == .slideout &&
+             (mergedTheme.isEmpty || mergedTheme.first?.slideOut == nil)) {
             shouldBindCarousel = false
         }
 
@@ -115,18 +116,24 @@ internal class ExperienceViewModel {
             let step = mobileContent.steps.first
         else { return }
 
+        config.experienceDelegate?.onExperienceStateChanged(
+            state: .started,
+            id: mobileContent.id,
+            experienceToken: mobileContent.token)
+
+        config.experienceDelegate?.onExperienceStepStateChanged(
+            id: mobileContent.id,
+            experienceToken: mobileContent.token,
+            step: 1,
+            totalSteps: mobileContent.steps.count)
+
+        let eventExperienceSeen = ExperienceSeenEvent(mobileContentID: mobileContent.id)
+        experiencesPublisher.sendSocketRequest(eventExperienceSeen)
+
         let eventStepSeen = ExperienceStepSeenEvent(
             mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID,
             stepID: step.id)
         experiencesPublisher.sendSocketRequest(eventStepSeen)
-
-        let eventExperienceSeen = ExperienceSeenEvent(
-            mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID)
-        experiencesPublisher.sendSocketRequest(eventExperienceSeen)
     }
 
     /**
@@ -138,19 +145,20 @@ internal class ExperienceViewModel {
             let step = mobileContent.steps.last
         else { return }
 
+        config.experienceDelegate?.onExperienceStateChanged(
+            state: .completed,
+            id: mobileContent.id,
+            experienceToken: mobileContent.token)
+
         let hasDeepLink = !(mobileContent.steps.last?.buttonAction?.deepLink?.isEmpty ?? true)
 
         let eventStepCompleted = ExperienceStepCompletedEvent(
             mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID,
             stepID: step.id)
         experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventContentCompleted = ExperienceCompletedEvent(
             mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID,
             hasDeepLinkContent: hasDeepLink)
         experiencesPublisher.sendSocketRequest(eventContentCompleted)
     }
@@ -166,17 +174,19 @@ internal class ExperienceViewModel {
 
         guard let mobileContent else { return }
 
+        config.experienceDelegate?.onExperienceStepStateChanged(
+            id: mobileContent.id,
+            experienceToken: mobileContent.token,
+            step: step + 1,
+            totalSteps: mobileContent.steps.count + 1)
+
         let eventStepCompleted = ExperienceStepCompletedEvent(
             mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID,
             stepID: mobileContent.steps[step - 1].id)
         experiencesPublisher.sendSocketRequest(eventStepCompleted)
 
         let eventStepSeen = ExperienceStepSeenEvent(
             mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID,
             stepID: mobileContent.steps[step].id)
         experiencesPublisher.sendSocketRequest(eventStepSeen)
     }
@@ -188,10 +198,14 @@ internal class ExperienceViewModel {
      */
     func onDismissStep(step: Int) {
         guard let mobileContent else { return }
+
+        config.experienceDelegate?.onExperienceStateChanged(
+            state: .dismissed,
+            id: mobileContent.id,
+            experienceToken: mobileContent.token)
+
         let eventExperienceDismissed = ExperienceDismissedEvent(
             mobileContentID: mobileContent.id,
-            appToken: config.token,
-            userID: storage.userID,
             stepId: mobileContent.steps[step].id)
         experiencesPublisher.sendSocketRequest(eventExperienceDismissed)
     }

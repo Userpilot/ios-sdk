@@ -177,6 +177,7 @@ extension SocketManager {
     // swiftlint:disable:next function_body_length
     private func openSocket() {
         guard
+            config.token.isNotEmpty,
             storage.userID.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
@@ -191,7 +192,8 @@ extension SocketManager {
             SocketManager.appPropertiesKey: appProperties
         ]
 
-        phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
+        phoenixSocket = Socket(socketURL, params: socketProperties)
+        // phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
         guard let phoenixSocket else { return }
 
         // Setup delegates for socket events

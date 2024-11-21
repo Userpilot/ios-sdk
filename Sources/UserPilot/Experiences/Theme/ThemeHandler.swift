@@ -52,6 +52,8 @@ internal class ThemeHandler: ThemeHandling {
         static let slideOutCornerRadius = CGFloat(20)
         static let blurHash = "U2pF^b@%MdR+^qj[NFjC0GozX9Kr"
         static let defaultTextMargin = "   "
+        static let imageSize = CGFloat(300)
+        static let closeButtonAlpha = 0.8
     }
 
     /// Style names used for text formatting in themes.

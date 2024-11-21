@@ -50,7 +50,7 @@ internal struct Multicast<T> {
 }
 
 /// A class that manages multiple delegates using weak references to prevent retain cycles.
-final class MulticastDelegate<T> {
+internal final class MulticastDelegate<T> {
 
     // MARK: - Properties
 

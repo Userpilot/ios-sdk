@@ -235,8 +235,9 @@ internal class SlideOutContainerView: UIView {
                 stepSectionsStackView.addArrangedSubview(paragraph)
 
             case .image:
+                let size = getImageSize(for: firstLine)
                 let image = UPImageView(frame: .zero)
-                image.heightAnchor.constraint(equalToConstant: 200).isActive = true
+                image.heightAnchor.constraint(equalToConstant: size.height).isActive = true
                 image.setupView(line: firstLine, imageLoader: imageLoader)
                 stepSectionsStackView.addArrangedSubview(image)
 

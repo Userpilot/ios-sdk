@@ -17,16 +17,10 @@ import Foundation
 
  - Parameters:
    - mobileContentId: The ID of the mobile content associated with the event.
-   - appToken: The client SDK token.
-   - userID: The ID of the user associated with the event.
    - stepID: The ID of the step associated with the event.
  */
 internal class ExperienceStepActionEvent: ExperienceActionEvent {
     let stepID: Int
-
-    override var eventName: String {
-        return "mobile_content_step"
-    }
 
     /// Creates a dictionary representation of the event data, including the step ID.
     ///
@@ -37,9 +31,9 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
         return map
     }
 
-    init(mobileContentID: Int, appToken: String, userID: String, stepID: Int) {
+    init(mobileContentID: Int, stepID: Int) {
         self.stepID = stepID
-        super.init(mobileContentID: mobileContentID, appToken: appToken, userID: userID)
+        super.init(mobileContentID: mobileContentID)
     }
 }
 
@@ -48,7 +42,7 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
  Represents the 'seen' step action event.
  */
 internal class ExperienceStepSeenEvent: ExperienceStepActionEvent {
-    override var act: String {
+    override var name: String {
         return "seen_mobile_content_step"
     }
 }
@@ -57,7 +51,7 @@ internal class ExperienceStepSeenEvent: ExperienceStepActionEvent {
  Represents the 'completed' step action event.
  */
 internal class ExperienceStepCompletedEvent: ExperienceStepActionEvent {
-    override var act: String {
+    override var name: String {
         return "completed_mobile_content_step"
     }
 }

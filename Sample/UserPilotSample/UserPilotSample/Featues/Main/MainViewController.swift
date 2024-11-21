@@ -48,7 +48,7 @@ class MainViewController: BaseViewController {
     internal func showConfigurationDialog() {
         DialogManager.shared().showConfigurationDialog { [weak self] in
             guard self != nil else { return }
-            UserPilotManager.shared.logout()
+            UserPilotManager.shared.destroy()
             UserPilotManager.shared.initialize()
         }
     }

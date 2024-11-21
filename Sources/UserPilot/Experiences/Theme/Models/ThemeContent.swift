@@ -23,18 +23,6 @@ internal struct ThemeContent: Codable {
     }
 }
 
-// MARK: - MobileTheme
-
-internal struct MobileTheme: Codable {
-    let id: Int
-    let themeData: ThemeData?
-
-    private enum CodingKeys: String, CodingKey {
-        case id = "theme_id"
-        case themeData = "theme_data"
-    }
-}
-
 // MARK: - ThemeData
 
 internal struct ThemeData: Codable {
@@ -247,6 +235,7 @@ internal struct ProgressStyle: Codable {
 // MARK: - ContentAlignmentType
 
 internal enum ContentAlignmentType: String, Codable {
+    case middle
     case center
     case top
     case bottom
@@ -254,7 +243,7 @@ internal enum ContentAlignmentType: String, Codable {
 
 // MARK: - Extension to deserialize a String into a ThemeResponse object
 
-extension String {
+internal extension String {
     func toMobileTheme() -> ThemeContent? {
         if let themeContent: ThemeContent = self.toObject() {
             return themeContent
