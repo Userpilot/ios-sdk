@@ -43,7 +43,7 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
  */
 internal class ExperienceStepSeenEvent: ExperienceStepActionEvent {
     override var name: String {
-        return "seen_mobile_content_step"
+        return SDKEventsName.experienceStepSeen.rawValue
     }
 }
 
@@ -52,6 +52,6 @@ internal class ExperienceStepSeenEvent: ExperienceStepActionEvent {
  */
 internal class ExperienceStepCompletedEvent: ExperienceStepActionEvent {
     override var name: String {
-        return "completed_mobile_content_step"
+        return SDKEventsName.experienceStepCompleted.rawValue
     }
 }

@@ -22,7 +22,7 @@ class ScreenTwoViewController: BaseViewController {
     }
 
     @IBAction func onNextButtonClicked(_ sender: UIButton) {
-        // FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
+        UserPilotManager.shared.triggerExperience(token: "mobile:IEebGyacOX")
     }
 
 }

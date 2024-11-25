@@ -128,12 +128,12 @@ internal class ExperienceViewModel {
             totalSteps: mobileContent.steps.count)
 
         let eventExperienceSeen = ExperienceSeenEvent(mobileContentID: mobileContent.id)
-        experiencesPublisher.sendSocketRequest(eventExperienceSeen)
+        experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
 
         let eventStepSeen = ExperienceStepSeenEvent(
             mobileContentID: mobileContent.id,
             stepID: step.id)
-        experiencesPublisher.sendSocketRequest(eventStepSeen)
+        experiencesPublisher.publishExperienceEvent(eventStepSeen)
     }
 
     /**
@@ -155,12 +155,12 @@ internal class ExperienceViewModel {
         let eventStepCompleted = ExperienceStepCompletedEvent(
             mobileContentID: mobileContent.id,
             stepID: step.id)
-        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+        experiencesPublisher.publishExperienceEvent(eventStepCompleted)
 
         let eventContentCompleted = ExperienceCompletedEvent(
             mobileContentID: mobileContent.id,
             hasDeepLinkContent: hasDeepLink)
-        experiencesPublisher.sendSocketRequest(eventContentCompleted)
+        experiencesPublisher.publishExperienceEvent(eventContentCompleted)
     }
 
     /**
@@ -183,12 +183,12 @@ internal class ExperienceViewModel {
         let eventStepCompleted = ExperienceStepCompletedEvent(
             mobileContentID: mobileContent.id,
             stepID: mobileContent.steps[step - 1].id)
-        experiencesPublisher.sendSocketRequest(eventStepCompleted)
+        experiencesPublisher.publishExperienceEvent(eventStepCompleted)
 
         let eventStepSeen = ExperienceStepSeenEvent(
             mobileContentID: mobileContent.id,
             stepID: mobileContent.steps[step].id)
-        experiencesPublisher.sendSocketRequest(eventStepSeen)
+        experiencesPublisher.publishExperienceEvent(eventStepSeen)
     }
 
     /**
@@ -207,7 +207,7 @@ internal class ExperienceViewModel {
         let eventExperienceDismissed = ExperienceDismissedEvent(
             mobileContentID: mobileContent.id,
             stepId: mobileContent.steps[step].id)
-        experiencesPublisher.sendSocketRequest(eventExperienceDismissed)
+        experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
     }
 
     // MARK: - Deep Link Handling

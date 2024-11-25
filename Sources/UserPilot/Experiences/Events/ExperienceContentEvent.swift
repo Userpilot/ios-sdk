@@ -21,7 +21,7 @@ internal struct ExperienceContentEvent: SDKEvent {
 
     /// The name of the event.
     var eventName: String {
-        return "get_mobile_content"
+        return SDKEventsName.fetchExperienceContent.rawValue
     }
 
     /// The payload of the event represented as a dictionary.

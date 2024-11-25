@@ -37,6 +37,11 @@ class MainViewController: BaseViewController {
          */
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        UserPilotManager.shared.screen("main")
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         if let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken),

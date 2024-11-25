@@ -22,7 +22,7 @@ internal struct ThemeContentEvent: SDKEvent {
 
     /// The name of the event.
     var eventName: String {
-        return "fetch_theme"
+        return SDKEventsName.fetchExperienceTheme.rawValue
     }
 
     /// The payload of the event represented as a dictionary.

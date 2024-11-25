@@ -29,6 +29,11 @@ class IdentifyViewController: BaseViewController {
     internal var userPropertiesViews: [String: PropertyView] = [:]
     internal var companyPropertiesViews: [String: PropertyView] = [:]
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        UserPilotManager.shared.screen("identify")
+    }
+
     // MARK: - IBActions
 
     @IBAction func onIdentifyButtonClicked(_ sender: UIButton) {

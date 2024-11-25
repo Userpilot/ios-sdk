@@ -26,11 +26,11 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Get current experience
     func getActiveMobileContent() -> MobileContent?
 
-    /// Get current experience
-    func getSeenExperience(_ screenTitle: String) -> Set<Int>
+    /// check active experience
+    func fetchAndResetCarouselContentState() -> Bool
 
     /// Send experience event to backend
-    func sendSocketRequest(_ sdkEvent: SDKEvent)
+    func publishExperienceEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceToken: String)
@@ -52,6 +52,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Manages socket connections and listens for socket events.
     private let socketManager: SocketEvents
 
+    /// Analytics publisher to manage events triggering.
+    private let analyticsPublisher: AnalyticsPublishing
+
     /// Handles themes for the experiences, managing theme data and styles.
     private let themeHandler: ThemeHandling
 
@@ -67,14 +70,14 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// The current screen name in the application, used to track active screens.
     private var currentScreen: String = ""
 
-    /// Cache seen experiences per screen.
-    private var seenExperiences = Set<Int>()
-
     /// Holds the active carousel content, if any, that is being displayed.
     private var mobileContent: MobileContent?
 
     /// Holds current displayed experience, Array to support more than one experience
     private var experiences: [WeakContent] = []
+
+    /// Holds last experience triggered by SDK
+    private var carouselContent = false
 
     // MARK: - Initializer
 
@@ -89,6 +92,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         self.storage = container.resolve(DataStoring.self)
         self.config = container.resolve(UserPilot.Config.self)
         self.socketManager = container.resolve(SocketEvents.self)
+        self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
         self.logger = container.resolve(UserPilot.Config.self).logger
     }
@@ -109,11 +113,18 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         return currentContent
     }
 
-    func getSeenExperience(_ screenTitle: String) -> Set<Int> {
-        if screenTitle != currentScreen {
-            seenExperiences.removeAll()
+    // Check experiences state
+    var hasActiveExperience: Bool {
+        !experiences.isEmpty
+    }
+
+    // Check experiences state
+    func fetchAndResetCarouselContentState() -> Bool {
+        if carouselContent {
+            carouselContent = false
+            return true
         }
-        return seenExperiences
+        return false
     }
 
     /**
@@ -121,13 +132,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
-    func sendSocketRequest(_ sdkEvent: SDKEvent) {
-        socketManager.publish(sdkEvent.eventName,
-                              payload: sdkEvent.eventPayload,
-                              socketSubscription: self)
+    func publishExperienceEvent(_ sdkEvent: SDKEvent) {
+        analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
 
-        if sdkEvent.eventName == "dismissed_mobile_content" ||
-            sdkEvent.eventName == "complete_mobile_content" {
+        if sdkEvent.eventName == SDKEventsName.experienceDismissed.rawValue ||
+            sdkEvent.eventName == SDKEventsName.experienceCompleted.rawValue {
 
             let isCarouselExperience = experiences.first?
                 .value?.isKind(of: CarouselExperienceViewController.self) == true
@@ -141,14 +150,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 checkCachedThemes(mobileContent.baseThemeID)
             } else {
                 if isCarouselExperience { return }
-                var payload: [String: Any] = [:]
-                payload[AnalyticsPublisher.screenTitleProperty] = currentScreen
-                payload[AnalyticsPublisher.metaDataProperty] = [
-                    AnalyticsPublisher.isSessionStartedProperty: false,
-                    AnalyticsPublisher.fakeReload: true,
-                    AnalyticsPublisher.seenContents: Array(seenExperiences)
-                ]
-                socketManager.publish(EventType.screenEvent, payload: payload)
+                analyticsPublisher.publishFakeReloadScreenEvent()
             }
         }
     }
@@ -163,7 +165,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func triggerExperience(_ experienceToken: String) {
         if mobileContent != nil { return }
-        sendSocketRequest(ExperienceContentEvent(experienceToken: experienceToken))
+        publishExperienceEvent(ExperienceContentEvent(experienceToken: experienceToken))
     }
 
     /*
@@ -213,19 +215,30 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         else { return }
             let experienceViewModel = ExperienceViewModel(container: self.container)
             if let mobileContent {
-                self.seenExperiences.insert(mobileContent.id)
+                self.analyticsPublisher.experiencePublished(mobileContent.id)
                 switch mobileContent.type {
                 case .carousel:
+                    self.carouselContent = true
                     self.openCarouselExperience(topViewController, experienceViewModel)
                 case .slideout:
-                    if let theme = themeHandler.getThemeById(mobileContent.baseThemeID),
-                        theme.isDialogExperience {
-                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
-                    } else {
+                    self.carouselContent = false
+                    if self.isBottomSheetContent(mobileContent) {
                         self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+                    } else {
+                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
                     }
                 }
             }
+        }
+    }
+
+    /// Fetch content type based on custom mobile content theme, then from base theme
+    private func isBottomSheetContent(_ mobileContent: MobileContent) -> Bool {
+        if let themeData = mobileContent.mobileTheme.themeData {
+            return themeData.general?.contentAlignment == ContentAlignmentType.bottom
+        } else {
+            return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience == false
+
         }
     }
 
@@ -235,11 +248,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      - Parameter themeID: A theme ID for which data needs to be fetched.
      */
     private func fetchThemeData(_ themeID: Int) {
-        guard socketManager.isSocketOpened else {
+        guard analyticsPublisher.canRequestExperienceEvent else {
             mobileContent = nil
             return
         }
-        sendSocketRequest(ThemeContentEvent(themeID: themeID, token: config.token))
+        publishExperienceEvent(ThemeContentEvent(themeID: themeID, token: config.token))
     }
 }
 
@@ -259,11 +272,10 @@ extension ExperiencesPublisher: SocketSubscription {
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
         if eventName == EventType.screenEvent {
             currentScreen = payload?[AnalyticsPublisher.screenTitleProperty] as? String ?? ""
-            getSeenExperience(currentScreen)
         }
 
         guard
-            !hasActiveExperience(),
+            !hasActiveExperience,
             !message.payload.isEmpty,
             let response = message.payload.toJSONString()
         else { return }
@@ -293,7 +305,7 @@ extension ExperiencesPublisher: SocketSubscription {
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
             guard
-                !hasActiveExperience(),
+                !hasActiveExperience,
                 payload.keys.contains("request_id"),
                 payload["request_id"] as? Int == nil,
                 let mobileContents = payload["mobile_contents"] as? [String: Any],
@@ -311,10 +323,6 @@ extension ExperiencesPublisher: SocketSubscription {
 // MARK: - Launch experiences
 
 extension ExperiencesPublisher {
-
-    private func hasActiveExperience() -> Bool {
-        return !experiences.isEmpty
-    }
 
     /// Validates whether the experience can be shown based on the current application state.
     private func canShowExperience() -> Bool {

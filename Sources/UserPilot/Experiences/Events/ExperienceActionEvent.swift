@@ -11,24 +11,6 @@
 
 import Foundation
 
-// MARK: - SDKEvent
-/**
- Protocol defining the structure for SDK events.
- */
-internal protocol SDKEvent {
-    var eventName: String { get }
-    var eventPayload: [String: Any] { get }
-    var hasDeepLink: Bool { get }
-}
-
-extension SDKEvent {
-
-    var hasDeepLink: Bool {
-        return false
-    }
-
-}
-
 // MARK: - ExperienceActionEvent
 /**
  Base class representing various types of experience action events for mobile content.
@@ -81,7 +63,7 @@ internal class ExperienceActionEvent: SDKEvent {
  */
 internal class ExperienceSeenEvent: ExperienceActionEvent {
     override var name: String {
-        return "seen_mobile_content"
+        return SDKEventsName.experienceSeen.rawValue
     }
 }
 
@@ -99,7 +81,7 @@ internal class ExperienceDismissedEvent: ExperienceActionEvent {
     }
 
     override var name: String {
-        return "dismissed_mobile_content"
+        return SDKEventsName.experienceDismissed.rawValue
     }
 
     /// Combines base event payload with custom parameters.
@@ -115,6 +97,6 @@ internal class ExperienceDismissedEvent: ExperienceActionEvent {
  */
 internal class ExperienceCompletedEvent: ExperienceActionEvent {
     override var name: String {
-        return "complete_mobile_content"
+        return SDKEventsName.experienceCompleted.rawValue
     }
 }

@@ -214,7 +214,6 @@ extension UserPilot {
      */
     @objc
     public func logout() {
-        updateSessionStartState()
         clean()
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
     }
@@ -278,8 +277,8 @@ extension UserPilot {
     }
 
     /// Hold SDK state for first initialization
-    internal func updateSessionStartState() {
-        sessionStarted = false
+    internal func updateSessionStartState(_ newSessionState: Bool) {
+        sessionStarted = newSessionState
     }
 }
 
