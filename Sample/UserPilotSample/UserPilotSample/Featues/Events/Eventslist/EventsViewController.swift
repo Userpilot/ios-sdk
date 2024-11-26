@@ -24,7 +24,7 @@ class EventsViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("screen two")
+        UserPilotManager.shared.screen("events")
     }
 
     // MARK: - IBAction

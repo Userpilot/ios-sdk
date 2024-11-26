@@ -21,6 +21,13 @@ class CustomEventViewController: BaseViewController {
 
     internal var eventPropertiesViews: [String: PropertyView] = [:]
 
+    // MARK: - override
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        UserPilotManager.shared.screen("custom events")
+    }
+
     // MARK: - IBActions
 
     @IBAction func onTrackEventButtonClicked(_ sender: UIButton) {

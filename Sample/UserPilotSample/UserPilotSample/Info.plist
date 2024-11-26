@@ -40,9 +40,10 @@
 	</dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Merriweather-Regular</string>
-		<string>Qwitcher-Grypen-Regular</string>
-		<string>Merriweather-Bold</string>
+		<string>Merriweather-Regular.ttf</string>
+		<string>Qwitcher-Grypen-Regular.ttf</string>
+		<string>Merriweather-Bold.ttf</string>
+		<string>Merriweather-BoldItalic.ttf</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
