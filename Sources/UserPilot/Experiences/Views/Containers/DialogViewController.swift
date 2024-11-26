@@ -39,7 +39,7 @@ internal class DialogViewController: UIViewController {
     private lazy var dimmedView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .black
+        view.backgroundColor = .clear
         view.alpha = 0
         return view
     }()
@@ -97,17 +97,20 @@ internal class DialogViewController: UIViewController {
                 equalTo: mainContainerView.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
         ])
+
+        /// prepare the view for slide in animation
+        dimmedView.alpha = 0
+        mainContainerView.alpha = 0
+        mainContainerView.frame.origin.y += 50
     }
 }
 
 // MARK: - Animations
 
 extension DialogViewController {
+
     /// Animates the presentation of the dialog.
     private func animatePresent() {
-        dimmedView.alpha = 0
-        mainContainerView.alpha = 0
-        mainContainerView.frame.origin.y += 50
         UIView.animate(withDuration: 0.4) {
             self.dimmedView.alpha = 1.0
             self.mainContainerView.alpha = 1.0
@@ -122,8 +125,7 @@ extension DialogViewController {
             self.dimmedView.alpha = 0
             self.mainContainerView.alpha = 0
         }, completion: { [weak self] _ in
-            self?.dismiss(animated: false)
-            completion?()
+            self?.dismiss(animated: false, completion: completion)
         })
     }
 }

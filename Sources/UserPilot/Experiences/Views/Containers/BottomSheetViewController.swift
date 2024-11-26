@@ -22,7 +22,7 @@ internal class BottomSheetViewController: UIViewController {
     private lazy var mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .clear
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view
@@ -47,15 +47,13 @@ internal class BottomSheetViewController: UIViewController {
     private lazy var dimmedView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .black
+        view.backgroundColor = .clear
         view.alpha = 0
         return view
     }()
 
     // MARK: - Properties
 
-    /// Maximum opacity for the dimmed background view
-    private let maxDimmedAlpha: CGFloat = 0
     /// Minimum vertical drag height required to dismiss the bottom sheet
     private let minDismissiblePanHeight: CGFloat = 20
     /// Minimum spacing between the top edge of the view and the bottom sheet
@@ -124,6 +122,10 @@ private extension BottomSheetViewController {
                 equalTo: view.safeAreaLayoutGuide.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
         ])
+
+        /// prepare the view for slide in animation
+        dimmedView.alpha = 0
+        mainContainerView.transform = CGAffineTransform(translationX: 0, y: view.frame.height)
     }
 }
 
@@ -177,8 +179,6 @@ internal extension BottomSheetViewController {
 
     /// Animate the presentation of the bottom sheet
     func animatePresent() {
-        dimmedView.alpha = 0
-        mainContainerView.transform = CGAffineTransform(translationX: 0, y: view.frame.height)
         UIView.animate(withDuration: 0.2) { [weak self] in
             self?.mainContainerView.transform = .identity
         }
