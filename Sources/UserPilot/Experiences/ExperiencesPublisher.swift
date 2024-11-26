@@ -330,7 +330,7 @@ extension ExperiencesPublisher {
             let mobileContent
         else { return false }
 
-        return mobileContent.isForAllScreens || mobileContent.screens.contains(currentScreen)
+        return isTriggerManualExperience || mobileContent.isForAllScreens || mobileContent.screens.contains(currentScreen)
     }
 
     /// Open carousel
