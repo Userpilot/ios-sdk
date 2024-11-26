@@ -143,7 +143,7 @@ internal struct Attributes: Codable {
     }
 
     var imageRadius: CGFloat {
-        CGFloat(style?.borderRadius?.toSize ?? 0)
+        CGFloat(style?.borderRadius ?? 0)
     }
 
 }
@@ -161,7 +161,7 @@ internal struct Style: Codable {
     let height: String?
     let width: String?
     let objectFit: String?
-    let borderRadius: String?
+    let borderRadius: Int?
 
     private enum CodingKeys: String, CodingKey {
         case objectFit = "object_fit"

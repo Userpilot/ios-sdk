@@ -49,7 +49,7 @@ internal class ThemeHandler: ThemeHandling {
         static let distanceBetweenSections = CGFloat(12)
         static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
-        static let slideOutCornerRadius = CGFloat(20)
+        static let slideOutCornerRadius = CGFloat(12)
         static let blurHash = "U2pF^b@%MdR+^qj[NFjC0GozX9Kr"
         static let defaultTextMargin = "   "
         static let imageSize = CGFloat(300)
