@@ -105,9 +105,11 @@ internal class DialogViewController: UIViewController {
 extension DialogViewController {
     /// Animates the presentation of the dialog.
     private func animatePresent() {
+        dimmedView.alpha = 0
         mainContainerView.alpha = 0
         mainContainerView.frame.origin.y += 50
         UIView.animate(withDuration: 0.4) {
+            self.dimmedView.alpha = 1.0
             self.mainContainerView.alpha = 1.0
             self.mainContainerView.frame.origin.y -= 50
         }

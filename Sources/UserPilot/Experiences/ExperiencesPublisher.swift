@@ -73,9 +73,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Holds the active carousel content, if any, that is being displayed.
     private var mobileContent: MobileContent?
 
-    /// Holds current displayed experience, Array to support more than one experience
-    private var experiences: [WeakContent] = []
-
     /// Holds last experience triggered by SDK
     private var carouselContent = false
 
@@ -106,56 +103,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         socketManager.registerCallback(self)
     }
 
-    /// Return the current active carousel content.
-    func getActiveMobileContent() -> MobileContent? {
-        let currentContent = mobileContent
-        mobileContent = nil
-        return currentContent
-    }
-
-    // Check experiences state
-    var hasActiveExperience: Bool {
-        !experiences.isEmpty
-    }
-
-    // Check experiences state
-    func fetchAndResetCarouselContentState() -> Bool {
-        if carouselContent {
-            carouselContent = false
-            return true
-        }
-        return false
-    }
-
-    /**
-     Sends a socket request based on the provided event interface.
-     
-     - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
-     */
-    func publishExperienceEvent(_ sdkEvent: SDKEvent) {
-        analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
-
-        if sdkEvent.eventName == SDKEventsName.experienceDismissed.rawValue ||
-            sdkEvent.eventName == SDKEventsName.experienceCompleted.rawValue {
-
-            let isCarouselExperience = experiences.first?
-                .value?.isKind(of: CarouselExperienceViewController.self) == true
-            experiences.removeAll()
-            if sdkEvent.hasDeepLink {
-                mobileContent = nil
-                return
-            }
-
-            if let mobileContent {
-                checkCachedThemes(mobileContent.baseThemeID)
-            } else {
-                if isCarouselExperience { return }
-                analyticsPublisher.publishFakeReloadScreenEvent()
-            }
-        }
-    }
-
-    // MARK: - Fetch & Parse experience content
+    // MARK: - SDK APIs
 
     /**
      Starts the experience for a given experience ID. This method can be used to
@@ -172,88 +120,30 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      End experience manually
      */
     func endExperience() {
-        if experiences.isEmpty { return }
-        experiences.forEach { experience in
-            if experience.value?.isKind(of: CarouselExperienceViewController.self) == true {
-                // swiftlint:disable:next force_cast
-                (experience.value as! CarouselExperienceViewController).closeExperience()
-            } else if experience.value?.isKind(of: SlideOutBottomSheetViewController.self) == true {
-                // swiftlint:disable:next force_cast
-                (experience.value as! SlideOutBottomSheetViewController).dismissBottomSheet()
-            } else if experience.value?.isKind(of: SlideOutDialogViewController.self) == true {
-                // swiftlint:disable:next force_cast
-                (experience.value as! SlideOutDialogViewController).dismissDialog()
-            }
-        }
+        guard let experience = UIApplication.shared.fetchTopViewController() else { return }
+        (experience as? CarouselExperienceViewController)?.closeExperience()
+        (experience as? SlideOutBottomSheetViewController)?.dismissBottomSheet()
+        (experience as? SlideOutDialogViewController)?.dismissDialog()
     }
 
-    /**
-     Checks for cached themes to determine if the theme is available locally.
+    // MARK: - helper methods
 
-     - Parameter themeID: A theme ID to check against the cached themes.
-     */
-    private func checkCachedThemes(_ themeID: Int) {
-        if themeHandler.getThemeById(themeID) != nil {
-            openExperienceFlow()
-        } else {
-            fetchThemeData(themeID)
-        }
+    /// Return the current active carousel content.
+    func getActiveMobileContent() -> MobileContent? {
+        let currentContent = mobileContent
+        mobileContent = nil
+        return currentContent
     }
 
-    /**
-     Opens the carousel screen to display carousel content.
-
-     Presents the `CarouselExperienceViewController` with the active carousel content
-     if the conditions for displaying the carousel are met.
-     */
-    private func openExperienceFlow() {
-        performOn(.main) { [weak self] in
-        guard
-            let self,
-            let topViewController = UIApplication.shared.topViewController(),
-            self.canShowExperience()
-        else { return }
-            let experienceViewModel = ExperienceViewModel(container: self.container)
-            if let mobileContent {
-                self.analyticsPublisher.experiencePublished(mobileContent.id)
-                switch mobileContent.type {
-                case .carousel:
-                    self.carouselContent = true
-                    self.openCarouselExperience(topViewController, experienceViewModel)
-                case .slideout:
-                    self.carouselContent = false
-                    if self.isBottomSheetContent(mobileContent) {
-                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
-                    } else {
-                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
-                    }
-                }
-            }
+    // Check experiences state
+    func fetchAndResetCarouselContentState() -> Bool {
+        if carouselContent {
+            carouselContent = false
+            return true
         }
+        return false
     }
 
-    /// Fetch content type based on custom mobile content theme, then from base theme
-    private func isBottomSheetContent(_ mobileContent: MobileContent) -> Bool {
-        if let themeData = mobileContent.mobileTheme.themeData {
-            return themeData.general?.contentAlignment == ContentAlignmentType.bottom
-        } else {
-            return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience == false
-
-        }
-    }
-
-    /**
-     Fetches theme data for themes that are not cached.
-
-     - Parameter themeID: A theme ID for which data needs to be fetched.
-     */
-    private func fetchThemeData(_ themeID: Int) {
-        guard analyticsPublisher.canRequestExperienceEvent else {
-            mobileContent = nil
-            return
-        }
-        publishExperienceEvent(ThemeContentEvent(themeID: themeID, token: config.token))
-    }
 }
 
 // MARK: - SocketSubscription
@@ -262,12 +152,12 @@ extension ExperiencesPublisher: SocketSubscription {
 
     /**
      Handles the socket event when a message is sent.
-
+     
      - Parameters:
-       - eventName: The name of the event sent over the socket.
-       - payload: The message payload, if any, received.
-       - message: The message object containing additional data.
-       - eventSent: Indicates whether the event was successfully sent.
+     - eventName: The name of the event sent over the socket.
+     - payload: The message payload, if any, received.
+     - message: The message object containing additional data.
+     - eventSent: Indicates whether the event was successfully sent.
      */
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
         if eventName == EventType.screenEvent {
@@ -275,7 +165,7 @@ extension ExperiencesPublisher: SocketSubscription {
         }
 
         guard
-            !hasActiveExperience,
+            !hasActiveExperience(),
             !message.payload.isEmpty,
             let response = message.payload.toJSONString()
         else { return }
@@ -299,13 +189,12 @@ extension ExperiencesPublisher: SocketSubscription {
 
     /*
      Handles new messages received over the socket, Processes the message to extract carousel and theme data.
-
      - Parameter message: The message object containing payload data.
      */
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
             guard
-                !hasActiveExperience,
+                !hasActiveExperience(),
                 payload.keys.contains("request_id"),
                 payload["request_id"] as? Int == nil,
                 let mobileContents = payload["mobile_contents"] as? [String: Any],
@@ -320,14 +209,115 @@ extension ExperiencesPublisher: SocketSubscription {
     }
 }
 
+// MARK: - Theme
+
+extension ExperiencesPublisher {
+
+    /**
+     Checks for cached themes to determine if the theme is available locally.
+
+     - Parameter themeID: A theme ID to check against the cached themes.
+     */
+    private func checkCachedThemes(_ themeID: Int) {
+        if themeHandler.getThemeById(themeID) != nil {
+            openExperienceFlow()
+        } else {
+            fetchThemeData(themeID)
+        }
+    }
+
+    /**
+     Fetches theme data for themes that are not cached.
+
+     - Parameter themeID: A theme ID for which data needs to be fetched.
+     */
+    private func fetchThemeData(_ themeID: Int) {
+        guard
+            analyticsPublisher.canRequestExperienceEvent
+        else {
+            mobileContent = nil
+            return
+        }
+        publishExperienceEvent(ThemeContentEvent(themeID: themeID, token: config.token))
+    }
+
+}
+
 // MARK: - Launch experiences
 
 extension ExperiencesPublisher {
 
+    /**
+     Sends a socket request based on the provided event interface.
+     
+     - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
+     */
+    func publishExperienceEvent(_ sdkEvent: SDKEvent) {
+        analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
+
+        if sdkEvent.eventName == SDKEventsName.experienceDismissed.rawValue ||
+            sdkEvent.eventName == SDKEventsName.experienceCompleted.rawValue {
+
+            if sdkEvent.hasDeepLink {
+                mobileContent = nil
+                return
+            }
+
+            if let mobileContent {
+                checkCachedThemes(mobileContent.baseThemeID)
+            } else {
+                carouselContent = wasCarouselExperience()
+                analyticsPublisher.publishFakeReloadScreenEvent()
+            }
+        }
+    }
+
+    /**
+     Opens the carousel screen to display carousel content.
+
+     Presents the `CarouselExperienceViewController` with the active carousel content
+     if the conditions for displaying the carousel are met.
+     */
+    private func openExperienceFlow() {
+        performOn(.main) { [weak self] in
+            guard
+                let self,
+                let topViewController = UIApplication.shared.fetchTopViewController(),
+                self.canShowExperience()
+            else {
+                self?.mobileContent = nil
+                return
+            }
+            if let mobileContent {
+                let experienceViewModel = ExperienceViewModel(container: self.container)
+                self.analyticsPublisher.experiencePublished(mobileContent.id)
+                switch mobileContent.type {
+                case .carousel:
+                    self.openCarouselExperience(topViewController, experienceViewModel)
+                case .slideout:
+                    if self.isBottomSheetContent(mobileContent) {
+                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+                    } else {
+                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Fetch content type based on custom mobile content theme, then from base theme
+    private func isBottomSheetContent(_ mobileContent: MobileContent) -> Bool {
+        if let themeData = mobileContent.mobileTheme.themeData {
+            return themeData.general?.contentAlignment == ContentAlignmentType.bottom
+        } else {
+            return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience == false
+        }
+    }
+
     /// Validates whether the experience can be shown based on the current application state.
     private func canShowExperience() -> Bool {
         guard
-            experiences.isEmpty,
+            !hasActiveExperience(),
             let mobileContent
         else { return false }
 
@@ -340,7 +330,6 @@ extension ExperiencesPublisher {
         let carouselExperienceViewController = CarouselExperienceViewController(
             experienceViewModel: experienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen
-        experiences.append(WeakContent(carouselExperienceViewController))
         viewController.present(carouselExperienceViewController, animated: true)
     }
 
@@ -348,7 +337,6 @@ extension ExperiencesPublisher {
     private func openSlideOutDialogExperience(_ viewController: UIViewController,
                                               _ experienceViewModel: ExperienceViewModel) {
         let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
-        experiences.append(WeakContent(slideOutDialogViewController))
         viewController.presentDialog(viewController: slideOutDialogViewController)
     }
 
@@ -357,16 +345,22 @@ extension ExperiencesPublisher {
                                                    _ experienceViewModel: ExperienceViewModel) {
         let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
             experienceViewModel: experienceViewModel)
-        experiences.append(WeakContent(slideOutBottomSheetViewController))
         viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
     }
 
-}
+    private func hasActiveExperience() -> Bool {
+        guard let topViewController = UIApplication.shared.fetchTopViewController() else {
+            return false
+        }
+        return topViewController.isKind(of: CarouselExperienceViewController.self) ||
+        topViewController.isKind(of: SlideOutDialogViewController.self) ||
+        topViewController.isKind(of: BottomSheetViewController.self)
+    }
 
-private extension ExperiencesPublisher {
-    class WeakContent {
-        weak var value: UIViewController?
-
-        init (_ wrapping: UIViewController) { self.value = wrapping }
+    private func wasCarouselExperience() -> Bool {
+        guard let topViewController = UIApplication.shared.fetchTopViewController() else {
+            return false
+        }
+        return topViewController.isKind(of: CarouselExperienceViewController.self)
     }
 }

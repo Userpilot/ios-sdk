@@ -183,7 +183,7 @@ internal extension BottomSheetViewController {
             self?.mainContainerView.transform = .identity
         }
         UIView.animate(withDuration: 0.4) { [weak self] in
-            self?.dimmedView.alpha = self?.maxDimmedAlpha ?? 0
+            self?.dimmedView.alpha = 1
         }
     }
 

@@ -145,7 +145,7 @@ internal struct ExperienceTheme: Codable {
     }
 
     var backdropOpacity: CGFloat {
-        CGFloat((backdrop?.opacity ?? ThemeHandler.DefaultValues.dimDegree / 100))
+        CGFloat(CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimDegree) / 100)
     }
 
     var backdropBackground: UIColor {

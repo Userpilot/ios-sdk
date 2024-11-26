@@ -13,6 +13,9 @@ import UIKit
 
 internal extension UIApplication {
 
+    // MARK: - Active Window Scenes
+
+    /// Returns all active window scenes in the foreground.
     @available(iOS 13.0, *)
     var activeWindowScenes: [UIWindowScene] {
         self.connectedScenes
@@ -20,7 +23,7 @@ internal extension UIApplication {
             .compactMap { $0 as? UIWindowScene }
     }
 
-    // We expose this property because a unit test cannot init a UIWindowScene for mocking different states.
+    /// Checks if there are any active window scenes.
     var hasActiveWindowScenes: Bool {
         if #available(iOS 13.0, *) {
             return !activeWindowScenes.isEmpty
@@ -29,9 +32,7 @@ internal extension UIApplication {
         }
     }
 
-    // Note: multitasking with two instances of the same app side by side
-    // will have both designated as `.foregroundActive`, and as a result
-    // the returned window may not be the one expected.
+    /// Returns the active key window, considering iOS versions and multitasking.
     private var activeKeyWindow: UIWindow? {
         if #available(iOS 13.0, *) {
             return self.activeWindowScenes
@@ -42,7 +43,27 @@ internal extension UIApplication {
         }
     }
 
-    func topViewController() -> UIViewController? {
+    // MARK: - Public API
+
+    /// Retrieves the top-most view controller, ensuring it is executed on the main thread.
+    /// - Returns: The top-most `UIViewController`, or `nil` if none is found.
+    func fetchTopViewController() -> UIViewController? {
+        if Thread.isMainThread {
+            return resolveTopViewController()
+        } else {
+            var topViewController: UIViewController?
+            DispatchQueue.main.sync {
+                topViewController = self.resolveTopViewController()
+            }
+            return topViewController
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    /// Resolves the top-most view controller starting from the root view controller.
+    /// - Returns: The top-most `UIViewController`, or `nil` if none is found.
+    private func resolveTopViewController() -> UIViewController? {
         var window: UIWindow? = activeKeyWindow
 
         if window == nil {
@@ -57,29 +78,34 @@ internal extension UIApplication {
         }
 
         guard let rootViewController = window?.rootViewController else { return nil }
-        return topViewController(controller: rootViewController)
+        return findTopViewController(from: rootViewController)
     }
 
-    private func topViewController(controller: UIViewController) -> UIViewController {
+    /// Recursively finds the top-most view controller starting from a given controller.
+    /// - Parameter controller: The `UIViewController` to start the search from.
+    /// - Returns: The top-most `UIViewController`.
+    private func findTopViewController(from controller: UIViewController) -> UIViewController {
         if let navigationController = controller as? UINavigationController,
            let visibleViewController = navigationController.visibleViewController {
             if !visibleViewController.isBeingDismissed {
-                return topViewController(controller: visibleViewController)
+                return findTopViewController(from: visibleViewController)
             } else if let topStack = navigationController.viewControllers.last {
-                // This gets the VC under what is being dismissed
-                return topViewController(controller: topStack)
+                return findTopViewController(from: topStack)
             } else {
-                return topViewController(controller: visibleViewController)
+                return findTopViewController(from: visibleViewController)
             }
         }
+
         if let tabController = controller as? UITabBarController,
-           let selected = tabController.selectedViewController {
-            return topViewController(controller: selected)
+           let selectedViewController = tabController.selectedViewController {
+            return findTopViewController(from: selectedViewController)
         }
-        if let presented = controller.presentedViewController, !presented.isBeingDismissed {
-            return topViewController(controller: presented)
+
+        if let presentedViewController = controller.presentedViewController,
+           !presentedViewController.isBeingDismissed {
+            return findTopViewController(from: presentedViewController)
         }
+
         return controller
     }
-
 }

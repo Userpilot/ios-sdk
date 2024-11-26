@@ -31,7 +31,7 @@ internal extension UIViewController {
     }
 
     func captureScreen() {
-        guard UIApplication.shared.topViewController() != nil else { return }
+        guard UIApplication.shared.fetchTopViewController() != nil else { return }
 
         // communicate the tracked screen back to AnalyticsTracker
         NotificationCenter.userpilot.post(name: .userpilotTrackedScreen,

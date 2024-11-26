@@ -113,8 +113,8 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
     ///
     /// - Parameter action: A `ButtonAction` that defines the type of action triggered (e.g., deep-linking).
     func onAction(_ action: ButtonAction) {
-        experienceViewModel.onExperienceCompleted()
         dismissBottomSheet {
+            self.experienceViewModel.onExperienceCompleted()
             if action.deepLink != nil {
                 self.experienceViewModel.onDeepLinkTriggered()
             }

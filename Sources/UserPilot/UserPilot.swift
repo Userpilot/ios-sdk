@@ -48,9 +48,6 @@ public class UserPilot: NSObject {
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(UserPilot.Config.self).logger
 
-    /// to hold session start state
-    private(set) var sessionStarted = false
-
     // MARK: - Initialization
 
     /**
@@ -75,9 +72,6 @@ public class UserPilot: NSObject {
 
         // start experience listener
         experiencesPublisher.start()
-
-        // session start indicator
-        sessionStarted = true
 
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
@@ -110,8 +104,8 @@ extension UserPilot {
     @objc
     public func destroy() {
         logout()
-        sessionStarted = false
         sessionMonitor.reset()
+        analyticsPublisher.reset()
     }
 }
 
@@ -274,11 +268,6 @@ extension UserPilot {
     internal func clean() {
         storage.userID = ""
         storage.user = User().toJson() ?? ""
-    }
-
-    /// Hold SDK state for first initialization
-    internal func updateSessionStartState(_ newSessionState: Bool) {
-        sessionStarted = newSessionState
     }
 }
 
