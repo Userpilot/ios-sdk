@@ -76,6 +76,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Holds last experience triggered by SDK
     private var carouselContent = false
 
+    /// Manual experience not check screen
+    private var isTriggerManualExperience = false
+
     // MARK: - Initializer
 
     /**
@@ -170,13 +173,18 @@ extension ExperiencesPublisher: SocketSubscription {
             let response = message.payload.toJSONString()
         else { return }
 
-        if eventName == EventType.screenEvent,
-           let contentPayload = message.payload["mobile_contents"] as? [String: Any],
-           !contentPayload.isEmpty,
-           let mobileContentData = response.toMobileContent() {
+        // Process experience content or screen events
+        if eventName == EventType.screenEvent || eventName == SDKEventsName.fetchExperienceContent.rawValue {
+            guard
+                let contentPayload = message.payload["mobile_contents"] as? [String: Any],
+                !contentPayload.isEmpty,
+                let mobileContentData = response.toMobileContent()
+            else { return }
+            isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
             mobileContent = mobileContentData.mobileContent
         }
-        if eventName == "fetch_theme" {
+
+        if eventName == SDKEventsName.fetchExperienceTheme.rawValue {
             if let themeData = response.toMobileTheme(), themeData.id != nil {
                 themeHandler.saveTheme(themeData)
             }
@@ -203,6 +211,7 @@ extension ExperiencesPublisher: SocketSubscription {
             else {
                 return
             }
+            isTriggerManualExperience = false
             mobileContent = mobileContentData.mobileContent
             checkCachedThemes(mobileContentData.mobileContent.baseThemeID)
         }
