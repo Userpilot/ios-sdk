@@ -318,7 +318,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         let isScreenTitleChanged = screenViewEntity?.event.screenTitle != event.screenTitle
 
         // Update session state if the screen title has changed
-        if isScreenTitleChanged {
+        if screenViewEntity != nil && isScreenTitleChanged {
             startSession = false
         }
 
