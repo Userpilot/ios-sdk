@@ -64,7 +64,7 @@ internal class BottomSheetViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
-        setupGestures()
+        // setupGestures()
     }
 
     override func viewDidAppear(_ animated: Bool) {

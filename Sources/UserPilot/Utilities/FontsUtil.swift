@@ -15,26 +15,37 @@ import UIKit
 @available(iOS 13.0, *)
 internal extension UIFont {
 
-    /// Returns a UIFont that matches the specified name, weight, and size.
+    /// Returns a UIFont that matches the specified name, weight, and size, with support for Dynamic Type.
     /// If the custom font is not available, it falls back to the system font.
     ///
     /// - Parameters:
     ///   - fontName: The name of the custom font. If nil, the system font is used.
     ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's traits (e.g., bold, italic).
-    ///   - fontSize: The size of the font.
-    /// - Returns: A UIFont object matching the specified criteria.
+    ///   - fontSize: The base size of the font.
+    ///   - textStyle: The text style for Dynamic Type scaling. Default is `.body`.
+    /// - Returns: A UIFont object matching the specified criteria, scaled for Dynamic Type.
     static func matching(fontName: String?,
                          fontWeight: [UIFontDescriptor.SymbolicTraits],
-                         fontSize: CGFloat) -> UIFont {
-        // If no font name is provided, fallback to system font with specified traits.
-        if fontName == nil {
-            return systemFont(for: fontWeight, size: fontSize)
-        }
+                         fontSize: CGFloat,
+                         textStyle: UIFont.TextStyle = .body) -> UIFont {
+        // Determine the base font
+        let baseFont: UIFont = {
+            if fontName == nil {
+                return systemFont(for: fontWeight, size: fontSize)
+            }
 
-        // Try to load a custom font, system design font, or fallback to system font.
-        return loadCustomFont(fontName: fontName!, fontWeight: fontWeight, fontSize: fontSize) ??
-               getDefaultSystemFont(fontName: fontName!, fontWeight: fontWeight, size: fontSize) ??
-               systemFont(for: fontWeight, size: fontSize)
+            return loadCustomFont(fontName: fontName!,
+                                  fontWeight: fontWeight,
+                                  fontSize: fontSize) ??
+                   getDefaultSystemFont(fontName: fontName!,
+                                        fontWeight: fontWeight,
+                                        size: fontSize) ??
+                   systemFont(for: fontWeight, size: fontSize)
+        }()
+
+        // Apply Dynamic Type scaling
+        let scaledFont = UIFontMetrics(forTextStyle: textStyle).scaledFont(for: baseFont)
+        return scaledFont
     }
 
     /// Returns the system font with specified symbolic traits (bold, italic, etc.)
@@ -110,7 +121,6 @@ internal extension UIFont {
         return UIFont(name: fullFontName, size: fontSize)
     }
 
-    /// Checks if a font with the specified name is already registered.
     /// Checks if a font with the specified name is already registered.
     private static func isFontRegistered(fontName: String) -> Bool {
         return UIFont.familyNames.contains { family in

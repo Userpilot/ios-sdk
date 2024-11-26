@@ -29,22 +29,11 @@ class MainViewController: BaseViewController {
             properties: ["locale_code": Locale.current.languageCode ?? "en"]
         )
          */
-
-        printFontsFamilyNames()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         UserPilotManager.shared.screen("main")
-    }
-
-    func printFontsFamilyNames () {
-        for familyName in UIFont.familyNames {
-            print(familyName)
-            for fontName in UIFont.fontNames(forFamilyName: familyName ) {
-                print("_____\(fontName)")
-            }
-        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
