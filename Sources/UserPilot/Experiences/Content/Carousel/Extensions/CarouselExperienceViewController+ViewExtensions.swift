@@ -47,7 +47,7 @@ internal extension CarouselExperienceViewController {
     func setupGeneralStyle() {
         // Get the theme for the current step index.
         guard
-            let theme = experienceViewModel.carouselTheme[safe: collectionView.currentIndex]
+            let theme = experienceViewModel.carouselTheme[safe: experienceViewModel.currentStep]
         else { return }
 
         // update status bar color
@@ -73,10 +73,10 @@ internal extension CarouselExperienceViewController {
     /// Binds the action button for a given step index.
     /// Sets up the button with its properties and configures the action when tapped.
     /// - Parameter index: The index of the step to bind the action button for.
-    func bindActionButton(_ index: Int) {
+    func bindActionButton() {
         guard
-            let theme = experienceViewModel.carouselTheme[safe: index],
-            let step = experienceViewModel.mobileContent?.steps[safe: index],
+            let theme = experienceViewModel.carouselTheme[safe: experienceViewModel.currentStep],
+            let step = experienceViewModel.mobileContent?.steps[safe: experienceViewModel.currentStep],
             let lastSection = step.sections.last,
             let button = lastSection.lines.last,
             button.type == .button
@@ -123,12 +123,9 @@ internal extension CarouselExperienceViewController {
     /// - Parameter step: The index of the new step viewed.
     func onNewStepViewed(_ step: Int) {
         experienceViewModel.onStepChanged(step)
-
-        // Update the progress view to indicate the new step.
+        setupGeneralStyle()
         viewStepsProgress.setCurrentStep(step)
-
-        // Bind the action button for the newly viewed step.
-        bindActionButton(step)
+        bindActionButton()
     }
 
     /// Closes the carousel experience view and triggers the onDismiss event.

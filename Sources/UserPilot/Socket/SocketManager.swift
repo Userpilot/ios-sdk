@@ -209,7 +209,7 @@ extension SocketManager {
         socketState = .connecting
 
         let socketProperties: [String: Any] = [
-            SocketManager.tokenKey: config.token,
+            SocketManager.tokenKey: "NX-1716ba67",
             SocketManager.userIDKey: storage.userID,
             SocketManager.sdkVersionKey: userPilot?.version() ?? "",
             SocketManager.autoPropertiesKey: autoProperties,

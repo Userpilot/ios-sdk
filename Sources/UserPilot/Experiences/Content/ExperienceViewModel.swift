@@ -41,7 +41,8 @@ internal class ExperienceViewModel {
         mobileContent?.steps.first
     }
 
-    /// Track last step user achieved - used in carousel content
+    /// Track current & last step user achieved - used in carousel content
+    private(set) var currentStep = 0
     private var lastStep = 0
 
     /// closure to observe the binding state of the content
@@ -169,6 +170,7 @@ internal class ExperienceViewModel {
      - Parameter step: The current step number.
      */
     func onStepChanged(_ step: Int) {
+        currentStep = step
         guard step > lastStep else { return }
         lastStep = step
 

@@ -28,8 +28,7 @@ internal extension CarouselExperienceViewController {
             // Set up the general style and reload data when view model data changes.
             self?.setupGeneralStyle()
             self?.collectionView.reloadData()
-            // Bind the action button for the first step.
-            self?.bindActionButton(0)
+            self?.bindActionButton()
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
