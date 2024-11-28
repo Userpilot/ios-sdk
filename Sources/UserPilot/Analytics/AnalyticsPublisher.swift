@@ -568,7 +568,7 @@ extension AnalyticsPublisher {
 
     /// update seen experiences
     func experiencePublished(_ experienceId: Int) {
-        if var screenEvent = screenViewEntity {
+        if let screenEvent = screenViewEntity {
             screenEvent.seenExperiences.insert(experienceId)
             screenViewEntity = screenEvent
         }

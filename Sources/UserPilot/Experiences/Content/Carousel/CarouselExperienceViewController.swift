@@ -21,19 +21,12 @@ internal class CarouselExperienceViewController: UIViewController {
 
     /// Views constraints.
     @IBOutlet internal weak var buttonDismissRightMargin: NSLayoutConstraint!
-    @IBOutlet internal weak var actionLeftMargin: NSLayoutConstraint!
-    @IBOutlet internal weak var actionRightMargin: NSLayoutConstraint!
-    @IBOutlet internal weak var contentTopMargin: NSLayoutConstraint!
-    @IBOutlet internal weak var contentBottomMargin: NSLayoutConstraint!
 
     /// Container view for the dismiss button.
     @IBOutlet internal weak var buttonDismissContainerView: UIView!
 
     /// Close button to dismiss the carousel experience.
     @IBOutlet internal weak var buttonDismiss: UPCloseButton!
-
-    /// Action button used for various step interactions.
-    @IBOutlet internal weak var buttonAction: UPButtonView!
 
     /// View displaying the step progress indicator.
     @IBOutlet internal weak var viewStepsProgress: UPStepsProgressView!

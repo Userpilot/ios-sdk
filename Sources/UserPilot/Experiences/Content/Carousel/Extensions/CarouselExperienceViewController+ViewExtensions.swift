@@ -21,10 +21,6 @@ internal extension CarouselExperienceViewController {
     func setupViews() {
         isModalInPresentation = true
         buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        actionLeftMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        actionRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        contentTopMargin.constant = ThemeHandler.DefaultValues.contentMargin
-        contentBottomMargin.constant = ThemeHandler.DefaultValues.contentBottomMargin
     }
 
     /// Setup UI locale depending on Experience content
@@ -53,9 +49,6 @@ internal extension CarouselExperienceViewController {
         // update status bar color
         setNeedsStatusBarAppearanceUpdate()
 
-        // Set the background color for the view.
-        self.view.backgroundColor = theme.backgroundColor
-
         // Configure the dismiss button based on the theme settings.
         if theme.isDismissButtonEnabled {
             buttonDismiss.setupView(theme: theme)
@@ -70,37 +63,15 @@ internal extension CarouselExperienceViewController {
         )
     }
 
-    /// Binds the action button for a given step index.
-    /// Sets up the button with its properties and configures the action when tapped.
-    /// - Parameter index: The index of the step to bind the action button for.
-    func bindActionButton() {
-        guard
-            let theme = experienceViewModel.carouselTheme[safe: experienceViewModel.currentStep],
-            let step = experienceViewModel.mobileContent?.steps[safe: experienceViewModel.currentStep],
-            let lastSection = step.sections.last,
-            let button = lastSection.lines.last,
-            button.type == .button
-        else {
-            return
-        }
-
-        // Set up the action button with the step's button configuration and theme.
-        buttonAction.setupViews(
-            line: button,
-            action: step.buttonAction,
-            theme: theme
-        ) { [weak self] action in
-            guard let self else { return }
-
-            // If it's the last step, handle dismissal and trigger actions accordingly.
-            if self.isLastStep() {
-                self.experienceViewModel.onExperienceCompleted()
-                self.dismiss(animated: true, completion: {
-                    if action.deepLink != nil {
-                        self.experienceViewModel.onDeepLinkTriggered()
-                    }
-                })
-            }
+    /// Process action button -> action.
+    func onActionButtonClicked(_ action: ButtonAction) {
+        if self.isLastStep() {
+            self.experienceViewModel.onExperienceCompleted()
+            self.dismiss(animated: true, completion: {
+                if action.deepLink != nil {
+                    self.experienceViewModel.onDeepLinkTriggered()
+                }
+            })
         }
     }
 
@@ -125,7 +96,6 @@ internal extension CarouselExperienceViewController {
         experienceViewModel.onStepChanged(step)
         setupGeneralStyle()
         viewStepsProgress.setCurrentStep(step)
-        bindActionButton()
     }
 
     /// Closes the carousel experience view and triggers the onDismiss event.

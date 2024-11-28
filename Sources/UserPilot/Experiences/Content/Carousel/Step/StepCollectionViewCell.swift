@@ -37,6 +37,13 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         return view
     }()
 
+    let actionButton: UPButtonView = {
+        let view = UPButtonView()
+        return view
+    }()
+
+    var actionButtonClicked: (ButtonAction) -> Void = { _ in }
+
     // MARK: - Override
 
     // Clear existing views in the stack view
@@ -83,6 +90,23 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                               withTheme theme: ExperienceTheme,
                               andImageLoader imageLoader: ImageLoading) {
         // Iterate over each section of the step
+        guard
+            let lastSection = step.sections.last,
+            let button = lastSection.lines.last,
+            button.type == .button
+        else {
+            return
+        }
+
+        // Set up the action button with the step's button configuration and theme.
+        actionButton.setupViews(
+            line: button,
+            action: step.buttonAction,
+            theme: theme
+        ) { [weak self] action in
+            self?.actionButtonClicked(action)
+        }
+
         step.sections.forEach { section in
             guard let firstLine = section.lines.first else { return }
             switch firstLine.type {
@@ -124,12 +148,14 @@ internal class StepCollectionViewCell: UICollectionViewCell {
        - theme: The `TheExperienceThemeData` that contains styling attributes for the cell's UI components.
      */
     private func setupUI(withTheme theme: ExperienceTheme) {
+        contentView.backgroundColor = theme.backgroundColor
         // Disable autoresizing mask constraints for custom layout
-        [theScrollView, contentContainerView, stackView].forEach {
+        [theScrollView, contentContainerView, stackView, actionButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
 
         // Add the scroll view and its content view to the cell's content view
+        contentView.addSubview(actionButton)
         contentView.addSubview(theScrollView)
         theScrollView.addSubview(contentContainerView)
         contentContainerView.addSubview(stackView)
@@ -146,10 +172,18 @@ internal class StepCollectionViewCell: UICollectionViewCell {
 
         // Activate layout constraints for the scroll view and its content
         NSLayoutConstraint.activate([
-            theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 0.0),
+            actionButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
+                                                  constant: ThemeHandler.DefaultValues.contentMargin),
+            actionButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
+                                                   constant: ThemeHandler.DefaultValues.contentMargin.negative),
+            actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
+                                                 constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
+            theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
+                                               constant: ThemeHandler.DefaultValues.carouselContentTopMargin),
             theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 0.0),
             theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 0.0),
-            theScrollView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: 0.0),
+            theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
+                                                  constant: ThemeHandler.DefaultValues.distanceBetweenSections),
             contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor, constant: 0.0),
             contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor, constant: 0.0),
             contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor, constant: 0.0),

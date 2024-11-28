@@ -81,11 +81,35 @@ internal extension String {
 internal extension String {
 
     var color: UIColor {
-        let formattedString = self.hasPrefix("#") ? self : "#\(self)"
-        guard let color = UIColor(hexString: formattedString) else {
-            return .black
+        // Remove any whitespace or `#` prefix
+        let cleanedHex = self.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
+        guard cleanedHex.count == 6 || cleanedHex.count == 8 else {
+            return .blue
         }
-        return color
+
+        var alpha: CGFloat = 1.0
+        var rgbPart = cleanedHex
+        if cleanedHex.count == 8 {
+            // Extract alpha as the last two characters
+            let alphaHex = String(cleanedHex.suffix(2))
+            if let alphaValue = Int(alphaHex, radix: 16) {
+                alpha = CGFloat(alphaValue) / 255.0
+            }
+            // Extract RGB as the first 6 characters
+            rgbPart = String(cleanedHex.prefix(6))
+        }
+        // Parse RGB channels
+        guard let red = Int(rgbPart.prefix(2), radix: 16),
+            let green = Int(rgbPart.dropFirst(2).prefix(2), radix: 16),
+            let blue = Int(rgbPart.dropFirst(4).prefix(2), radix: 16)
+        else { return  .black }
+
+        return UIColor(
+            red: CGFloat(red) / 255.0,
+            green: CGFloat(green) / 255.0,
+            blue: CGFloat(blue) / 255.0,
+            alpha: alpha
+        )
     }
 
     func rgbaToColor() -> UIColor {

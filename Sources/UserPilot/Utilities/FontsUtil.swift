@@ -28,24 +28,20 @@ internal extension UIFont {
                          fontWeight: [UIFontDescriptor.SymbolicTraits],
                          fontSize: CGFloat,
                          textStyle: UIFont.TextStyle = .body) -> UIFont {
+        guard let fontName else { return systemFont(for: fontWeight, size: fontSize) }
         // Determine the base font
-        let baseFont: UIFont = {
-            if fontName == nil {
-                return systemFont(for: fontWeight, size: fontSize)
-            }
-
-            return loadCustomFont(fontName: fontName!,
-                                  fontWeight: fontWeight,
-                                  fontSize: fontSize) ??
-                   getDefaultSystemFont(fontName: fontName!,
+        let font: UIFont = {
+            return getDefaultSystemFont(fontName: fontName,
                                         fontWeight: fontWeight,
                                         size: fontSize) ??
-                   systemFont(for: fontWeight, size: fontSize)
+                    loadCustomFont(fontName: fontName,
+                                  fontWeight: fontWeight,
+                                  fontSize: fontSize) ??
+                    systemFont(for: fontWeight, size: fontSize)
         }()
 
         // Apply Dynamic Type scaling
-        let scaledFont = UIFontMetrics(forTextStyle: textStyle).scaledFont(for: baseFont)
-        return scaledFont
+        return UIFontMetrics.metricFor(size: fontSize).scaledFont(for: font)
     }
 
     /// Returns the system font with specified symbolic traits (bold, italic, etc.)
@@ -100,31 +96,45 @@ internal extension UIFont {
         let fullFontName = fontName + suffix
 
         // Check if the font is already registered
-        if isFontRegistered(fontName: fullFontName) {
+        guard (Bundle.main.url(forResource: fullFontName, withExtension: "ttf") ??
+               Bundle.main.url(forResource: fullFontName, withExtension: "otf")) != nil else {
+            return nil
+        }
+
+        if UIFont.familyNames.flatMap({ UIFont.fontNames(forFamilyName: $0) }).contains(fullFontName) {
             return UIFont(name: fullFontName, size: fontSize)
         }
-
-        // Load the font from the bundle
-        guard let fontURL = Bundle.main.url(forResource: fullFontName, withExtension: "ttf"),
-              let fontDataProvider = CGDataProvider(url: fontURL as CFURL),
-              let cgFont = CGFont(fontDataProvider) else {
-            return nil
-        }
-
-        // Register the font with Core Text
-        var error: Unmanaged<CFError>?
-        if !CTFontManagerRegisterGraphicsFont(cgFont, &error) {
-            return nil
-        }
-
-        // Return the custom font
-        return UIFont(name: fullFontName, size: fontSize)
+        return nil
     }
 
     /// Checks if a font with the specified name is already registered.
     private static func isFontRegistered(fontName: String) -> Bool {
         return UIFont.familyNames.contains { family in
             UIFont.fontNames(forFamilyName: family).contains(fontName)
+        }
+    }
+
+    private static func isCustomFontAvailable(_ fontName: String) -> Bool {
+        guard let fontURL = Bundle.main.url(forResource: fontName, withExtension: "ttf") ??
+                Bundle.main.url(forResource: fontName, withExtension: "otf") else {
+            print("Font file not found in the package bundle.")
+            return false
+        }
+
+        if UIFont.familyNames.flatMap({ UIFont.fontNames(forFamilyName: $0) }).contains(fontName) {
+            return true
+        }
+
+        guard let fontDataProvider = CGDataProvider(url: fontURL as CFURL),
+              let font = CGFont(fontDataProvider) else {
+            return false
+        }
+
+        var error: Unmanaged<CFError>?
+        if CTFontManagerRegisterGraphicsFont(font, &error) {
+            return true
+        } else {
+            return false
         }
     }
 }
@@ -164,6 +174,20 @@ internal extension UIFontDescriptor.SystemDesign {
         case "Rounded": self = .rounded
         case "Serif": self = .serif
         default: return nil
+        }
+    }
+}
+
+extension UIFontMetrics {
+    static func metricFor(size: CGFloat) -> UIFontMetrics {
+        // using a simple mapping here to try to provide reasonable font scaling
+        // behavior based on the original text size in the design
+        if size <= 15 {
+            return UIFontMetrics(forTextStyle: .caption1)
+        } else if size >= 20 {
+            return UIFontMetrics(forTextStyle: .title1)
+        } else {
+            return UIFontMetrics(forTextStyle: .body)
         }
     }
 }

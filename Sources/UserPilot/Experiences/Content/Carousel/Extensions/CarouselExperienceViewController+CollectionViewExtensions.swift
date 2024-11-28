@@ -45,6 +45,9 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
         stepCollectionViewCell.bindStep(step,
                                         withTheme: theme,
                                         andImageLoader: experienceViewModel.imageLoader)
+        stepCollectionViewCell.actionButtonClicked = { [weak self] action in
+            self?.onActionButtonClicked(action)
+        }
         return stepCollectionViewCell
     }
 

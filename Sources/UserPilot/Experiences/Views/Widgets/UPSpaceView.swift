@@ -55,9 +55,9 @@ internal class UPSpaceView: UIView {
     /// Sets the height of the spacer view.
     /// - Parameter height: The height to be set for the spacer, in points.
     func setHeight(_ height: Int) {
-        spaceHeight = CGFloat(height)  // Convert the integer height to CGFloat
-        setNeedsLayout()                // Mark the view as needing layout
-        layoutIfNeeded()                // Ensure the layout is updated immediately
-        layoutSubviews()                // Call layoutSubviews to layout the subviews
+        spaceHeight = CGFloat(height)
+        setNeedsLayout()
+        layoutIfNeeded()
+        layoutSubviews()
     }
 }

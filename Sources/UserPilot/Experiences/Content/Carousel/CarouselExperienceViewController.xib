@@ -10,104 +10,79 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="CarouselExperienceViewController" customModule="UserPilot">
             <connections>
-                <outlet property="actionLeftMargin" destination="9Tz-8q-Sv8" id="rpU-8h-x3F"/>
-                <outlet property="actionRightMargin" destination="D2D-eX-ukj" id="whu-rG-U45"/>
-                <outlet property="buttonAction" destination="3gt-N5-NdR" id="l5n-md-sps"/>
-                <outlet property="buttonDismiss" destination="77F-mu-doi" id="hNw-xy-giN"/>
-                <outlet property="buttonDismissContainerView" destination="OAC-jE-Go0" id="ble-wc-P5k"/>
-                <outlet property="buttonDismissRightMargin" destination="xX1-Wz-Igg" id="Lzv-1I-zoC"/>
-                <outlet property="collectionView" destination="rAc-Qs-gI2" id="Yxt-e3-7dw"/>
-                <outlet property="contentBottomMargin" destination="q5E-PZ-Q3C" id="kiy-Zq-zzA"/>
-                <outlet property="contentTopMargin" destination="9rk-4w-hWf" id="yW1-Le-MFu"/>
-                <outlet property="view" destination="iN0-l3-epB" id="Phi-ar-ZxS"/>
-                <outlet property="viewStepsProgress" destination="Gv2-Kb-wZm" id="dKd-cJ-tQz"/>
+                <outlet property="buttonDismiss" destination="kxY-Jg-UdR" id="MTr-bf-Jjk"/>
+                <outlet property="buttonDismissContainerView" destination="nTt-J7-kXc" id="5Nv-XA-SyY"/>
+                <outlet property="buttonDismissRightMargin" destination="fh0-1Z-KC5" id="di3-Ak-GUY"/>
+                <outlet property="collectionView" destination="P7K-pc-v5x" id="5sN-wi-Bxf"/>
+                <outlet property="view" destination="Oby-9P-aTQ" id="4Vr-Ie-7Hu"/>
+                <outlet property="viewStepsProgress" destination="fPH-Qu-Hol" id="cps-9m-ABy"/>
             </connections>
         </placeholder>
         <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
-        <view contentMode="scaleToFill" id="iN0-l3-epB">
+        <view contentMode="scaleToFill" id="Oby-9P-aTQ">
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="12" translatesAutoresizingMaskIntoConstraints="NO" id="SfO-Cs-KvK">
-                    <rect key="frame" x="0.0" y="79" width="393" height="719"/>
+                <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="none" translatesAutoresizingMaskIntoConstraints="NO" id="P7K-pc-v5x">
+                    <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="t7j-QF-yZh">
+                        <size key="itemSize" width="128" height="128"/>
+                        <size key="headerReferenceSize" width="0.0" height="0.0"/>
+                        <size key="footerReferenceSize" width="0.0" height="0.0"/>
+                        <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
+                    </collectionViewFlowLayout>
+                    <connections>
+                        <outlet property="dataSource" destination="-1" id="Jsv-MH-MuQ"/>
+                        <outlet property="delegate" destination="-1" id="xmb-il-EM8"/>
+                    </connections>
+                </collectionView>
+                <view tag="1" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="nTt-J7-kXc">
+                    <rect key="frame" x="0.0" y="79" width="393" height="35"/>
                     <subviews>
-                        <view tag="1" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="OAC-jE-Go0">
-                            <rect key="frame" x="0.0" y="0.0" width="393" height="35"/>
-                            <subviews>
-                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="77F-mu-doi" customClass="UPCloseButton" customModule="UserPilot">
-                                    <rect key="frame" x="338" y="0.0" width="35" height="35"/>
-                                    <constraints>
-                                        <constraint firstAttribute="height" constant="35" id="LiJ-Lt-sPh"/>
-                                        <constraint firstAttribute="width" constant="35" id="VR9-Au-xBh"/>
-                                    </constraints>
-                                    <state key="normal" title="Button"/>
-                                    <buttonConfiguration key="configuration" style="plain"/>
-                                    <connections>
-                                        <action selector="onCloseButtonClicked:" destination="-1" eventType="touchUpInside" id="L0k-5O-ann"/>
-                                    </connections>
-                                </button>
-                            </subviews>
-                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kxY-Jg-UdR" customClass="UPCloseButton" customModule="UserPilot">
+                            <rect key="frame" x="338" y="0.0" width="35" height="35"/>
                             <constraints>
-                                <constraint firstItem="77F-mu-doi" firstAttribute="top" secondItem="OAC-jE-Go0" secondAttribute="top" id="LS3-sE-4tF"/>
-                                <constraint firstAttribute="height" constant="35" id="heb-d8-UQh"/>
-                                <constraint firstAttribute="trailing" secondItem="77F-mu-doi" secondAttribute="trailing" constant="20" id="xX1-Wz-Igg"/>
+                                <constraint firstAttribute="width" constant="35" id="aNp-Ev-T0O"/>
+                                <constraint firstAttribute="height" constant="35" id="cQU-Qv-D2n"/>
                             </constraints>
-                        </view>
-                        <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="none" translatesAutoresizingMaskIntoConstraints="NO" id="rAc-Qs-gI2">
-                            <rect key="frame" x="0.0" y="47" width="393" height="583"/>
-                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="oEb-bB-sux">
-                                <size key="itemSize" width="128" height="128"/>
-                                <size key="headerReferenceSize" width="0.0" height="0.0"/>
-                                <size key="footerReferenceSize" width="0.0" height="0.0"/>
-                                <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
-                            </collectionViewFlowLayout>
+                            <state key="normal" title="Button"/>
+                            <buttonConfiguration key="configuration" style="plain"/>
                             <connections>
-                                <outlet property="dataSource" destination="-1" id="BGd-KX-npg"/>
-                                <outlet property="delegate" destination="-1" id="6gJ-Tg-bSm"/>
+                                <action selector="onCloseButtonClicked:" destination="-1" eventType="touchUpInside" id="TuR-gb-Nii"/>
                             </connections>
-                        </collectionView>
-                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="zf4-O3-Buf">
-                            <rect key="frame" x="0.0" y="642" width="393" height="50"/>
-                            <subviews>
-                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="3gt-N5-NdR" customClass="UPButtonView" customModule="UserPilot">
-                                    <rect key="frame" x="20" y="0.0" width="353" height="50"/>
-                                    <constraints>
-                                        <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="50" id="DPh-t1-VuO"/>
-                                    </constraints>
-                                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
-                                    <state key="normal" title="Button"/>
-                                </button>
-                            </subviews>
-                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            <constraints>
-                                <constraint firstItem="3gt-N5-NdR" firstAttribute="leading" secondItem="zf4-O3-Buf" secondAttribute="leading" constant="20" id="9Tz-8q-Sv8"/>
-                                <constraint firstAttribute="trailing" secondItem="3gt-N5-NdR" secondAttribute="trailing" constant="20" id="D2D-eX-ukj"/>
-                                <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="50" id="JSk-l0-PxQ"/>
-                                <constraint firstItem="3gt-N5-NdR" firstAttribute="top" secondItem="zf4-O3-Buf" secondAttribute="top" id="caV-vP-NRT"/>
-                                <constraint firstAttribute="bottom" secondItem="3gt-N5-NdR" secondAttribute="bottom" id="luL-dT-6ZB"/>
-                            </constraints>
-                        </view>
-                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Gv2-Kb-wZm" customClass="UPStepsProgressView" customModule="UserPilot">
-                            <rect key="frame" x="0.0" y="704" width="393" height="15"/>
-                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            <constraints>
-                                <constraint firstAttribute="height" constant="15" id="X6r-Zd-6IL"/>
-                            </constraints>
-                        </view>
+                        </button>
                     </subviews>
-                </stackView>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <constraints>
+                        <constraint firstItem="kxY-Jg-UdR" firstAttribute="top" secondItem="nTt-J7-kXc" secondAttribute="top" id="YCg-xZ-df6"/>
+                        <constraint firstAttribute="trailing" secondItem="kxY-Jg-UdR" secondAttribute="trailing" constant="20" id="fh0-1Z-KC5"/>
+                        <constraint firstAttribute="height" constant="35" id="wwy-RZ-GfY"/>
+                    </constraints>
+                </view>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fPH-Qu-Hol" customClass="UPStepsProgressView" customModule="UserPilot">
+                    <rect key="frame" x="0.0" y="783" width="393" height="15"/>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="15" id="4NV-5j-1YV"/>
+                    </constraints>
+                </view>
             </subviews>
-            <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
+            <viewLayoutGuide key="safeArea" id="j8h-dh-eGS"/>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
-                <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="SfO-Cs-KvK" secondAttribute="trailing" id="3oK-4c-3De"/>
-                <constraint firstItem="SfO-Cs-KvK" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="20" id="9rk-4w-hWf"/>
-                <constraint firstItem="SfO-Cs-KvK" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" id="PuT-AS-AR8"/>
-                <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="SfO-Cs-KvK" secondAttribute="bottom" constant="20" id="q5E-PZ-Q3C"/>
+                <constraint firstItem="nTt-J7-kXc" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="0sH-nM-27R"/>
+                <constraint firstAttribute="trailing" secondItem="fPH-Qu-Hol" secondAttribute="trailing" id="38L-bU-b1V"/>
+                <constraint firstItem="P7K-pc-v5x" firstAttribute="top" secondItem="Oby-9P-aTQ" secondAttribute="top" id="3Do-hr-Pm5"/>
+                <constraint firstItem="P7K-pc-v5x" firstAttribute="trailing" secondItem="j8h-dh-eGS" secondAttribute="trailing" id="BJA-84-tx0"/>
+                <constraint firstAttribute="bottom" secondItem="P7K-pc-v5x" secondAttribute="bottom" id="Kr6-s3-CCC"/>
+                <constraint firstItem="j8h-dh-eGS" firstAttribute="bottom" secondItem="fPH-Qu-Hol" secondAttribute="bottom" constant="20" id="Vry-eT-zD8"/>
+                <constraint firstAttribute="trailing" secondItem="nTt-J7-kXc" secondAttribute="trailing" id="ZTC-Es-Gk7"/>
+                <constraint firstItem="nTt-J7-kXc" firstAttribute="top" secondItem="j8h-dh-eGS" secondAttribute="top" constant="20" id="aC2-L5-Ie0"/>
+                <constraint firstItem="P7K-pc-v5x" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="gCK-ds-LsW"/>
+                <constraint firstItem="fPH-Qu-Hol" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="iCm-WP-5Ip"/>
             </constraints>
-            <point key="canvasLocation" x="140" y="21"/>
+            <point key="canvasLocation" x="201" y="15"/>
         </view>
     </objects>
 </document>
