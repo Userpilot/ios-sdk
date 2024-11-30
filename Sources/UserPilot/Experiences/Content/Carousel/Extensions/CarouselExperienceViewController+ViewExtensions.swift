@@ -24,18 +24,17 @@ internal extension CarouselExperienceViewController {
     }
 
     /// Setup UI locale depending on Experience content
-    private func setupLocale() {
-        if "".isRTL {
-            UIView.appearance().semanticContentAttribute = .forceLeftToRight
-        }
-        let collectionViewLayout = UIView.userInterfaceLayoutDirection(
-            for: self.view.semanticContentAttribute) == .rightToLeft ?
-        UPCollectionViewLayout() : UICollectionViewFlowLayout()
+    func setupLocale() {
+        let collectionViewLayout = UPCollectionViewLayout()
         collectionViewLayout.sectionInset = UIEdgeInsets.zero
         collectionViewLayout.minimumLineSpacing = 0
         collectionViewLayout.minimumInteritemSpacing = 0
         collectionViewLayout.scrollDirection = .horizontal
         collectionView.collectionViewLayout = collectionViewLayout
+        if experienceViewModel.isRTL() {
+            buttonDismissContainerView.semanticContentAttribute = .forceRightToLeft
+            collectionView.semanticContentAttribute = .forceRightToLeft
+        }
     }
 
     /// Configures the general style for the carousel experience view.
@@ -59,7 +58,8 @@ internal extension CarouselExperienceViewController {
         // Set up the step progress view with the total number of steps and the current theme.
         viewStepsProgress.setupView(
             stepsCount: experienceViewModel.mobileContent?.steps.count ?? 0,
-            theme: theme
+            theme: theme,
+            isRTL: experienceViewModel.isRTL()
         )
     }
 

@@ -101,6 +101,10 @@ internal class ExperienceViewModel {
         }
     }
 
+    func isRTL() -> Bool {
+        return (mobileContent?.localeCode ?? "en").isRTL == true
+    }
+
     /// Returns the total number of steps in the carousel.
     var carouselStepsCount: Int {
         return mobileContent?.steps.count ?? 0

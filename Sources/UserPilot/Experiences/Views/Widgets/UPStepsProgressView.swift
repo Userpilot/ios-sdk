@@ -131,11 +131,11 @@ internal class UPStepsProgressView: UIView {
        - stepsCount: The total number of steps to display.
        - theme: The experience theme used for styling the circles.
      */
-    func setupView(stepsCount: Int, theme: ExperienceTheme) {
+    func setupView(stepsCount: Int, theme: ExperienceTheme, isRTL: Bool = false) {
         numberOfSteps = stepsCount
         updateColors(from: theme)
         setCurrentStep(0)
-        if UIView.userInterfaceLayoutDirection(for: self.semanticContentAttribute) == .rightToLeft {
+        if isRTL {
             transform = CGAffineTransform(scaleX: -1, y: 1)
         }
     }

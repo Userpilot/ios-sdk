@@ -41,12 +41,14 @@ internal struct MobileContent: Codable {
     let mobileTheme: ContentMobileTheme
     let screens: [String]
     let screenType: ScreenType
+    let localeCode: String
 
     private enum CodingKeys: String, CodingKey {
         case id, token, type, steps
         case mobileTheme = "theme_data"
         case screens
         case screenType = "screen_type"
+        case localeCode = "locale_code"
     }
 
     // General
@@ -174,11 +176,10 @@ internal struct Style: Codable {
 
 internal struct Content: Codable {
     let text: String?
-    let type: String
     let marks: [Mark]?
 
     private enum CodingKeys: String, CodingKey {
-        case text, type, marks
+        case text, marks
     }
 }
 
