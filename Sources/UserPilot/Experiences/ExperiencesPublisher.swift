@@ -33,7 +33,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func publishExperienceEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
-    func triggerExperience(_ experienceToken: String)
+    func triggerExperience(_ experienceID: String)
 
     /// manually end experience
     func endExperience()
@@ -114,9 +114,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
      - Parameter experienceId: The ID of the experience to start.
      */
-    func triggerExperience(_ experienceToken: String) {
+    func triggerExperience(_ experienceID: String) {
         if mobileContent != nil { return }
-        publishExperienceEvent(ExperienceContentEvent(experienceToken: experienceToken))
+        publishExperienceEvent(ExperienceContentEvent(experienceID: experienceID))
     }
 
     /*

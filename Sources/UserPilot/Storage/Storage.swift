@@ -37,7 +37,7 @@ internal protocol DataStoring: AnyObject {
     var temporaryUser: String? { get set }
 
     /// The socket URL used to connect the SDK to the backend services.
-    var imagesCache: [NSString: Date] { get set }
+    var sessionDate: Date? { get set }
 }
 
 /**
@@ -61,7 +61,7 @@ internal class Storage: DataStoring {
         case userID
         case user
         case temporaryUser
-        case imagesCache
+        case sessionDate
     }
 
     // MARK: - Properties
@@ -115,12 +115,12 @@ internal class Storage: DataStoring {
     }
 
     /// The user, which contains all updated user meta data and company.
-    internal var imagesCache: [NSString: Date] {
+    internal var sessionDate: Date? {
         get {
-            return read(.imagesCache, defaultValue: [:])
+            return read(.sessionDate, defaultValue: nil)
         }
         set {
-            write(.imagesCache, newValue: newValue)
+            write(.sessionDate, newValue: newValue)
         }
     }
 

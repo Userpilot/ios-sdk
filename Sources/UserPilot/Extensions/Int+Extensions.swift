@@ -11,10 +11,21 @@
 //
 
 import Foundation
+import UIKit
 
 internal extension Int {
     mutating func increment(by value: Int = 1) {
         self += value
+    }
+
+    func toPoints() -> Int {
+        return Int(CGFloat(self) / UIScreen.main.scale)
+    }
+}
+
+extension CGFloat {
+    func toPoints() -> CGFloat {
+        return self / UIScreen.main.scale
     }
 }
 

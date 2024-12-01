@@ -43,11 +43,11 @@ internal class ThemeHandler: ThemeHandling {
         static let headerTextSize = 16
         static let normalTextSize = 16
         static let dimDegree = 40
-        static let slideOutContentMaxHeightPercentage = 0.55
+        static let slideOutContentMaxHeightPercentage = 0.65
         static let blackColor = "#000000"
         static let whiteColor = "#FFFFFF"
         static let distanceBetweenSections = CGFloat(12)
-        static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(20)
+        static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(20) : CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let buttonBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(62) : CGFloat(52)
         static let carouselContentTopMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(80)

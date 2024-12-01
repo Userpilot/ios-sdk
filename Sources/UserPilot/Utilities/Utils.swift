@@ -83,8 +83,8 @@ internal func delay(_ delay: Double, closure: @escaping () -> Void) {
  */
 internal func getImageSize(for line: Line) -> CGSize {
     let defaultSize = ThemeHandler.DefaultValues.imageSize
-    let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
-    let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
+    let actualWidth = CGFloat(line.attrs?.actualSize?.width?.toPoints() ?? Int(defaultSize))
+    let actualHeight = CGFloat(line.attrs?.actualSize?.height?.toPoints() ?? Int(defaultSize))
     let screenWidth = screenWidth() * screenWidthMultiplier()
 
     if line.attrs?.style?.width == "auto" && line.attrs?.style?.height == "auto" {

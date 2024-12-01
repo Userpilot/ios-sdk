@@ -317,6 +317,11 @@ extension FlowRoutingManager {
                                       preferredStyle: alertStyle)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
         }))
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = viewController.view
+            popoverController.sourceRect = CGRect(x: viewController.view.bounds.midX, y: viewController.view.bounds.midY, width: 0, height: 0)
+        }
+
         viewController.present(alert, animated: true, completion: nil)
     }
 

@@ -175,6 +175,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Resume socket connection when back from background.
      */
     func resume() {
+        if isNewSession() {
+            reset()
+        }
         if let userID = cachedIdentifyEvent?.userID {
             storage.userID = userID
         }
@@ -183,8 +186,23 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
     }
 
+    /**
+     Reset session state
+     */
     func reset() {
         startSession = true
+    }
+
+    /**
+     Compare the saved date with the current date and return true if the difference is more than 30 minutes
+     */
+    func isNewSession() -> Bool {
+        guard let sessionDate = storage.sessionDate else {
+            return false
+        }
+        storage.sessionDate = nil
+        let difference = Date().timeIntervalSince(sessionDate)
+        return difference > GeneralConstants.SESSION_DURATION
     }
 
     /*

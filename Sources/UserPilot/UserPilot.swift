@@ -73,6 +73,9 @@ public class UserPilot: NSObject {
         // start experience listener
         experiencesPublisher.start()
 
+        // reset session Date
+        storage.sessionDate = nil
+
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
     }
@@ -283,8 +286,8 @@ extension UserPilot {
         by the backend or obtained during experience configuration.
      */
     @objc
-    public func triggerExperience(_ experienceToken: String) {
-        experiencesPublisher.triggerExperience(experienceToken)
+    public func triggerExperience(_ experienceID: String) {
+        experiencesPublisher.triggerExperience(experienceID)
     }
 
     /**

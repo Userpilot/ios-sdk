@@ -28,10 +28,14 @@ internal class SessionMonitor: SessionMonitoring {
     /// The analytics publisher responsible for flushing and resuming events.
     private let analyticsPublisher: AnalyticsPublishing
 
+    /// The storage used to store user-related data.
+    private var storage: DataStoring
+
     /// Initializes the `SessionMonitor` with a dependency container that resolves an `AnalyticsPublishing` instance.
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
     init(container: DIContainer) {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
+        self.storage = container.resolve(DataStoring.self)
     }
 
     /// Starts monitoring app lifecycle changes by observing `UIApplication` notifications for
@@ -69,6 +73,7 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterBackground(notification: Notification) {
+        storage.sessionDate = Date()
         analyticsPublisher.flush()
     }
 

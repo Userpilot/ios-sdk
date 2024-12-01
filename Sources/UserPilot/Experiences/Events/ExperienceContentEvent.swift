@@ -6,7 +6,7 @@
 //  Copyright © 2024 UserPilot. All rights reserved.
 //
 //  [Brief Description]
-//  This class encapsulates the data required to fetch experience associated with a token.
+//  This class encapsulates the data required to fetch experience associated with ID.
 //
 
 import Foundation
@@ -15,7 +15,7 @@ internal struct ExperienceContentEvent: SDKEvent {
 
     // MARK: - Properties
 
-    let experienceToken: String
+    let experienceID: String
 
     // MARK: - SDKEvent Conformance
 
@@ -26,6 +26,6 @@ internal struct ExperienceContentEvent: SDKEvent {
 
     /// The payload of the event represented as a dictionary.
     var eventPayload: [String: Any] {
-        return ["mobile_content_token": experienceToken]
+        return ["mobile_content_token": experienceID]
     }
 }

@@ -149,6 +149,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      */
     private func setupUI(withTheme theme: ExperienceTheme) {
         contentView.backgroundColor = theme.backgroundColor
+
         // Disable autoresizing mask constraints for custom layout
         [theScrollView, contentContainerView, stackView, actionButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
@@ -183,7 +184,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 0.0),
             theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 0.0),
             theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
-                                                  constant: ThemeHandler.DefaultValues.distanceBetweenSections),
+               constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative),
             contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor, constant: 0.0),
             contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor, constant: 0.0),
             contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor, constant: 0.0),
