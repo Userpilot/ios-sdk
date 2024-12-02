@@ -43,7 +43,7 @@ internal class ThemeHandler: ThemeHandling {
         static let headerTextSize = 16
         static let normalTextSize = 16
         static let dimDegree = 40
-        static let slideOutContentMaxHeightPercentage = 0.65
+        static let slideOutContentMaxHeightPercentage = 0.6
         static let blackColor = "#000000"
         static let whiteColor = "#FFFFFF"
         static let distanceBetweenSections = CGFloat(12)

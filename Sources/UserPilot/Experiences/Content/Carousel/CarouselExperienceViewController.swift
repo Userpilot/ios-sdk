@@ -75,6 +75,14 @@ internal class CarouselExperienceViewController: UIViewController {
         bindViewModel()
     }
 
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .portrait
+    }
+
+    override var shouldAutorotate: Bool {
+        return false
+    }
+
     // Override the preferredStatusBarStyle based on the current style
     override var preferredStatusBarStyle: UIStatusBarStyle {
         guard

@@ -72,12 +72,12 @@
             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
                 <constraint firstItem="nTt-J7-kXc" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="0sH-nM-27R"/>
-                <constraint firstAttribute="trailing" secondItem="fPH-Qu-Hol" secondAttribute="trailing" id="38L-bU-b1V"/>
+                <constraint firstItem="j8h-dh-eGS" firstAttribute="trailing" secondItem="fPH-Qu-Hol" secondAttribute="trailing" id="38L-bU-b1V"/>
                 <constraint firstItem="P7K-pc-v5x" firstAttribute="top" secondItem="Oby-9P-aTQ" secondAttribute="top" id="3Do-hr-Pm5"/>
                 <constraint firstItem="P7K-pc-v5x" firstAttribute="trailing" secondItem="j8h-dh-eGS" secondAttribute="trailing" id="BJA-84-tx0"/>
                 <constraint firstAttribute="bottom" secondItem="P7K-pc-v5x" secondAttribute="bottom" id="Kr6-s3-CCC"/>
                 <constraint firstItem="j8h-dh-eGS" firstAttribute="bottom" secondItem="fPH-Qu-Hol" secondAttribute="bottom" constant="20" id="Vry-eT-zD8"/>
-                <constraint firstAttribute="trailing" secondItem="nTt-J7-kXc" secondAttribute="trailing" id="ZTC-Es-Gk7"/>
+                <constraint firstItem="j8h-dh-eGS" firstAttribute="trailing" secondItem="nTt-J7-kXc" secondAttribute="trailing" id="ZTC-Es-Gk7"/>
                 <constraint firstItem="nTt-J7-kXc" firstAttribute="top" secondItem="j8h-dh-eGS" secondAttribute="top" constant="20" id="aC2-L5-Ie0"/>
                 <constraint firstItem="P7K-pc-v5x" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="gCK-ds-LsW"/>
                 <constraint firstItem="fPH-Qu-Hol" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="iCm-WP-5Ip"/>

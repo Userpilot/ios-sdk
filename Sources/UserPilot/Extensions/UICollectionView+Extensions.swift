@@ -41,4 +41,14 @@ extension UICollectionViewCell {
     static var identifier: String {
         return String(describing: self)
     }
+
+    func topSafeAreaHeight() -> CGFloat {
+        if let window = self.window {
+            return window.safeAreaInsets.top
+        } else if let collectionView = self.superview as? UICollectionView,
+            let window = collectionView.window {
+            return window.safeAreaInsets.top
+        }
+        return 0
+    }
 }

@@ -43,6 +43,7 @@ internal protocol ImageLoading: AnyObject {
 internal class ImageLoader: ImageLoading {
 
     private var fileStorageManager: FileStoring
+    private var blurCache = [String: UIImage]()
 
     // Private initializer to prevent instantiation from outside
     init(container: DIContainer) {
@@ -58,8 +59,13 @@ internal class ImageLoader: ImageLoading {
                 return
             }
 
-            if let blurHash, let image = UIImage(blurHash: blurHash, size: size) {
-                setImage(target, image)
+            if let blurHash {
+                if let image = blurCache[blurHash] {
+                    setImage(target, image)
+                } else if let image = UIImage(blurHash: blurHash, size: size) {
+                    blurCache[blurHash] = image
+                    setImage(target, image)
+                }
             }
 
             self.loadImage(from: url) { [weak self] image in
