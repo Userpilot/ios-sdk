@@ -98,10 +98,8 @@ internal class DialogViewController: UIViewController {
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
         ])
 
-        /// prepare the view for slide in animation
         dimmedView.alpha = 0
         mainContainerView.alpha = 0
-        mainContainerView.frame.origin.y += 50
     }
 }
 
@@ -111,6 +109,7 @@ extension DialogViewController {
 
     /// Animates the presentation of the dialog.
     private func animatePresent() {
+        mainContainerView.frame.origin.y += 50
         UIView.animate(withDuration: 0.4) {
             self.dimmedView.alpha = 1.0
             self.mainContainerView.alpha = 1.0

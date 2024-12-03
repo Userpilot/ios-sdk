@@ -95,8 +95,8 @@ internal func getImageSize(for line: Line) -> CGSize {
             return CGSize(width: actualWidth, height: actualHeight)
         }
     } else {
-        if let width = line.attrs?.style?.width?.toSize,
-           let height = line.attrs?.style?.height?.toSize {
+        if let width = line.attrs?.style?.width?.toSize?.toPoints(),
+           let height = line.attrs?.style?.height?.toSize?.toPoints() {
             if width > screenWidth {
                 let newHeight = (screenWidth * actualHeight) / actualWidth
                 return CGSize(width: screenWidth, height: newHeight)

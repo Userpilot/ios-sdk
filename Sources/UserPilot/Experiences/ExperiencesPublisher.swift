@@ -341,14 +341,18 @@ extension ExperiencesPublisher {
         let carouselExperienceViewController = CarouselExperienceViewController(
             experienceViewModel: experienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen
-        viewController.present(carouselExperienceViewController, animated: true)
+        delay(0.5) {
+            viewController.present(carouselExperienceViewController, animated: true)
+        }
     }
 
     /// Open dialog
     private func openSlideOutDialogExperience(_ viewController: UIViewController,
                                               _ experienceViewModel: ExperienceViewModel) {
         let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
-        viewController.presentDialog(viewController: slideOutDialogViewController)
+        delay(0.5) {
+            viewController.presentDialog(viewController: slideOutDialogViewController)
+        }
     }
 
     /// Open bottom sheet
@@ -356,7 +360,9 @@ extension ExperiencesPublisher {
                                                    _ experienceViewModel: ExperienceViewModel) {
         let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
             experienceViewModel: experienceViewModel)
-        viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
+        delay(0.5) {
+            viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
+        }
     }
 
     private func hasActiveExperience() -> Bool {
