@@ -50,13 +50,17 @@ internal class ThemeHandler: ThemeHandling {
         static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(20) : CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let buttonBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(62) : CGFloat(52)
-        static let carouselContentTopMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(80)
+        static let carouselContentTopMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(0)
 
         static let slideOutCornerRadius = CGFloat(12)
         static let blurHash = "U2pF^b@%MdR+^qj[NFjC0GozX9Kr"
+        static let blurImageSize = CGSize(width: 64, height: 64)
+        static let iconImageSize = CGSize(width: iconImageDimensions, height: iconImageDimensions)
         static let defaultTextMargin = "   "
         static let imageSize = CGFloat(300)
         static let closeButtonAlpha = 0.8
+        static let dismissButtonMargin = CGFloat(10)
+        static let iconImageDimensions = 38
     }
 
     /// Style names used for text formatting in themes.

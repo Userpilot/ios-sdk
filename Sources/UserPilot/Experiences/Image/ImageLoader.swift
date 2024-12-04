@@ -33,45 +33,49 @@ import UniformTypeIdentifiers
  */
 internal protocol ImageLoading: AnyObject {
     /// Loading image to image view with blur effect
-    func loadImage(target: UIImageView,
-                   url: String,
-                   placeholder: UIColor?,
-                   blurHash: String?,
-                   size: CGSize)
+    func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize)
 }
 
 internal class ImageLoader: ImageLoading {
 
-    private var fileStorageManager: FileStoring
     private var blurCache = [String: UIImage]()
+    private var imageCache = [String: UIImage]()
 
     // Private initializer to prevent instantiation from outside
-    init(container: DIContainer) {
-        self.fileStorageManager = container.resolve(FileStoring.self)
-    }
+    init(container: DIContainer) { }
 
-    func loadImage(target: UIImageView, url: String, placeholder: UIColor?, blurHash: String?, size: CGSize) {
+    func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
         performOn(.background) { [weak self] in
-            guard let self else { return }
-            guard let url = URL(string: url) else { return }
-            if let image = loadImageFromDisk(url: url) {
+            guard
+                let self,
+                let url = URL(string: url)
+            else { return }
+
+            if let image = imageCache[url.absoluteString] {
                 setImage(target, image)
                 return
             }
 
             if let blurHash {
                 if let image = blurCache[blurHash] {
-                    setImage(target, image)
-                } else if let image = UIImage(blurHash: blurHash, size: size) {
+                    setBlurImage(target, image)
+                } else if let image = UIImage(blurHash: blurHash, size: ThemeHandler.DefaultValues.blurImageSize) {
                     blurCache[blurHash] = image
-                    setImage(target, image)
+                    setBlurImage(target, image)
                 }
             }
 
-            self.loadImage(from: url) { [weak self] image in
+            self.loadImage(from: url, size: size) { [weak self] image in
                 guard let image else { return }
                 self?.setImage(target, image)
             }
+        }
+    }
+
+    func setBlurImage(_ target: UIImageView, _ image: UIImage) {
+        performOn(.main) { [weak self] in
+            guard self != nil else { return }
+            target.setImageWithCrossfade(image)
         }
     }
 
@@ -87,16 +91,15 @@ internal class ImageLoader: ImageLoading {
     /// - Parameters:
     ///   - url: The URL of the image to load.
     ///   - completion: A completion handler with the loaded `UIImage` (optional).
-    private func loadImage(from url: URL, completion: @escaping (UIImage?) -> Void) {
-        // Download the image asynchronously
+    private func loadImage(from url: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self, let data = data, error == nil else {
                 completion(nil)
                 return
             }
 
-            if let image = self.createImage(from: data) {
-                self.saveImageToDisk(image: data, url: url)
+            if let image = self.createImage(from: data, size: size) {
+                self.imageCache[url.absoluteString] = image
                 completion(image)
             } else {
                 completion(nil)
@@ -107,11 +110,15 @@ internal class ImageLoader: ImageLoading {
     /// Creates an image from the data, supporting static images and GIFs.
     /// - Parameter data: The data of the image.
     /// - Returns: A `UIImage` if the data represents an image, otherwise `nil`.
-    private func createImage(from data: Data) -> UIImage? {
+    private func createImage(from data: Data, size: CGSize) -> UIImage? {
         if let gifImage = createAnimatedImage(from: data) {
             return gifImage
         } else if let image = UIImage(data: data) {
-            return image
+            if let resizedImage = image.resized(to: size) {
+                return resizedImage
+            } else {
+                return image
+            }
         }
         return nil
     }
@@ -167,48 +174,5 @@ internal class ImageLoader: ImageLoading {
 
         // Ensure the delay is non-zero (default to 0.1 seconds if the value is 0)
         return delayTime > 0 ? delayTime : 0.1
-    }
-
-    /// Creates a UIImage from a specified color.
-    /// - Parameters:
-    ///   - color: The color to fill the image.
-    ///   - size: The size of the image (default is 1x1 pixel).
-    /// - Returns: A UIImage filled with the specified color.
-    func imageFromColor(color: UIColor, size: CGSize = CGSize(width: 1, height: 1)) -> UIImage? {
-        // Create a rectangle with the specified size
-        let rect = CGRect(origin: .zero, size: size)
-
-        // Begin a new image context
-        UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
-
-        // Get the current context
-        guard let context = UIGraphicsGetCurrentContext() else { return nil }
-
-        // Fill the context with the specified color
-        context.setFillColor(color.cgColor)
-        context.fill(rect)
-
-        // Create an image from the context
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-
-        // End the image context
-        UIGraphicsEndImageContext()
-
-        return image
-    }
-
-    /// Saves an image to the file system for future use.
-    /// - Parameters:
-    ///   - image: The image to save.
-    ///   - url: The URL used for the image.
-    private func saveImageToDisk(image: Data, url: URL) {
-        fileStorageManager.saveImage(image, withURL: url.absoluteString)
-    }
-
-    /// Loads an image from the file system.
-    /// - Parameter url: The URL used for the image.
-    /// - Returns: The image if it exists on disk, otherwise `nil`.
-    private func loadImageFromDisk(url: URL) -> UIImage? {
-        return fileStorageManager.loadImage(url.absoluteString)
     }
 }

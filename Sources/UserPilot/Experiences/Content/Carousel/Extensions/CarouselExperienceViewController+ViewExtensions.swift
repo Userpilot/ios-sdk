@@ -20,7 +20,6 @@ internal extension CarouselExperienceViewController {
     /// Configures general views constraints.
     func setupViews() {
         isModalInPresentation = true
-        buttonDismissRightMargin.constant = ThemeHandler.DefaultValues.contentMargin
     }
 
     /// Setup UI locale depending on Experience content

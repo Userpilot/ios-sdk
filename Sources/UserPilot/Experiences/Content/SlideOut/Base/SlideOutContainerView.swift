@@ -132,10 +132,10 @@ internal class SlideOutContainerView: UIView {
             stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
             stepSectionsStackView.leadingAnchor.constraint(
                 equalTo: contentContainerView.leadingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: 0),
             stepSectionsStackView.trailingAnchor.constraint(
                 equalTo: contentContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                constant: 0),
             stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
             contentViewHeightConstraint
         ])
@@ -179,7 +179,9 @@ internal class SlideOutContainerView: UIView {
 
             NSLayoutConstraint.activate([
                 buttonDismiss!.topAnchor.constraint(equalTo: buttonDismissContainerView.topAnchor),
-                buttonDismiss!.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor),
+                buttonDismiss!.trailingAnchor.constraint(
+                    equalTo: buttonDismissContainerView.trailingAnchor,
+                    constant: ThemeHandler.DefaultValues.dismissButtonMargin),
                 buttonDismiss!.heightAnchor.constraint(equalToConstant: UPCloseButton.buttonSize),
                 buttonDismiss!.widthAnchor.constraint(equalToConstant: UPCloseButton.buttonSize)
             ])

@@ -31,6 +31,15 @@ internal extension String {
         return self.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    func baseURL() -> String? {
+        guard
+            let urlComponents = URLComponents(string: self),
+            let scheme = urlComponents.scheme,
+            let host = urlComponents.host
+        else { return nil }
+        return "\(scheme)://\(host)"
+    }
+
     var toFontSize: CGFloat {
         if self.contains("px"), let value = Int(self.dropLast(2)) {
             return CGFloat(value)

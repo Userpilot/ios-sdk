@@ -17,8 +17,6 @@ internal class UPIconTextView: UIStackView {
     // MARK: - Constants
 
     struct Constants {
-        static let iconWidth: CGFloat = 38
-        static let iconHeight: CGFloat = 38
         static let textLeftMargin: CGFloat = 8
     }
     // MARK: - Subviews
@@ -27,8 +25,8 @@ internal class UPIconTextView: UIStackView {
     private let imageView: UPImageView = {
         let imageView = UPImageView(frame: .zero)
         NSLayoutConstraint.activate([
-            imageView.widthAnchor.constraint(equalToConstant: Constants.iconWidth),
-            imageView.heightAnchor.constraint(equalToConstant: Constants.iconHeight)
+            imageView.widthAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.iconImageDimensions)),
+            imageView.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.iconImageDimensions))
         ])
         return imageView
     }()

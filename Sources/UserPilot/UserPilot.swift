@@ -135,9 +135,7 @@ extension UserPilot {
         container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
-        container.registerLazy(FileStoring.self, initializer: FileStorageManager.init)
     }
-
 }
 
 // MARK: - Tracking APIs

@@ -97,8 +97,8 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
                     self.logger.info("RSDK Settings response: %{public}@", responseBody)
                     do {
                         if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                           let endpoint = json["endpoint"] as? String {
-                            self.storage.socketURL = endpoint
+                           let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
+                            self.storage.socketURL = url
                         }
                     } catch {
                         // Log an error if JSON parsing fails

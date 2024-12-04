@@ -83,9 +83,9 @@ internal func delay(_ delay: Double, closure: @escaping () -> Void) {
  */
 internal func getImageSize(for line: Line) -> CGSize {
     let defaultSize = ThemeHandler.DefaultValues.imageSize
-    let actualWidth = CGFloat(line.attrs?.actualSize?.width?.toPoints() ?? Int(defaultSize))
-    let actualHeight = CGFloat(line.attrs?.actualSize?.height?.toPoints() ?? Int(defaultSize))
-    let screenWidth = screenWidth() * screenWidthMultiplier()
+    let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
+    let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
+    let screenWidth = screenWidth() - (ThemeHandler.DefaultValues.contentMargin * 2)
 
     if line.attrs?.style?.width == "auto" && line.attrs?.style?.height == "auto" {
         if actualWidth > screenWidth {
@@ -95,8 +95,8 @@ internal func getImageSize(for line: Line) -> CGSize {
             return CGSize(width: actualWidth, height: actualHeight)
         }
     } else {
-        if let width = line.attrs?.style?.width?.toSize?.toPoints(),
-           let height = line.attrs?.style?.height?.toSize?.toPoints() {
+        if let width = line.attrs?.style?.width?.toSize,
+           let height = line.attrs?.style?.height?.toSize {
             if width > screenWidth {
                 let newHeight = (screenWidth * actualHeight) / actualWidth
                 return CGSize(width: screenWidth, height: newHeight)

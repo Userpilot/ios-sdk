@@ -180,7 +180,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
                                                  constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
             theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
-                constant: topSafeAreaHeight() + ThemeHandler.DefaultValues.distanceBetweenSections),
+                constant: topSafeAreaHeight() + ThemeHandler.DefaultValues.carouselContentTopMargin),
             theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 0.0),
             theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 0.0),
             theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,

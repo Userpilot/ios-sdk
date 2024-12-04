@@ -18,10 +18,6 @@ import UIKit
 internal class CarouselExperienceViewController: UIViewController {
 
     // MARK: - IBOutlets
-
-    /// Views constraints.
-    @IBOutlet internal weak var buttonDismissRightMargin: NSLayoutConstraint!
-
     /// Container view for the dismiss button.
     @IBOutlet internal weak var buttonDismissContainerView: UIView!
 

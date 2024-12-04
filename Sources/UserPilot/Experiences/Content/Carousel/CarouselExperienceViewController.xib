@@ -12,7 +12,6 @@
             <connections>
                 <outlet property="buttonDismiss" destination="kxY-Jg-UdR" id="MTr-bf-Jjk"/>
                 <outlet property="buttonDismissContainerView" destination="nTt-J7-kXc" id="5Nv-XA-SyY"/>
-                <outlet property="buttonDismissRightMargin" destination="fh0-1Z-KC5" id="di3-Ak-GUY"/>
                 <outlet property="collectionView" destination="P7K-pc-v5x" id="5sN-wi-Bxf"/>
                 <outlet property="view" destination="Oby-9P-aTQ" id="4Vr-Ie-7Hu"/>
                 <outlet property="viewStepsProgress" destination="fPH-Qu-Hol" id="cps-9m-ABy"/>
@@ -41,7 +40,7 @@
                     <rect key="frame" x="0.0" y="79" width="393" height="35"/>
                     <subviews>
                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kxY-Jg-UdR" customClass="UPCloseButton" customModule="UserPilot">
-                            <rect key="frame" x="338" y="0.0" width="35" height="35"/>
+                            <rect key="frame" x="348" y="0.0" width="35" height="35"/>
                             <constraints>
                                 <constraint firstAttribute="width" constant="35" id="aNp-Ev-T0O"/>
                                 <constraint firstAttribute="height" constant="35" id="cQU-Qv-D2n"/>
@@ -56,7 +55,7 @@
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <constraints>
                         <constraint firstItem="kxY-Jg-UdR" firstAttribute="top" secondItem="nTt-J7-kXc" secondAttribute="top" id="YCg-xZ-df6"/>
-                        <constraint firstAttribute="trailing" secondItem="kxY-Jg-UdR" secondAttribute="trailing" constant="20" id="fh0-1Z-KC5"/>
+                        <constraint firstAttribute="trailing" secondItem="kxY-Jg-UdR" secondAttribute="trailing" constant="10" id="fh0-1Z-KC5"/>
                         <constraint firstAttribute="height" constant="35" id="wwy-RZ-GfY"/>
                     </constraints>
                 </view>
