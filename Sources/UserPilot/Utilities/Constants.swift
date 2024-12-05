@@ -31,6 +31,7 @@ internal struct DispatchQueueConstants {
 internal struct GeneralConstants {
     static let MAX_EVENTS_PER_SCREEN = 200
     static let MAX_ACTION_TO_DEBOUNCE = 20
-    static let SESSION_DURATION = TimeInterval(5 * 60)
+    static let SESSION_DURATION = TimeInterval(30 * 60)
+    static let CONFIGURATION_DURATION = TimeInterval(5 * 60)
 }
 // swiftlint:enable identifier_name

@@ -31,7 +31,7 @@ internal class SDKSettingsDetector {
     // MARK: - Properties
 
     /// Base URL for the SDK settings API.
-    let baseURL = "https://find.userpilot.io/v1/lookups/"
+    private let baseURL = "https://find.userpilot.io/v1/lookups/"
 
     /// A configuration instance holding SDK-related configuration details.
     private let config: UserPilot.Config
@@ -66,6 +66,14 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
      * - Parameter callback: A closure to be executed after the settings have been fetched.
      */
     func fetchSettings(callback: @escaping () -> Void) {
+        if let configurationDate = storage.configurationDate, storage.socketURL.isNotEmpty {
+            let difference = Date().timeIntervalSince(configurationDate)
+            if difference < GeneralConstants.CONFIGURATION_DURATION {
+                callback()
+                return
+            }
+        }
+
         let urlString = baseURL + config.token
         guard let url = URL(string: urlString) else {
             self.logger.error("Invalid URL: %{public}@", urlString)
@@ -75,8 +83,9 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
 
         let request = URLRequest(url: url)
 
-        // Perform the network request asynchronously on a background thread
-        DispatchQueue.global(qos: .background).async {
+        performOn(.highPriority) {
+            // Perform the network request asynchronously on a background thread
+            // DispatchQueue.global(qos: .background).async {
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error {
                     self.logger.error("Request failed: %{public}@", error.localizedDescription)
@@ -98,10 +107,10 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
                     do {
                         if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                            let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
+                            self.storage.configurationDate = Date()
                             self.storage.socketURL = url
                         }
                     } catch {
-                        // Log an error if JSON parsing fails
                         self.logger.error("Failed to parse JSON: %{public}@", error.localizedDescription)
                     }
                 }

@@ -12,7 +12,7 @@
 
 import Foundation
 
-internal  enum QueueType {
+internal enum QueueType {
     case main
     case background
     case lowPriority
@@ -27,7 +27,7 @@ internal  enum QueueType {
                                  qos: .background,
                                  target: nil)
         case .lowPriority:
-            return DispatchQueue.global(qos: .userInitiated)
+            return DispatchQueue.global(qos: .utility)
         case .highPriority:
             return DispatchQueue.global(qos: .userInitiated)
         }

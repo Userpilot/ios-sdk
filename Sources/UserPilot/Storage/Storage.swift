@@ -36,8 +36,11 @@ internal protocol DataStoring: AnyObject {
     /// The socket URL used to connect the SDK to the backend services.
     var temporaryUser: String? { get set }
 
-    /// The socket URL used to connect the SDK to the backend services.
+    /// The date for session when app enter background state.
     var sessionDate: Date? { get set }
+
+    /// The date for configuration to update it.
+    var configurationDate: Date? { get set }
 }
 
 /**
@@ -62,6 +65,7 @@ internal class Storage: DataStoring {
         case user
         case temporaryUser
         case sessionDate
+        case configurationDate
     }
 
     // MARK: - Properties
@@ -105,6 +109,7 @@ internal class Storage: DataStoring {
         }
     }
 
+    /// The user, which hold identify event.
     internal var temporaryUser: String? {
         get {
             return read(.temporaryUser, defaultValue: nil)
@@ -114,13 +119,23 @@ internal class Storage: DataStoring {
         }
     }
 
-    /// The user, which contains all updated user meta data and company.
+    /// The session Date, which used for tracking app background duration.
     internal var sessionDate: Date? {
         get {
             return read(.sessionDate, defaultValue: nil)
         }
         set {
             write(.sessionDate, newValue: newValue)
+        }
+    }
+
+    /// The session Date, which used for update configuration.
+    internal var configurationDate: Date? {
+        get {
+            return read(.configurationDate, defaultValue: nil)
+        }
+        set {
+            write(.configurationDate, newValue: newValue)
         }
     }
 
