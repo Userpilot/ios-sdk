@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -18,8 +20,20 @@
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ss9-HL-T6u">
+                    <rect key="frame" x="16.000000000000004" y="75" width="49.333333333333343" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="8P8-oB-c0D"/>
+                    </constraints>
+                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
+                    <connections>
+                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="htV-Kw-SDr"/>
+                    </connections>
+                </button>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Screen One" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tK4-GA-TJE">
-                    <rect key="frame" x="142" y="414" width="109" height="24"/>
+                    <rect key="frame" x="142" y="83" width="109" height="24"/>
                     <fontDescription key="fontDescription" type="boldSystem" pointSize="20"/>
                     <color key="textColor" name="MineShaft"/>
                     <nil key="highlightedColor"/>
@@ -38,26 +52,60 @@
                         <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="bLS-RX-3ar"/>
                     </connections>
                 </button>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ss9-HL-T6u">
-                    <rect key="frame" x="16" y="75" width="40" height="40"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="40" id="8P8-oB-c0D"/>
-                        <constraint firstAttribute="width" constant="40" id="b1V-1b-AVF"/>
-                    </constraints>
-                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                    <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
-                    <connections>
-                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="htV-Kw-SDr"/>
-                    </connections>
-                </button>
+                <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="24" translatesAutoresizingMaskIntoConstraints="NO" id="eDF-Ei-gKU">
+                    <rect key="frame" x="24" y="141" width="345" height="603"/>
+                    <subviews>
+                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="YeB-FL-23H">
+                            <rect key="frame" x="0.0" y="0.0" width="345" height="100"/>
+                            <color key="backgroundColor" systemColor="systemGray5Color"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="100" id="x3c-Gm-0bz"/>
+                            </constraints>
+                        </view>
+                        <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="24" translatesAutoresizingMaskIntoConstraints="NO" id="ic1-Yu-pmk">
+                            <rect key="frame" x="0.0" y="124" width="345" height="100"/>
+                            <subviews>
+                                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="adf-qA-ZXI">
+                                    <rect key="frame" x="0.0" y="0.0" width="160.66666666666666" height="100"/>
+                                    <color key="backgroundColor" systemColor="systemGray5Color"/>
+                                    <constraints>
+                                        <constraint firstAttribute="height" constant="100" id="3Uj-7C-kOj"/>
+                                    </constraints>
+                                </view>
+                                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="0Be-2y-dPr">
+                                    <rect key="frame" x="184.66666666666663" y="0.0" width="160.33333333333337" height="100"/>
+                                    <color key="backgroundColor" systemColor="systemGray5Color"/>
+                                    <constraints>
+                                        <constraint firstAttribute="height" constant="100" id="LAF-Id-osT"/>
+                                    </constraints>
+                                </view>
+                            </subviews>
+                        </stackView>
+                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="FUU-rh-hYA">
+                            <rect key="frame" x="0.0" y="248" width="345" height="100"/>
+                            <color key="backgroundColor" systemColor="systemGray5Color"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="100" id="XNG-bk-DQ6"/>
+                            </constraints>
+                        </view>
+                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="WdX-C2-I0D">
+                            <rect key="frame" x="0.0" y="372" width="345" height="231"/>
+                            <color key="backgroundColor" systemColor="systemGray5Color"/>
+                        </view>
+                    </subviews>
+                </stackView>
             </subviews>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
-                <constraint firstItem="tK4-GA-TJE" firstAttribute="centerY" secondItem="iN0-l3-epB" secondAttribute="centerY" id="GKs-5s-p8o"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="eDF-Ei-gKU" secondAttribute="trailing" constant="24" id="1ls-LH-DhE"/>
+                <constraint firstItem="tK4-GA-TJE" firstAttribute="centerY" secondItem="ss9-HL-T6u" secondAttribute="centerY" id="5Me-6c-kL1"/>
+                <constraint firstItem="eDF-Ei-gKU" firstAttribute="top" secondItem="tK4-GA-TJE" secondAttribute="bottom" constant="34" id="SqM-jI-fgK"/>
+                <constraint firstItem="aoH-Rs-PCb" firstAttribute="top" secondItem="eDF-Ei-gKU" secondAttribute="bottom" constant="24" id="SrX-l6-US4"/>
                 <constraint firstItem="ss9-HL-T6u" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="YJM-2G-hYI"/>
+                <constraint firstItem="eDF-Ei-gKU" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="24" id="ngx-ey-2fK"/>
                 <constraint firstItem="aoH-Rs-PCb" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="24" id="pBU-dx-QtQ"/>
+                <constraint firstItem="tK4-GA-TJE" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="ss9-HL-T6u" secondAttribute="trailing" constant="8" symbolic="YES" id="tHN-om-nvB"/>
                 <constraint firstItem="tK4-GA-TJE" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="tUt-Bj-eNj"/>
                 <constraint firstItem="ss9-HL-T6u" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="16" id="tbe-gc-lyi"/>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="aoH-Rs-PCb" secondAttribute="trailing" constant="24" id="vRf-dc-MDd"/>
@@ -74,5 +122,8 @@
         <namedColor name="MineShaft">
             <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
+        <systemColor name="systemGray5Color">
+            <color red="0.8980392157" green="0.8980392157" blue="0.91764705879999997" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </systemColor>
     </resources>
 </document>

@@ -114,7 +114,7 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
     /// Dismisses the bottom sheet when the close action is triggered.
     func onClose() {
         dismissBottomSheet { [weak self] in
-            self?.experienceViewModel.onDismissStep(step: 0)
+            self?.experienceViewModel.onDismissStep()
         }
     }
 

@@ -202,7 +202,7 @@ internal class ExperienceViewModel {
      
      - Parameter step: The step number that was dismissed.
      */
-    func onDismissStep(step: Int) {
+    func onDismissStep() {
         guard let mobileContent else { return }
 
         config.experienceDelegate?.onExperienceStateChanged(
@@ -212,7 +212,7 @@ internal class ExperienceViewModel {
 
         let eventExperienceDismissed = ExperienceDismissedEvent(
             mobileContentID: mobileContent.id,
-            stepId: mobileContent.steps[step].id)
+            stepId: mobileContent.steps[lastStep].id)
         experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
     }
 

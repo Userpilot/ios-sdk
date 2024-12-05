@@ -211,7 +211,7 @@ extension ExperiencesPublisher: SocketSubscription {
             else {
                 return
             }
-            isTriggerManualExperience = false
+            isTriggerManualExperience = true
             mobileContent = mobileContentData.mobileContent
             checkCachedThemes(mobileContentData.mobileContent.baseThemeID)
         }
@@ -294,9 +294,11 @@ extension ExperiencesPublisher {
                 let topViewController = UIApplication.shared.fetchTopViewController(),
                 self.canShowExperience()
             else {
+                self?.isTriggerManualExperience = false
                 self?.mobileContent = nil
                 return
             }
+            self.isTriggerManualExperience = false
             if let mobileContent {
                 let experienceViewModel = ExperienceViewModel(container: self.container)
                 self.analyticsPublisher.experiencePublished(mobileContent.id)

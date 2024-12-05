@@ -22,7 +22,7 @@ class ScreenTwoViewController: BaseViewController {
     }
 
     @IBAction func onNextButtonClicked(_ sender: UIButton) {
-        UserPilotManager.shared.triggerExperience(token: "mobile:IEebGyacOX")
+        UserPilotManager.shared.triggerExperience(experienceID: "")
     }
 
 }

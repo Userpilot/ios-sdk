@@ -76,8 +76,8 @@ class UserPilotManager {
         userPilot?.track(eventName: eventName, properties: properties)
     }
 
-    func triggerExperience(token: String) {
-        userPilot?.triggerExperience(token)
+    func triggerExperience(experienceID: String) {
+        userPilot?.triggerExperience(experienceID)
     }
 
     func endExperience() {

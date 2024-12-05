@@ -99,7 +99,7 @@ internal extension CarouselExperienceViewController {
 
     /// Closes the carousel experience view and triggers the onDismiss event.
     func closeExperience() {
-        self.experienceViewModel.onDismissStep(step: self.collectionView.currentIndex)
+        self.experienceViewModel.onDismissStep()
         dismiss(animated: true)
     }
 }

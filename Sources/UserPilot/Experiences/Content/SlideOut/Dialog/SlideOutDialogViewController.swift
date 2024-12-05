@@ -99,7 +99,7 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
     /// Handles the close action from the slide-out container.
     func onClose() {
         dismissDialog { [weak self] in
-            self?.experienceViewModel.onDismissStep(step: 0)
+            self?.experienceViewModel.onDismissStep()
         }
     }
 

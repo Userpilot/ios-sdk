@@ -8,13 +8,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حقوق النشر © 2024 UserPilot. جميع الحقوق محفوظة."
+            "value" : "© 2024 UserPilot. جميع الحقوق محفوظة."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Copyright © 2024 UserPilot. All rights reserved."
+            "value" : "© 2024 UserPilot. All rights reserved."
           }
         }
       }

@@ -40,14 +40,14 @@
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "تتبع الأحداث"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Track Events"
+            "value" : "Track events"
           }
         }
       }
@@ -57,14 +57,14 @@
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "المستخدم والمجهول"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "User & Anonymous"
+            "value" : "User & anonymous"
           }
         }
       }

@@ -26,13 +26,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "إظهار الحوار"
+            "value" : "إظهار تجربة"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Show dialog"
+            "value" : "Show experience"
           }
         }
       }
