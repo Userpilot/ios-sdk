@@ -44,6 +44,8 @@ internal class DialogViewController: UIViewController {
         return view
     }()
 
+    private var mainContainerWidthConstraint: NSLayoutConstraint?
+
     // MARK: - View Lifecycle
 
     override func viewDidLoad() {
@@ -54,6 +56,27 @@ internal class DialogViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         animatePresent()
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            guard let self else { return }
+            let widthRatio = self.calculateDialogWidthRatio()
+            self.mainContainerWidthConstraint?.constant = size.width * widthRatio
+            self.view.layoutIfNeeded()
+        }, completion: nil)
+    }
+
+    /// Calculates the dialog width ratio based on the given size.
+    /// - Parameter size: The size parameter from the transition method.
+    /// - Returns: A CGFloat representing the width ratio.
+    private func calculateDialogWidthRatio() -> CGFloat {
+        var size = 0.9
+        if isLandscape {
+            size = 0.7
+        }
+        return size
     }
 
     // MARK: - Setup Views
@@ -73,11 +96,17 @@ internal class DialogViewController: UIViewController {
         // Add the main container view to the dialog
         view.addSubview(mainContainerView)
 
+        // Set up the main container width constraint
+        let widthRatio = self.calculateDialogWidthRatio()
+        let widthConstraint = mainContainerView.widthAnchor.constraint(
+            equalToConstant: screenWidth * widthRatio)
+        mainContainerWidthConstraint = widthConstraint
+
         // Center the main container view and set its width
         NSLayoutConstraint.activate([
             mainContainerView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             mainContainerView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            mainContainerView.widthAnchor.constraint(equalToConstant: UIScreen.main.bounds.width * 0.9)
+            widthConstraint
         ])
 
         // Set up the content view within the main container

@@ -85,7 +85,7 @@ internal func getImageSize(for line: Line) -> CGSize {
     let defaultSize = ThemeHandler.DefaultValues.imageSize
     let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
     let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
-    let screenWidth = screenWidth() - (ThemeHandler.DefaultValues.contentMargin * 2)
+    let screenWidth = screenWidth - (ThemeHandler.DefaultValues.contentMargin * 2)
 
     if line.attrs?.style?.width == "auto" && line.attrs?.style?.height == "auto" {
         if actualWidth > screenWidth {
@@ -109,14 +109,23 @@ internal func getImageSize(for line: Line) -> CGSize {
     }
 }
 
-internal func screenWidthMultiplier() -> CGFloat {
-    if screenWidth() <= 800 { // Phone (width <= 800px)
-        return CGFloat(0.9)
-    } else { // Tablet (width > 800px)
-        return CGFloat(0.8)
-    }
+/// Returns the width of the device's screen in points.
+/// - Returns: A `CGFloat` representing the width of the device's screen.
+internal var screenWidth: CGFloat {
+    return UIScreen.main.bounds.width
 }
 
-internal func screenWidth() -> CGFloat {
-    return UIScreen.main.bounds.width
+/// Returns the multiplier used to adjust the width of UI elements based on screen size.
+/// The multiplier is `0.9` for devices with a screen width of 800 points or less (typically phones),
+/// and `0.8` for devices with a screen width greater than 800 points (typically tablets).
+/// - Returns: A `CGFloat` representing the width multiplier.
+internal var screenWidthMultiplier: CGFloat {
+    return screenWidth <= 800 ? 0.9 : 0.8
+}
+
+/// Returns a Boolean value indicating whether the device is currently in landscape orientation.
+/// - Returns: `true` if the device is in landscape mode
+/// (either `.landscapeLeft` or `.landscapeRight`), `false` otherwise.
+internal var isLandscape: Bool {
+    return UIDevice.current.orientation == .landscapeLeft || UIDevice.current.orientation == .landscapeRight
 }

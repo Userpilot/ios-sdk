@@ -13,6 +13,7 @@
 //
 
 import Foundation
+import UIKit
 
 internal extension CarouselExperienceViewController {
 
@@ -29,6 +30,14 @@ internal extension CarouselExperienceViewController {
             self?.setupLocale()
             self?.setupGeneralStyle()
             self?.collectionView.reloadData()
+
+            delay(0.1) {
+                if isLandscape {
+                    self?.collectionView.scrollToItem(at: IndexPath(row: 0, section: 0),
+                                                      at: .centeredHorizontally,
+                                                      animated: false)
+                }
+            }
         }
 
         // Trigger any initial actions or setup needed when the view model starts.

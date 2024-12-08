@@ -71,12 +71,18 @@ internal class CarouselExperienceViewController: UIViewController {
         bindViewModel()
     }
 
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .portrait
-    }
-
-    override var shouldAutorotate: Bool {
-        return false
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        let index = collectionView.currentIndex
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            guard let self else { return }
+            self.viewStepsProgress.setNeedsDisplay()
+            self.collectionView.scrollToItem(at: IndexPath(row: index, section: 0),
+                                             at: .centeredHorizontally,
+                                             animated: false)
+            self.collectionView.collectionViewLayout.invalidateLayout()
+            self.collectionView.reloadData()
+        }, completion: nil)
     }
 
     // Override the preferredStatusBarStyle based on the current style

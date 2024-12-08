@@ -26,6 +26,7 @@ internal struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
     static let DEBOUNCER_QUEUE = "userpilot-debouncer-queue"
+    static let THROTTLE_QUEUE = "userpilot-throttle-queue"
 }
 
 internal struct GeneralConstants {

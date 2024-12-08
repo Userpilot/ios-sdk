@@ -58,14 +58,6 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
         setContent(slideOutContainerView)
         bindViewModel()
     }
-
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .portrait
-    }
-
-    override var shouldAutorotate: Bool {
-        return false
-    }
 }
 
 // MARK: - ViewModel Binding

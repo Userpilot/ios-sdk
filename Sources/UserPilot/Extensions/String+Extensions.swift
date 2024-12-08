@@ -93,7 +93,7 @@ internal extension String {
         // Remove any whitespace or `#` prefix
         let cleanedHex = self.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
         guard cleanedHex.count == 6 || cleanedHex.count == 8 else {
-            return .blue
+            return .black
         }
 
         var alpha: CGFloat = 1.0

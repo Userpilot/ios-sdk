@@ -49,14 +49,6 @@ internal class SlideOutDialogViewController: DialogViewController {
         bindViewModel()
         setContent(content: slideOutContainerView)
     }
-
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .portrait
-    }
-
-    override var shouldAutorotate: Bool {
-        return false
-    }
 }
 
 // MARK: - View Model Binding

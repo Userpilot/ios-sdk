@@ -20,7 +20,7 @@
       }
     },
     "6UZ-QK-BHy.configuration.title" : {
-      "comment" : "Class = \"UIButton\"; configuration.title = \"Show dialog\"; ObjectID = \"6UZ-QK-BHy\";",
+      "comment" : "Class = \"UIButton\"; configuration.title = \"Show experience\"; ObjectID = \"6UZ-QK-BHy\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {

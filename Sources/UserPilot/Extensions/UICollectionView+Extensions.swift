@@ -37,18 +37,30 @@ internal extension UICollectionView {
     }
 }
 
-extension UICollectionViewCell {
+internal extension UICollectionViewCell {
     static var identifier: String {
         return String(describing: self)
     }
 
     func topSafeAreaHeight() -> CGFloat {
-        if let window = self.window {
-            return window.safeAreaInsets.top
-        } else if let collectionView = self.superview as? UICollectionView,
-            let window = collectionView.window {
-            return window.safeAreaInsets.top
+        if  isLandscape {
+            return CGFloat(70)
+        } else {
+            if let window = self.window {
+                return window.safeAreaInsets.top
+            } else if let collectionView = self.superview as? UICollectionView,
+                      let window = collectionView.window {
+                return window.safeAreaInsets.top
+            }
+            return 0
         }
-        return 0
+    }
+
+    func leftRightMargin() -> CGFloat {
+        if isLandscape {
+            return CGFloat(70)
+        } else {
+            return 0
+        }
     }
 }

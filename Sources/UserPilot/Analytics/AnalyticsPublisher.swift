@@ -90,10 +90,8 @@ internal class AnalyticsPublisher {
     /// Set of event names sent during the current screen view.
     private var eventsName = Set<String>()
 
-    /// A debouncer used to control the frequency of event flushing.
-    /// let backgroundQueue = DispatchQueue(label: "com.example.background")
-    /// let debouncer = Debouncer(delay: 1.0, queue: backgroundQueue)
-    private var debouncer = Debouncer(delay: 2.0)
+    /// EventThrottle to throttle events
+    private let eventThrottle = EventThrottle(throttleDuration: 1.0)
 
     /// Read-write lock for thread-safe event queue operations.
     private lazy var readWriteLock = ReadWriteLock(label: DispatchQueueConstants.EVENT_QUEUE)
@@ -102,7 +100,7 @@ internal class AnalyticsPublisher {
     private var cachedIdentifyEvent: Event?
 
     /// Tracks the last screen viewed, bool for fake reload state.
-    private var screenViewEntity: ScreenViewEntity? // (first: Event, second: Bool, third: Set<Int>)?
+    private var screenViewEntity: ScreenViewEntity?
 
     /// Tracks the first event to open the socket.
     private var cachedEvent: Event?
@@ -156,7 +154,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func flush() {
         socketManager.updateSocketState(.shuttingDown, forceUpdateState: true)
-        debouncer.cancel()
         flushQueue(shouldCloseSocket: true, flushImmediately: true)
     }
 
@@ -189,6 +186,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func reset() {
         startSession = true
+        eventThrottle.clear()
     }
 
     /**
@@ -290,6 +288,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         if experiencesPublisher?.fetchAndResetCarouselContentState() == true {
             return
         }
+        if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
+            return
+        }
         setupScreenEvent(event)
         flushPriorityEvents()
     }
@@ -305,13 +306,13 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         readWriteLock.write { [weak self] in
             guard
                 let self,
-                !self.eventsName.contains(event.eventTitle)
+                self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle)
             else { return }
-
             self.eventsName.insert(event.eventTitle)
-            self.debouncer.cancel()
             self.eventsToFlush.append(event)
-            self.flushTrackedEvents()
+            if self.eventsToFlush.count == 1 {
+                flushQueue()
+            }
         }
     }
 
@@ -396,53 +397,47 @@ extension AnalyticsPublisher {
         if let cachedEvent {
             clearCachedEvent()
             eventsToFlush.append(cachedEvent)
-            flushTrackedEvents()
+            if eventsToFlush.count == 1 {
+                flushQueue()
+            }
         }
     }
 
     /**
-     Flushes the queue of normal events, applying debouncing logic to prevent excessive socket communication.
-     */
-    private func flushTrackedEvents() {
-        debouncer.debounce { [weak self] in
-            self?.flushQueue()
-        }
-    }
-
-    /**
-     Flushs the queue directly, for example when application moves to background
+     Flush the queue directly, for example when application moves to background
      */
     private func flushQueue(shouldCloseSocket: Bool = false, flushImmediately: Bool = false) {
-        readWriteLock.read {
-            if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
-                checkFallbackState()
+        readWriteLock.write { [weak self] in
+            guard let self else { return }
+            if !self.socketManager.isSocketOpened || self.socketManager.isJoiningSocket {
+                self.checkFallbackState()
                 return
             }
             if self.eventsToFlush.isEmpty {
-                if shouldCloseSocket { closeSocket() }
+                if shouldCloseSocket { self.closeSocket() }
                 return
             }
 
             if let eventToSend = self.eventsToFlush.first {
-                eventsToFlush.removeFirst()
-                eventsName.remove(eventToSend.eventTitle)
+                self.eventsToFlush.removeFirst()
+                // self.eventsName.remove(eventToSend.eventTitle)
 
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle
                 payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
 
-                broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
-                socketManager.publish(
+                self.broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
+                self.socketManager.publish(
                     eventToSend.eventName,
                     payload: payload,
                     shouldCloseSocket: shouldCloseSocket
                 )
 
                 if flushImmediately {
-                    flushQueue(shouldCloseSocket: shouldCloseSocket, flushImmediately: true)
+                    self.flushQueue(shouldCloseSocket: shouldCloseSocket, flushImmediately: true)
                 } else {
                     if !shouldCloseSocket {
-                        flushTrackedEvents()
+                        self.flushQueue()
                     }
                 }
             }
@@ -508,7 +503,7 @@ extension AnalyticsPublisher: SocketSubscription {
                 broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userID ?? "", properties: payload)
             }
         }
-        flushTrackedEvents()
+        flushQueue()
     }
 
 }
@@ -527,7 +522,6 @@ private extension AnalyticsPublisher {
     /// Clears the cached events on new identify event or when socket opened.
     private func clearCachedEvents() {
         eventsToFlush.removeAll()
-        debouncer.cancel()
     }
 
     /// Clears the cached identify event after it has been successfully sent.

@@ -2,7 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "0rx-ji-MFa.text" : {
-      "comment" : "Class = \"UILabel\"; text = \"Copyright © 2024 UserPilot. All rights reserved.\"; ObjectID = \"0rx-ji-MFa\";",
+      "comment" : "Class = \"UILabel\"; text = \"© 2024 UserPilot. All rights reserved.\"; ObjectID = \"0rx-ji-MFa\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {

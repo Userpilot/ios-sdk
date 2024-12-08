@@ -44,6 +44,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
 
     var actionButtonClicked: (ButtonAction) -> Void = { _ in }
 
+    private var storedConstraints: [NSLayoutConstraint] = []
     // MARK: - Override
 
     // Clear existing views in the stack view
@@ -141,13 +142,18 @@ internal class StepCollectionViewCell: UICollectionViewCell {
 
     // MARK: - UI Setup
 
-    /**
+    /*
      Sets up the UI components of the cell with the provided theme data.
      
      - Parameters:
        - theme: The `TheExperienceThemeData` that contains styling attributes for the cell's UI components.
      */
+    // swiftlint:disable:next function_body_length
     private func setupUI(withTheme theme: ExperienceTheme) {
+        // Deactivate previously stored constraints
+        NSLayoutConstraint.deactivate(storedConstraints)
+        storedConstraints.removeAll()
+
         contentView.backgroundColor = theme.backgroundColor
 
         // Disable autoresizing mask constraints for custom layout
@@ -171,43 +177,55 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
         contentViewHeightConstraint.priority = .defaultLow
 
-        // Activate layout constraints for the scroll view and its content
-        NSLayoutConstraint.activate([
+        // Define layout constraints for the scroll view and its content
+        storedConstraints.append(contentsOf: [
             actionButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                                                  constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: ThemeHandler.DefaultValues.contentMargin + leftRightMargin()),
             actionButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                                                   constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                constant: ThemeHandler.DefaultValues.contentMargin.negative + leftRightMargin().negative),
             actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
-                                                 constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
+                constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
             theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
                 constant: topSafeAreaHeight() + ThemeHandler.DefaultValues.carouselContentTopMargin),
-            theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 0.0),
-            theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 0.0),
+            theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
+                constant: leftRightMargin()),
+            theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
+                constant: leftRightMargin().negative),
             theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
                 constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative),
-            contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor, constant: 0.0),
-            contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor, constant: 0.0),
-            contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor, constant: 0.0),
-            contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor, constant: 0.0),
-            contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor, constant: 0.0),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor, constant: -8.0),
+            contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor,
+                constant: 0.0),
+            contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor,
+                constant: 0.0),
+            contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor,
+                constant: 0.0),
+            contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor,
+                constant: 0.0),
+            contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor,
+                constant: 0.0),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor,
+                constant: -8.0),
             stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor,
-                                               constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: ThemeHandler.DefaultValues.contentMargin),
             stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor,
-                                                constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                constant: ThemeHandler.DefaultValues.contentMargin.negative),
             contentViewHeightConstraint
         ])
 
         // Conditional layout based on content alignment
         if theme.contentAlignment == .middle {
-            NSLayoutConstraint.activate([
+            storedConstraints.append(contentsOf: [
                 stackView.topAnchor.constraint(greaterThanOrEqualTo: contentContainerView.topAnchor, constant: 0.0),
                 stackView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor, constant: 0.0)
             ])
         } else {
-            NSLayoutConstraint.activate([
+            storedConstraints.append(
                 stackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 0.0)
-            ])
+            )
         }
+
+        // Activate the stored constraints
+        NSLayoutConstraint.activate(storedConstraints)
     }
+
 }
