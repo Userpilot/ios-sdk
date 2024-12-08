@@ -262,9 +262,9 @@ extension UserPilotManager: UserPilotNavigationDelegate {
         if url.scheme == "userpilot-example" {
             guard let destination = url.host else { return }
             if destination == "demo" {
-                //delay(0.4) {
+                // delay(0.4) {
                     FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
-                //}
+                // }
             } else if destination == "identify" {
                 FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
             } else if destination == "screen_one" {
@@ -273,6 +273,11 @@ extension UserPilotManager: UserPilotNavigationDelegate {
                 FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
             }
             completion(true)
+        } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            completion(true)
+        } else {
+            completion(false)
         }
     }
 
