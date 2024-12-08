@@ -215,7 +215,7 @@ internal struct ButtonAction: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case buttonAction = "button_action"
-        case deepLink = "deep_link"
+        case deepLink = "ios_deep_link"
     }
 }
 

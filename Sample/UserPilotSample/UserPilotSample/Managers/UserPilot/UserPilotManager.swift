@@ -262,11 +262,17 @@ extension UserPilotManager: UserPilotNavigationDelegate {
         if url.scheme == "userpilot-example" {
             guard let destination = url.host else { return }
             if destination == "demo" {
-                delay(0.4) {
+                //delay(0.4) {
                     FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
-                    completion(true)
-                }
+                //}
+            } else if destination == "identify" {
+                FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
+            } else if destination == "screen_one" {
+                FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
+            } else if destination == "screen_two" {
+                FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
             }
+            completion(true)
         }
     }
 

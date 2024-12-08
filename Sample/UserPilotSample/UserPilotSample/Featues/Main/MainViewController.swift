@@ -29,6 +29,10 @@ class MainViewController: BaseViewController {
             properties: ["locale_code": Locale.current.languageCode ?? "en"]
         )
          */
+
+//        delay(4) {
+//            UserPilotManager.shared.startPerformanceTest()
+//        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
