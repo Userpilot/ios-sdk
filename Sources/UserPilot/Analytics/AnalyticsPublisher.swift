@@ -304,10 +304,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func trackEvent(_ event: Event) {
         readWriteLock.write { [weak self] in
-            guard
-                let self,
-                self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle)
-            else { return }
+            guard let self else { return }
+            if self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle) { return }
             self.eventsName.insert(event.eventTitle)
             self.eventsToFlush.append(event)
             if self.eventsToFlush.count == 1 {
