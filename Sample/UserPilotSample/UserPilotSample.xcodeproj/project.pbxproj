@@ -131,7 +131,7 @@
 		ABFB5FE32C9173D60054E142 /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		ABFB5FE52C91743B0054E142 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
 		ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITableReusableView+Extension.swift"; sourceTree = "<group>"; };
-		C5C897B52C5CFFFA0083928E /* UserPilotSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserPilotSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C5C897B52C5CFFFA0083928E /* UserpilotSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserpilotSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5C897B82C5CFFFA0083928E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		C5C897C12C5CFFFB0083928E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -446,7 +446,7 @@
 		C5C897AC2C5CFFFA0083928E = {
 			isa = PBXGroup;
 			children = (
-				C5C897B72C5CFFFA0083928E /* UserPilotSample */,
+				C5C897B72C5CFFFA0083928E /* UserpilotSample */,
 				ABB390052D0713C50091FE7A /* Frameworks */,
 				C5C897B62C5CFFFA0083928E /* Products */,
 			);
@@ -455,12 +455,12 @@
 		C5C897B62C5CFFFA0083928E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C5C897B52C5CFFFA0083928E /* UserPilotSample.app */,
+				C5C897B52C5CFFFA0083928E /* UserpilotSample.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		C5C897B72C5CFFFA0083928E /* UserPilotSample */ = {
+		C5C897B72C5CFFFA0083928E /* UserpilotSample */ = {
 			isa = PBXGroup;
 			children = (
 				AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */,
@@ -478,15 +478,15 @@
 				C5C897C62C5CFFFB0083928E /* Info.plist */,
 				AB585F672CD79EF400E2A66D /* Config.xcconfig */,
 			);
-			path = UserPilotSample;
+			path = UserpilotSample;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C5C897B42C5CFFFA0083928E /* UserPilotSample */ = {
+		C5C897B42C5CFFFA0083928E /* UserpilotSample */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C5C897C92C5CFFFB0083928E /* Build configuration list for PBXNativeTarget "UserPilotSample" */;
+			buildConfigurationList = C5C897C92C5CFFFB0083928E /* Build configuration list for PBXNativeTarget "UserpilotSample" */;
 			buildPhases = (
 				C5C897B12C5CFFFA0083928E /* Sources */,
 				C5C897B22C5CFFFA0083928E /* Frameworks */,
@@ -497,14 +497,14 @@
 			);
 			dependencies = (
 			);
-			name = UserPilotSample;
+			name = UserpilotSample;
 			packageProductDependencies = (
 				AB46B0A32D07134B0054D249 /* Userpilot */,
 				ABB390032D0713AE0091FE7A /* Userpilot */,
 				ABB390072D07140A0091FE7A /* Userpilot */,
 			);
 			productName = UserPilotSample;
-			productReference = C5C897B52C5CFFFA0083928E /* UserPilotSample.app */;
+			productReference = C5C897B52C5CFFFA0083928E /* UserpilotSample.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -522,7 +522,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserPilotSample" */;
+			buildConfigurationList = C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserpilotSample" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -539,7 +539,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C5C897B42C5CFFFA0083928E /* UserPilotSample */,
+				C5C897B42C5CFFFA0083928E /* UserpilotSample */,
 			);
 		};
 /* End PBXProject section */
@@ -942,7 +942,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserPilotSample" */ = {
+		C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserpilotSample" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C5C897C72C5CFFFB0083928E /* Debug */,
@@ -951,7 +951,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C5C897C92C5CFFFB0083928E /* Build configuration list for PBXNativeTarget "UserPilotSample" */ = {
+		C5C897C92C5CFFFB0083928E /* Build configuration list for PBXNativeTarget "UserpilotSample" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C5C897CA2C5CFFFB0083928E /* Debug */,
