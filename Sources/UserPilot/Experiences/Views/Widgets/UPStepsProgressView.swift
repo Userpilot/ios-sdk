@@ -177,8 +177,8 @@ internal class UPStepsProgressView: UIView {
 
         animatedStep = CGFloat(newStep)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
-            self.currentStep = newStep
+        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) { [weak self] in
+            self?.currentStep = newStep
         }
     }
 }

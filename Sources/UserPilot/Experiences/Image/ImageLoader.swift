@@ -93,7 +93,7 @@ internal class ImageLoader: ImageLoading {
     ///   - completion: A completion handler with the loaded `UIImage` (optional).
     private func loadImage(from url: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self, let data = data, error == nil else {
+            guard let self, let data = data, error == nil else {
                 completion(nil)
                 return
             }

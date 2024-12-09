@@ -60,15 +60,15 @@ internal class UPImageView: UIView {
     func setupView(line: Line, imageLoader: ImageLoading) {
         guard let attributes = line.attrs else { return }
 
-        self.setupAccessibility(for: line)
+        setupAccessibility(for: line)
 
         // Determine the image source based on the line type.
         let imageUrl = (line.type == .image) ? attributes.src : attributes.icon
         let imageSize = (line.type == .image) ? getImageSize(for: line) : ThemeHandler.DefaultValues.iconImageSize
 
         // Configure the layout and style.
-        self.configureLayout(for: line, imageSize: imageSize)
-        self.applyStyling(attributes)
+        configureLayout(for: line, imageSize: imageSize)
+        applyStyling(attributes)
 
         if let url = imageUrl {
             imageLoader.loadImage(target: imageView, url: url, blurHash: attributes.hash, size: imageSize)

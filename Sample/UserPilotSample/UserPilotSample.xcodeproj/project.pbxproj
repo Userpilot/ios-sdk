@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AB01CB0E2C8497900069937C /* UICollectionView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */; };
-		AB01CB102C84985B0069937C /* Screen+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */; };
 		AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942A82CD25CD700924844 /* MainViewController.xib */; };
 		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
 		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
@@ -68,8 +66,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UICollectionView+Extensions.swift"; sourceTree = "<group>"; };
-		AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Screen+Extensions.swift"; sourceTree = "<group>"; };
 		AB1942A72CD25CD700924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainViewController.xib; sourceTree = "<group>"; };
 		AB1942AA2CD25CD700924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/MainViewController.xcstrings; sourceTree = "<group>"; };
 		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -268,8 +264,6 @@
 			isa = PBXGroup;
 			children = (
 				AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */,
-				AB01CB0D2C8497900069937C /* UICollectionView+Extensions.swift */,
-				AB01CB0F2C84985B0069937C /* Screen+Extensions.swift */,
 				ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */,
 				ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */,
 			);
@@ -603,7 +597,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */,
-				AB01CB0E2C8497900069937C /* UICollectionView+Extensions.swift in Sources */,
 				ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */,
 				ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,
@@ -620,7 +613,6 @@
 				ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */,
 				ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */,
 				AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */,
-				AB01CB102C84985B0069937C /* Screen+Extensions.swift in Sources */,
 				ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */,
 				AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */,
 				ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */,

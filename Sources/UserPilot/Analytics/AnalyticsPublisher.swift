@@ -126,7 +126,7 @@ internal class AnalyticsPublisher {
         // Register socket event callback
         self.socketManager.registerCallback(self)
         if let temporaryUserString = storage.temporaryUser {
-            let temporaryUser = User.fromJson(temporaryUserString) // temporaryUserString.toUser()
+            let temporaryUser = User.fromJson(temporaryUserString)
             cachedIdentifyEvent = Event(type: EventType.identify(temporaryUser.userID),
                                 properties: temporaryUser.properties,
                                 company: temporaryUser.company)

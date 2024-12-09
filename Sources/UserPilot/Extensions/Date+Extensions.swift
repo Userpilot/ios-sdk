@@ -22,8 +22,4 @@ internal extension Date {
         return dateFormatter.string(from: self)
     }
 
-    var millisecondsSince1970: Double {
-        return (self.timeIntervalSince1970 * 1_000.0).rounded()
-    }
-
 }

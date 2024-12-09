@@ -64,11 +64,11 @@ internal extension CarouselExperienceViewController {
 
     /// Process action button -> action.
     func onActionButtonClicked(_ action: ButtonAction) {
-        if self.isLastStep() {
-            self.experienceViewModel.onExperienceCompleted()
-            self.dismiss(animated: true, completion: {
+        if isLastStep() {
+            experienceViewModel.onExperienceCompleted()
+            dismiss(animated: true, completion: { [weak self] in
                 if action.deepLink != nil {
-                    self.experienceViewModel.onDeepLinkTriggered()
+                    self?.experienceViewModel.onDeepLinkTriggered()
                 }
             })
         }

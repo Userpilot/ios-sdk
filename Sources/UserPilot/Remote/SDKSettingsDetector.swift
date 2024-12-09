@@ -85,8 +85,8 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
 
         performOn(.highPriority) {
             // Perform the network request asynchronously on a background thread
-            // DispatchQueue.global(qos: .background).async {
-            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+                guard let self else { return }
                 if let error {
                     self.logger.error("Request failed: %{public}@", error.localizedDescription)
                     callback()

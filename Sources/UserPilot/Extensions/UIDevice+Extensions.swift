@@ -15,10 +15,6 @@ import UIKit
 
 internal extension UIDevice {
 
-    static var identifier: String {
-        (current.identifierForVendor ?? UUID()).userpilotFormatted
-    }
-
     static var deviceType: String {
         return UIDevice.current.name
     }
