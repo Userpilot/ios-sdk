@@ -1,9 +1,9 @@
 //
 //  ExperienceViewModel.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  This class is responsible for managing the state and interactions of the carousel experience.
@@ -20,7 +20,7 @@ internal class ExperienceViewModel {
 
     private let experiencesPublisher: ExperiencesPublishing
     private let themeHandler: ThemeHandling
-    private let config: UserPilot.Config
+    private let config: Userpilot.Config
     private let storage: DataStoring
     let imageLoader: ImageLoading
 
@@ -55,7 +55,7 @@ internal class ExperienceViewModel {
     init(container: DIContainer) {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.config = container.resolve(UserPilot.Config.self)
+        self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.imageLoader = container.resolve(ImageLoading.self)
     }

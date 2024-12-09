@@ -1,9 +1,9 @@
 //
 //  AnalyticsPublishing.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  `AnalyticsPublisher` handles the processing and dispatching of events to the backend.
@@ -64,8 +64,8 @@ internal class AnalyticsPublisher {
     // A weak reference to ExperienceRendering would be expected here to avoid a retain cycle with AnalyticsPublisher
     private weak var container: DIContainer?
 
-    /// Weak reference to the owning `UserPilot` instance.
-    private weak var userPilot: UserPilot?
+    /// Weak reference to the owning `Userpilot` instance.
+    private weak var userpilot: Userpilot?
 
     /// SDK logger.
     private let logger: Logging
@@ -117,11 +117,11 @@ internal class AnalyticsPublisher {
      */
     init(container: DIContainer) {
         self.container = container
-        self.userPilot = container.owner
+        self.userpilot = container.owner
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.socketManager = container.resolve(SocketEvents.self)
-        self.logger = container.resolve(UserPilot.Config.self).logger
+        self.logger = container.resolve(Userpilot.Config.self).logger
 
         // Register socket event callback
         self.socketManager.registerCallback(self)
@@ -145,7 +145,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The event to log.
      */
     func logEvent(_ event: Event) {
-        guard let logger = userPilot?.config.logger else { return }
+        guard let logger = userpilot?.config.logger else { return }
         event.logData(logger: logger)
     }
 
@@ -269,7 +269,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         /// In-case new user ID
         if storage.userID.isNotEmpty && userID != storage.userID {
-            userPilot?.clean()
+            userpilot?.clean()
             logout(socketState: .switchingUser)
         } else {
             flushPriorityEvents()
@@ -476,7 +476,7 @@ extension AnalyticsPublisher: SocketSubscription {
             return
         }
         if let eventToPublish = cachedIdentifyEvent {
-            userPilot?.clean()
+            userpilot?.clean()
             publish(eventToPublish)
         } else {
             clearAllCachedProperties()
@@ -588,8 +588,8 @@ internal extension AnalyticsPublisher {
 
     func broadcastEvent(_ event: Event, _ value: String, properties: [String: Any]?) {
         performOn(.main) { [weak self] in
-            self?.userPilot?.config.analyticsDelegate?.didTrack(
-                analytic: event.userPilotAnalytic,
+            self?.userpilot?.config.analyticsDelegate?.didTrack(
+                analytic: event.userpilotAnalytic,
                 value: value,
                 properties: properties)
         }

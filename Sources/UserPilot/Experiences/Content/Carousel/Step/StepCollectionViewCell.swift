@@ -1,9 +1,9 @@
 //
 //  CarouselExperienceViewController.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 02/10/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  A custom UICollectionViewCell that represents a single step in a multi-step tutorial or guide.

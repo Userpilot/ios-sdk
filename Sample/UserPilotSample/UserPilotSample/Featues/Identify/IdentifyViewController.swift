@@ -1,6 +1,6 @@
 //
 //  IdentifyViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 11/08/2024.
 //
@@ -31,7 +31,7 @@ class IdentifyViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("identify")
+        UserpilotManager.shared.screen("identify")
     }
 
     // MARK: - IBActions
@@ -54,11 +54,11 @@ class IdentifyViewController: BaseViewController {
 
     @IBAction func onLogout(_ sender: UIButton) {
         FlowRoutingManager.shared.showAlertMessage("User logged out successfully!")
-        UserPilotManager.shared.logout()
+        UserpilotManager.shared.logout()
     }
 
     @IBAction func onAnonymous(_ sender: UIButton) {
-        UserPilotManager.shared.anonymous()
+        UserpilotManager.shared.anonymous()
     }
 
 }
@@ -91,7 +91,7 @@ extension IdentifyViewController {
         for (_, propertyView) in companyPropertiesViews {
             companyProperties[propertyView.getParams().0] = propertyView.getParams().1
         }
-        UserPilotManager.shared.identify(userID: userID, properties: userProperties, company: companyProperties)
+        UserpilotManager.shared.identify(userID: userID, properties: userProperties, company: companyProperties)
     }
 
 }

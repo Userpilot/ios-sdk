@@ -1,9 +1,9 @@
 //
 //  SlideOutContainerViewDelegate.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 21/10/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  This protocol defines the delegate methods for handling user interactions

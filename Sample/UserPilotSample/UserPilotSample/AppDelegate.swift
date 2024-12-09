@@ -1,12 +1,12 @@
 //
 //  AppDelegate.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 02/08/2024.
 //
 
 import UIKit
-import UserPilot
+import Userpilot
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,7 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
         // Override point for customization after application launch.
-        UserPilotManager.shared.initialize()
+        UserpilotManager.shared.initialize()
 
         return true
     }

@@ -1,9 +1,9 @@
 //
 //  ThemeContentEvent.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  This class responsible for defining mock responses for `carouselData` and `BaseTheme`.

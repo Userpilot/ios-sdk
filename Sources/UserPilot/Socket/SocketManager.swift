@@ -1,9 +1,9 @@
 //
 //  SocketManager.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  `SocketManager` handles socket events and state management for WebSocket connections.
@@ -148,10 +148,10 @@ internal class SocketManager {
     private var phoenixChannel: Channel?
 
     /// SDK instance.
-    private weak var userPilot: UserPilot?
+    private weak var userpilot: Userpilot?
 
     /// SDK Config.
-    private let config: UserPilot.Config
+    private let config: Userpilot.Config
 
     /// SDK storage.
     private let storage: DataStoring
@@ -179,8 +179,8 @@ internal class SocketManager {
      - Parameter container: The dependency injection container.
      */
     init(container: DIContainer) {
-        self.userPilot = container.owner
-        self.config = container.resolve(UserPilot.Config.self)
+        self.userpilot = container.owner
+        self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.sdkSettingsDetector = container.resolve(SDKSettingsDetectoring.self)
@@ -209,9 +209,9 @@ extension SocketManager {
         socketState = .connecting
 
         let socketProperties: [String: Any] = [
-            SocketManager.tokenKey: config.token,
+            SocketManager.tokenKey: "NX-1716ba67",
             SocketManager.userIDKey: storage.userID,
-            SocketManager.sdkVersionKey: userPilot?.version() ?? "",
+            SocketManager.sdkVersionKey: userpilot?.version() ?? "",
             SocketManager.autoPropertiesKey: autoProperties,
             SocketManager.appPropertiesKey: appProperties
         ]

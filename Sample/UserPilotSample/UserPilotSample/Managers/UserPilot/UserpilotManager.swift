@@ -1,37 +1,37 @@
 //
-//  UserPilotManager.swift
-//  UserPilotSample
+//  UserpilotManager.swift
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 18/08/2024.
 //
 
 import Foundation
-import UserPilot
+import Userpilot
 import UIKit
 
-class UserPilotManager {
+class UserpilotManager {
 
     // MARK: - Public Properties
 
-    static let shared = UserPilotManager()
+    static let shared = UserpilotManager()
 
     // MARK: - Private Properties
 
-    private var userPilot: UserPilot?
+    private var userpilot: Userpilot?
 
-    private(set) var userPilotSDKEvents = [UserPilotSDKEvents]()
+    private(set) var userpilotSDKEvents = [UserpilotSDKEvents]()
 
     // MARK: - Life Cycle
 
     private init() { }
 
-    // MARK: - UserPilot SDK APIs
+    // MARK: - Userpilot SDK APIs
 
     func initialize() {
         guard
             let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
         else { return }
-        userPilot = UserPilot(config: UserPilot.Config(token: appToken)
+        userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(true)
             .setNavigationHandler(navigationDelegate: self)
             .setAnalyticsDelegate(analyticsDelegate: self)
@@ -39,49 +39,49 @@ class UserPilotManager {
         )
     }
 
-    /// Destroy UserPilot instance
+    /// Destroy Userpilot instance
     func destroy() {
-        userPilot?.destroy()
-        userPilot = nil
+        userpilot?.destroy()
+        userpilot = nil
     }
 
-    /// UserPilot Settings
+    /// Userpilot Settings
     @discardableResult
     func settings() -> [String: Any] {
-        return userPilot?.settings() ?? [:]
+        return userpilot?.settings() ?? [:]
     }
 
     /// Identify user
     func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
-        userPilot?.identify(userID: userID, properties: properties, company: company)
+        userpilot?.identify(userID: userID, properties: properties, company: company)
     }
 
     /// login as Anonymous
     func anonymous() {
-        userPilot?.anonymous()
+        userpilot?.anonymous()
     }
 
     /// Logout user
     func logout() {
-        userPilot?.logout()
+        userpilot?.logout()
     }
 
     /// Track screens
     func screen(_ screenTitle: String) {
-        userPilot?.screen(screenTitle)
+        userpilot?.screen(screenTitle)
     }
 
     /// Track user events
     func track(eventName: String, properties: [String: Any]? = nil) {
-        userPilot?.track(eventName: eventName, properties: properties)
+        userpilot?.track(eventName: eventName, properties: properties)
     }
 
     func triggerExperience(experienceID: String) {
-        userPilot?.triggerExperience(experienceID)
+        userpilot?.triggerExperience(experienceID)
     }
 
     func endExperience() {
-        userPilot?.endExperience()
+        userpilot?.endExperience()
     }
 
     // MARK: - Test Log multiEvents
@@ -164,7 +164,7 @@ class UserPilotManager {
                 }
 
                 // another user event
-                // self.userPilot.identify(userID: "NX-22222")
+                // self.userpilot.identify(userID: "NX-22222")
 
                 // screen event
                 self.screen("Main")
@@ -196,7 +196,7 @@ class UserPilotManager {
      This function simulates a series of updates to a user's identification information,
      with delays between each update to mimic asynchronous behavior or to observe changes over time.
      The `identify` function is called multiple times with different attributes and data,
-     followed by a call to `userPilot.settings()` to log or review the final state of the user settings.
+     followed by a call to `userpilot.settings()` to log or review the final state of the user settings.
      
      The SDK should post identify event in case there is new data updated or added to user info,
      otherwise, is should be ignored
@@ -246,17 +246,42 @@ class UserPilotManager {
                         ]
                     )
 
-                    _ = self.userPilot?.settings()
+                    _ = self.userpilot?.settings()
                 }
             }
         }
     }
 
+    func testesz() {
+            delay(1) { // 1 second
+                self.track(eventName: "Event 1")
+
+                delay(0.5) { // 0.5 seconds
+                    self.track(eventName: "Event 2")
+
+                    delay(0.5) { // 0.5 seconds
+                        self.track(eventName: "Event 3")
+
+                        delay(0.5) { // 0.5 seconds
+                            self.track(eventName: "Event 4")
+
+                            delay(0.5) { // 0.5 seconds
+                                self.track(eventName: "Event 5")
+
+                                // Additional event tracking
+                                self.track(eventName: "Event 6")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 }
 
-// MARK: - UserPilotNavigationDelegate
+// MARK: - UserpilotNavigationDelegate
 
-extension UserPilotManager: UserPilotNavigationDelegate {
+extension UserpilotManager: UserpilotNavigationDelegate {
 
     func navigate(to url: URL, completion: @escaping (Bool) -> Void) {
         if url.scheme == "userpilot-example" {
@@ -283,12 +308,12 @@ extension UserPilotManager: UserPilotNavigationDelegate {
 
 }
 
-// MARK: - UserPilotAnalyticsDelegate
+// MARK: - UserpilotAnalyticsDelegate
 
-extension UserPilotManager: UserPilotAnalyticsDelegate {
+extension UserpilotManager: UserpilotAnalyticsDelegate {
 
-    func didTrack(analytic: UserPilotAnalytic, value: String, properties: [String: Any]?) {
-        userPilotSDKEvents.insert(UserPilotSDKEvents(analytic: analytic, value: value, properties: properties), at: 0)
+    func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?) {
+        userpilotSDKEvents.insert(UserpilotSDKEvents(analytic: analytic, value: value, properties: properties), at: 0)
         if analytic == .identify {
             showIdentifyAlert()
         }
@@ -299,11 +324,11 @@ extension UserPilotManager: UserPilotAnalyticsDelegate {
     }
 }
 
-// MARK: - UserPilotAnalyticsDelegate
+// MARK: - UserpilotAnalyticsDelegate
 
-extension UserPilotManager: UserPilotExperienceDelegate {
+extension UserpilotManager: UserpilotExperienceDelegate {
 
-    func onExperienceStateChanged(state: UserPilotExperienceState, id: Int, experienceToken: String) {
+    func onExperienceStateChanged(state: UserpilotExperienceState, id: Int, experienceToken: String) {
         print("ExperienceDelegate -> \(state.rawValue), experienceToken -> \(experienceToken)")
     }
 
@@ -315,8 +340,8 @@ extension UserPilotManager: UserPilotExperienceDelegate {
 
 // MARK: - Hold SDK events
 
-struct UserPilotSDKEvents {
-    let analytic: UserPilotAnalytic
+struct UserpilotSDKEvents {
+    let analytic: UserpilotAnalytic
     let value: String
     let properties: [String: Any]?
 }

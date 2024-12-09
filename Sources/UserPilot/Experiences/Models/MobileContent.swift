@@ -1,8 +1,8 @@
 //  CarouselExperienceViewController.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
-//  Copyright © 2021 UserPilot. All rights reserved.
+//  Copyright © 2021 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  Represents the configuration and content of a carousel.

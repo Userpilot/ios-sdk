@@ -1,19 +1,19 @@
 //
-//  UserPilotAnalyticsDelegate.swift
-//  UserPilot SDK
+//  UserpilotAnalyticsDelegate.swift
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 16/11/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  This protocol allows the application to observe and respond to analytics
-//  events emitted by the UserPilot SDK, providing insights into user interactions.
+//  events emitted by the Userpilot SDK, providing insights into user interactions.
 //
 
 import Foundation
 
-/// The different types of analytics tracked by the UserPilot SDK.
+/// The different types of analytics tracked by the Userpilot SDK.
 @objc
-public enum UserPilotAnalytic: Int {
+public enum UserpilotAnalytic: Int {
     /// Represents an identify event, typically used to associate a user with a specific ID.
     case identify = 0
 
@@ -36,10 +36,10 @@ public enum UserPilotAnalytic: Int {
     }
 }
 
-/// A protocol that allows observation of analytics events emitted by the UserPilot SDK.
+/// A protocol that allows observation of analytics events emitted by the Userpilot SDK.
 @objc
-public protocol UserPilotAnalyticsDelegate: AnyObject {
-    /// Notifies the delegate when a UserPilot analytics event is tracked.
+public protocol UserpilotAnalyticsDelegate: AnyObject {
+    /// Notifies the delegate when a Userpilot analytics event is tracked.
     ///
     /// - Parameters:
     ///   - analytic: The type of analytic being tracked. This can be one of:
@@ -52,5 +52,5 @@ public protocol UserPilotAnalyticsDelegate: AnyObject {
     ///     - For `.screen`: The screen title.
     ///   - properties: Optional dictionary containing additional context or metadata
     ///     about the analytic event.
-    func didTrack(analytic: UserPilotAnalytic, value: String, properties: [String: Any]?)
+    func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?)
 }

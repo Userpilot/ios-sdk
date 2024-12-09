@@ -1,6 +1,6 @@
 //
 //  MainViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 19/08/2024.
 //
@@ -22,22 +22,22 @@ class MainViewController: BaseViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        UserPilotManager.shared.settings()
+        UserpilotManager.shared.settings()
         /*
-        UserPilotManager.shared.identify(
+        UserpilotManager.shared.identify(
             userID: "112233",
             properties: ["locale_code": Locale.current.languageCode ?? "en"]
         )
          */
 
-//        delay(4) {
-//            UserPilotManager.shared.startPerformanceTest()
-//        }
+        delay(4) {
+            UserpilotManager.shared.testesz()
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("main")
+        UserpilotManager.shared.screen("main")
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -51,8 +51,8 @@ class MainViewController: BaseViewController {
     internal func showConfigurationDialog() {
         DialogManager.shared().showConfigurationDialog { [weak self] in
             guard self != nil else { return }
-            UserPilotManager.shared.destroy()
-            UserPilotManager.shared.initialize()
+            UserpilotManager.shared.destroy()
+            UserpilotManager.shared.initialize()
         }
     }
 }

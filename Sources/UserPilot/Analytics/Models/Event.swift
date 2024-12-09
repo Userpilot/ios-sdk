@@ -1,12 +1,12 @@
 //
 //  TrackingUpdate.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  The `Event` struct is a holder for event details in the UserPilot SDK.
+//  The `Event` struct is a holder for event details in the Userpilot SDK.
 //  It tracks information about various user actions, analytics events, and their associated metadata.
 //
 
@@ -67,7 +67,7 @@ internal struct Event {
         return type.userID
     }
 
-    var userPilotAnalytic: UserPilotAnalytic {
+    var userpilotAnalytic: UserpilotAnalytic {
         switch type {
         case .identify:
             return .identify

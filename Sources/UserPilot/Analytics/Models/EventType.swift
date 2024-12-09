@@ -1,19 +1,19 @@
 //
 //  EventType.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  The `EventType` enum represents different types of events that can be tracked in the UserPilot SDK.
+//  The `EventType` enum represents different types of events that can be tracked in the Userpilot SDK.
 //  These include custom events, screen views, and user identity grouping.
 //
 
 import Foundation
 
 /**
- The `EventType` enum is used to categorize and manage different types of events within the UserPilot SDK.
+ The `EventType` enum is used to categorize and manage different types of events within the Userpilot SDK.
 
  It defines three types of events:
  - `event`: Tracks custom events, such as button clicks or other user interactions.

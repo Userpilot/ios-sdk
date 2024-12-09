@@ -1,9 +1,9 @@
 //
 //  UIStackView+Extension.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 11/11/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  `UIStackView+Extension` contains extensions with helper methods for the `UIStackView` class.

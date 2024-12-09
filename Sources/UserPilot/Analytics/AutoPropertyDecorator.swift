@@ -1,9 +1,9 @@
 //
 //  AutoPropertyDecorator.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  The `AutoPropertyDecorator` class provides automatic property decoration for analytics events,
@@ -36,8 +36,8 @@ internal class AutoPropertyDecorator {
 
     // MARK: - Properties
 
-    /// Configuration object for UserPilot.
-    private let config: UserPilot.Config
+    /// Configuration object for Userpilot.
+    private let config: Userpilot.Config
 
     // MARK: - Initialization
 
@@ -47,13 +47,13 @@ internal class AutoPropertyDecorator {
      - Parameter container: The dependency injection container holding references to required services.
      */
     init(container: DIContainer) {
-        self.config = container.resolve(UserPilot.Config.self)
+        self.config = container.resolve(Userpilot.Config.self)
     }
 
     // MARK: - Auto Properties
 
     /// Provides system and device properties.
-    private lazy var userPilotAutoProperties: [String: Any] = [
+    private lazy var userpilotAutoProperties: [String: Any] = [
         AutoPropertyDecorator.osKey: "iOS",
         AutoPropertyDecorator.osVersionKey: UIDevice.current.systemVersion,
         AutoPropertyDecorator.appVersionKey: Bundle.main.version,
@@ -63,7 +63,7 @@ internal class AutoPropertyDecorator {
     ]
 
     /// Provides application properties.
-    private lazy var userPilotAppProperties: [String: Any] = [
+    private lazy var userpilotAppProperties: [String: Any] = [
         AutoPropertyDecorator.appNameKey: Bundle.main.displayName,
         AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier
     ]
@@ -75,11 +75,11 @@ internal class AutoPropertyDecorator {
 extension AutoPropertyDecorator: AutoPropertyDecoratoring {
 
     var autoProperties: [String: Any] {
-        return userPilotAutoProperties
+        return userpilotAutoProperties
     }
 
     var appProperties: [String: Any] {
-        return userPilotAppProperties
+        return userpilotAppProperties
     }
 }
 

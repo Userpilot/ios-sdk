@@ -1,6 +1,6 @@
 //
 //  ScreenTwoViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 19/08/2024.
 //
@@ -12,7 +12,7 @@ class ScreenTwoViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("screen two")
+        UserpilotManager.shared.screen("screen two")
     }
 
     // MARK: - IBAction
@@ -22,7 +22,7 @@ class ScreenTwoViewController: BaseViewController {
     }
 
     @IBAction func onNextButtonClicked(_ sender: UIButton) {
-        UserPilotManager.shared.triggerExperience(experienceID: "")
+        UserpilotManager.shared.triggerExperience(experienceID: "")
     }
 
 }

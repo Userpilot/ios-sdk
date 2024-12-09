@@ -1,9 +1,9 @@
 //
 //  DIContainer.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  The `DIContainer` class provides a dependency injection container for managing component instances
@@ -33,8 +33,8 @@ internal class DIContainer {
     /// A dictionary of registered component instances.
     private var components: [String: Any] = [:]
 
-    /// A weak reference to the owning instance (e.g., `UserPilot`).
-    weak var owner: UserPilot?
+    /// A weak reference to the owning instance (e.g., `Userpilot`).
+    weak var owner: Userpilot?
 
     // MARK: - Register Methods
 

@@ -1,6 +1,6 @@
 //
 //  SDKEventsViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 16/11/2024.
 //
@@ -21,11 +21,11 @@ class SDKEventsViewController: BaseViewController {
         }
     }
 
-    private var userPilotSDKEvents = UserPilotManager.shared.userPilotSDKEvents
+    private var userpilotSDKEvents = UserpilotManager.shared.userpilotSDKEvents
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        if userPilotSDKEvents.isEmpty {
+        if userpilotSDKEvents.isEmpty {
             emptyContentLabel.isHidden = false
         }
     }
@@ -44,13 +44,13 @@ class SDKEventsViewController: BaseViewController {
 extension SDKEventsViewController: UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return userPilotSDKEvents.count
+        return userpilotSDKEvents.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let eventTableViewCell: SDKEventTableViewCell = tableView.dequeueReusableCell(for: indexPath)
         eventTableViewCell.selectionStyle = .none
-        eventTableViewCell.bindCell(userPilotSDKEvents[indexPath.row])
+        eventTableViewCell.bindCell(userpilotSDKEvents[indexPath.row])
         return eventTableViewCell
     }
 

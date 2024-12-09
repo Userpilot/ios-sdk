@@ -1,6 +1,6 @@
 //
 //  UUID+Extension.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
 //

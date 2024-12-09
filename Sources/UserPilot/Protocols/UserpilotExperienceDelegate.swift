@@ -1,19 +1,19 @@
 //
-//  UserPilotExperienceDelegate.swift
-//  UserPilot SDK
+//  UserpilotExperienceDelegate.swift
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/11/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  This protocol allows the application to observe and respond to changes in the state
-//  of UserPilot experiences and individual steps within those experiences.
+//  of Userpilot experiences and individual steps within those experiences.
 //
 
 import Foundation
 
-/// The various states of a UserPilot experience.
+/// The various states of a Userpilot experience.
 @objc
-public enum UserPilotExperienceState: Int {
+public enum UserpilotExperienceState: Int {
     /// Indicates that the experience has started.
     case started
 
@@ -24,10 +24,10 @@ public enum UserPilotExperienceState: Int {
     case dismissed
 }
 
-/// A protocol to observe and respond to state changes in UserPilot experiences.
+/// A protocol to observe and respond to state changes in Userpilot experiences.
 @objc
-public protocol UserPilotExperienceDelegate: AnyObject {
-    /// Called when the state of a UserPilot experience changes.
+public protocol UserpilotExperienceDelegate: AnyObject {
+    /// Called when the state of a Userpilot experience changes.
     ///
     /// - Parameters:
     ///   - state: The current state of the experience. Possible values are:
@@ -36,9 +36,9 @@ public protocol UserPilotExperienceDelegate: AnyObject {
     ///     - `.dismissed`: The experience was dismissed before completion.
     ///   - id: A unique identifier for the experience.
     ///   - experienceToken: A token that uniquely identifies the specific instance of the experience.
-    func onExperienceStateChanged(state: UserPilotExperienceState, id: Int, experienceToken: String)
+    func onExperienceStateChanged(state: UserpilotExperienceState, id: Int, experienceToken: String)
 
-    /// Called when the state of a specific step within a UserPilot experience changes.
+    /// Called when the state of a specific step within a Userpilot experience changes.
     ///
     /// - Parameters:
     ///   - id: A unique identifier for the experience.

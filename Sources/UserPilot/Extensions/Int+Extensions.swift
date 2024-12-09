@@ -1,9 +1,9 @@
 //
 //  Int+Extension.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 04/09/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  `Int+Extension` contains an extension with helper methods for the `Int` class.

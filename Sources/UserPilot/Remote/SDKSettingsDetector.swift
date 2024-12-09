@@ -1,9 +1,9 @@
 //
 //  SDKSettingsDetector.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 17/09/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  The `SDKSettingsDetector` responsible for fetching SDK settings.
@@ -34,7 +34,7 @@ internal class SDKSettingsDetector {
     private let baseURL = "https://find.userpilot.io/v1/lookups/"
 
     /// A configuration instance holding SDK-related configuration details.
-    private let config: UserPilot.Config
+    private let config: Userpilot.Config
 
     /// Logger instance for logging information and errors.
     private let logger: Logging
@@ -50,9 +50,9 @@ internal class SDKSettingsDetector {
      * - Parameter container: The dependency injection container holding references to required services.
      */
     init(container: DIContainer) {
-        self.config = container.resolve(UserPilot.Config.self)
+        self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
-        self.logger = container.resolve(UserPilot.Config.self).logger
+        self.logger = container.resolve(Userpilot.Config.self).logger
     }
 }
 

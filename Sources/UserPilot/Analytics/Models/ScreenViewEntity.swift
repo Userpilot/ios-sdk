@@ -1,19 +1,19 @@
 //
 //  ScreenViewEntity.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 24/11/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [ScreenViewEntity]
 //  The `ScreenViewEntity` class represents the state and behavior associated with a screen view
-//  in the UserPilot SDK. It tracks the current event, handles fake reload logic, manages seen
+//  in the Userpilot SDK. It tracks the current event, handles fake reload logic, manages seen
 //  experiences, and provides utility methods to update and reset its state.
 //
 
 import Foundation
 
-/// Represents the state and behavior of a screen view in the UserPilot SDK.
+/// Represents the state and behavior of a screen view in the Userpilot SDK.
 internal class ScreenViewEntity {
     /// The current event associated with the screen view.
     var event: Event

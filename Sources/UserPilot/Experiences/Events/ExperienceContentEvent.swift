@@ -1,9 +1,9 @@
 //
 //  ExperienceContentEvent.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 05/11/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  This class encapsulates the data required to fetch experience associated with ID.

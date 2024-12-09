@@ -19,6 +19,7 @@
 		AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C22CD261F100924844 /* CustomEventViewController.xib */; };
 		AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C62CD2624000924844 /* EventsViewController.xib */; };
 		AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942CA2CD2626C00924844 /* EventTableViewCell.xib */; };
+		AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB46B0A32D07134B0054D249 /* Userpilot */; };
 		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
 		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
@@ -37,7 +38,9 @@
 		ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */; };
 		ABACA8652C96E3F5006C9B77 /* DialogManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA8642C96E3F5006C9B77 /* DialogManager.swift */; };
 		ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */; };
-		ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */; };
+		ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABB390032D0713AE0091FE7A /* Userpilot */; };
+		ABB390082D07140A0091FE7A /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABB390072D07140A0091FE7A /* Userpilot */; };
+		ABC0AE182C7205CE00BB9F62 /* UserpilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */; };
 		ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */; };
 		ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */; };
 		ABCD7E312CE48212008393E5 /* EnvironmentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */; };
@@ -62,7 +65,6 @@
 		C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */; };
 		C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C12C5CFFFB0083928E /* Assets.xcassets */; };
 		C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */; };
-		C5C897CE2C5D00090083928E /* UserPilot in Frameworks */ = {isa = PBXBuildFile; productRef = C5C897CD2C5D00090083928E /* UserPilot */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -108,7 +110,7 @@
 		ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPropertyDialogViewController.swift; sourceTree = "<group>"; };
 		ABACA8642C96E3F5006C9B77 /* DialogManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogManager.swift; sourceTree = "<group>"; };
 		ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-BoldItalic.ttf"; sourceTree = "<group>"; };
-		ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPilotManager.swift; sourceTree = "<group>"; };
+		ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserpilotManager.swift; sourceTree = "<group>"; };
 		ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Regular.ttf"; sourceTree = "<group>"; };
 		ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwitcher-Grypen-Regular.ttf"; sourceTree = "<group>"; };
 		ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentManager.swift; sourceTree = "<group>"; };
@@ -142,7 +144,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C5C897CE2C5D00090083928E /* UserPilot in Frameworks */,
+				ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */,
+				ABB390082D07140A0091FE7A /* Userpilot in Frameworks */,
+				AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -307,10 +311,17 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
+		ABB390052D0713C50091FE7A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		ABC0AE162C7205BA00BB9F62 /* UserPilot */ = {
 			isa = PBXGroup;
 			children = (
-				ABC0AE172C7205CE00BB9F62 /* UserPilotManager.swift */,
+				ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */,
 			);
 			path = UserPilot;
 			sourceTree = "<group>";
@@ -436,6 +447,7 @@
 			isa = PBXGroup;
 			children = (
 				C5C897B72C5CFFFA0083928E /* UserPilotSample */,
+				ABB390052D0713C50091FE7A /* Frameworks */,
 				C5C897B62C5CFFFA0083928E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -487,7 +499,9 @@
 			);
 			name = UserPilotSample;
 			packageProductDependencies = (
-				C5C897CD2C5D00090083928E /* UserPilot */,
+				AB46B0A32D07134B0054D249 /* Userpilot */,
+				ABB390032D0713AE0091FE7A /* Userpilot */,
+				ABB390072D07140A0091FE7A /* Userpilot */,
 			);
 			productName = UserPilotSample;
 			productReference = C5C897B52C5CFFFA0083928E /* UserPilotSample.app */;
@@ -519,7 +533,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				C5C897CC2C5D00090083928E /* XCLocalSwiftPackageReference "../.." */,
+				ABB390062D07140A0091FE7A /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -594,7 +608,7 @@
 				ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,
 				AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */,
-				ABC0AE182C7205CE00BB9F62 /* UserPilotManager.swift in Sources */,
+				ABC0AE182C7205CE00BB9F62 /* UserpilotManager.swift in Sources */,
 				ABF38C8B2C7388AA00013F18 /* ScreenTwoViewController.swift in Sources */,
 				ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */,
 				ABF38C812C73719300013F18 /* Content.swift in Sources */,
@@ -949,16 +963,24 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C5C897CC2C5D00090083928E /* XCLocalSwiftPackageReference "../.." */ = {
+		ABB390062D07140A0091FE7A /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../..;
+			relativePath = "../../../userpilot-ios-sdk";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		C5C897CD2C5D00090083928E /* UserPilot */ = {
+		AB46B0A32D07134B0054D249 /* Userpilot */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = UserPilot;
+			productName = Userpilot;
+		};
+		ABB390032D0713AE0091FE7A /* Userpilot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Userpilot;
+		};
+		ABB390072D07140A0091FE7A /* Userpilot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Userpilot;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

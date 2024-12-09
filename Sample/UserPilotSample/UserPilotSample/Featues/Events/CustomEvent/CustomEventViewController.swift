@@ -1,6 +1,6 @@
 //
 //  CustomEventViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 16/09/2024.
 //
@@ -25,7 +25,7 @@ class CustomEventViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("custom events")
+        UserpilotManager.shared.screen("custom events")
     }
 
     // MARK: - IBActions
@@ -59,7 +59,7 @@ extension CustomEventViewController {
         for (_, propertyView) in eventPropertiesViews {
             eventProperties[propertyView.getParams().0] = propertyView.getParams().1
         }
-        UserPilotManager.shared.track(eventName: eventName, properties: eventProperties)
+        UserpilotManager.shared.track(eventName: eventName, properties: eventProperties)
     }
 
 }

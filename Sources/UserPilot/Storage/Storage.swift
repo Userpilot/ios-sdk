@@ -1,9 +1,9 @@
 //
 //  Storage.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  The `Storage` class provides a mechanism for storing and caching runtime data, including 
@@ -14,7 +14,7 @@ import Foundation
 import UIKit
 
 /**
- Protocol that defines the methods and properties required for data storage in the UserPilot SDK.
+ Protocol that defines the methods and properties required for data storage in the Userpilot SDK.
 
  - Properties:
    - `socketURL`: The URL for the socket connection.
@@ -70,8 +70,8 @@ internal class Storage: DataStoring {
 
     // MARK: - Properties
 
-    /// The configuration object for the UserPilot SDK, containing settings that are resolved via dependency injection.
-    private let config: UserPilot.Config
+    /// The configuration object for the Userpilot SDK, containing settings that are resolved via dependency injection.
+    private let config: Userpilot.Config
 
     /// A lazy-loaded `UserDefaults` instance, scoped to the SDK’s user defaults suite name for isolating stored data.
     private lazy var defaults = UserDefaults(
@@ -147,7 +147,7 @@ internal class Storage: DataStoring {
      - Parameter container: The DI container used to resolve dependencies, including the SDK's `Config` object.
      */
     init(container: DIContainer) {
-        self.config = container.resolve(UserPilot.Config.self)
+        self.config = container.resolve(Userpilot.Config.self)
     }
 
     // MARK: - Helper Methods

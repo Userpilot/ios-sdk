@@ -1,12 +1,12 @@
 //
 //  User.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 15/09/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  The `User` struct is a holder for user details in the UserPilot SDK.
+//  The `User` struct is a holder for user details in the Userpilot SDK.
 //  It tracks information about user properties and company attributes and supports
 //  custom serialization, updating with events, and comparison between user objects.
 //
@@ -15,7 +15,7 @@ import Foundation
 import UIKit
 
 /**
- * The `User` struct represents a user in the UserPilot SDK.
+ * The `User` struct represents a user in the Userpilot SDK.
  * It stores user-specific details such as the user ID, user properties, and company attributes.
  *
  * Properties:

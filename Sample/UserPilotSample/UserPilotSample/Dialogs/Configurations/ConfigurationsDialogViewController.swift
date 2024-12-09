@@ -1,6 +1,6 @@
 //
 //  ConfigurationsDialogViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 03/11/2024.
 //

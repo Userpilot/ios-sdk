@@ -1,22 +1,22 @@
 //
-//  UserPilot.swift
-//  UserPilot SDK
+//  Userpilot.swift
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/08/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  The `UserPilot` class is the primary interface for integrating UserPilot SDK into an application.
+//  The `Userpilot` class is the primary interface for integrating Userpilot SDK into an application.
 //  It manages user tracking, event publishing, experience rendering, and various analytics functions,
 //  allowing you to deliver personalized, context-aware content based on user actions and data.
 //
 
 import UIKit
 
-/// `UserPilot` manages the lifecycle of the UserPilot SDK and tracks user activity, enabling 
+/// `Userpilot` manages the lifecycle of the Userpilot SDK and tracks user activity, enabling 
 /// personalized content delivery.
-@objc(UserPilot)
-public class UserPilot: NSObject {
+@objc(Userpilot)
+public class Userpilot: NSObject {
 
     // MARK: - Properties
 
@@ -46,12 +46,12 @@ public class UserPilot: NSObject {
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
 
     /// Lazy loading SDK logger
-    private lazy var logger = container.resolve(UserPilot.Config.self).logger
+    private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
     // MARK: - Initialization
 
     /**
-     Initializes the `UserPilot` SDK with the provided configuration.
+     Initializes the `Userpilot` SDK with the provided configuration.
      
      This method sets up the required services such as analytics, storage, and networking, and prepares
      the SDK for tracking and rendering.
@@ -77,31 +77,31 @@ public class UserPilot: NSObject {
         storage.sessionDate = nil
 
         // Log the initialization of the SDK with the current version
-        config.logger.info("🌏 UserPilot SDK initialized, version: %{public}@", version())
+        config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
     }
 
 }
 
 // MARK: - Public Methods
 
-extension UserPilot {
+extension Userpilot {
 
     /**
-     Retrieves the current version of the UserPilot SDK as a string.
+     Retrieves the current version of the Userpilot SDK as a string.
      
      This method provides the static version of the SDK, useful for logging or debugging purposes.
      
-     - Returns: A string representing the current version of the UserPilot SDK.
+     - Returns: A string representing the current version of the Userpilot SDK.
      */
     @objc(sdkVersion)
     public static func version() -> String {
-        return userPilotVersion
+        return userpilotVersion
     }
 
     /// Retrieves the current version of the SDK for this instance.
     @objc
     public func version() -> String {
-        return UserPilot.version()
+        return Userpilot.version()
     }
 
     @objc
@@ -114,7 +114,7 @@ extension UserPilot {
 
 // MARK: - Setup Methods
 
-extension UserPilot {
+extension Userpilot {
 
     /**
      Initializes the DI (Dependency Injection) container and registers required services.
@@ -140,7 +140,7 @@ extension UserPilot {
 
 // MARK: - Tracking APIs
 
-extension UserPilot {
+extension Userpilot {
 
     /**
      Identifies a user to the SDK, enabling personalized content and behavior tracking.
@@ -274,7 +274,7 @@ extension UserPilot {
 
 // MARK: - Experiences
 
-extension UserPilot {
+extension Userpilot {
 
     /**
      Manually starts an experience within the client application using the provided experience token.

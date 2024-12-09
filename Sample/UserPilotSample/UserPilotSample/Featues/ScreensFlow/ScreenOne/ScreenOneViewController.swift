@@ -1,6 +1,6 @@
 //
 //  ScreenOneViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 19/08/2024.
 //
@@ -12,7 +12,7 @@ class ScreenOneViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("screen one")
+        UserpilotManager.shared.screen("screen one")
     }
 
     // MARK: - IBAction

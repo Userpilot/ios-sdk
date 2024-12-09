@@ -1,9 +1,9 @@
 //
 //  Utils.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 10/10/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  A Utils class for utilities functions.
@@ -128,4 +128,39 @@ internal var screenWidthMultiplier: CGFloat {
 /// (either `.landscapeLeft` or `.landscapeRight`), `false` otherwise.
 internal var isLandscape: Bool {
     return UIDevice.current.orientation == .landscapeLeft || UIDevice.current.orientation == .landscapeRight
+}
+
+/// Executes a block of code inside a `do-catch` block, catching and ignoring any errors or throwables.
+///
+/// This function wraps the execution of the provided `code` closure and silently handles any errors or throwables
+/// that may occur during its execution. The error handling is done without taking any further action, essentially
+/// ignoring any failures.
+///
+/// - Parameter code: The closure to execute. It is a block that takes no parameters and returns no result.
+internal func tryCatch(code: () throws -> Void) {
+    do {
+        try code()
+    } catch {
+        // Ignoring any errors
+    }
+}
+
+/// Executes a block of code inside a `do-catch` block, catching and returning a default value in case
+///  of any error or throwable.
+///
+/// This function executes the provided `code` closure and returns its result if successful. In case of an error,
+/// it returns a default value specified by the `defaultValue` parameter. If no `defaultValue` is provided,
+/// it returns `nil`.
+///
+/// - Parameters:
+///   - code: The closure to execute. It is a block that takes no parameters and returns a result of type `T`.
+///   - defaultValue: An optional default value to return if an error is encountered. The default is `nil`.
+/// - Returns: The result of executing `code` if successful, otherwise `defaultValue` or `nil` if no
+/// default value is provided.
+internal func tryCatch<T>(code: () throws -> T, defaultValue: T? = nil) -> T? {
+    do {
+        return try code()
+    } catch {
+        return defaultValue
+    }
 }

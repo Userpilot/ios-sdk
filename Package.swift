@@ -4,15 +4,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "UserPilot",
+    name: "Userpilot",
     platforms: [
         .iOS(.v13)
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "UserPilot",
-            targets: ["UserPilot"]),
+            name: "Userpilot",
+            targets: ["Userpilot"]),
     ],
     dependencies: [
         .package(
@@ -26,7 +26,7 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "UserPilot",
+            name: "Userpilot",
             dependencies: [
                 .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient"),
             ],
@@ -35,7 +35,7 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "UserPilotTests",
-            dependencies: ["UserPilot"]),
+            name: "UserpilotTests",
+            dependencies: ["Userpilot"]),
     ]
 )

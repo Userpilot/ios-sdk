@@ -1,6 +1,6 @@
 //
 //  SceneDelegate.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 02/08/2024.
 //

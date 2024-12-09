@@ -1,6 +1,6 @@
 //
 //  EventsViewController.swift
-//  UserPilotSample
+//  UserpilotSample
 //
 //  Created by Motasem Hamed on 11/09/2024.
 //
@@ -24,7 +24,7 @@ class EventsViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserPilotManager.shared.screen("events")
+        UserpilotManager.shared.screen("events")
     }
 
     // MARK: - IBAction
@@ -42,7 +42,7 @@ class EventsViewController: BaseViewController {
             properties[title] = value
         }
 
-        UserPilotManager.shared.track(eventName: "Row #\(position)", properties: properties.isEmpty ? nil : properties)
+        UserpilotManager.shared.track(eventName: "Row #\(position)", properties: properties.isEmpty ? nil : properties)
     }
 
 }

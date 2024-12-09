@@ -1,9 +1,9 @@
 //
 //  ExperiencesPublisher.swift
-//  UserPilot SDK
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
-//  Copyright © 2024 UserPilot. All rights reserved.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
 //  The `ExperiencesPublisher` class is responsible for managing and publishing in-app experiences,
@@ -46,8 +46,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// The dependency injection container used for resolving services and configurations.
     private let container: DIContainer
 
-    /// Reference to the `UserPilot` instance that owns this manager.
-    private weak var userPilot: UserPilot?
+    /// Reference to the `Userpilot` instance that owns this manager.
+    private weak var userpilot: Userpilot?
 
     /// Manages socket connections and listens for socket events.
     private let socketManager: SocketEvents
@@ -61,8 +61,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Handles local data storage operations.
     private var storage: DataStoring
 
-    /// The configuration settings for the `UserPilot` SDK.
-    private let config: UserPilot.Config
+    /// The configuration settings for the `Userpilot` SDK.
+    private let config: Userpilot.Config
 
     /// Logger used for internal logging of operations and errors.
     private let logger: Logging
@@ -88,13 +88,13 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     init(container: DIContainer) {
         self.container = container
-        self.userPilot = container.owner
+        self.userpilot = container.owner
         self.storage = container.resolve(DataStoring.self)
-        self.config = container.resolve(UserPilot.Config.self)
+        self.config = container.resolve(Userpilot.Config.self)
         self.socketManager = container.resolve(SocketEvents.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.logger = container.resolve(UserPilot.Config.self).logger
+        self.logger = container.resolve(Userpilot.Config.self).logger
     }
 
     // MARK: - Public Methods
