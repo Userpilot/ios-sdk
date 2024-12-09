@@ -30,7 +30,7 @@ internal extension CarouselExperienceViewController {
         collectionViewLayout.minimumInteritemSpacing = 0
         collectionViewLayout.scrollDirection = .horizontal
         collectionView.collectionViewLayout = collectionViewLayout
-        if experienceViewModel.isRTL() {
+        if experienceViewModel.isRTL {
             buttonDismissContainerView.semanticContentAttribute = .forceRightToLeft
             collectionView.semanticContentAttribute = .forceRightToLeft
         }
@@ -58,7 +58,7 @@ internal extension CarouselExperienceViewController {
         viewStepsProgress.setupView(
             stepsCount: experienceViewModel.mobileContent?.steps.count ?? 0,
             theme: theme,
-            isRTL: experienceViewModel.isRTL()
+            isRTL: experienceViewModel.isRTL
         )
     }
 

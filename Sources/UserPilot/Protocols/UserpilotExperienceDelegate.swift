@@ -35,8 +35,7 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     ///     - `.completed`: The experience has completed successfully.
     ///     - `.dismissed`: The experience was dismissed before completion.
     ///   - id: A unique identifier for the experience.
-    ///   - experienceToken: A token that uniquely identifies the specific instance of the experience.
-    func onExperienceStateChanged(state: UserpilotExperienceState, id: Int, experienceToken: String)
+    func onExperienceStateChanged(id: Int, state: UserpilotExperienceState)
 
     /// Called when the state of a specific step within a Userpilot experience changes.
     ///
@@ -45,5 +44,5 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     ///   - experienceToken: A token that uniquely identifies the specific instance of the experience.
     ///   - step: The current step number in the experience.
     ///   - totalSteps: The total number of steps in the experience.
-    func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
+    func onExperienceStepStateChanged(id: Int, state: UserpilotExperienceState, experienceId: Int, totalSteps: Int)
 }

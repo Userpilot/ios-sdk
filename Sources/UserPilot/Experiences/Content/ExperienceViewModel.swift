@@ -101,7 +101,7 @@ internal class ExperienceViewModel {
         }
     }
 
-    func isRTL() -> Bool {
+    var isRTL: Bool {
         return (mobileContent?.localeCode ?? "en").isRTL == true
     }
 
@@ -122,15 +122,16 @@ internal class ExperienceViewModel {
         else { return }
 
         config.experienceDelegate?.onExperienceStateChanged(
-            state: .started,
             id: mobileContent.id,
-            experienceToken: mobileContent.token)
+            state: .started
+        )
 
         config.experienceDelegate?.onExperienceStepStateChanged(
-            id: mobileContent.id,
-            experienceToken: mobileContent.token,
-            step: 1,
-            totalSteps: mobileContent.steps.count)
+            id: step.id,
+            state: .started,
+            experienceId: mobileContent.id,
+            totalSteps: mobileContent.steps.count
+        )
 
         let eventExperienceSeen = ExperienceSeenEvent(mobileContentID: mobileContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
@@ -150,10 +151,17 @@ internal class ExperienceViewModel {
             let step = mobileContent.steps.last
         else { return }
 
-        config.experienceDelegate?.onExperienceStateChanged(
+        config.experienceDelegate?.onExperienceStepStateChanged(
+            id: step.id,
             state: .completed,
+            experienceId: mobileContent.id,
+            totalSteps: mobileContent.steps.count
+        )
+
+        config.experienceDelegate?.onExperienceStateChanged(
             id: mobileContent.id,
-            experienceToken: mobileContent.token)
+            state: .completed
+        )
 
         let hasDeepLink = !(mobileContent.steps.last?.buttonAction?.deepLink?.isEmpty ?? true)
 
@@ -181,10 +189,11 @@ internal class ExperienceViewModel {
         guard let mobileContent else { return }
 
         config.experienceDelegate?.onExperienceStepStateChanged(
-            id: mobileContent.id,
-            experienceToken: mobileContent.token,
-            step: step + 1,
-            totalSteps: mobileContent.steps.count + 1)
+            id: mobileContent.steps[step].id,
+            state: .started,
+            experienceId: mobileContent.id,
+            totalSteps: mobileContent.steps.count
+        )
 
         let eventStepCompleted = ExperienceStepCompletedEvent(
             mobileContentID: mobileContent.id,
@@ -205,10 +214,17 @@ internal class ExperienceViewModel {
     func onDismissStep() {
         guard let mobileContent else { return }
 
-        config.experienceDelegate?.onExperienceStateChanged(
+        config.experienceDelegate?.onExperienceStepStateChanged(
+            id: mobileContent.steps[lastStep].id,
             state: .dismissed,
+            experienceId: mobileContent.id,
+            totalSteps: mobileContent.steps.count
+        )
+
+        config.experienceDelegate?.onExperienceStateChanged(
             id: mobileContent.id,
-            experienceToken: mobileContent.token)
+            state: .dismissed
+        )
 
         let eventExperienceDismissed = ExperienceDismissedEvent(
             mobileContentID: mobileContent.id,
