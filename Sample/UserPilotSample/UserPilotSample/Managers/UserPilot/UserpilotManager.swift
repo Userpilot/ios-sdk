@@ -328,12 +328,12 @@ extension UserpilotManager: UserpilotAnalyticsDelegate {
 
 extension UserpilotManager: UserpilotExperienceDelegate {
 
-    func onExperienceStateChanged(state: UserpilotExperienceState, id: Int, experienceToken: String) {
-        print("ExperienceDelegate -> \(state.rawValue), experienceToken -> \(experienceToken)")
+    func onExperienceStateChanged(id: Int, state: UserpilotExperienceState) {
+        print("Experience state -> \(state.rawValue), experienceId -> \(id)")
     }
 
-    func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int) {
-        print("ExperienceDelegate -> step -> \(step), experienceToken -> \(experienceToken)")
+    func onExperienceStepStateChanged(id: Int, state: UserpilotExperienceState, experienceId: Int, totalSteps: Int) {
+        print("Experience state -> step id -> \(id), experienceId -> \(experienceId)")
     }
 
 }
