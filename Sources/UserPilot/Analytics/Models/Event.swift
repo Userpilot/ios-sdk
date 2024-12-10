@@ -94,23 +94,25 @@ internal extension Event {
      - Parameter logger: An instance conforming to the `Logging` protocol, responsible for outputting logs.
      */
     func logData(logger: Logging) {
-        logger.info("------------ Event ----------")
-        logger.info("PUBLISHED ANALYTIC EVENT:")
-        logger.info("Event name: %{public}@", type.eventName)
-        logger.info("Event date: %{public}@", self.timestamp.fullDateString)
-        logger.info("Event properties:")
-        if let properties, let propertiesJsonString = properties.toJSONString() {
-            logger.info("Event properties: %{public}@", propertiesJsonString)
-        } else {
-            logger.info("No properties")
+        tryCatch {
+            logger.info("------------ Event ----------")
+            logger.info("PUBLISHED ANALYTIC EVENT:")
+            logger.info("Event name: %{public}@", type.eventName)
+            logger.info("Event date: %{public}@", self.timestamp.fullDateString)
+            logger.info("Event properties:")
+            if let properties, let propertiesJsonString = properties.toJSONString() {
+                logger.info("Event properties: %{public}@", propertiesJsonString)
+            } else {
+                logger.info("No properties")
+            }
+            logger.info("Event company properties:")
+            if let company, let companyJsonString = company.toJSONString() {
+                logger.info("Event company: %{public}@", companyJsonString)
+            } else {
+                logger.info("No company")
+            }
+            logger.info("----------------------")
         }
-        logger.info("Event company properties:")
-        if let company, let companyJsonString = company.toJSONString() {
-            logger.info("Event company: %{public}@", companyJsonString)
-        } else {
-            logger.info("No company")
-        }
-        logger.info("----------------------")
     }
 
 }

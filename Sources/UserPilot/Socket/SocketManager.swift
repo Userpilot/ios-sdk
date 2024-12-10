@@ -206,78 +206,80 @@ extension SocketManager {
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
         else { return }
-        socketState = .connecting
+        tryCatch {
+            socketState = .connecting
 
-        let socketProperties: [String: Any] = [
-            SocketManager.tokenKey: "NX-1716ba67",
-            SocketManager.userIDKey: storage.userID,
-            SocketManager.sdkVersionKey: userpilot?.version() ?? "",
-            SocketManager.autoPropertiesKey: autoProperties,
-            SocketManager.appPropertiesKey: appProperties
-        ]
+            let socketProperties: [String: Any] = [
+                SocketManager.tokenKey: config.token,
+                SocketManager.userIDKey: storage.userID,
+                SocketManager.sdkVersionKey: userpilot?.version() ?? "",
+                SocketManager.autoPropertiesKey: autoProperties,
+                SocketManager.appPropertiesKey: appProperties
+            ]
 
-        phoenixSocket = Socket(socketURL, params: socketProperties)
-        // phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
-        guard let phoenixSocket else { return }
+            phoenixSocket = Socket(socketURL, params: socketProperties)
+            // phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
+            guard let phoenixSocket else { return }
 
-        // Setup delegates for socket events
-        phoenixSocket.delegateOnOpen(to: self) { (self) in
-            self.logger.info("✅ SOCKET opened")
-        }
-
-        phoenixSocket.delegateOnClose(to: self) { (self) in
-            self.logger.error("🛑 SOCKET closed")
-            self.updateSocketState(.closed)
-            if self.socketState != .shuttingDown {
-                self.$socketSubscription.invoke { $0.onSocketClosed() }
+            // Setup delegates for socket events
+            phoenixSocket.delegateOnOpen(to: self) { (self) in
+                self.logger.info("✅ SOCKET opened")
             }
-        }
 
-        phoenixSocket.delegateOnError(to: self) { (self, error) in
-            let (error, _) = error
-            self.logger.error("❗ SOCKET error - details %{public}@", error.localizedDescription)
-            self.updateSocketState(.error)
-        }
+            phoenixSocket.delegateOnClose(to: self) { (self) in
+                self.logger.error("🛑 SOCKET closed")
+                self.updateSocketState(.closed)
+                if self.socketState != .shuttingDown {
+                    self.$socketSubscription.invoke { $0.onSocketClosed() }
+                }
+            }
 
-        phoenixSocket.onMessage(callback: { [weak self] message in
-            if message.isInvalidMessage { return }
-            self?.$socketSubscription.invoke { $0.onNewMessage(message) }
-        })
-
-        phoenixSocket.logger = { [weak self] message in
-            self?.logger.debug("✈️ SOCKET message: %{public}@", message)
-        }
-
-        // Setup the channel
-        let channel = phoenixSocket.channel(SocketManager.channelTopic)
-
-        // Connect to the channel
-        phoenixChannel = channel
-        phoenixChannel?.join()
-            .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
-                self.logger.info("🚀 SOCKET channel joined")
-                self.updateSocketState(.opened)
-                self.$socketSubscription.invoke { $0.onSocketOpened() }
-            })
-            .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
-                self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
+            phoenixSocket.delegateOnError(to: self) { (self, error) in
+                let (error, _) = error
+                self.logger.error("❗ SOCKET error - details %{public}@", error.localizedDescription)
                 self.updateSocketState(.error)
-                self.closeSocket()
+            }
+
+            phoenixSocket.onMessage(callback: { [weak self] message in
+                if message.isInvalidMessage { return }
+                self?.$socketSubscription.invoke { $0.onNewMessage(message) }
             })
 
-        phoenixChannel?.onError { [weak self] message in
-            self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
-            self?.updateSocketState(.error)
-            self?.closeSocket()
-        }
+            phoenixSocket.logger = { [weak self] message in
+                self?.logger.debug("✈️ SOCKET message: %{public}@", message)
+            }
 
-        phoenixChannel?.onClose { [weak self] message in
-            self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
-            self?.updateSocketState(.closed)
-        }
+            // Setup the channel
+            let channel = phoenixSocket.channel(SocketManager.channelTopic)
 
-        // Connect the socket
-        phoenixSocket.connect()
+            // Connect to the channel
+            phoenixChannel = channel
+            phoenixChannel?.join()
+                .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
+                    self.logger.info("🚀 SOCKET channel joined")
+                    self.updateSocketState(.opened)
+                    self.$socketSubscription.invoke { $0.onSocketOpened() }
+                })
+                .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
+                    self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
+                    self.updateSocketState(.error)
+                    self.closeSocket()
+                })
+
+            phoenixChannel?.onError { [weak self] message in
+                self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
+                self?.updateSocketState(.error)
+                self?.closeSocket()
+            }
+
+            phoenixChannel?.onClose { [weak self] message in
+                self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
+                self?.updateSocketState(.closed)
+            }
+
+            // Connect the socket
+            phoenixSocket.connect()
+        }
     }
 
     /**
@@ -286,13 +288,14 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        // socketState = .closed
-        if let phoenixChannel, !phoenixChannel.isClosed {
-            phoenixChannel.leave(timeout: 0.0)
-            phoenixSocket?.remove(phoenixChannel)
-        }
-        if let phoenixSocket {
-            phoenixSocket.disconnect()
+        tryCatch {
+            if let phoenixChannel, !phoenixChannel.isClosed {
+                phoenixChannel.leave(timeout: 0.0)
+                phoenixSocket?.remove(phoenixChannel)
+            }
+            if let phoenixSocket {
+                phoenixSocket.disconnect()
+            }
         }
     }
 
@@ -325,12 +328,14 @@ extension SocketManager: SocketEvents {
     /// Update socket state
     func updateSocketState(_ newSocketState: SocketManager.SocketState,
                            forceUpdateState: Bool = false) {
-        if forceUpdateState || newSocketState == .error {
+        tryCatch {
+            if forceUpdateState || newSocketState == .error {
+                socketState = newSocketState
+                return
+            }
+            if socketState == newSocketState || socketState == .error { return }
             socketState = newSocketState
-            return
         }
-        if socketState == newSocketState || socketState == .error { return }
-        socketState = newSocketState
     }
 
     /// Checks if the socket is currently opened without channel
@@ -361,30 +366,32 @@ extension SocketManager: SocketEvents {
                  payload: Payload,
                  shouldCloseSocket: Bool,
                  socketSubscription: SocketSubscription?) {
-        phoenixChannel?
-            .push(eventName, payload: payload ?? [:])
-            .receive(SocketManager.successKey) { [weak self] message in
-                if self?.socketState != .shuttingDown {
-                    if let socketSubscription {
-                        socketSubscription.onSocketEventSent(eventName, payload, message, true)
-                    } else {
-                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true)
+        tryCatch {
+            phoenixChannel?
+                .push(eventName, payload: payload ?? [:])
+                .receive(SocketManager.successKey) { [weak self] message in
+                    if self?.socketState != .shuttingDown {
+                        if let socketSubscription {
+                            socketSubscription.onSocketEventSent(eventName, payload, message, true)
+                        } else {
+                            self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true)
+                            }
                         }
                     }
+                    if shouldCloseSocket { self?.closeSocket() }
                 }
-                if shouldCloseSocket { self?.closeSocket() }
-            }
-            .receive(SocketManager.errorKey) { [weak self] message in
-                if self?.socketState != .shuttingDown {
-                    if let socketSubscription {
-                        socketSubscription.onSocketEventSent(eventName, payload, message, false)
-                    } else {
-                        self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, false)
+                .receive(SocketManager.errorKey) { [weak self] message in
+                    if self?.socketState != .shuttingDown {
+                        if let socketSubscription {
+                            socketSubscription.onSocketEventSent(eventName, payload, message, false)
+                        } else {
+                            self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, false)
+                            }
                         }
                     }
+                    if shouldCloseSocket { self?.closeSocket() }
                 }
-                if shouldCloseSocket { self?.closeSocket() }
-            }
+        }
     }
 
     /// Implementation to register a callback for socket events

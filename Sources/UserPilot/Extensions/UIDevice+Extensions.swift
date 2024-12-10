@@ -14,9 +14,13 @@ import Foundation
 import UIKit
 
 internal extension UIDevice {
-
-    static var deviceType: String {
-        return UIDevice.current.name
+    var modelName: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        return machineMirror.children.reduce(into: "") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return }
+            identifier += String(UnicodeScalar(UInt8(value)))
+        }
     }
-
 }

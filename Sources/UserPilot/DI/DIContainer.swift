@@ -65,9 +65,11 @@ internal class DIContainer {
      - Parameter value: The instance of the component to register.
      */
     func register<Component>(_ type: Component.Type, value: Component) {
-        // Use a barrier to ensure exclusive access during writes.
-        componentQueue.async(flags: .barrier) {
-            self.components[String(describing: Component.self)] = value
+        tryCatch {
+            // Use a barrier to ensure exclusive access during writes.
+            componentQueue.async(flags: .barrier) {
+                self.components[String(describing: Component.self)] = value
+            }
         }
     }
 

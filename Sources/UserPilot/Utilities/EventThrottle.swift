@@ -72,14 +72,16 @@ internal class EventThrottle {
     ///   - eventName: The name of the event to remove.
     ///   - isScreenEvent: `true` if this is a screen event, `false` otherwise.
     private func scheduleRemoval(of eventName: String, isScreenEvent: Bool) {
-        DispatchQueue.global().asyncAfter(deadline: .now() + throttleDuration) { [weak self] in
-            self?.queue.sync {
-                if isScreenEvent {
-                    if self?.activeScreenEvent == eventName {
-                        self?.activeScreenEvent = nil
+        tryCatch {
+            DispatchQueue.global().asyncAfter(deadline: .now() + throttleDuration) { [weak self] in
+                self?.queue.sync {
+                    if isScreenEvent {
+                        if self?.activeScreenEvent == eventName {
+                            self?.activeScreenEvent = nil
+                        }
+                    } else {
+                        self?.activeEvents.remove(eventName)
                     }
-                } else {
-                    self?.activeEvents.remove(eventName)
                 }
             }
         }

@@ -39,7 +39,7 @@
                 <view tag="1" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="nTt-J7-kXc">
                     <rect key="frame" x="0.0" y="79" width="393" height="35"/>
                     <subviews>
-                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kxY-Jg-UdR" customClass="UPCloseButton" customModule="UserPilot">
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kxY-Jg-UdR" customClass="UPCloseButton" customModule="Userpilot">
                             <rect key="frame" x="348" y="0.0" width="35" height="35"/>
                             <constraints>
                                 <constraint firstAttribute="width" constant="35" id="aNp-Ev-T0O"/>
@@ -59,7 +59,7 @@
                         <constraint firstAttribute="height" constant="35" id="wwy-RZ-GfY"/>
                     </constraints>
                 </view>
-                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fPH-Qu-Hol" customClass="UPStepsProgressView" customModule="UserPilot">
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fPH-Qu-Hol" customClass="UPStepsProgressView" customModule="Userpilot">
                     <rect key="frame" x="0.0" y="783" width="393" height="15"/>
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <constraints>

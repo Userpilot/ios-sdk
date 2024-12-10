@@ -35,8 +35,11 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Manually trigger experience
     func triggerExperience(_ experienceID: String)
 
-    /// manually end experience
+    /// Manually end experience
     func endExperience()
+
+    /// Try to handle the deep link internally
+    func triggerDeepLink(url: URL)
 }
 
 internal class ExperiencesPublisher: ExperiencesPublishing {
@@ -145,6 +148,18 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             return true
         }
         return false
+    }
+
+    /// Try to handle the deep link internally
+    func triggerDeepLink(url: URL) {
+        if let navigationDelegate = config.navigationDelegate {
+            navigationDelegate.navigate(to: url) { _ in }
+        } else {
+            if url.scheme == "http" || url.scheme == "https",
+                UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            }
+        }
     }
 
 }

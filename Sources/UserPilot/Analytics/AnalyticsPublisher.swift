@@ -74,7 +74,7 @@ internal class AnalyticsPublisher {
     private var storage: DataStoring
 
     /// The experience publisher.
-    lazy var experiencesPublisher: ExperiencesPublishing? = {
+    private lazy var experiencesPublisher: ExperiencesPublishing? = {
         container?.resolve(ExperiencesPublishing.self)
     }()
 
@@ -206,35 +206,37 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     // swiftlint:disable:next cyclomatic_complexity
     func publish(_ event: Event) {
-        if event.isIdentifyEvent {
-            if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
-            screenViewEntity?.resetState()
-            storage.temporaryUser = event.toUser().toJson()
-            cachedIdentifyEvent = event
-            socketManager.updateSocketState(.closed, forceUpdateState: true)
-        }
-        if socketManager.isShutdownState { return }
-        if socketManager.isJoiningSocket {
-            cacheEvent(event)
-            return
-        }
+        tryCatch {
+            if event.isIdentifyEvent {
+                if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
+                screenViewEntity?.resetState()
+                storage.temporaryUser = event.toUser().toJson()
+                cachedIdentifyEvent = event
+                socketManager.updateSocketState(.closed, forceUpdateState: true)
+            }
+            if socketManager.isShutdownState { return }
+            if socketManager.isJoiningSocket {
+                cacheEvent(event)
+                return
+            }
 
-        if !socketManager.isSocketOpened {
-            cacheEvent(event)
-            if let userID = cachedIdentifyEvent?.userID { storage.userID = userID }
-            if let userID = event.userID { storage.userID = userID }
-            if storage.userID.isEmpty { return }
-            openSocket()
-            return
-        }
+            if !socketManager.isSocketOpened {
+                cacheEvent(event)
+                if let userID = cachedIdentifyEvent?.userID { storage.userID = userID }
+                if let userID = event.userID { storage.userID = userID }
+                if storage.userID.isEmpty { return }
+                openSocket()
+                return
+            }
 
-        switch event.type {
-        case .identify:
-            identify(event)
-        case .screen:
-            screen(event)
-        case .event:
-            trackEvent(event)
+            switch event.type {
+            case .identify:
+                identify(event)
+            case .screen:
+                screen(event)
+            case .event:
+                trackEvent(event)
+            }
         }
     }
 
@@ -265,14 +267,16 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The `identify` event to process.
      */
     private func identify(_ event: Event) {
-        guard let userID = event.userID else { return }
+        tryCatch {
+            guard let userID = event.userID else { return }
 
-        /// In-case new user ID
-        if storage.userID.isNotEmpty && userID != storage.userID {
-            userpilot?.clean()
-            logout(socketState: .switchingUser)
-        } else {
-            flushPriorityEvents()
+            /// In-case new user ID
+            if storage.userID.isNotEmpty && userID != storage.userID {
+                userpilot?.clean()
+                logout(socketState: .switchingUser)
+            } else {
+                flushPriorityEvents()
+            }
         }
     }
 
@@ -285,14 +289,16 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The screen event to process.
      */
     private func screen(_ event: Event) {
-        if experiencesPublisher?.fetchAndResetCarouselContentState() == true {
-            return
+        tryCatch {
+            if experiencesPublisher?.fetchAndResetCarouselContentState() == true {
+                return
+            }
+            if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
+                return
+            }
+            setupScreenEvent(event)
+            flushPriorityEvents()
         }
-        if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
-            return
-        }
-        setupScreenEvent(event)
-        flushPriorityEvents()
     }
 
     /**
@@ -303,13 +309,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The event to track.
      */
     private func trackEvent(_ event: Event) {
-        readWriteLock.write { [weak self] in
-            guard let self else { return }
-            if self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle) { return }
-            self.eventsName.insert(event.eventTitle)
-            self.eventsToFlush.append(event)
-            if self.eventsToFlush.count == 1 {
-                flushQueue()
+        tryCatch {
+            readWriteLock.write { [weak self] in
+                guard let self else { return }
+                if self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle) { return }
+                self.eventsName.insert(event.eventTitle)
+                self.eventsToFlush.append(event)
+                if self.eventsToFlush.count == 1 {
+                    flushQueue()
+                }
             }
         }
     }
@@ -327,22 +335,24 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      - Parameter event: The new screen event to process.
      */
     private func setupScreenEvent(_ event: Event) {
-        // Check if the screen title has changed
-        let isScreenTitleChanged = screenViewEntity?.event.screenTitle != event.screenTitle
+        tryCatch {
+            // Check if the screen title has changed
+            let isScreenTitleChanged = screenViewEntity?.event.screenTitle != event.screenTitle
 
-        // Update session state if the screen title has changed
-        if screenViewEntity != nil && isScreenTitleChanged {
-            startSession = false
-        }
+            // Update session state if the screen title has changed
+            if screenViewEntity != nil && isScreenTitleChanged {
+                startSession = false
+            }
 
-        // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
-        if isScreenTitleChanged {
-            // New screen: start with an empty set of seen experiences
-            screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set())
-        } else {
-            // Same screen: retain the existing seen experiences
-            let seenExperiences = screenViewEntity?.seenExperiences ?? Set()
-            screenViewEntity = ScreenViewEntity(event: event, seenExperiences: seenExperiences)
+            // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
+            if isScreenTitleChanged {
+                // New screen: start with an empty set of seen experiences
+                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set())
+            } else {
+                // Same screen: retain the existing seen experiences
+                let seenExperiences = screenViewEntity?.seenExperiences ?? Set()
+                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: seenExperiences)
+            }
         }
     }
 
@@ -357,46 +367,44 @@ extension AnalyticsPublisher {
      opens the socket.
      */
     private func flushPriorityEvents() {
-        if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
-            checkFallbackState()
-            return
-        }
-
-        /// Identify event
-        if let cachedIdentifyEvent {
-            var payload: [String: Any] = [:]
-            guard let userID = cachedIdentifyEvent.userID else { return }
-            // In-case identify event called again when joining socket channel
-            if storage.userID.isNotEmpty && userID != storage.userID {
-                identify(cachedIdentifyEvent)
+        tryCatch {
+            if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
+                checkFallbackState()
                 return
             }
-            payload[AnalyticsPublisher.metaDataProperty] = cachedIdentifyEvent.properties ?? [:]
-            if let company = cachedIdentifyEvent.company, !company.isEmpty {
-                payload[AnalyticsPublisher.identifyCompanyProperty] = company
+
+            /// Identify event
+            if let cachedIdentifyEvent {
+                var payload: [String: Any] = [:]
+                guard let userID = cachedIdentifyEvent.userID else { return }
+                // In-case identify event called again when joining socket channel
+                if storage.userID.isNotEmpty && userID != storage.userID {
+                    identify(cachedIdentifyEvent)
+                    return
+                }
+                payload[AnalyticsPublisher.metaDataProperty] = cachedIdentifyEvent.properties ?? [:]
+                if let company = cachedIdentifyEvent.company, !company.isEmpty {
+                    payload[AnalyticsPublisher.identifyCompanyProperty] = company
+                }
+                socketManager.publish(cachedIdentifyEvent.eventName, payload: payload)
             }
-            socketManager.publish(cachedIdentifyEvent.eventName, payload: payload)
-        }
 
-        /// Screen event
-        if let screenViewEntity {
-            var payload: [String: Any] = [:]
-            payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
-            payload[AnalyticsPublisher.metaDataProperty] = [
-                AnalyticsPublisher.isSessionStartedProperty: startSession,
-                AnalyticsPublisher.fakeReload: false,
-                AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
-            ]
-            socketManager.publish(screenViewEntity.event.eventName, payload: payload)
-            broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
-        }
+            /// Screen event
+            if let screenViewEntity {
+                var payload: [String: Any] = [:]
+                payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
+                payload[AnalyticsPublisher.metaDataProperty] = [
+                    AnalyticsPublisher.isSessionStartedProperty: startSession,
+                    AnalyticsPublisher.fakeReload: false,
+                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
+                ]
+                socketManager.publish(screenViewEntity.event.eventName, payload: payload)
+                broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
+            }
 
-        /// Track event
-        if let cachedEvent {
-            clearCachedEvent()
-            eventsToFlush.append(cachedEvent)
-            if eventsToFlush.count == 1 {
-                flushQueue()
+            /// Track event
+            if let cachedEvent {
+                trackEvent(cachedEvent)
             }
         }
     }
@@ -405,37 +413,38 @@ extension AnalyticsPublisher {
      Flush the queue directly, for example when application moves to background
      */
     private func flushQueue(shouldCloseSocket: Bool = false, flushImmediately: Bool = false) {
-        readWriteLock.write { [weak self] in
-            guard let self else { return }
-            if !self.socketManager.isSocketOpened || self.socketManager.isJoiningSocket {
-                self.checkFallbackState()
-                return
-            }
-            if self.eventsToFlush.isEmpty {
-                if shouldCloseSocket { self.closeSocket() }
-                return
-            }
+        tryCatch {
+            readWriteLock.write { [weak self] in
+                guard let self else { return }
+                if !self.socketManager.isSocketOpened || self.socketManager.isJoiningSocket {
+                    self.checkFallbackState()
+                    return
+                }
+                if self.eventsToFlush.isEmpty {
+                    if shouldCloseSocket { self.closeSocket() }
+                    return
+                }
 
-            if let eventToSend = self.eventsToFlush.first {
-                self.eventsToFlush.removeFirst()
-                // self.eventsName.remove(eventToSend.eventTitle)
+                if let eventToSend = self.eventsToFlush.first {
+                    self.eventsToFlush.removeFirst()
 
-                var payload: [String: Any] = [:]
-                payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle
-                payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
+                    var payload: [String: Any] = [:]
+                    payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle
+                    payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
 
-                self.broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
-                self.socketManager.publish(
-                    eventToSend.eventName,
-                    payload: payload,
-                    shouldCloseSocket: shouldCloseSocket
-                )
+                    self.broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
+                    self.socketManager.publish(
+                        eventToSend.eventName,
+                        payload: payload,
+                        shouldCloseSocket: shouldCloseSocket
+                    )
 
-                if flushImmediately {
-                    self.flushQueue(shouldCloseSocket: shouldCloseSocket, flushImmediately: true)
-                } else {
-                    if !shouldCloseSocket {
-                        self.flushQueue()
+                    if flushImmediately {
+                        self.flushQueue(shouldCloseSocket: shouldCloseSocket, flushImmediately: true)
+                    } else {
+                        if !shouldCloseSocket {
+                            self.flushQueue()
+                        }
                     }
                 }
             }
@@ -471,15 +480,17 @@ extension AnalyticsPublisher: SocketSubscription {
 
     /// Socket closed callback.
     func onSocketClosed() {
-        if socketManager.didErrorOccurred {
-            clearAllCachedProperties()
-            return
-        }
-        if let eventToPublish = cachedIdentifyEvent {
-            userpilot?.clean()
-            publish(eventToPublish)
-        } else {
-            clearAllCachedProperties()
+        tryCatch {
+            if socketManager.didErrorOccurred {
+                clearAllCachedProperties()
+                return
+            }
+            if let eventToPublish = cachedIdentifyEvent {
+                userpilot?.clean()
+                publish(eventToPublish)
+            } else {
+                clearAllCachedProperties()
+            }
         }
     }
 
@@ -491,17 +502,19 @@ extension AnalyticsPublisher: SocketSubscription {
        - eventSent: Whether the event was successfully sent.
      */
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
-        if let cachedIdentifyEvent {
-            if eventName == EventType.identifyEvent &&
-                cachedIdentifyEvent.userID == storage.userID {
-                var newUser = User.fromJson(storage.user)
-                storage.user = newUser.updateUser(event: cachedIdentifyEvent).toJson() ?? ""
-                logger.info("👤 USER %{public}@", storage.user)
-                clearCachedIdentifyEvent()
-                broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userID ?? "", properties: payload)
+        tryCatch {
+            if let cachedIdentifyEvent {
+                if eventName == EventType.identifyEvent &&
+                    cachedIdentifyEvent.userID == storage.userID {
+                    var newUser = User.fromJson(storage.user)
+                    storage.user = newUser.updateUser(event: cachedIdentifyEvent).toJson() ?? ""
+                    logger.info("👤 USER %{public}@", storage.user)
+                    clearCachedIdentifyEvent()
+                    broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userID ?? "", properties: payload)
+                }
             }
+            flushQueue()
         }
-        flushQueue()
     }
 
 }
@@ -519,7 +532,12 @@ private extension AnalyticsPublisher {
 
     /// Clears the cached events on new identify event or when socket opened.
     private func clearCachedEvents() {
-        eventsToFlush.removeAll()
+        tryCatch {
+            readWriteLock.write { [weak self] in
+                guard let self else { return }
+                self.eventsToFlush.removeAll()
+            }
+        }
     }
 
     /// Clears the cached identify event after it has been successfully sent.
@@ -549,35 +567,36 @@ extension AnalyticsPublisher {
         _ sdkEvent: SDKEvent,
         socketSubscription: SocketSubscription
     ) {
-        guard canRequestExperienceEvent else { return }
-        socketManager.publish(
-            sdkEvent.eventName,
-            payload: sdkEvent.eventPayload,
-            socketSubscription: socketSubscription
-        )
+        tryCatch {
+            guard canRequestExperienceEvent else { return }
+            socketManager.publish(
+                sdkEvent.eventName,
+                payload: sdkEvent.eventPayload,
+                socketSubscription: socketSubscription
+            )
+        }
     }
 
     /// publish fake reload event
     func publishFakeReloadScreenEvent() {
-        guard canRequestExperienceEvent else { return }
-        if let screenViewEntity {
-            var payload: [String: Any] = [:]
-            payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
-            payload[AnalyticsPublisher.metaDataProperty] = [
-                AnalyticsPublisher.isSessionStartedProperty: startSession,
-                AnalyticsPublisher.fakeReload: true,
-                AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
-            ]
-            socketManager.publish(screenViewEntity.event.eventName, payload: payload)
+        tryCatch {
+            guard canRequestExperienceEvent else { return }
+            if let screenViewEntity {
+                var payload: [String: Any] = [:]
+                payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
+                payload[AnalyticsPublisher.metaDataProperty] = [
+                    AnalyticsPublisher.isSessionStartedProperty: startSession,
+                    AnalyticsPublisher.fakeReload: true,
+                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
+                ]
+                socketManager.publish(screenViewEntity.event.eventName, payload: payload)
+            }
         }
     }
 
     /// update seen experiences
     func experiencePublished(_ experienceId: Int) {
-        if let screenEvent = screenViewEntity {
-            screenEvent.seenExperiences.insert(experienceId)
-            screenViewEntity = screenEvent
-        }
+        screenViewEntity?.updateSeenExperiences(experienceId)
     }
 
 }

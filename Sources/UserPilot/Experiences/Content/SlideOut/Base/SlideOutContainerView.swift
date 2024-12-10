@@ -97,60 +97,62 @@ internal class SlideOutContainerView: UIView {
      Sets up the layout and constraints for the view components.
      */
     private func setupUI() {
-        // Deactivate and clear previously stored constraints
-        NSLayoutConstraint.deactivate(storedConstraints)
-        storedConstraints.removeAll()
+        tryCatch {
+            // Deactivate and clear previously stored constraints
+            NSLayoutConstraint.deactivate(storedConstraints)
+            storedConstraints.removeAll()
 
-        // Disable autoresizing masks for custom layout
-        [scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
-         actionButton, contentStackView].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
+            // Disable autoresizing masks for custom layout
+            [scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
+             actionButton, contentStackView].forEach {
+                $0.translatesAutoresizingMaskIntoConstraints = false
+            }
+
+            // Add subviews
+            addSubview(contentStackView)
+            scrollView.addSubview(contentContainerView)
+            contentContainerView.addSubview(stepSectionsStackView)
+
+            let safeAreaLayoutGuide = safeAreaLayoutGuide
+            let frameLayoutGuide = scrollView.frameLayoutGuide
+
+            // Constraint for the content container view height
+            let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
+                equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
+            contentViewHeightConstraint.priority = .defaultLow
+
+            // Define constraints
+            storedConstraints.append(contentsOf: [
+                // Constraints for the content stack view (full-screen with padding)
+                contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
+                contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
+                contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
+                contentStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
+
+                // Scroll view constraints
+                contentContainerView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+                contentContainerView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+                contentContainerView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+                contentContainerView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+                contentContainerView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+
+                // Step section stack view inside content container
+                stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+                stepSectionsStackView.leadingAnchor.constraint(
+                    equalTo: contentContainerView.leadingAnchor,
+                    constant: 0),
+                stepSectionsStackView.trailingAnchor.constraint(
+                    equalTo: contentContainerView.trailingAnchor,
+                    constant: 0),
+                stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
+
+                // Content container view height constraint
+                contentViewHeightConstraint
+            ])
+
+            // Activate the stored constraints
+            NSLayoutConstraint.activate(storedConstraints)
         }
-
-        // Add subviews
-        addSubview(contentStackView)
-        scrollView.addSubview(contentContainerView)
-        contentContainerView.addSubview(stepSectionsStackView)
-
-        let safeAreaLayoutGuide = safeAreaLayoutGuide
-        let frameLayoutGuide = scrollView.frameLayoutGuide
-
-        // Constraint for the content container view height
-        let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
-            equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
-        contentViewHeightConstraint.priority = .defaultLow
-
-        // Define constraints
-        storedConstraints.append(contentsOf: [
-            // Constraints for the content stack view (full-screen with padding)
-            contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
-            contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
-            contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
-            contentStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
-
-            // Scroll view constraints
-            contentContainerView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-            contentContainerView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
-            contentContainerView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
-            contentContainerView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-            contentContainerView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
-
-            // Step section stack view inside content container
-            stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
-            stepSectionsStackView.leadingAnchor.constraint(
-                equalTo: contentContainerView.leadingAnchor,
-                constant: 0),
-            stepSectionsStackView.trailingAnchor.constraint(
-                equalTo: contentContainerView.trailingAnchor,
-                constant: 0),
-            stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
-
-            // Content container view height constraint
-            contentViewHeightConstraint
-        ])
-
-        // Activate the stored constraints
-        NSLayoutConstraint.activate(storedConstraints)
     }
 
     // MARK: - Binding Methods

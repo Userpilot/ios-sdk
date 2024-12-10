@@ -332,8 +332,9 @@ extension UserpilotManager: UserpilotExperienceDelegate {
         print("Experience state -> \(state.rawValue), experienceId -> \(id)")
     }
 
-    func onExperienceStepStateChanged(id: Int, state: UserpilotExperienceState, experienceId: Int, totalSteps: Int) {
-        print("Experience state -> step id -> \(id), experienceId -> \(experienceId)")
+    func onExperienceStepStateChanged(id: Int, state: UserpilotExperienceState,
+                                      experienceId: Int, step: Int, totalSteps: Int) {
+        print("Experience state -> step -> \(step), total steps -> \(totalSteps)")
     }
 
 }

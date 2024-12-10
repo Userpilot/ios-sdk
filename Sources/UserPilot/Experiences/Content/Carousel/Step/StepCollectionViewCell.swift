@@ -150,82 +150,84 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      */
     // swiftlint:disable:next function_body_length
     private func setupUI(withTheme theme: ExperienceTheme) {
-        // Deactivate previously stored constraints
-        NSLayoutConstraint.deactivate(storedConstraints)
-        storedConstraints.removeAll()
+        tryCatch {
+            // Deactivate previously stored constraints
+            NSLayoutConstraint.deactivate(storedConstraints)
+            storedConstraints.removeAll()
 
-        contentView.backgroundColor = theme.backgroundColor
+            contentView.backgroundColor = theme.backgroundColor
 
-        // Disable autoresizing mask constraints for custom layout
-        [theScrollView, contentContainerView, stackView, actionButton].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-        }
+            // Disable autoresizing mask constraints for custom layout
+            [theScrollView, contentContainerView, stackView, actionButton].forEach {
+                $0.translatesAutoresizingMaskIntoConstraints = false
+            }
 
-        // Add the scroll view and its content view to the cell's content view
-        contentView.addSubview(actionButton)
-        contentView.addSubview(theScrollView)
-        theScrollView.addSubview(contentContainerView)
-        contentContainerView.addSubview(stackView)
+            // Add the scroll view and its content view to the cell's content view
+            contentView.addSubview(actionButton)
+            contentView.addSubview(theScrollView)
+            theScrollView.addSubview(contentContainerView)
+            contentContainerView.addSubview(stackView)
 
-        // Define layout guides
-        let safeAreaLayoutGuide = contentView.safeAreaLayoutGuide
-        let contentLayoutGuide = theScrollView.contentLayoutGuide
-        let frameLayoutGuide = theScrollView.frameLayoutGuide
+            // Define layout guides
+            let safeAreaLayoutGuide = contentView.safeAreaLayoutGuide
+            let contentLayoutGuide = theScrollView.contentLayoutGuide
+            let frameLayoutGuide = theScrollView.frameLayoutGuide
 
-        // Constraint for the content container view height
-        let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
-            equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
-        contentViewHeightConstraint.priority = .defaultLow
+            // Constraint for the content container view height
+            let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
+                equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
+            contentViewHeightConstraint.priority = .defaultLow
 
-        // Define layout constraints for the scroll view and its content
-        storedConstraints.append(contentsOf: [
-            actionButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin + leftRightMargin()),
-            actionButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative + leftRightMargin().negative),
-            actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
-            theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
-                constant: topSafeAreaHeight() + ThemeHandler.DefaultValues.carouselContentTopMargin),
-            theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                constant: leftRightMargin()),
-            theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                constant: leftRightMargin().negative),
-            theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
-                constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative),
-            contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor,
-                constant: 0.0),
-            contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor,
-                constant: 0.0),
-            contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor,
-                constant: 0.0),
-            contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor,
-                constant: 0.0),
-            contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor,
-                constant: 0.0),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor,
-                constant: -8.0),
-            stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
-            stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative),
-            contentViewHeightConstraint
-        ])
-
-        // Conditional layout based on content alignment
-        if theme.contentAlignment == .middle {
+            // Define layout constraints for the scroll view and its content
             storedConstraints.append(contentsOf: [
-                stackView.topAnchor.constraint(greaterThanOrEqualTo: contentContainerView.topAnchor, constant: 0.0),
-                stackView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor, constant: 0.0)
+                actionButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
+                   constant: ThemeHandler.DefaultValues.contentMargin + leftRightMargin()),
+                actionButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
+                   constant: ThemeHandler.DefaultValues.contentMargin.negative + leftRightMargin().negative),
+                actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
+                   constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
+                theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
+                   constant: topSafeAreaHeight() + ThemeHandler.DefaultValues.carouselContentTopMargin),
+                theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
+                   constant: leftRightMargin()),
+                theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
+                   constant: leftRightMargin().negative),
+                theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
+                   constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative),
+                contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor,
+                   constant: 0.0),
+                contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor,
+                   constant: 0.0),
+                contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor,
+                   constant: 0.0),
+                contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor,
+                   constant: 0.0),
+                contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor,
+                   constant: 0.0),
+                stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor,
+                   constant: -8.0),
+                stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor,
+                   constant: ThemeHandler.DefaultValues.contentMargin),
+                stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor,
+                   constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                contentViewHeightConstraint
             ])
-        } else {
-            storedConstraints.append(
-                stackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 0.0)
-            )
-        }
 
-        // Activate the stored constraints
-        NSLayoutConstraint.activate(storedConstraints)
+            // Conditional layout based on content alignment
+            if theme.contentAlignment == .middle {
+                storedConstraints.append(contentsOf: [
+                    stackView.topAnchor.constraint(greaterThanOrEqualTo: contentContainerView.topAnchor, constant: 0.0),
+                    stackView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor, constant: 0.0)
+                ])
+            } else {
+                storedConstraints.append(
+                    stackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 0.0)
+                )
+            }
+
+            // Activate the stored constraints
+            NSLayoutConstraint.activate(storedConstraints)
+        }
     }
 
 }
