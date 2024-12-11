@@ -135,7 +135,7 @@ This method is used to identify unique users and companies (groups of users) and
 - **On app launch for authenticated users:** If the user has a valid authenticated session, call `identify` at app launch.
 - **Upon property updates:** Whenever user or company properties change.
 
-**Method:**
+##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot?.identify(
@@ -175,7 +175,7 @@ userpilot?.identify(
 
 Call `screen` whenever the user navigates to a particular screen. Tracking screens helps contextualize subsequent events and identifies.
 
-**Method:**
+##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot.screen("Profile Screen")
@@ -185,7 +185,7 @@ userpilot.screen("Profile Screen")
 
 Log any meaningful action the user performs. Events can be button clicks, form submissions, or any custom activity you want to analyze. Optionally, pass metadata to provide context.
 
-**Method:**
+##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot.track("Added to Cart", properties: ["itemId": "sku_456", "price": 29.99])
@@ -195,7 +195,7 @@ userpilot.track("Added to Cart", properties: ["itemId": "sku_456", "price": 29.9
 
 When a user logs out, call `logout` to clear the current user context. This ensures subsequent events are no longer associated with the previous user.
 
-**Method:**
+##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot.logout()
@@ -205,7 +205,7 @@ userpilot.logout()
 
 If a user is not authenticated, call `anonymous` to track events without a user ID. This is useful for pre-signup flows or guest sessions.
 
-**Method:**
+##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot.anonymous()
@@ -227,7 +227,7 @@ userpilot.trigger(EXPERIENCE_ID)
 
 If you have additional configuration needs, you can pass a custom configuration when initializing UserPilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
 
-**Example:**
+##### &nbsp;&nbsp;&nbsp; Example:
 
 ```swift
 userpilot = Userpilot(
@@ -242,7 +242,7 @@ userpilot = Userpilot(
 
 Defines how your app handles deep link routes triggered by Userpilot experiences. Implement this to route users to the appropriate screens or external URLs.
 
-**Interface:**
+##### &nbsp;&nbsp;&nbsp; Delegate:
 
 ```swift
 @objc
@@ -257,6 +257,8 @@ The UserPilot SDK automatically handles navigation if you haven't implemented th
 
 Receives callbacks whenever the SDK tracks an event, screen, or identifies a user. Implement this if you need to integrate with another analytics tool or log events for debugging.
 
+##### &nbsp;&nbsp;&nbsp; Delegate:
+
 ```swift
 @objc
 public protocol UserpilotAnalyticsDelegate: AnyObject {
@@ -269,7 +271,7 @@ public protocol UserpilotAnalyticsDelegate: AnyObject {
 
 Receives callbacks when Userpilot experiences start, complete, or are dismissed, as well as changes in their step-by-step progression. Implement this if you want to pipe these data points to a destination or react to user actions.
 
-**Interface:**
+##### &nbsp;&nbsp;&nbsp; Delegate:
 
 ```swift
 @objc
