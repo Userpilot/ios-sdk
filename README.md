@@ -105,20 +105,15 @@ Once integrated, the Userpilot SDK is available throughout your application.
 
 To use Userpilot, initialize it once in your App Delegate or Scene Delegate during app launch. This ensures the SDK is ready as soon as your app starts. Replace `<APP_TOKEN>` with your Application Token, which can be fetched from your [Environments Page](https://run.userpilot.io/environment).
 
-**Example (App Delegate):**
+##### &nbsp;&nbsp;&nbsp; Example (App Delegate):
 
 ```swift
-import Userpilot
 
-@main
-class AppDelegate: UIResponder, UIApplicationDelegate {
-    var userpilot: Userpilot?
-
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>"))
-    }
+func application(_ application: UIApplication,
+                didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>"))
 }
+
 ```
 
 ### Using the SDK
@@ -138,7 +133,7 @@ This method is used to identify unique users and companies (groups of users) and
 ##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
-userpilot?.identify(
+userpilot.identify(
     userId: "<USER_ID>",
     userProperties: [
         "name": "John Doe",
