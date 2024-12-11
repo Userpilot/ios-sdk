@@ -217,8 +217,8 @@ extension SocketManager {
                 SocketManager.appPropertiesKey: appProperties
             ]
 
-            phoenixSocket = Socket(socketURL, params: socketProperties)
-            // phoenixSocket = Socket(isDebugMode ? socketURL : storage.socketURL, params: socketProperties)
+            phoenixSocket = Socket(storage.socketURL, params: socketProperties)
+
             guard let phoenixSocket else { return }
 
             // Setup delegates for socket events
@@ -366,7 +366,7 @@ extension SocketManager: SocketEvents {
                  payload: Payload,
                  shouldCloseSocket: Bool,
                  socketSubscription: SocketSubscription?) {
-        tryCatch {
+        _ = tryCatch {
             phoenixChannel?
                 .push(eventName, payload: payload ?? [:])
                 .receive(SocketManager.successKey) { [weak self] message in

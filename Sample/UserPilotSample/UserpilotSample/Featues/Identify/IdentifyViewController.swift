@@ -29,6 +29,8 @@ class IdentifyViewController: BaseViewController {
     internal var userPropertiesViews: [String: PropertyView] = [:]
     internal var companyPropertiesViews: [String: PropertyView] = [:]
 
+    // MARK: - Override
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         UserpilotManager.shared.screen("identify")

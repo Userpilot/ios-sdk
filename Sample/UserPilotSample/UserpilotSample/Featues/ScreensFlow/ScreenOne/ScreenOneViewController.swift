@@ -10,6 +10,8 @@ import UIKit
 
 class ScreenOneViewController: BaseViewController {
 
+    // MARK: - Override
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         UserpilotManager.shared.screen("screen one")

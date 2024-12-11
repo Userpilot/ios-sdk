@@ -25,14 +25,11 @@ let isDebugMode = false
 internal struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
-    static let DEBOUNCER_QUEUE = "userpilot-debouncer-queue"
     static let THROTTLE_QUEUE = "userpilot-throttle-queue"
 }
 
 internal struct GeneralConstants {
-    static let MAX_EVENTS_PER_SCREEN = 200
-    static let MAX_ACTION_TO_DEBOUNCE = 20
     static let SESSION_DURATION = TimeInterval(30 * 60)
-    static let CONFIGURATION_DURATION = TimeInterval(5 * 60)
+    static let CONFIGURATION_DURATION = TimeInterval(30 * 60)
 }
 // swiftlint:enable identifier_name

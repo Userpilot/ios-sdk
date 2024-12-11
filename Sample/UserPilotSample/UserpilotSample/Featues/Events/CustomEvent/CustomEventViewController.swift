@@ -21,7 +21,7 @@ class CustomEventViewController: BaseViewController {
 
     internal var eventPropertiesViews: [String: PropertyView] = [:]
 
-    // MARK: - override
+    // MARK: - Override
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)

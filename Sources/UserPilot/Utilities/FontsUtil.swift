@@ -117,7 +117,7 @@ internal extension UIFont {
     private static func isCustomFontAvailable(_ fontName: String) -> Bool {
         guard let fontURL = Bundle.main.url(forResource: fontName, withExtension: "ttf") ??
                 Bundle.main.url(forResource: fontName, withExtension: "otf") else {
-            print("Font file not found in the package bundle.")
+            print("Font \(fontName) not found!")
             return false
         }
 
