@@ -1,7 +1,7 @@
 //
 //  File.swift
 //
-//  UPCloseButton.swift
+//  UPDismissButton.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 29/09/2024.
@@ -13,7 +13,7 @@
 import Foundation
 import UIKit
 
-internal class UPCloseButton: UIButton {
+internal class UPDismissButton: UIButton {
 
     // MARK: - Properties
 
@@ -42,12 +42,12 @@ internal class UPCloseButton: UIButton {
     private func applyConfiguration() {
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.plain()
-            config.image = UIImage(named: "icon_close", in: Bundle.module, compatibleWith: nil)
+            config.image = UIImage(named: "icon_close", in: Userpilot.resourceBundle, compatibleWith: nil)
             config.imagePlacement = .leading
             config.imagePadding = 0
             self.configuration = config
         } else {
-            self.setImage(UIImage(named: "icon_close", in: Bundle.module, compatibleWith: nil), for: .normal)
+            self.setImage(UIImage(named: "icon_close", in: Userpilot.resourceBundle, compatibleWith: nil), for: .normal)
             self.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
             self.contentHorizontalAlignment = .left
         }

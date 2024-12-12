@@ -171,7 +171,7 @@ userpilot.trigger(EXPERIENCE_ID)
 
 ### Configurations (Optional)
 
-If you have additional configuration needs, you can pass a custom configuration when initializing UserPilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
+If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
 
 ##### &nbsp;&nbsp;&nbsp; Example:
 
@@ -197,7 +197,7 @@ public protocol UserpilotNavigationDelegate: AnyObject {
 }
 ```
 
-The UserPilot SDK automatically handles navigation if you haven't implemented the `UserPilotNavigationHandler`. When a deep link is external, the SDK will handle it appropriately. For complete control over link handling, you can override the `UserPilotNavigationHandler` protocol. This allows you to customize the behavior for all types of links as per your requirements.
+The Userpilot SDK automatically handles navigation if you haven't implemented the `UserpilotNavigationHandler`. When a deep link is external, the SDK will handle it appropriately. For complete control over link handling, you can override the `UserpilotNavigationHandler` protocol. This allows you to customize the behavior for all types of links as per your requirements.
 
 #### Analytics Delegate
 

@@ -24,12 +24,12 @@ internal class SlideOutContainerView: UIView {
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPCloseButton.buttonSize).isActive = true
+        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
         return view
     }()
 
     /// The dismiss button, which triggers the closing of the slide-out container.
-    private var buttonDismiss: UPCloseButton?
+    private var buttonDismiss: UPDismissButton?
 
     /// The action button at the bottom of the view.
     private lazy var actionButton: UPButtonView = {
@@ -186,7 +186,7 @@ internal class SlideOutContainerView: UIView {
      */
     private func setupDismissButton(_ theme: ExperienceTheme) {
         if theme.isDismissButtonEnabled {
-            buttonDismiss = UPCloseButton()
+            buttonDismiss = UPDismissButton()
             buttonDismiss?.setupView(theme: theme)
             buttonDismissContainerView.addSubview(buttonDismiss!)
             buttonDismiss?.translatesAutoresizingMaskIntoConstraints = false
@@ -196,8 +196,8 @@ internal class SlideOutContainerView: UIView {
                 buttonDismiss!.trailingAnchor.constraint(
                     equalTo: buttonDismissContainerView.trailingAnchor,
                     constant: ThemeHandler.DefaultValues.dismissButtonMargin),
-                buttonDismiss!.heightAnchor.constraint(equalToConstant: UPCloseButton.buttonSize),
-                buttonDismiss!.widthAnchor.constraint(equalToConstant: UPCloseButton.buttonSize)
+                buttonDismiss!.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
+                buttonDismiss!.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
             ])
 
             buttonDismiss?.addTarget(self, action: #selector(buttonDismissClicked), for: .touchUpInside)

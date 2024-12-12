@@ -36,3 +36,20 @@ internal extension Bundle {
     }
 
 }
+
+internal extension Userpilot {
+    static let resourceBundle: Bundle = {
+        #if SWIFT_PACKAGE
+        // Swift Package Manager (SPM) case
+        return Bundle.module
+        #else
+        // CocoaPods case
+        if let url = Bundle(for: Userpilot.self).url(forResource: "Userpilot", withExtension: "bundle"),
+           let bundle = Bundle(url: url) {
+            return bundle
+        } else {
+            fatalError("Can't find 'Userpilot' resource bundle")
+        }
+        #endif
+    }()
+}

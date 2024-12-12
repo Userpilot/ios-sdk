@@ -1,4 +1,4 @@
-# UserPilot SDK - Deep Link Integration
+# Userpilot SDK - Deep Link Integration
 
 ## Overview
 

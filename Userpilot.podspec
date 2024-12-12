@@ -14,14 +14,14 @@ Pod::Spec.new do |spec|
   spec.author        = { "motasem-userpilot" => "motasem@userpilot.co" }
 
   spec.source        = { :git => "https://github.com/Userpilot/ios-sdk.git", :tag => "#{spec.version}" }
-  spec.source_files  = "Sources/Userpilot/**/*.swift"
-  spec.exclude_files = 'Sources/Userpilot/Userpilot.docc'
+  spec.source_files  = "Sources/UserPilot/**/*.swift"
+  spec.exclude_files = 'Sources/UserPilot/Userpilot.docc'
 
   spec.swift_version = "5.0"
   spec.ios.deployment_target = "13.0"
 
   spec.resource_bundles = {
-      'Userpilot' => ['Sources/Userpilot/**/*.xcassets']
+      'UserPilot' => ['Sources/UserPilot/*.xcassets']
   }
 
   spec.dependency "SwiftPhoenixClient", "~> 5.2.2"

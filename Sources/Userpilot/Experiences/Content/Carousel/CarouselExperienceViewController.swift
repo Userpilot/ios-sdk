@@ -22,7 +22,7 @@ internal class CarouselExperienceViewController: UIViewController {
     @IBOutlet internal weak var buttonDismissContainerView: UIView!
 
     /// Close button to dismiss the carousel experience.
-    @IBOutlet internal weak var buttonDismiss: UPCloseButton!
+    @IBOutlet internal weak var buttonDismiss: UPDismissButton!
 
     /// View displaying the step progress indicator.
     @IBOutlet internal weak var viewStepsProgress: UPStepsProgressView!
@@ -48,12 +48,7 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Initializes the view controller with the given view model.
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
-        var bundle: Bundle
-        #if SWIFT_PACKAGE
-        bundle = Bundle.module
-        #else
-        bundle = Bundle(for: CarouselExperienceViewController.self)
-        #endif
+        let bundle = Userpilot.resourceBundle
         super.init(nibName: "CarouselExperienceViewController", bundle: bundle)
     }
 
