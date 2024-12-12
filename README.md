@@ -1,9 +1,5 @@
 # Userpilot iOS SDK
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE)
-[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fappcues%2Fappcues-ios-sdk%2Fbadge%3Ftype%3Dplatforms)](https://github.com/Userpilot/ios-sdk)
-[![](https://img.shields.io/badge/Swift%205-4BC51D?logo=swift&logoColor=white)](https://github.com/Userpilot/ios-sdk)
-
 ## Introduction
 
 Userpilot iOS SDK enables you to capture user insights and deliver personalized in-app experiences in real time. With just a one-time setup, you can immediately begin leveraging Userpilot’s analytics and engagement features to understand user behaviors and guide their journeys in-app.
@@ -240,14 +236,6 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
 }
 ```
-
-## 📚 Documentation
-
-SDK Documentation is available at https://github.com/Userpilot/ios-sdk and full Userpilot documentation is available at https://docs.userpilot.com/
-
-## 🎬 Samples
-
-The `samples` directory in repository contains full example iOS apps demonstrating different methods of installation and providing references for usage of the Userpilot API.
 
 ## 📄 License
 
