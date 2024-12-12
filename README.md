@@ -1,50 +1,8 @@
 # Userpilot iOS SDK
-<!-- Banner Image -->
 
-<p align="center">
-  <a href="https://userpilot.com/">
-    <img alt="userpilot sdk" height="128" src="./.github/resources/banner.png">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://cocoapods.org/pods/Userpilot">
-    <img src="https://img.shields.io/cocoapods/v/Userpilot?style=for-the-badge" alt="Cocoapods">
-  </a>
-  &nbsp;
-  <a href="https://github.com/Userpilot/ios-sdk">
-    <img src="https://img.shields.io/badge/-documentation-informational?style=for-the-badge" alt="Documentation">
-  </a>
-  &nbsp;
-  <a href="https://github.com/Userpilot/ios-sdk/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge" alt="License">
-    <a href="https://swiftpackageindex.com/Userpilot/ios-sdk">
-    <img src="https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen?style=for-the-badge" alt="SPM Compatible">
-  </a>
-    <a href="https://swiftpackageindex.com/Userpilot/ios-sdk">
-    <img src="https://img.shields.io/badge/Swift-5.0%2B-blue.svg?style=for-the-badge" alt="Swift 5.0+">
-  </a>
-</p>
-
-
-<h6 align="center">Follow us on</h6>
-<p align="center">
-  <a aria-label="Follow @userpilot on X" href="https://twitter.com/teamuserpilot" target="_blank">
-    <img alt="Userpilot on X" src="https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white" target="_blank" />
-  </a>&nbsp;
-  <a aria-label="Follow @userpilot on GitHub" href="https://github.com/Userpilot/android-sdk" target="_blank">
-    <img alt="Userpilot on GitHub" src="https://img.shields.io/badge/GitHub-222222?style=for-the-badge&logo=github&logoColor=white" target="_blank" />
-  </a>&nbsp;
-  <a aria-label="Follow @userpilot on Youtube" href="https://www.youtube.com/@userpilot" target="_blank">
-    <img alt="Userpilot on Youtube" src="https://img.shields.io/badge/Youtube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" target="_blank" />
-  </a>&nbsp;
-  <a aria-label="Follow @userpilot on Facebook" href="https://www.facebook.com/userpilot" target="_blank">
-    <img alt="Userpilot on Facebook" src="https://img.shields.io/badge/Facebook-4267B2?style=for-the-badge&logo=facebook&logoColor=white" target="_blank" />
-  </a>&nbsp;
-  <a aria-label="Follow @userpilot on LinkedIn" href="https://www.linkedin.com/company/teamuserpilot/" target="_blank">
-    <img alt="Userpilot on LinkedIn" src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" target="_blank" />
-  </a>
-</p>
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fappcues%2Fappcues-ios-sdk%2Fbadge%3Ftype%3Dplatforms)](https://github.com/Userpilot/ios-sdk)
+[![](https://img.shields.io/badge/Swift%205-4BC51D?logo=swift&logoColor=white)](https://github.com/Userpilot/ios-sdk)
 
 ## Introduction
 
@@ -62,7 +20,7 @@ This document provides a step-by-step walkthrough of the installation and initia
       - [Swift Package Manager](#swift-package-manager)
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
-    - [Configurations](#Configurations-(Optional))
+    - [Configurations](#Configurations-%28Optional%29)
   - [📚 Documentation](#-documentation)
   - [🎬 Samples](#-samples)
   - [📄 License](#-license)
@@ -166,9 +124,9 @@ userpilot.identify(
 - Ensure the User ID source is consistent across Web, Android, and iOS.
 - While properties are optional, setting them enhances Userpilot’s segmentation capabilities.
 
-#### Tracking Screens
+#### Tracking Screens (Required)
 
-Call `screen` whenever the user navigates to a particular screen. Tracking screens helps contextualize subsequent events and identifies.
+Calling screen is crucial for unlocking Userpilot’s core engagement and analytics capabilities. When a user navigates to a particular screen, invoking screen records that view and triggers any eligible in-app experiences. Subsequent events are also attributed to the most recently tracked screen, providing context for richer analytical insights. For these reasons, we strongly recommend tracking all of your app’s screen views.
 
 ##### &nbsp;&nbsp;&nbsp; Method:
 
