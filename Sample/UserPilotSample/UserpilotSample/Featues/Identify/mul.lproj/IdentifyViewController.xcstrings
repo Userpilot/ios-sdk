@@ -1,0 +1,168 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "1JW-us-yJb.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"1JW-us-yJb\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رجوع"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "BRf-AR-gsJ.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"User Properties\"; ObjectID = \"BRf-AR-gsJ\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خصائص المستخدم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "User Properties"
+          }
+        }
+      }
+    },
+    "Dew-rY-RoJ.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Anonymous\"; ObjectID = \"Dew-rY-RoJ\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مجهول"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Anonymous"
+          }
+        }
+      }
+    },
+    "Dmf-Y6-2UJ.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Logout\"; ObjectID = \"Dmf-Y6-2UJ\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الخروج"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Logout"
+          }
+        }
+      }
+    },
+    "DMR-Yt-jkv.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Identify\"; ObjectID = \"DMR-Yt-jkv\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحديد"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Identify"
+          }
+        }
+      }
+    },
+    "DZc-hu-a3a.placeholder" : {
+      "comment" : "Class = \"UITextField\"; placeholder = \"Enter user ID\"; ObjectID = \"DZc-hu-a3a\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أدخل معرف المستخدم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter user ID"
+          }
+        }
+      }
+    },
+    "fuP-K5-rdN.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"User ID\"; ObjectID = \"fuP-K5-rdN\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معرف المستخدم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "User ID"
+          }
+        }
+      }
+    },
+    "Va8-fh-GDQ.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Company Properties\"; ObjectID = \"Va8-fh-GDQ\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خصائص شركة المستخدم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Company Properties"
+          }
+        }
+      }
+    },
+    "ZdB-mZ-qEQ.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Identify\"; ObjectID = \"ZdB-mZ-qEQ\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحديد"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Identify"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

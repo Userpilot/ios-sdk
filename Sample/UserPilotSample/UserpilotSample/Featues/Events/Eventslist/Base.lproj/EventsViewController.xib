@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="EventsViewController" customModule="UserPilotSample" customModuleProvider="target">
+            <connections>
+                <outlet property="tableView" destination="OaA-hL-rHD" id="SUN-GJ-RYM"/>
+                <outlet property="view" destination="iN0-l3-epB" id="Hwm-EY-veH"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB">
+            <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Events" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="jDe-9x-PKY">
+                    <rect key="frame" x="173" y="75" width="47.333333333333343" height="18"/>
+                    <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
+                    <nil key="textColor"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Una-Nl-A2t">
+                    <rect key="frame" x="16.000000000000004" y="64" width="49.333333333333343" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="gvN-VF-NnW"/>
+                    </constraints>
+                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
+                    <connections>
+                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="mww-Wt-fdC"/>
+                    </connections>
+                </button>
+                <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" style="plain" separatorStyle="none" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" translatesAutoresizingMaskIntoConstraints="NO" id="OaA-hL-rHD">
+                    <rect key="frame" x="0.0" y="109" width="393" height="709"/>
+                    <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                    <connections>
+                        <outlet property="dataSource" destination="-1" id="JjL-PP-x1d"/>
+                        <outlet property="delegate" destination="-1" id="1Mo-zG-6QA"/>
+                    </connections>
+                </tableView>
+            </subviews>
+            <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
+            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+            <constraints>
+                <constraint firstItem="jDe-9x-PKY" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Una-Nl-A2t" secondAttribute="trailing" constant="8" symbolic="YES" id="U5E-dI-HEc"/>
+                <constraint firstItem="Una-Nl-A2t" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="WdS-lz-3AU"/>
+                <constraint firstItem="Una-Nl-A2t" firstAttribute="centerY" secondItem="jDe-9x-PKY" secondAttribute="centerY" id="YnQ-uZ-LP4"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="OaA-hL-rHD" secondAttribute="bottom" id="ZuC-6y-bzV"/>
+                <constraint firstItem="jDe-9x-PKY" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="dlJ-IN-HJN"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="OaA-hL-rHD" secondAttribute="trailing" id="n3V-Eb-rzt"/>
+                <constraint firstItem="OaA-hL-rHD" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" id="rGc-yb-5H4"/>
+                <constraint firstItem="OaA-hL-rHD" firstAttribute="top" secondItem="jDe-9x-PKY" secondAttribute="bottom" constant="16" id="sye-6b-uEo"/>
+                <constraint firstItem="jDe-9x-PKY" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="16" id="wen-7c-esP"/>
+            </constraints>
+            <point key="canvasLocation" x="140" y="21"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="arrow.backward" catalog="system" width="128" height="95"/>
+        <systemColor name="systemBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+    </resources>
+</document>
