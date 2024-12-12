@@ -20,7 +20,7 @@ This document provides a step-by-step walkthrough of the installation and initia
       - [Swift Package Manager](#swift-package-manager)
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
-    - [Configurations](#Configurations-%28Optional%29)
+    - [Configurations](#configurations-optional)
   - [📚 Documentation](#-documentation)
   - [🎬 Samples](#-samples)
   - [📄 License](#-license)
