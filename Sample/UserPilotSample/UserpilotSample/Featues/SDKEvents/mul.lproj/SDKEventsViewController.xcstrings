@@ -1,0 +1,60 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Aie-Ug-lZF.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"No events have been tracked yet\"; ObjectID = \"Aie-Ug-lZF\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لم يتم تتبع أي أحداث حتى الآن"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No events have been tracked yet"
+          }
+        }
+      }
+    },
+    "ISF-Pl-bqV.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"ISF-Pl-bqV\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رجوع"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "O4G-I1-J0c.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Events log\"; ObjectID = \"O4G-I1-J0c\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "سجل الأحداث"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Events log"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

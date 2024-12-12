@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <capability name="Named colors" minToolsVersion="9.0"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" rowHeight="217" id="KGk-i7-Jjw" customClass="EventTableViewCell" customModule="UserPilotSample" customModuleProvider="target">
+            <rect key="frame" x="0.0" y="0.0" width="377" height="217"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="KGk-i7-Jjw" id="H2p-sc-9uM">
+                <rect key="frame" x="0.0" y="0.0" width="377" height="217"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="ATD-5Q-E5i" customClass="CardView" customModule="UserPilotSample" customModuleProvider="target">
+                        <rect key="frame" x="10" y="10" width="357" height="197"/>
+                        <subviews>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Row #1" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="SLb-E0-eD6">
+                                <rect key="frame" x="149.66666666666666" y="15.999999999999998" width="58" height="20.333333333333329"/>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="17"/>
+                                <color key="textColor" name="MineShaft"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Event properties" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XsH-Un-zUo">
+                                <rect key="frame" x="16.000000000000007" y="56.333333333333336" width="122.66666666666669" height="19.333333333333336"/>
+                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="16"/>
+                                <color key="textColor" name="MineShaft"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="b4K-pl-ark">
+                                <rect key="frame" x="16" y="81.666666666666671" width="325" height="34"/>
+                                <subviews>
+                                    <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Title" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="d2V-kt-mEm">
+                                        <rect key="frame" x="0.0" y="0.0" width="154.66666666666666" height="34"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                        <textInputTraits key="textInputTraits"/>
+                                    </textField>
+                                    <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Value" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="Ns3-8r-IJM">
+                                        <rect key="frame" x="170.66666666666663" y="0.0" width="154.33333333333337" height="34"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                        <textInputTraits key="textInputTraits"/>
+                                    </textField>
+                                </subviews>
+                            </stackView>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="cxu-UJ-F3l" customClass="OutlineButton" customModule="UserPilotSample" customModuleProvider="target">
+                                <rect key="frame" x="16" y="135.66666666666666" width="325" height="45.333333333333343"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="45.329999999999998" id="aDZ-zy-29u"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
+                                <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                                <state key="normal" title="Track event">
+                                    <color key="titleColor" name="AccentColor"/>
+                                </state>
+                                <connections>
+                                    <action selector="onTrackEventButtonClicked:" destination="KGk-i7-Jjw" eventType="touchUpInside" id="CJk-Oe-BWG"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <constraints>
+                            <constraint firstAttribute="trailing" secondItem="cxu-UJ-F3l" secondAttribute="trailing" constant="16" id="2o6-LK-9Hd"/>
+                            <constraint firstItem="cxu-UJ-F3l" firstAttribute="leading" secondItem="ATD-5Q-E5i" secondAttribute="leading" constant="16" id="5dT-12-X63"/>
+                            <constraint firstAttribute="trailing" secondItem="b4K-pl-ark" secondAttribute="trailing" constant="16" id="AVA-5G-omO"/>
+                            <constraint firstItem="b4K-pl-ark" firstAttribute="top" secondItem="XsH-Un-zUo" secondAttribute="bottom" constant="6" id="O6i-nc-AZh"/>
+                            <constraint firstItem="XsH-Un-zUo" firstAttribute="top" secondItem="SLb-E0-eD6" secondAttribute="bottom" constant="20" id="O8P-tb-xO0"/>
+                            <constraint firstItem="b4K-pl-ark" firstAttribute="leading" secondItem="ATD-5Q-E5i" secondAttribute="leading" constant="16" id="VgS-Az-2eF"/>
+                            <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="XsH-Un-zUo" secondAttribute="trailing" constant="20" symbolic="YES" id="bpZ-Ws-4Os"/>
+                            <constraint firstAttribute="bottom" secondItem="cxu-UJ-F3l" secondAttribute="bottom" constant="16" id="cd2-cr-pdA"/>
+                            <constraint firstItem="SLb-E0-eD6" firstAttribute="top" secondItem="ATD-5Q-E5i" secondAttribute="top" constant="16" id="cgF-9D-t60"/>
+                            <constraint firstItem="cxu-UJ-F3l" firstAttribute="top" secondItem="b4K-pl-ark" secondAttribute="bottom" constant="20" id="oy6-a3-uj8"/>
+                            <constraint firstItem="XsH-Un-zUo" firstAttribute="leading" secondItem="ATD-5Q-E5i" secondAttribute="leading" constant="16" id="pqN-ol-Aza"/>
+                            <constraint firstItem="SLb-E0-eD6" firstAttribute="centerX" secondItem="ATD-5Q-E5i" secondAttribute="centerX" id="zIk-0d-6Q3"/>
+                        </constraints>
+                    </view>
+                </subviews>
+                <constraints>
+                    <constraint firstAttribute="trailing" secondItem="ATD-5Q-E5i" secondAttribute="trailing" constant="10" id="FtK-ml-W7L"/>
+                    <constraint firstItem="ATD-5Q-E5i" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="10" id="Sos-0X-4mb"/>
+                    <constraint firstItem="ATD-5Q-E5i" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="10" id="dCG-da-Zj7"/>
+                    <constraint firstAttribute="bottom" secondItem="ATD-5Q-E5i" secondAttribute="bottom" constant="10" id="rOa-xx-fAS"/>
+                </constraints>
+            </tableViewCellContentView>
+            <viewLayoutGuide key="safeArea" id="njF-e1-oar"/>
+            <connections>
+                <outlet property="eventName" destination="SLb-E0-eD6" id="BNS-oz-Y2r"/>
+                <outlet property="eventTitle" destination="d2V-kt-mEm" id="bgW-xw-z9d"/>
+                <outlet property="eventValue" destination="Ns3-8r-IJM" id="dMj-6G-MUj"/>
+            </connections>
+            <point key="canvasLocation" x="181" y="44"/>
+        </tableViewCell>
+    </objects>
+    <resources>
+        <namedColor name="AccentColor">
+            <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="MineShaft">
+            <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+    </resources>
+</document>

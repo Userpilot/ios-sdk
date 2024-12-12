@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <capability name="Named colors" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="PropertyView" customModule="UserPilotSample" customModuleProvider="target">
+            <connections>
+                <outlet property="propertyName" destination="GCC-Eo-Ff3" id="H3e-LY-lce"/>
+                <outlet property="propertyValue" destination="Oyo-SY-AhR" id="OGt-Lv-SKR"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB">
+            <rect key="frame" x="0.0" y="0.0" width="393" height="50"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="b2N-8J-nfp">
+                    <rect key="frame" x="347" y="10" width="30" height="30"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="30" id="3Hv-Mx-tOa"/>
+                        <constraint firstAttribute="height" constant="30" id="JW5-F5-87E"/>
+                    </constraints>
+                    <color key="tintColor" red="0.36078431372549019" green="0.36862745098039218" blue="0.37647058823529411" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                    <state key="normal" image="highlighter" catalog="system"/>
+                    <connections>
+                        <action selector="onEditPropertyButtonClicked:" destination="-1" eventType="touchUpInside" id="I9u-Ac-lMA"/>
+                    </connections>
+                </button>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="oYB-fa-MqM">
+                    <rect key="frame" x="307" y="10" width="30" height="30"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="30" id="KfE-fN-Nhe"/>
+                        <constraint firstAttribute="width" constant="30" id="yzo-9k-mTT"/>
+                    </constraints>
+                    <color key="tintColor" red="0.29803921568627451" green="0.011764705882352941" blue="0.011764705882352941" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                    <state key="normal" image="trash" catalog="system"/>
+                    <connections>
+                        <action selector="onDeletePropertyButtonClicked:" destination="-1" eventType="touchUpInside" id="8GW-1m-dEE"/>
+                    </connections>
+                </button>
+                <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="FGK-gH-Ula">
+                    <rect key="frame" x="16" y="16" width="281" height="18"/>
+                    <subviews>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="GCC-Eo-Ff3">
+                            <rect key="frame" x="0.0" y="0.0" width="140.66666666666666" height="18"/>
+                            <fontDescription key="fontDescription" type="system" weight="medium" pointSize="14"/>
+                            <color key="textColor" name="MineShaft"/>
+                            <nil key="highlightedColor"/>
+                        </label>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Oyo-SY-AhR">
+                            <rect key="frame" x="140.66666666666663" y="0.0" width="140.33333333333337" height="18"/>
+                            <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                            <color key="textColor" name="MineShaft"/>
+                            <nil key="highlightedColor"/>
+                        </label>
+                    </subviews>
+                </stackView>
+            </subviews>
+            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+            <constraints>
+                <constraint firstItem="FGK-gH-Ula" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" constant="16" id="1ul-G5-C4R"/>
+                <constraint firstAttribute="trailing" secondItem="b2N-8J-nfp" secondAttribute="trailing" constant="16" id="FaR-HU-jRT"/>
+                <constraint firstItem="FGK-gH-Ula" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" constant="16" id="cHe-33-XAY"/>
+                <constraint firstItem="oYB-fa-MqM" firstAttribute="centerY" secondItem="b2N-8J-nfp" secondAttribute="centerY" id="dTf-Mr-QY6"/>
+                <constraint firstItem="oYB-fa-MqM" firstAttribute="leading" secondItem="FGK-gH-Ula" secondAttribute="trailing" constant="10" id="fXl-70-D0Y"/>
+                <constraint firstAttribute="bottom" secondItem="FGK-gH-Ula" secondAttribute="bottom" constant="16" id="hgY-X8-y7v"/>
+                <constraint firstItem="b2N-8J-nfp" firstAttribute="leading" secondItem="oYB-fa-MqM" secondAttribute="trailing" constant="10" id="nlb-Xu-dk5"/>
+                <constraint firstItem="b2N-8J-nfp" firstAttribute="centerY" secondItem="iN0-l3-epB" secondAttribute="centerY" id="tg4-cv-1I3"/>
+                <constraint firstItem="FGK-gH-Ula" firstAttribute="centerY" secondItem="iN0-l3-epB" secondAttribute="centerY" id="yb8-s8-tRD"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <point key="canvasLocation" x="106" y="20"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="highlighter" catalog="system" width="128" height="120"/>
+        <image name="trash" catalog="system" width="117" height="128"/>
+        <namedColor name="MineShaft">
+            <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <systemColor name="systemBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+    </resources>
+</document>
