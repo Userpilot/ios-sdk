@@ -108,7 +108,7 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
                         if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                            let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
                             self.storage.configurationDate = Date()
-                            self.storage.socketURL = url
+                            self.storage.socketURL = url + GeneralConstants.PATH_NAME
                         }
                     } catch {
                         self.logger.error("Failed to parse JSON: %{public}@", error.localizedDescription)
