@@ -207,14 +207,14 @@ extension SocketManager {
             socketState = .connecting
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: "NX-1716ba67",
+                SocketManager.tokenKey: config.token,
                 SocketManager.userIDKey: storage.userID,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,
                 SocketManager.appPropertiesKey: appProperties
             ]
-            let socketURL = "wss://analytex-dev-nxtapp-8755.userpilot.io/mobile/v1/events/websocket"
-            phoenixSocket = Socket(socketURL, params: socketProperties)
+
+            phoenixSocket = Socket(storage.socketURL, params: socketProperties)
 
             guard let phoenixSocket else { return }
 

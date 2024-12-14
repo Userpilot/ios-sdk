@@ -29,6 +29,7 @@
 		AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */; };
 		AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD442C68D8560009BB11 /* Utils.swift */; };
 		AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */; };
+		AB791F182D0B6638008E4523 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB791F172D0B6638008E4523 /* Userpilot */; };
 		ABAC8E6A2CE9CF21005EEC9D /* SDKEventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABAC8E692CE9CF21005EEC9D /* SDKEventsViewController.xib */; };
 		ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABAC8E6D2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib */; };
 		ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85A2C96D5AF006C9B77 /* PropertyView.swift */; };
@@ -140,6 +141,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB791F182D0B6638008E4523 /* Userpilot in Frameworks */,
 				ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */,
 				ABB390082D07140A0091FE7A /* Userpilot in Frameworks */,
 				AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */,
@@ -496,6 +498,7 @@
 				AB46B0A32D07134B0054D249 /* Userpilot */,
 				ABB390032D0713AE0091FE7A /* Userpilot */,
 				ABB390072D07140A0091FE7A /* Userpilot */,
+				AB791F172D0B6638008E4523 /* Userpilot */,
 			);
 			productName = UserPilotSample;
 			productReference = C5C897B52C5CFFFA0083928E /* UserpilotSample.app */;
@@ -516,7 +519,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserpilotSample" */;
+			buildConfigurationList = C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserPilotSample" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -527,7 +530,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				ABB390062D07140A0091FE7A /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */,
+				AB791F162D0B6638008E4523 /* XCLocalSwiftPackageReference "../../../ios-sdk" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -934,7 +937,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserpilotSample" */ = {
+		C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserPilotSample" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C5C897C72C5CFFFB0083928E /* Debug */,
@@ -955,14 +958,18 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		ABB390062D07140A0091FE7A /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */ = {
+		AB791F162D0B6638008E4523 /* XCLocalSwiftPackageReference "../../../ios-sdk" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../userpilot-ios-sdk";
+			relativePath = "../../../ios-sdk";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		AB46B0A32D07134B0054D249 /* Userpilot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Userpilot;
+		};
+		AB791F172D0B6638008E4523 /* Userpilot */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Userpilot;
 		};

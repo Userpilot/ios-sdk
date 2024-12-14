@@ -248,7 +248,6 @@ extension Userpilot {
         ]
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .withoutEscapingSlashes) {
-            // swiftlint:disable:next non_optional_string_data_conversion
             if let jsonString = String(data: jsonData, encoding: .utf8) {
                 logger.debug("⚙️ Settings -> %{public}@", jsonString)
             }

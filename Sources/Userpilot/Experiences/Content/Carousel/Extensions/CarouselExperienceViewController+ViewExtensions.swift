@@ -53,6 +53,15 @@ internal extension CarouselExperienceViewController {
         } else {
             buttonDismissContainerView.isHidden = true
         }
+
+        // Set up the step progress view with the total number of steps and the current theme.
+        if theme.isStepsProgressEnabled {
+            viewStepsProgress.setupView(
+                stepsCount: experienceViewModel.mobileContent?.steps.count ?? 0,
+                theme: theme,
+                isRTL: experienceViewModel.isRTL
+            )
+        }
     }
 
     /// Process action button -> action.

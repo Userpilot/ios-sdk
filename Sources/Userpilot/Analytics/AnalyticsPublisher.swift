@@ -47,6 +47,9 @@ internal protocol AnalyticsPublishing: AnyObject {
 
     /// update seen experiences
     func experiencePublished(_ experienceId: Int)
+
+    /// For experience which are come from start session
+    var isStartSession: Bool { get }
 }
 
 /**
@@ -560,6 +563,11 @@ extension AnalyticsPublisher {
     /// check socket state
     var canRequestExperienceEvent: Bool {
         socketManager.isSocketOpened
+    }
+
+    /// For experience which are come from start session
+    var isStartSession: Bool {
+        startSession
     }
 
     /// publish experience event

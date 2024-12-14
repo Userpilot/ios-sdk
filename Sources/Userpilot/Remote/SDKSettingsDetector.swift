@@ -101,7 +101,6 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
                     return
                 }
 
-                // swiftlint:disable:next non_optional_string_data_conversion
                 if let data, let responseBody = String(data: data, encoding: .utf8) {
                     self.logger.info("RSDK Settings response: %{public}@", responseBody)
                     do {

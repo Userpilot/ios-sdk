@@ -15,10 +15,11 @@ import Foundation
 import UIKit
 import SwiftPhoenixClient
 
-/**
+/*
  The `ExperiencesPublishing` protocol defines the required methods for managing experiences,
  such as starting the service, retrieving active carousel content, and sending socket requests.
  */
+// swiftlint:disable file_length
 internal protocol ExperiencesPublishing: AnyObject {
     /// Start new experience
     func start()
@@ -191,6 +192,7 @@ extension ExperiencesPublisher: SocketSubscription {
         // Process experience content or screen events
         if eventName == EventType.screenEvent || eventName == SDKEventsName.fetchExperienceContent.rawValue {
             guard
+                mobileContent == nil,
                 let contentPayload = message.payload["mobile_contents"] as? [String: Any],
                 !contentPayload.isEmpty,
                 let mobileContentData = response.toMobileContent()
@@ -217,6 +219,7 @@ extension ExperiencesPublisher: SocketSubscription {
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
             guard
+                mobileContent == nil,
                 !hasActiveExperience(),
                 payload.keys.contains("request_id"),
                 payload["request_id"] as? Int == nil,
@@ -348,6 +351,7 @@ extension ExperiencesPublisher {
         else { return false }
 
         return isTriggerManualExperience ||
+                analyticsPublisher.isStartSession ||
                 mobileContent.isForAllScreens ||
                 mobileContent.screens.contains(currentScreen)
     }

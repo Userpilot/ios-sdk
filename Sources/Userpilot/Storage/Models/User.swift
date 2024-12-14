@@ -65,7 +65,6 @@ extension User {
         dict["properties"] = properties
         dict["company"] = company
         if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: .withoutEscapingSlashes) {
-            // swiftlint:disable:next non_optional_string_data_conversion
             return String(data: jsonData, encoding: .utf8)
         }
         return nil

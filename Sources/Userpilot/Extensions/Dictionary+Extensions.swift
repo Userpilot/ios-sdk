@@ -23,7 +23,6 @@ internal extension Dictionary {
     func toJSONString() -> String? {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: self, options: .withoutEscapingSlashes)
-            // swiftlint:disable:next non_optional_string_data_conversion
             let jsonString = String(data: jsonData, encoding: .utf8)
             return jsonString
         } catch {

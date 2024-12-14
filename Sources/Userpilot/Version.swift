@@ -16,4 +16,4 @@ import Foundation
 /// This constant represents the version number of the SDK in use. It is useful for
 /// tracking updates, managing compatibility, and ensuring that users are working with
 /// the expected version of the SDK.
-let userpilotVersion = "0.0.1-beta.1"
+let userpilotVersion = "0.0.1-beta.2"

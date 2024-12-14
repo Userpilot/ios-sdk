@@ -1,13 +1,13 @@
 {
-  "originHash" : "60f8e1531cd47260080430503c9fe21335a999967cecb433a85970cf5df383d0",
+  "originHash" : "59b9baecb7dc39d875fb815c19c48b04c529f051fb0e66e92629ea787480c408",
   "pins" : [
     {
       "identity" : "swiftlintplugins",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SimplyDanny/SwiftLintPlugins",
       "state" : {
-        "revision" : "b8431a26655378581890d56b95a0b59aba9f62da",
-        "version" : "0.55.1"
+        "revision" : "f9731bef175c3eea3a0ca960f1be78fcc2bc7853",
+        "version" : "0.57.1"
       }
     },
     {
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/davidstump/SwiftPhoenixClient",
       "state" : {
-        "revision" : "f7098ca53af4c9eb2a5e43267c5db5a306c98335",
-        "version" : "5.3.3"
+        "revision" : "2ea54b43202b053a1e84529509b91621d5601606",
+        "version" : "5.3.4"
       }
     }
   ],
