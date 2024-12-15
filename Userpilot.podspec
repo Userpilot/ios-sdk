@@ -11,7 +11,7 @@ Pod::Spec.new do |spec|
 
   spec.homepage      = "https://github.com/Userpilot/ios-sdk"
   spec.license       = { :type => "MIT", :file => "LICENSE" }
-  spec.author        = { "motasem-userpilot" => "motasem@userpilot.co" }
+  spec.author        = { "Userpilot" => "dev@userpilot.co" }
 
   spec.source        = { :git => "https://github.com/Userpilot/ios-sdk.git", :tag => "#{spec.version}" }
   spec.source_files  = "Sources/UserPilot/**/*.swift"
