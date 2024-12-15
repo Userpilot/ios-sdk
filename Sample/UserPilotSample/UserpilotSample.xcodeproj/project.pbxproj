@@ -21,6 +21,7 @@
 		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
 		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
+		AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */; };
 		AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */; };
 		AB6ABAAC2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */; };
 		AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */; };
@@ -60,6 +61,7 @@
 		ABFB5FE42C9173D60054E142 /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE32C9173D60054E142 /* CardView.swift */; };
 		ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE52C91743B0054E142 /* OutlineButton.swift */; };
 		ABFB5FE82C9175030054E142 /* UITableReusableView+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */; };
+		ABFD95802D0E096500F8F757 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABFD957F2D0E096500F8F757 /* Userpilot */; };
 		C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897B82C5CFFFA0083928E /* AppDelegate.swift */; };
 		C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */; };
 		C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C12C5CFFFB0083928E /* Assets.xcassets */; };
@@ -90,6 +92,7 @@
 		AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ConfigurationsDialogViewController.xib; sourceTree = "<group>"; };
 		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		AB585F672CD79EF400E2A66D /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaddingLabel.swift; sourceTree = "<group>"; };
 		AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventsViewController.swift; sourceTree = "<group>"; };
 		AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventTableViewCell.swift; sourceTree = "<group>"; };
 		AB6DBD2E2C68BF510009BB11 /* IdentifyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifyViewController.swift; sourceTree = "<group>"; };
@@ -145,6 +148,7 @@
 				ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */,
 				ABB390082D07140A0091FE7A /* Userpilot in Frameworks */,
 				AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */,
+				ABFD95802D0E096500F8F757 /* Userpilot in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,7 +206,7 @@
 			isa = PBXGroup;
 			children = (
 				ABACA8632C96E3E9006C9B77 /* UI */,
-				ABC0AE162C7205BA00BB9F62 /* UserPilot */,
+				ABC0AE162C7205BA00BB9F62 /* Userpilot */,
 				AB6DBD3B2C68CDB90009BB11 /* Routing */,
 				AB585F652CD79D8C00E2A66D /* StorageManager.swift */,
 				ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */,
@@ -255,6 +259,7 @@
 		AB6DBD462C68D9350009BB11 /* CustomViews */ = {
 			isa = PBXGroup;
 			children = (
+				AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */,
 				ABACA8592C96D591006C9B77 /* PropertyView */,
 				ABFB5FE32C9173D60054E142 /* CardView.swift */,
 				ABFB5FE52C91743B0054E142 /* OutlineButton.swift */,
@@ -314,12 +319,12 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		ABC0AE162C7205BA00BB9F62 /* UserPilot */ = {
+		ABC0AE162C7205BA00BB9F62 /* Userpilot */ = {
 			isa = PBXGroup;
 			children = (
 				ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */,
 			);
-			path = UserPilot;
+			path = Userpilot;
 			sourceTree = "<group>";
 		};
 		ABC0B5132CB3CBB200139174 /* Fonts */ = {
@@ -499,6 +504,7 @@
 				ABB390032D0713AE0091FE7A /* Userpilot */,
 				ABB390072D07140A0091FE7A /* Userpilot */,
 				AB791F172D0B6638008E4523 /* Userpilot */,
+				ABFD957F2D0E096500F8F757 /* Userpilot */,
 			);
 			productName = UserPilotSample;
 			productReference = C5C897B52C5CFFFA0083928E /* UserpilotSample.app */;
@@ -519,7 +525,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserPilotSample" */;
+			buildConfigurationList = C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserpilotSample" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -530,7 +536,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB791F162D0B6638008E4523 /* XCLocalSwiftPackageReference "../../../ios-sdk" */,
+				ABFD957E2D0E096500F8F757 /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -627,6 +633,7 @@
 				ABFB5FE82C9175030054E142 /* UITableReusableView+Extension.swift in Sources */,
 				ABFB5FE42C9173D60054E142 /* CardView.swift in Sources */,
 				ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */,
+				AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */,
 				ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */,
 				ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */,
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
@@ -937,7 +944,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserPilotSample" */ = {
+		C5C897B02C5CFFFA0083928E /* Build configuration list for PBXProject "UserpilotSample" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C5C897C72C5CFFFB0083928E /* Debug */,
@@ -958,9 +965,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB791F162D0B6638008E4523 /* XCLocalSwiftPackageReference "../../../ios-sdk" */ = {
+		ABFD957E2D0E096500F8F757 /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../ios-sdk";
+			relativePath = "../../../userpilot-ios-sdk";
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -978,6 +985,10 @@
 			productName = Userpilot;
 		};
 		ABB390072D07140A0091FE7A /* Userpilot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Userpilot;
+		};
+		ABFD957F2D0E096500F8F757 /* Userpilot */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Userpilot;
 		};

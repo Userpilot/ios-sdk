@@ -47,7 +47,8 @@ internal class UPIconTextContainerView: UIStackView {
      */
     func setupView(lines: [Line],
                    theme: ExperienceTheme,
-                   imageLoader: ImageLoading) {
+                   imageLoader: ImageLoading,
+                   isRTL: Bool) {
         // Remove existing views before adding new ones.
         clearViews()
 
@@ -57,15 +58,9 @@ internal class UPIconTextContainerView: UIStackView {
             let iconText = UPIconTextView()
             iconText.setupView(line: line,
                                theme: theme,
-                               imageLoader: imageLoader)
+                               imageLoader: imageLoader,
+                               isRTL: isRTL)
             addArrangedSubview(iconText)
-
-//            // Add a spacer view between `UPIconTextView` components if this is not the last line.
-//            if index < lines.count - 1 {
-//                let spacer = UPSpaceView()
-//                spacer.setHeight(10)
-//                addArrangedSubview(spacer)
-//            }
         }
     }
 }

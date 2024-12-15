@@ -12,6 +12,11 @@ class IdentifyViewController: BaseViewController {
 
     // MARK: - IBOutlet
 
+    @IBOutlet weak var labelAuthorizedUser: PaddedLabel! {
+        didSet {
+            labelAuthorizedUser.textInsets = UIEdgeInsets(top: 10, left: 24, bottom: 10, right: 24)
+        }
+    }
     @IBOutlet weak var textFieldUserID: UITextField! {
         didSet {
             textFieldUserID.delegate = self
@@ -39,6 +44,8 @@ class IdentifyViewController: BaseViewController {
     // MARK: - IBActions
 
     @IBAction func onIdentifyButtonClicked(_ sender: UIButton) {
+        labelAuthorizedUser.text = "identifing".localized
+        labelAuthorizedUser.isHidden = false
         identifyUser()
     }
 
@@ -60,6 +67,8 @@ class IdentifyViewController: BaseViewController {
     }
 
     @IBAction func onAnonymous(_ sender: UIButton) {
+        labelAuthorizedUser.text = "identifing".localized
+        labelAuthorizedUser.isHidden = false
         UserpilotManager.shared.anonymous()
     }
 
@@ -94,6 +103,10 @@ extension IdentifyViewController {
             companyProperties[propertyView.getParams().0] = propertyView.getParams().1
         }
         UserpilotManager.shared.identify(userID: userID, properties: userProperties, company: companyProperties)
+    }
+
+    func onUserIdentified(_ user: String) {
+        labelAuthorizedUser.text = user
     }
 
 }

@@ -44,7 +44,8 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
         // Bind the step data to the cell
         stepCollectionViewCell.bindStep(step,
                                         withTheme: theme,
-                                        andImageLoader: experienceViewModel.imageLoader)
+                                        andImageLoader: experienceViewModel.imageLoader,
+                                        withLocale: experienceViewModel.isRTL)
         stepCollectionViewCell.actionButtonClicked = { [weak self] action in
             self?.onActionButtonClicked(action)
         }

@@ -18,7 +18,7 @@
                BlueprintIdentifier = "C5C897B42C5CFFFA0083928E"
                BuildableName = "UserpilotSample.app"
                BlueprintName = "UserpilotSample"
-               ReferencedContainer = "container:UserPilotSample.xcodeproj">
+               ReferencedContainer = "container:UserpilotSample.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -47,7 +47,7 @@
             BlueprintIdentifier = "C5C897B42C5CFFFA0083928E"
             BuildableName = "UserpilotSample.app"
             BlueprintName = "UserpilotSample"
-            ReferencedContainer = "container:UserPilotSample.xcodeproj">
+            ReferencedContainer = "container:UserpilotSample.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -64,7 +64,7 @@
             BlueprintIdentifier = "C5C897B42C5CFFFA0083928E"
             BuildableName = "UserpilotSample.app"
             BlueprintName = "UserpilotSample"
-            ReferencedContainer = "container:UserPilotSample.xcodeproj">
+            ReferencedContainer = "container:UserpilotSample.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

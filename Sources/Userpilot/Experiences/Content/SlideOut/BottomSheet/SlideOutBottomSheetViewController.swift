@@ -84,7 +84,8 @@ internal extension SlideOutBottomSheetViewController {
                 slideOutContent,
                 withTheme: self.experienceViewModel.slideOutTheme,
                 andSlideOutContainerViewDelegate: self,
-                andImageLoader: self.experienceViewModel.imageLoader
+                andImageLoader: self.experienceViewModel.imageLoader,
+                withLocal: self.experienceViewModel.isRTL
             )
         }
 

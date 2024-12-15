@@ -128,14 +128,21 @@ internal class UPTextView: UILabel {
             isUserInteractionEnabled = true
 
             // Add tap gesture for the link
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleLabelTap(_:)))
+            let tapGesture = LinkTapGestureRecognizer(target: self, action: #selector(handleLabelTap(_:)))
+            tapGesture.range = range
+            tapGesture.link = URL(string: mark.attrs?.href ?? "")
             addGestureRecognizer(tapGesture)
         }
     }
 
-    // Method to handle link tap
-    @objc private func handleLabelTap(_ gesture: UITapGestureRecognizer) {
-        guard let text = attributedText, gesture.state == .ended else { return }
+    /// Handles link tap.
+    @objc private func handleLabelTap(_ gesture: LinkTapGestureRecognizer) {
+        guard
+            gesture.state == .ended,
+            let text = attributedText,
+            let range = gesture.modifiedRange,
+            let link = gesture.link
+        else { return }
 
         let layoutManager = NSLayoutManager()
         let textContainer = NSTextContainer(size: bounds.size)
@@ -149,12 +156,26 @@ internal class UPTextView: UILabel {
         textContainer.maximumNumberOfLines = numberOfLines
         textContainer.lineBreakMode = lineBreakMode
 
-        let index = layoutManager.characterIndex(for: location,
-                                                 in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
+        let characterIndex = layoutManager.characterIndex(for: location,
+                                                 in: textContainer,
+                                                 fractionOfDistanceBetweenInsertionPoints: nil)
 
-        // Check if the tapped index is within a link's range
-        if index < text.length, let link = text.attribute(.link, at: index, effectiveRange: nil) as? URL {
+        // Check if the character index is within bounds
+        if characterIndex < text.length &&
+            characterIndex >= range.location &&
+            characterIndex <=  range.location + range.length {
             UIApplication.shared.open(link)
         }
+    }
+
+}
+
+// Custom Gesture Recognizer to hold the link
+private class LinkTapGestureRecognizer: UITapGestureRecognizer {
+    var range: NSRange?
+    var link: URL?
+
+    var modifiedRange: NSRange? {
+        return NSRange(location: (range?.location ?? 3) - 3, length: (range?.length ?? 0) + 3)
     }
 }

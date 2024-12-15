@@ -19,6 +19,24 @@
         }
       }
     },
+    "3U7-SQ-g1x.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Identifing ...\"; ObjectID = \"3U7-SQ-g1x\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جاري التعريف ..."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Identifing ..."
+          }
+        }
+      }
+    },
     "BRf-AR-gsJ.text" : {
       "comment" : "Class = \"UILabel\"; text = \"User Properties\"; ObjectID = \"BRf-AR-gsJ\";",
       "extractionState" : "extracted_with_value",

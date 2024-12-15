@@ -169,12 +169,16 @@ internal class SlideOutContainerView: UIView {
     func bindStep(_ step: Step,
                   withTheme theme: ExperienceTheme,
                   andSlideOutContainerViewDelegate slideOutContainerViewDelegate: SlideOutContainerViewDelegate,
-                  andImageLoader imageLoader: ImageLoading) {
+                  andImageLoader imageLoader: ImageLoading,
+                  withLocal isRTL: Bool) {
         self.slideOutContainerViewDelegate = slideOutContainerViewDelegate
 
         setupDismissButton(theme)
         setupActionButton(step, theme)
-        bindSections(step, withTheme: theme, andImageLoader: imageLoader)
+        bindSections(step,
+                     withTheme: theme,
+                     andImageLoader: imageLoader,
+                     withLocale: isRTL)
     }
 
     // MARK: - Component Setup
@@ -235,7 +239,8 @@ internal class SlideOutContainerView: UIView {
      */
     private func bindSections(_ step: Step,
                               withTheme theme: ExperienceTheme,
-                              andImageLoader imageLoader: ImageLoading) {
+                              andImageLoader imageLoader: ImageLoading,
+                              withLocale isRTL: Bool) {
         step.sections.forEach { section in
             guard let firstLine = section.lines.first else { return }
 
@@ -261,7 +266,8 @@ internal class SlideOutContainerView: UIView {
                 let iconText = UPIconTextContainerView()
                 iconText.setupView(lines: section.lines,
                                    theme: theme,
-                                   imageLoader: imageLoader)
+                                   imageLoader: imageLoader,
+                                   isRTL: isRTL)
                 stepSectionsStackView.addArrangedSubview(iconText)
             default:
                 break

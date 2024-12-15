@@ -67,12 +67,14 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      */
     func bindStep(_ step: Step,
                   withTheme theme: ExperienceTheme,
-                  andImageLoader imageLoader: ImageLoading) {
+                  andImageLoader imageLoader: ImageLoading,
+                  withLocale isRTL: Bool) {
         // Setup UI and bind sections to the stack view
         setupUI(withTheme: theme)
         bindSections(step,
                      withTheme: theme,
-                     andImageLoader: imageLoader
+                     andImageLoader: imageLoader,
+                     withLocale: isRTL
         )
     }
 
@@ -89,7 +91,8 @@ internal class StepCollectionViewCell: UICollectionViewCell {
      */
     private func bindSections(_ step: Step,
                               withTheme theme: ExperienceTheme,
-                              andImageLoader imageLoader: ImageLoading) {
+                              andImageLoader imageLoader: ImageLoading,
+                              withLocale isRTL: Bool) {
         // Iterate over each section of the step
         guard
             let lastSection = step.sections.last,
@@ -132,7 +135,8 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 let iconText = UPIconTextContainerView()
                 iconText.setupView(lines: section.lines,
                                    theme: theme,
-                                   imageLoader: imageLoader)
+                                   imageLoader: imageLoader,
+                                   isRTL: isRTL)
                 stackView.addArrangedSubview(iconText)
             default:
                 break

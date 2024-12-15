@@ -71,7 +71,8 @@ extension SlideOutDialogViewController {
                 slideOutContent,
                 withTheme: self.experienceViewModel.slideOutTheme,
                 andSlideOutContainerViewDelegate: self,
-                andImageLoader: self.experienceViewModel.imageLoader)
+                andImageLoader: self.experienceViewModel.imageLoader,
+                withLocal: experienceViewModel.isRTL)
         }
 
         // Trigger any initial actions or setup needed when the view model starts.

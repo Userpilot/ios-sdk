@@ -54,10 +54,6 @@ internal class UPIconTextView: UIStackView {
         axis = .horizontal
         alignment = .center
         spacing = Constants.textLeftMargin
-
-        // Add the subviews to the stack view
-        addArrangedSubview(imageView)
-        addArrangedSubview(textView)
     }
 
     // MARK: - Configuration
@@ -72,7 +68,16 @@ internal class UPIconTextView: UIStackView {
      */
     func setupView(line: Line,
                    theme: ExperienceTheme,
-                   imageLoader: ImageLoading) {
+                   imageLoader: ImageLoading,
+                   isRTL: Bool) {
+        // Add the subviews to the stack view
+        if isRTL {
+            addArrangedSubview(textView)
+            addArrangedSubview(imageView)
+        } else {
+            addArrangedSubview(imageView)
+            addArrangedSubview(textView)
+        }
         // Configure the imageView using the provided line data.
         imageView.setupView(line: line, imageLoader: imageLoader)
 
