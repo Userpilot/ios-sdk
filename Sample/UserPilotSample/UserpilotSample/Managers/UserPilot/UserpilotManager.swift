@@ -33,7 +33,10 @@ class UserpilotManager {
     // MARK: - Userpilot SDK APIs
 
     func initialize() {
-        userpilot = Userpilot(config: Userpilot.Config(token: "your actual app token")
+        guard
+            let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
+        else { return }
+        userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(true)
             .setNavigationHandler(navigationDelegate: self)
             .setAnalyticsDelegate(analyticsDelegate: self)
@@ -130,7 +133,24 @@ extension UserpilotManager: UserpilotAnalyticsDelegate {
     }
 
     func showIdentifyAlert() {
-        FlowRoutingManager.shared.showAlertMessage("User identify successfully!\nUser details:\n\(settings())")
+        if let topViewController =
+            FlowRoutingManager.topMostController(),
+           topViewController.isKind(of: IdentifyViewController.self) {
+            (topViewController as? IdentifyViewController)?.onUserIdentified("\(prettyPrint(settings()))")
+        } else {
+            FlowRoutingManager.shared.showAlertMessage(
+                "User identify successfully!\nUser details:\n\(prettyPrint(settings()))")
+        }
+    }
+
+    func prettyPrint(_ dictionary: [String: Any]) -> String {
+        if let jsonData = try? JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted),
+           // swiftlint:disable:next non_optional_string_data_conversion
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            return jsonString
+        } else {
+            return "\(dictionary)"
+        }
     }
 }
 
