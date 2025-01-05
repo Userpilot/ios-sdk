@@ -179,9 +179,9 @@ If you have additional configuration needs, you can pass a custom configuration 
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
         .logging(true) // Enable or disable logging
-        .setNavigationHandler(navigationDelegate: self)
-        .setExperienceDelegate(experienceDelegate: self)
 )
+userpilot.navigationDelegate = self
+userpilot.experienceDelegate = self
 ```
 
 #### Navigation Handler
