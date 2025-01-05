@@ -43,14 +43,31 @@ internal class ThemeHandler: ThemeHandling {
         static let headerTextSize = 16
         static let normalTextSize = 16
         static let dimDegree = 40
-        static let slideOutContentMaxHeightPercentage = 0.55
+        static var slideOutContentMaxHeightPercentage: CGFloat {
+            if isLandscape {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    return CGFloat(0.65)
+                } else {
+                    return CGFloat(0.4)
+                }
+            } else {
+                return CGFloat(0.55)
+            }
+        }
+        static var leftRightMargin: CGFloat {
+            if isLandscape {
+                return CGFloat(70)
+            } else {
+                return 0
+            }
+        }
         static let blackColor = "#000000"
         static let whiteColor = "#FFFFFF"
         static let distanceBetweenSections = CGFloat(12)
-        static let contentMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(20) : CGFloat(20)
+        static let contentMargin = CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let buttonBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(62) : CGFloat(52)
-        static let carouselContentTopMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(70) : CGFloat(12)
+        static let carouselContentTopMargin = CGFloat(55)
 
         static let slideOutCornerRadius = CGFloat(12)
         static let blurImageSize = CGSize(width: 64, height: 64)

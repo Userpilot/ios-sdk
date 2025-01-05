@@ -48,6 +48,17 @@ public class Userpilot: NSObject {
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
+    // MARK: - Delegates
+
+    /// The delegate object that handles application screen navigation during experience presentation.
+    @objc public weak var navigationDelegate: UserpilotNavigationDelegate?
+
+    /// The delegate object that broadcast analytics events.
+    @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
+
+    /// The delegate object that manages and observes experience presentations.
+    @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
+
     // MARK: - Initialization
 
     /**

@@ -2,7 +2,7 @@ Pod::Spec.new do |spec|
 
   spec.name          = "Userpilot"
   spec.module_name   = "Userpilot"
-  spec.version       = "0.0.1-beta.2"
+  spec.version       = "0.0.1-beta.3"
   spec.summary       = "Userpilot iOS SDK allows you to integrate Userpilot experiences into your native iOS apps"
 
   spec.description   = <<-DESC
@@ -24,6 +24,6 @@ Pod::Spec.new do |spec|
       'UserPilot' => ['Sources/UserPilot/*.xcassets']
   }
 
-  spec.dependency "SwiftPhoenixClient", "~> 5.2.2"
+  spec.dependency "SwiftPhoenixClient", "5.2.2"
 
 end

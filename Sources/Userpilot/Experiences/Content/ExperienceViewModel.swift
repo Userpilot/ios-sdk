@@ -18,9 +18,10 @@ internal class ExperienceViewModel {
 
     // MARK: - Properties
 
+    /// Weak reference to the owning `Userpilot` instance.
+    private weak var userpilot: Userpilot?
     private let experiencesPublisher: ExperiencesPublishing
     private let themeHandler: ThemeHandling
-    private let config: Userpilot.Config
     private let storage: DataStoring
     let imageLoader: ImageLoading
 
@@ -53,9 +54,9 @@ internal class ExperienceViewModel {
     /// Initializes the view model with a dependency injection container.
     /// - Parameter container: Dependency injection container providing required services.
     init(container: DIContainer) {
+        self.userpilot = container.owner
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.imageLoader = container.resolve(ImageLoading.self)
     }
@@ -121,12 +122,12 @@ internal class ExperienceViewModel {
             let step = mobileContent.steps.first
         else { return }
 
-        config.experienceDelegate?.onExperienceStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
             id: mobileContent.id,
             state: .started
         )
 
-        config.experienceDelegate?.onExperienceStepStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             id: step.id,
             state: .started,
             experienceId: mobileContent.id,
@@ -152,7 +153,7 @@ internal class ExperienceViewModel {
             let step = mobileContent.steps.last
         else { return }
 
-        config.experienceDelegate?.onExperienceStepStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             id: step.id,
             state: .completed,
             experienceId: mobileContent.id,
@@ -160,7 +161,7 @@ internal class ExperienceViewModel {
             totalSteps: mobileContent.steps.count
         )
 
-        config.experienceDelegate?.onExperienceStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
             id: mobileContent.id,
             state: .completed
         )
@@ -194,7 +195,7 @@ internal class ExperienceViewModel {
             let oldStep = mobileContent.steps[safe: step - 1]
         else { return }
 
-        config.experienceDelegate?.onExperienceStepStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             id: currentStep.id,
             state: .completed,
             experienceId: mobileContent.id,
@@ -202,7 +203,7 @@ internal class ExperienceViewModel {
             totalSteps: mobileContent.steps.count
         )
 
-        config.experienceDelegate?.onExperienceStepStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             id: currentStep.id,
             state: .started,
             experienceId: mobileContent.id,
@@ -232,7 +233,7 @@ internal class ExperienceViewModel {
             let step = mobileContent.steps[safe: lastStep]
         else { return }
 
-        config.experienceDelegate?.onExperienceStepStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             id: step.id,
             state: .dismissed,
             experienceId: mobileContent.id,
@@ -240,7 +241,7 @@ internal class ExperienceViewModel {
             totalSteps: mobileContent.steps.count
         )
 
-        config.experienceDelegate?.onExperienceStateChanged(
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
             id: mobileContent.id,
             state: .dismissed
         )

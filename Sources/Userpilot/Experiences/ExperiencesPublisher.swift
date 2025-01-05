@@ -119,7 +119,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      - Parameter experienceId: The ID of the experience to start.
      */
     func triggerExperience(_ experienceID: String) {
-        if mobileContent != nil { return }
+        guard mobileContent == nil else { return }
         publishExperienceEvent(ExperienceContentEvent(experienceID: experienceID))
     }
 
@@ -128,35 +128,31 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func endExperience() {
         guard let experience = UIApplication.shared.fetchTopViewController() else { return }
-        (experience as? CarouselExperienceViewController)?.closeExperience()
-        (experience as? SlideOutBottomSheetViewController)?.dismissBottomSheet()
-        (experience as? SlideOutDialogViewController)?.dismissDialog()
+        (experience as? UPExperience)?.triggerCloseExpereince()
     }
 
     // MARK: - helper methods
 
     /// Return the current active carousel content.
     func getActiveMobileContent() -> MobileContent? {
-        let currentContent = mobileContent
-        mobileContent = nil
-        return currentContent
+        defer { mobileContent = nil }
+        return mobileContent
     }
 
-    // Check experiences state
+    /// Check experiences state, in case the screen events comes from on resume state after
+    /// carousel expereince end
     func fetchAndResetCarouselContentState() -> Bool {
-        if carouselContent {
-            carouselContent = false
-            return true
-        }
-        return false
+        guard carouselContent else { return false }
+        carouselContent = false
+        return true
     }
 
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL) {
-        if let navigationDelegate = config.navigationDelegate {
+        if let navigationDelegate = userpilot?.navigationDelegate {
             navigationDelegate.navigate(to: url) { _ in }
         } else {
-            if url.scheme == "http" || url.scheme == "https",
+            if url.isHttpOrHttps,
                 UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }
@@ -259,9 +255,7 @@ extension ExperiencesPublisher {
      - Parameter themeID: A theme ID for which data needs to be fetched.
      */
     private func fetchThemeData(_ themeID: Int) {
-        guard
-            analyticsPublisher.canRequestExperienceEvent
-        else {
+        guard analyticsPublisher.canRequestExperienceEvent else {
             mobileContent = nil
             return
         }
@@ -386,6 +380,7 @@ extension ExperiencesPublisher {
         }
     }
 
+    /// Check top view controller if its one of Experiences view controller
     private func hasActiveExperience() -> Bool {
         guard let topViewController = UIApplication.shared.fetchTopViewController() else {
             return false
@@ -395,6 +390,7 @@ extension ExperiencesPublisher {
         topViewController.isKind(of: BottomSheetViewController.self)
     }
 
+    /// check if expereince was Carousel one
     private func wasCarouselExperience() -> Bool {
         guard let topViewController = UIApplication.shared.fetchTopViewController() else {
             return false
@@ -402,3 +398,4 @@ extension ExperiencesPublisher {
         return topViewController.isKind(of: CarouselExperienceViewController.self)
     }
 }
+// swiftlint:enable file_length

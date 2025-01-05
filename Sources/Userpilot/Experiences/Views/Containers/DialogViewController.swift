@@ -58,16 +58,6 @@ internal class DialogViewController: UIViewController {
         animatePresent()
     }
 
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-        super.viewWillTransition(to: size, with: coordinator)
-        coordinator.animate(alongsideTransition: { [weak self] _ in
-            guard let self else { return }
-            let widthRatio = self.calculateDialogWidthRatio()
-            self.mainContainerWidthConstraint?.constant = size.width * widthRatio
-            self.view.layoutIfNeeded()
-        }, completion: nil)
-    }
-
     /// Calculates the dialog width ratio based on the given size.
     /// - Parameter size: The size parameter from the transition method.
     /// - Returns: A CGFloat representing the width ratio.
@@ -183,6 +173,16 @@ extension DialogViewController {
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
+    }
+}
+
+// MARK: - Update constraints on screen rotation
+
+internal extension DialogViewController {
+    func resetWidth(_ size: CGSize) {
+        let widthRatio = self.calculateDialogWidthRatio()
+        self.mainContainerWidthConstraint?.constant = size.width * widthRatio
+        self.view.layoutIfNeeded()
     }
 }
 

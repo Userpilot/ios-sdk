@@ -37,11 +37,11 @@ class UserpilotManager {
             let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
         else { return }
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
-            .logging(true)
-            .setNavigationHandler(navigationDelegate: self)
-            .setAnalyticsDelegate(analyticsDelegate: self)
-            .setExperienceDelegate(experienceDelegate: self)
+            .logging(enabled: true)
         )
+        userpilot?.navigationDelegate = self
+        userpilot?.analyticsDelegate = self
+        userpilot?.experienceDelegate = self
     }
 
     /// Destroy Userpilot instance

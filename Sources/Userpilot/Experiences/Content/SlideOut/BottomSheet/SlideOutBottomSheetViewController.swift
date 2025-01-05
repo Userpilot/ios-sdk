@@ -58,6 +58,15 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
         setContent(slideOutContainerView)
         bindViewModel()
     }
+
+    /// Handle screen rotation
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            guard let self else { return }
+            self.slideOutContainerView.resetContentHeight(size)
+        }, completion: nil)
+    }
 }
 
 // MARK: - ViewModel Binding
@@ -121,5 +130,13 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
                 self?.experienceViewModel.onDeepLinkTriggered()
             }
         }
+    }
+}
+
+// MARK: - UPExperience
+
+extension SlideOutBottomSheetViewController: UPExperience {
+    func triggerCloseExpereince() {
+        dismissBottomSheet()
     }
 }

@@ -110,9 +110,13 @@ internal func getImageSize(for line: Line) -> CGSize {
 }
 
 /// Returns the width of the device's screen in points.
-/// - Returns: A `CGFloat` representing the width of the device's screen.
 internal var screenWidth: CGFloat {
     return UIScreen.main.bounds.width
+}
+
+/// Returns the height of the device's screen in points.
+internal var screenHeight: CGFloat {
+    return UIScreen.main.bounds.height
 }
 
 /// Returns the multiplier used to adjust the width of UI elements based on screen size.
@@ -127,7 +131,7 @@ internal var screenWidthMultiplier: CGFloat {
 /// - Returns: `true` if the device is in landscape mode
 /// (either `.landscapeLeft` or `.landscapeRight`), `false` otherwise.
 internal var isLandscape: Bool {
-    return UIDevice.current.orientation == .landscapeLeft || UIDevice.current.orientation == .landscapeRight
+    return UIScreen.main.bounds.width > UIScreen.main.bounds.height
 }
 
 /// Executes a block of code inside a `do-catch` block, catching and ignoring any errors or throwables.

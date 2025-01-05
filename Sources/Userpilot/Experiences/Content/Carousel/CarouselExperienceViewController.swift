@@ -48,8 +48,7 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Initializes the view controller with the given view model.
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
-        let bundle = Userpilot.resourceBundle
-        super.init(nibName: "CarouselExperienceViewController", bundle: bundle)
+        super.init(nibName: "CarouselExperienceViewController", bundle: Userpilot.resourceBundle)
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
@@ -93,6 +92,14 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Action handler for the close button. Dismisses the experience view.
     /// - Parameter sender: The button triggering the close action.
     @IBAction func onCloseButtonClicked(_ sender: UIButton) {
+        closeExperience()
+    }
+}
+
+// MARK: - UPExperience
+
+extension CarouselExperienceViewController: UPExperience {
+    func triggerCloseExpereince() {
         closeExperience()
     }
 }

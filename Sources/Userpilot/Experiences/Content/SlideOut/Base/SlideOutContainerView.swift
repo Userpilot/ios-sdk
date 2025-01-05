@@ -43,6 +43,7 @@ internal class SlideOutContainerView: UIView {
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, scrollView, actionButton])
         stackView.axis = .vertical
+        stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
@@ -52,10 +53,6 @@ internal class SlideOutContainerView: UIView {
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.heightAnchor.constraint(
-            lessThanOrEqualToConstant:
-            UIScreen.main.bounds.height * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
-        .isActive = true
         return scrollView
     }()
 
@@ -77,6 +74,7 @@ internal class SlideOutContainerView: UIView {
 
     weak var slideOutContainerViewDelegate: SlideOutContainerViewDelegate?
 
+    private var scrollViewHeightConstraint: NSLayoutConstraint?
     private var storedConstraints: [NSLayoutConstraint] = []
 
     // MARK: - Initial Setup
@@ -94,6 +92,20 @@ internal class SlideOutContainerView: UIView {
     // MARK: - UI Setup
 
     /**
+     Reset height fo Scroll View on screen rotation.
+     */
+    func resetContentHeight(_ size: CGSize) {
+        if let scrollViewHeightConstraint {
+            NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+        }
+        scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
+            lessThanOrEqualToConstant:
+                screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+        scrollViewHeightConstraint?.isActive = true
+        self.layoutIfNeeded()
+    }
+
+    /**
      Sets up the layout and constraints for the view components.
      */
     private func setupUI() {
@@ -101,6 +113,15 @@ internal class SlideOutContainerView: UIView {
             // Deactivate and clear previously stored constraints
             NSLayoutConstraint.deactivate(storedConstraints)
             storedConstraints.removeAll()
+
+            // Set scroll view height
+            if let scrollViewHeightConstraint {
+                NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+            }
+            scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
+                lessThanOrEqualToConstant:
+                    screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+            scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
             [scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,

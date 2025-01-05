@@ -32,5 +32,6 @@ internal struct GeneralConstants {
     static let PATH_NAME = "/mobile/v1/events/websocket"
     static let SESSION_DURATION = TimeInterval(30 * 60)
     static let CONFIGURATION_DURATION = TimeInterval(30 * 60)
+    static let USERPILOT_LOGGING_CATEOGRY = "general"
 }
 // swiftlint:enable identifier_name

@@ -615,7 +615,7 @@ internal extension AnalyticsPublisher {
 
     func broadcastEvent(_ event: Event, _ value: String, properties: [String: Any]?) {
         performOn(.main) { [weak self] in
-            self?.userpilot?.config.analyticsDelegate?.didTrack(
+            self?.userpilot?.analyticsDelegate?.didTrack(
                 analytic: event.userpilotAnalytic,
                 value: value,
                 properties: properties)

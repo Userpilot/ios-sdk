@@ -30,6 +30,7 @@ internal extension CarouselExperienceViewController {
             self?.setupLocale()
             self?.setupGeneralStyle()
             self?.collectionView.reloadData()
+            // Fallback fix, to reset collection view position in landscape mode
             delay(0.1) {
                 if isLandscape {
                     self?.collectionView.scrollToItem(at: IndexPath(row: 0, section: 0),

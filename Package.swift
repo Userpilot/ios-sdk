@@ -1,4 +1,4 @@
-// swift-tools-version: 5
+// swift-tools-version: 5.6
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -17,10 +17,10 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/SimplyDanny/SwiftLintPlugins",
-            from: "0.55.1"),
+            exact: "0.57.1"),
         .package(
             url: "https://github.com/davidstump/SwiftPhoenixClient",
-            from: "5.2.2")
+            exact: "5.2.2")
         ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -37,6 +37,5 @@ let package = Package(
         .testTarget(
             name: "UserpilotTests",
             dependencies: ["Userpilot"]),
-    ],
-    swiftLanguageVersions: [.v5]
+    ]
 )
