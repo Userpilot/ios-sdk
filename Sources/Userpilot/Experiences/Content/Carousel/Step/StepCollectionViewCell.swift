@@ -190,7 +190,9 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 constant: ThemeHandler.DefaultValues.contentMargin.negative
                                                        + ThemeHandler.DefaultValues.leftRightMargin.negative),
                 actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
-                  constant: ThemeHandler.DefaultValues.buttonBottomMargin.negative),
+                                                     constant:
+                  theme.isStepsProgressEnabled ? ThemeHandler.DefaultValues.buttonBottomMarginWithStepProgress.negative
+                    : ThemeHandler.DefaultValues.buttonBottomMarginWithoutStepProgress.negative),
                 theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
                   constant: ThemeHandler.DefaultValues.carouselContentTopMargin),
                 theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,

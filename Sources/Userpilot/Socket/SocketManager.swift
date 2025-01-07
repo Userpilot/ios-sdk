@@ -198,6 +198,7 @@ extension SocketManager {
     // swiftlint:disable:next function_body_length
     private func openSocket() {
         guard
+            storage.socketURL.isNotEmpty,
             config.token.isNotEmpty,
             storage.userID.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
@@ -207,7 +208,7 @@ extension SocketManager {
             socketState = .connecting
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: "NX-b83a34b8",
+                SocketManager.tokenKey: config.token,
                 SocketManager.userIDKey: storage.userID,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,

@@ -66,7 +66,10 @@ internal class ThemeHandler: ThemeHandling {
         static let distanceBetweenSections = CGFloat(12)
         static let contentMargin = CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
-        static let buttonBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(62) : CGFloat(52)
+        static let buttonBottomMarginWithStepProgress = UIDevice.current.userInterfaceIdiom == .pad
+        ? CGFloat(62) : CGFloat(52)
+        static let buttonBottomMarginWithoutStepProgress = UIDevice.current.userInterfaceIdiom == .pad
+        ? CGFloat(35) : CGFloat(52)
         static let carouselContentTopMargin = CGFloat(55)
 
         static let slideOutCornerRadius = CGFloat(12)

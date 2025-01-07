@@ -47,6 +47,9 @@ internal extension Userpilot {
         if let url = Bundle(for: Userpilot.self).url(forResource: "Userpilot", withExtension: "bundle"),
            let bundle = Bundle(url: url) {
             return bundle
+        } else if let url = Bundle(for: Userpilot.self).url(forResource: "UserPilot", withExtension: "bundle"),
+            let bundle = Bundle(url: url) {
+            return bundle
         } else {
             fatalError("Can't find 'Userpilot' resource bundle")
         }

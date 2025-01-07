@@ -7,21 +7,25 @@ Pod::Spec.new do |spec|
 
   spec.description   = <<-DESC
   A Swift library for sending user properties and events to the Userpilot and retrieving and rendering Userpilot content based on those properties and events.
-                   DESC
+  DESC
 
   spec.homepage      = "https://github.com/Userpilot/ios-sdk"
   spec.license       = { :type => "MIT", :file => "LICENSE" }
   spec.author        = { "Userpilot" => "dev@userpilot.co" }
 
   spec.source        = { :git => "https://github.com/Userpilot/ios-sdk.git", :tag => "#{spec.version}" }
-  spec.source_files  = "Sources/UserPilot/**/*.swift"
-  spec.exclude_files = 'Sources/UserPilot/Userpilot.docc'
+  spec.source_files  = "Sources/Userpilot/**/*.swift"
+  spec.exclude_files = 'Sources/Userpilot/Userpilot.docc'
 
   spec.swift_version = "5.0"
   spec.ios.deployment_target = "13.0"
 
+  # Include all resources in the resource bundle
   spec.resource_bundles = {
-      'UserPilot' => ['Sources/UserPilot/*.xcassets']
+      'Userpilot' => [
+          'Sources/Userpilot/*.xcassets',
+          'Sources/Userpilot/**/*.xib'
+      ]
   }
 
   spec.dependency "SwiftPhoenixClient", "5.2.2"
