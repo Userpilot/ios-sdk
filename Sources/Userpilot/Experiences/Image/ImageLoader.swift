@@ -40,11 +40,11 @@ internal class ImageLoader: ImageLoading {
 
     private var blurCache = [String: UIImage]()
     private var imageCache = [String: UIImage]()
-    private var userAgent: String? = nil
-    
+    private var userAgent: String?
+
     // Private initializer to prevent instantiation from outside
     init(container: DIContainer) { }
-    
+
     func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
         if userAgent == nil {
             userAgent = getUserAgent()
