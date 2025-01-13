@@ -18,7 +18,7 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
  - [📝 Documentation](#-documentation)
- - [🎬 Examples](#-examples)
+ - [🎬 Samples](#-samples)
  - [📄 License](#-license)
 
 ## 🚀 Getting Started
