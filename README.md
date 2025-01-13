@@ -17,6 +17,9 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
+ - [📝 Documentation](#-documentation)
+ - [🎬 Examples](#-examples)
+ - [📄 License](#-license)
 
 ## 🚀 Getting Started
 
@@ -166,7 +169,7 @@ userpilot.anonymous()
 Triggers a specific experience programmatically using its unique ID. This API allows you to manually initiate an experience within your application.
 
 ```swift
-userpilot.trigger(EXPERIENCE_ID)
+userpilot.triggerExperience(EXPERIENCE_ID)
 ```
 
 ### Configurations (Optional)
@@ -233,3 +236,15 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
 }
 ```
+
+## 📝 Documentation
+
+Full documentation is available at https://docs.userpilot.com/
+
+## 🎬 Samples
+
+The `Sample` directory in repository contains a full example swift app providing references for usage of the Userpilot API.
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE) for more information.
