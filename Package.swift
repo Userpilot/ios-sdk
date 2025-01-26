@@ -30,6 +30,9 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient"),
             ],
+            resources: [
+               .process("Resources")
+            ],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]

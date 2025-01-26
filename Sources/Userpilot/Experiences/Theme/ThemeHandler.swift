@@ -24,25 +24,33 @@ internal protocol ThemeHandling: AnyObject {
     /// Retrieves theme data for the specified theme ID.
     func getThemeById(_ themeId: Int) -> ThemeData?
 
-    /// Merges multiple themes into a unified theme.
-    func mergeThemes(
+    /// Merges Experience themes into a unified theme.
+    func mergeExperienceThemes(
         _ baseTheme: ThemeData?,
         _ globalTheme: ExperienceTheme?,
         _ stepTheme: ExperienceTheme?
     ) -> ThemeData
+
+    /// Merges Survey themes into a unified theme.
+    func mergeSurveyThemes(
+        _ baseTheme: ThemeData?,
+        _ surveyTheme: SurveyTheme?
+    ) -> SurveyTheme
 }
 
 // MARK: - ThemeHandler Class
 
+// swiftlint:disable:next type_body_length
 internal class ThemeHandler: ThemeHandling {
 
     // MARK: - Nested Types
 
     /// Default values for various text styles and attributes.
     struct DefaultValues {
+        // Carousels & Slide out
         static let headerTextSize = 16
         static let normalTextSize = 16
-        static let dimDegree = 40
+        static let dimSlideOutDegree = 40
         static var slideOutContentMaxHeightPercentage: CGFloat {
             if isLandscape {
                 if UIDevice.current.userInterfaceIdiom == .pad {
@@ -80,6 +88,26 @@ internal class ThemeHandler: ThemeHandling {
         static let closeButtonAlpha = 0.8
         static let dismissButtonMargin = CGFloat(10)
         static let iconImageDimensions = 38
+
+        /// Survey
+        static let surveyItemRatingMinWidth: Int = 80
+        static let surveyContentTopMargin: Int = 16
+        static let surveyTitleTextSize: CGFloat = 16
+        static let surveyDescriptionTextSize: CGFloat = 13
+        static let surveyHighLowTextSize: CGFloat = 12
+        static let surveyPromptButtonTextSize: CGFloat = 12
+        static let surveyDescriptionTextTopMargin: Int = 10
+        static let surveyDefaultLikertViewCount: Int = 10
+        static let surveyMaxTextFieldCharCount: Int = 500
+        static let surveyPromptViewButtonMargin: Int = 50
+        static let surveyContentTopMargin24: Int = 24
+        static let surveyLikertViewMaxCount: Int = 10
+        static let surveyOpenTextEditTextHeight: Int = 80
+        static let surveyTextSize = 14
+
+        static let surveySingleTextDefaultCountryCode: String = "+1"
+        static let surveySingleTextMaxLength: Int = 50
+        static let surveyOtherChoice: String = "Other"
     }
 
     /// Style names used for text formatting in themes.
@@ -137,7 +165,7 @@ internal class ThemeHandler: ThemeHandling {
      * - Returns: A unified theme that combines values from all provided theme layers.
      */
     // swiftlint:disable:next function_body_length
-    func mergeThemes(
+    func mergeExperienceThemes(
         _ baseTheme: ThemeData?,
         _ globalTheme: ExperienceTheme?,
         _ stepTheme: ExperienceTheme?
@@ -200,7 +228,10 @@ internal class ThemeHandler: ThemeHandling {
                         ?? baseTheme?.carousel?.progress?.colorType,
                     enabled: stepTheme?.progress?.enabled
                         ?? globalTheme?.progress?.enabled
-                        ?? baseTheme?.carousel?.progress?.enabled
+                        ?? baseTheme?.carousel?.progress?.enabled,
+                    type: stepTheme?.progress?.type
+                        ?? globalTheme?.progress?.type
+                        ?? baseTheme?.carousel?.progress?.type
                 )
             ),
             slideOut: ExperienceTheme(
@@ -262,6 +293,58 @@ internal class ThemeHandler: ThemeHandling {
                     ?? globalTheme?.backdrop?.opacity
                     ?? baseTheme?.slideOut?.backdrop?.opacity
                 )
+            ),
+            survey: nil
+        )
+    }
+
+    /*
+     * Merges Survey themes (base, global) to create a final unified theme.
+     *
+     * - Parameters:
+     *   - baseTheme: The base theme data.
+     *   - surveyTheme: The global theme data that applies to the entire survey.
+     * - Returns: A unified theme that combines values from all provided theme layers.
+     */
+    func mergeSurveyThemes(
+        _ baseTheme: ThemeData?,
+        _ surveyTheme: SurveyTheme?
+    ) -> SurveyTheme {
+        return SurveyTheme(
+            general: SurveyGeneral(
+                defaultPosition: surveyTheme?.general?.defaultPosition
+                    ?? baseTheme?.survey?.general?.defaultPosition,
+                primaryColor: surveyTheme?.general?.primaryColor
+                    ?? baseTheme?.survey?.general?.primaryColor,
+                backgroundColor: surveyTheme?.general?.backgroundColor
+                    ?? baseTheme?.survey?.general?.backgroundColor
+            ),
+            font: SurveyFont(
+                fontFamily: surveyTheme?.font?.fontFamily
+                    ?? baseTheme?.survey?.font?.fontFamily,
+                fontColor: surveyTheme?.font?.fontColor
+                    ?? baseTheme?.survey?.font?.fontColor,
+                colorType: surveyTheme?.font?.colorType
+                    ?? baseTheme?.survey?.font?.colorType
+            ),
+            boxBorder: nil,
+            progress: ProgressStyle(
+                color: surveyTheme?.progress?.color
+                    ?? baseTheme?.survey?.progress?.color,
+                colorType: surveyTheme?.progress?.colorType
+                    ?? baseTheme?.survey?.progress?.colorType,
+                enabled: surveyTheme?.progress?.enabled
+                    ?? baseTheme?.survey?.progress?.enabled,
+                type: surveyTheme?.progress?.type
+                    ?? baseTheme?.survey?.progress?.type
+            ),
+            backdrop: Backdrop(
+                color: surveyTheme?.backdrop?.color
+                    ?? baseTheme?.survey?.backdrop?.color,
+                enabled: surveyTheme?.backdrop?.enabled
+                    ?? baseTheme?.survey?.backdrop?.enabled,
+                opacity: surveyTheme?.backdrop?.opacity
+                    ?? baseTheme?.survey?.backdrop?.opacity
             )
         )
     }

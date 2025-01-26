@@ -176,3 +176,34 @@ internal func getUserAgent() -> String {
     return webView.value(forKey: "userAgent") as? String ??
     "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 }
+
+/// Loads and decodes a JSON file from the app's resource bundle into a specified `Decodable` type.
+/// - Parameters:
+///   - fileName: The name of the JSON file (without the `.json` extension).
+///   - type: The `Decodable` type to which the JSON content will be deserialized.
+/// - Returns: An optional instance of the specified `Decodable` type `T`. Returns `nil`
+/// if the file is not found or decoding fails.
+internal func loadJSONFile<T: Decodable>(named fileName: String, as type: T.Type) -> T? {
+    guard let url = Userpilot.resourceBundle.url(forResource: fileName, withExtension: "json") else {
+        return nil
+    }
+
+    do {
+        let data = try Data(contentsOf: url)
+        let decoder = JSONDecoder()
+        let decodedObject = try decoder.decode(T.self, from: data)
+        return decodedObject
+    } catch {
+        return nil
+    }
+}
+
+/// Retrieves the current key `UIWindow` in the app that is part of an active foreground scene.
+/// - Returns: An optional `UIWindow`. Returns `nil` if no key window is found.
+internal func getWindow() -> UIWindow? {
+    return UIApplication.shared.connectedScenes
+        .filter({ $0.activationState == .foregroundActive })
+        .compactMap({ $0 as? UIWindowScene })
+        .first?.windows
+        .filter({ $0.isKeyWindow }).first
+}

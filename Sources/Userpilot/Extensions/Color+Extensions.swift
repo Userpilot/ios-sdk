@@ -14,6 +14,30 @@
 import Foundation
 import UIKit
 
+extension UIColor {
+    // static let gray = UIColor(hexString: "#656567")
+    static let lightGray = UIColor(hex: "#EBEBEB")
+    static let grayCA = UIColor(hex: "#CACACE")
+    static let gray43 = UIColor(hex: "#434345")
+    static let grayA8 = UIColor(hex: "#A8A8AC")
+}
+
+ extension UIColor {
+    convenience init(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+        Scanner(string: hexSanitized).scanHexInt64(&rgb)
+
+        let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+        let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+        let blue = CGFloat(rgb & 0x0000FF) / 255.0
+
+        self.init(red: red, green: green, blue: blue, alpha: 1.0)
+    }
+ }
+
 internal extension UIColor {
 
     convenience init?(hexString: String) {
@@ -74,6 +98,24 @@ extension UIColor {
 
     func withOpacity(_ opacity: CGFloat) -> UIColor {
         return self.withAlphaComponent(opacity)
+    }
+
+    func toHexStringWithAlpha(alpha: CGFloat) -> String {
+        let clampedAlpha = max(0.0, min(1.0, alpha)) // Clamp alpha to 0-1
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var currentAlpha: CGFloat = 0
+
+        // Extract RGBA components
+        self.getRed(&red, green: &green, blue: &blue, alpha: &currentAlpha)
+
+        let scaledAlpha = Int(clampedAlpha * 255)
+        let redInt = Int(red * 255)
+        let greenInt = Int(green * 255)
+        let blueInt = Int(blue * 255)
+
+        return String(format: "#%02X%02X%02X%02X", scaledAlpha, redInt, greenInt, blueInt)
     }
 
 }

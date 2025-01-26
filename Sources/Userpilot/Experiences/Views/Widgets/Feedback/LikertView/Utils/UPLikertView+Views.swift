@@ -1,0 +1,84 @@
+//
+//  UPLikertView+ViewsExt.swift
+//  Userpilot SDK
+//
+//  Created by Motasem Hamed on 19/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  [Brief Description]
+//  This extension contains methods for setting up the view hierarchy, configuring the collection view,
+//  and binding the low/high score text labels in the Likert scale view. It also handles UI layout
+//  and setting of constraints using Auto Layout.
+//
+
+import UIKit
+
+internal extension UPLikertView {
+
+    // MARK: - Setup View Hierarchy
+
+    /// Sets up the view hierarchy by adding subviews and applying constraints.
+    func setupViewHierarchy() {
+        titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Stack view for the low and high score text labels
+        let bottomRowStackView = UIStackView(arrangedSubviews: [lowScoreTextLabel, highScoreTextLabel])
+        bottomRowStackView.axis = .horizontal
+        bottomRowStackView.spacing = 8
+        bottomRowStackView.alignment = .center
+        bottomRowStackView.distribution = .fillProportionally
+        bottomRowStackView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Add subviews to the main view
+        addSubview(titleDescriptionView)
+        addSubview(collectionView)
+        addSubview(bottomRowStackView)
+
+        // Apply Auto Layout constraints
+        NSLayoutConstraint.activate([
+            titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+
+            collectionView.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 16),
+            collectionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            collectionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            collectionView.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
+
+            bottomRowStackView.topAnchor.constraint(equalTo: collectionView.bottomAnchor, constant: 6),
+            bottomRowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            bottomRowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            bottomRowStackView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
+
+    // MARK: - Configure Collection View
+
+    /// Registers the collection view cell and sets its data source and delegate.
+    func configureCollectionView() {
+        collectionView.register(LikertCollectionViewCell.self,
+        forCellWithReuseIdentifier: LikertCollectionViewCell.identifier)
+        collectionView.dataSource = self
+        collectionView.delegate = self
+    }
+
+    // MARK: - Bind Low and High Score Texts
+
+    /// Binds the low and high score texts to their respective labels based on the survey step and theme.
+    func bindLowHeightTexts() {
+        // Set low score text and properties
+        lowScoreTextLabel.text = surveyStep?.metadata?.lowScore
+        lowScoreTextLabel.textColor = surveyTheme?.textColor
+        lowScoreTextLabel.font = UIFont.matching(
+            fontName: surveyTheme?.fontFamily, fontWeight: [],
+            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+
+        // Set high score text and properties
+        highScoreTextLabel.text = surveyStep?.metadata?.highScore
+        highScoreTextLabel.textColor = surveyTheme?.textColor
+        highScoreTextLabel.font = UIFont.matching(
+            fontName: surveyTheme?.fontFamily, fontWeight: [],
+            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+    }
+}

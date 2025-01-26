@@ -22,7 +22,7 @@ internal class BottomSheetViewController: UIViewController {
     private lazy var mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
+        view.backgroundColor = .systemBlue
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view
@@ -215,8 +215,17 @@ internal extension BottomSheetViewController {
         view.layoutIfNeeded()
     }
 
-    /// Customize the background color of the bottom sheet
+    /// Customize the background color of the bottom sheet for `ExperienceTheme`
     func setBackgroundColor(_ theme: ExperienceTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        dimmedView.isHidden = !theme.backdropEnabled
+        if theme.backdropEnabled {
+            dimmedView.backgroundColor = theme.backdropBackground
+        }
+    }
+
+    /// Customize the background color of the bottom sheet for `SurveyTheme`
+    func setBackgroundColor(_ theme: SurveyTheme) {
         mainContainerView.backgroundColor = theme.backgroundColor
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {

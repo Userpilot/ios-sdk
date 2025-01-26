@@ -20,12 +20,16 @@ import Foundation
    - hasDeepLinkContent: To allow fetch next experience or open deep link screen.
  */
 internal class ExperienceActionEvent: SDKEvent {
-    let mobileContentID: Int
+    /// Experience ID
+    let contentID: Int
+    /// Has deeplink to open it
     let hasDeepLinkContent: Bool
+    /// Survey form answers
+    let feedback: [Payload]?
 
     /// The action type of the event.
     var name: String {
-        fatalError("Subclasses need to implement the `act` property.")
+        fatalError("Subclasses need to implement the `name` property.")
     }
 
     /// Event name, defaulted to "mobile_content".
@@ -46,14 +50,19 @@ internal class ExperienceActionEvent: SDKEvent {
     ///
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
     func toMap() -> [String: Any] {
-        return [
-            "mobile_content_id": mobileContentID
+        var params: [String: Any] = [
+            "mobile_content_id": contentID
         ]
+        if let feedback {
+            params["feedback"] = feedback
+        }
+        return params
     }
 
-    init(mobileContentID: Int, hasDeepLinkContent: Bool = false) {
-        self.mobileContentID = mobileContentID
+    init(mobileContentID: Int, hasDeepLinkContent: Bool = false, feedback: [Payload]? = nil) {
+        self.contentID = mobileContentID
         self.hasDeepLinkContent = hasDeepLinkContent
+        self.feedback = feedback
     }
 }
 
@@ -73,9 +82,9 @@ internal class ExperienceSeenEvent: ExperienceActionEvent {
 internal class ExperienceDismissedEvent: ExperienceActionEvent {
 
     // Custom parameters for the dismissed event
-    let stepId: Int
+    let stepId: Int?
 
-    init(mobileContentID: Int, stepId: Int) {
+    init(mobileContentID: Int, stepId: Int? = nil) {
         self.stepId = stepId
         super.init(mobileContentID: mobileContentID)
     }
@@ -87,7 +96,9 @@ internal class ExperienceDismissedEvent: ExperienceActionEvent {
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
-        basePayload["step_id"] = stepId
+        if stepId != nil {
+            basePayload["step_id"] = stepId
+        }
         return basePayload
     }
 }

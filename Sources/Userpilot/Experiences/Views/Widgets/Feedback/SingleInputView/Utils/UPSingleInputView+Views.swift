@@ -1,0 +1,123 @@
+//
+//  UPSingleInputView+View.swift
+//  Userpilot SDK
+//
+//  Created by Motasem Hamed on 20/01/2025.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  [Brief Description]
+//  A extension to handle setup views.
+//
+
+import UIKit
+
+extension UPSingleInputView {
+
+    // MARK: - Configure Text Field
+
+    /// Configures the text field based on the provided text type.
+    func configureTextField(for type: SingleTextType) {
+        switch type {
+        case .number:
+            textField.setPadding(start: 10, end: 10)
+            textField.keyboardType = .numberPad
+            countryStackView.isHidden = true
+            calendarIconButton.isHidden = true
+        case .date:
+            textField.setPadding(start: 10, end: 60)
+            textField.keyboardType = .numberPad
+            textField.placeholder = "dd/mm/yyyy"
+            calendarIconButton.isHidden = false
+            countryStackView.isHidden = true
+            calendarIconButton.tintColor = surveyTheme?.textSecondaryColorAlpha80 ?? .gray
+        case .phone:
+            textField.setPadding(start: 120, end: 10)
+            textField.keyboardType = .phonePad
+            countryStackView.isHidden = false
+            calendarIconButton.isHidden = true
+            downArrowButton.tintColor = surveyTheme?.textSecondaryColorAlpha80 ?? .gray
+            countrySelectorButton.config(with: "+1", and: surveyTheme?.textSecondaryColorAlpha80 ?? .gray)
+        case .email:
+            textField.setPadding(start: 10, end: 10)
+            textField.keyboardType = .emailAddress
+            countryStackView.isHidden = true
+            calendarIconButton.isHidden = true
+        case .general:
+            textField.setPadding(start: 10, end: 10)
+            textField.keyboardType = .default
+            countryStackView.isHidden = true
+            calendarIconButton.isHidden = true
+        }
+    }
+
+    // MARK: - Setup View
+    func setupView() {
+        // Setup countryStackView
+        countryStackView.addArrangedSubviews([countrySelectorButton, downArrowButton, separatorView])
+        countryStackView.axis = .horizontal
+        countryStackView.spacing = 10
+        countryStackView.translatesAutoresizingMaskIntoConstraints = false
+        countryStackView.alignment = .center
+        countryStackView.isHidden = true
+
+        // Setup titleDescriptionView
+        addSubview(titleDescriptionView)
+        titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Setup textField
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        textField.borderStyle = .none
+        textField.layer.borderWidth = 1
+        textField.layer.cornerRadius = 8
+        textField.layer.borderColor = UIColor.grayCA.cgColor
+        textField.returnKeyType = .done
+        textField.delegate = self
+        textField.addTarget(self, action: #selector(textDidChange(_:)), for: .editingChanged)
+        addSubview(textField)
+
+        // Setup calendar button
+        calendarIconButton.translatesAutoresizingMaskIntoConstraints = false
+        calendarIconButton.setImage(UIImage.userpilotImage(named: "icon_calander"), for: .normal)
+        calendarIconButton.addTarget(self, action: #selector(showDatePicker), for: .touchUpInside)
+        addSubview(calendarIconButton)
+        calendarIconButton.isHidden = true
+
+        // Setup country selector button
+        countrySelectorButton.translatesAutoresizingMaskIntoConstraints = false
+        countrySelectorButton.addTarget(self, action: #selector(showCoutriesPopupMenu), for: .touchUpInside)
+
+        // Setup down arrow button
+        downArrowButton.translatesAutoresizingMaskIntoConstraints = false
+        downArrowButton.setImage(UIImage.userpilotImage(named: "icon_down_arrow"), for: .normal)
+        downArrowButton.addTarget(self, action: #selector(showCoutriesPopupMenu), for: .touchUpInside)
+        addSubview(countryStackView)
+
+        // Setup separator view
+        separatorView.translatesAutoresizingMaskIntoConstraints = false
+        separatorView.backgroundColor = .lightGray
+
+        // Apply constraints for the layout
+        NSLayoutConstraint.activate([
+            titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+
+            textField.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 16),
+            textField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            textField.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            textField.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            calendarIconButton.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -16),
+            calendarIconButton.centerYAnchor.constraint(equalTo: textField.centerYAnchor),
+
+            // Country stack view positioning
+            countryStackView.leadingAnchor.constraint(equalTo: textField.leadingAnchor, constant: 8),
+            countryStackView.centerYAnchor.constraint(equalTo: textField.centerYAnchor),
+            countryStackView.widthAnchor.constraint(equalToConstant: 100),
+
+            separatorView.heightAnchor.constraint(equalToConstant: 30),
+            separatorView.widthAnchor.constraint(equalToConstant: 1)
+        ])
+    }
+}

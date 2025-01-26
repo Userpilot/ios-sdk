@@ -31,4 +31,12 @@ internal extension UIImage {
             self.draw(in: CGRect(origin: .zero, size: size))
         }
     }
+
+    /// A convenience method to load an image from the Userpilot resource bundle.
+    /// - Parameter imageName: The name of the image to be loaded.
+    /// - Returns: The image from the Userpilot resource bundle, or `nil` if not found.
+    static func userpilotImage(named imageName: String) -> UIImage? {
+        return UIImage(named: imageName, in: Userpilot.resourceBundle, compatibleWith: nil)
+    }
+
 }
