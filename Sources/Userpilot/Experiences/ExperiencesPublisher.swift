@@ -289,8 +289,7 @@ extension ExperiencesPublisher {
     func publishExperienceEvent(_ sdkEvent: SDKEvent) {
         analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
 
-        if sdkEvent.eventName == SDKEventsName.experienceDismissed.rawValue ||
-            sdkEvent.eventName == SDKEventsName.experienceCompleted.rawValue {
+        if sdkEvent.isEventForCloseExperience() {
 
             if sdkEvent.hasDeepLink {
                 experienceContent = nil
@@ -342,20 +341,52 @@ extension ExperiencesPublisher {
                     }
 
                 case .survey(let content):
-                    self.analyticsPublisher.experiencePublished(content.id)
-                    switch content.type {
-                    case .list:
-                        let surveyViewModel = SurveyViewModel(container: self.container)
-                        self.openSurveyListExperience(topViewController, surveyViewModel)
-                    case .stepView:
-                        break
-//                        if self.isBottomSheetContent(content) {
-//                            self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
-//                        } else {
-//                            self.openSlideOutDialogExperience(topViewController, experienceViewModel)
-//                        }
-                    }
+                    self.checkSurveyDelayConfiguration(content)
                 }
+            }
+        }
+    }
+
+    /**
+     Check survey delay, in case we have a delay, so start a delay timer
+     */
+    private func checkSurveyDelayConfiguration(_ content: SurveyContent) {
+        if content.timeDelay != 0 {
+            delay(Double(content.timeDelay)) { [weak self] in
+                self?.handleSurveyExperience(content)
+            }
+        } else {
+            handleSurveyExperience(content)
+        }
+    }
+
+    /**
+     Recheck top view controller and expereince state to show the survey expereince again
+     */
+    private func handleSurveyExperience(_ content: SurveyContent) {
+        performOn(.main) { [weak self] in
+            guard
+                let self,
+                let topViewController = UIApplication.shared.fetchTopViewController(),
+                self.canShowExperience()
+            else {
+                self?.isTriggerManualExperience = false
+                self?.experienceContent = nil
+                return
+            }
+            self.checkSurveyDelayConfiguration(content)
+            self.analyticsPublisher.experiencePublished(content.id)
+            switch content.type {
+            case .list:
+                let surveyViewModel = SurveyViewModel(container: self.container)
+                self.openSurveyListExperience(topViewController, surveyViewModel)
+            case .stepView:
+                break
+                //                        if self.isBottomSheetContent(content) {
+                //     self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+                //                        } else {
+                //                            self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+                //                        }
             }
         }
     }
@@ -394,17 +425,6 @@ extension ExperiencesPublisher {
            isForAllScreens ||
            screens.contains(currentScreen)
     }
-//    private func canShowExperience() -> Bool {
-//        guard
-//            !hasActiveExperience(),
-//            let experienceContent
-//        else { return false }
-//
-//        return isTriggerManualExperience ||
-//                analyticsPublisher.isStartSession ||
-//                experienceContent.isForAllScreens ||
-//                experienceContent.screens.contains(currentScreen)
-//    }
 
     /// Check top view controller if its one of Experiences view controller
     private func hasActiveExperience() -> Bool {
@@ -413,7 +433,8 @@ extension ExperiencesPublisher {
         }
         return topViewController.isKind(of: CarouselExperienceViewController.self) ||
         topViewController.isKind(of: SlideOutDialogViewController.self) ||
-        topViewController.isKind(of: BottomSheetViewController.self)
+        topViewController.isKind(of: BottomSheetViewController.self) ||
+        topViewController.isKind(of: SurveyListViewController.self)
     }
 
     /// check if expereince was Carousel one

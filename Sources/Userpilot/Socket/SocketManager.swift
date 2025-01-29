@@ -215,7 +215,7 @@ extension SocketManager {
                 SocketManager.appPropertiesKey: appProperties
             ]
 
-            phoenixSocket = Socket("https://analytex-dev-nxtapp-11632.userpilot.io/mobile/v1/events/websocket", params: socketProperties)
+            phoenixSocket = Socket("https://analytex-dev-nxtapp-11893.userpilot.io/mobile/v1/events/websocket", params: socketProperties)
 
             guard let phoenixSocket else { return }
 

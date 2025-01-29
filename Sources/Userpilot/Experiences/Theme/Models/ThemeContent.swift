@@ -296,7 +296,7 @@ internal struct SurveyTheme: Codable {
     var textSecondaryColorAlpha80: UIColor {
         textColor.withAlphaComponent(0.8)
     }
-    
+
     var textSecondaryColor: UIColor {
         textColor.withAlphaComponent(0.2)
     }

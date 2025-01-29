@@ -6,12 +6,12 @@
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  This class is responsible for defining experience `step` events.
+//  This class is responsible for defining flow experience `step` events.
 //
 
 import Foundation
 
-// MARK: - ExperienceStepActionEvent
+// MARK: - FlowExperienceStepActionEvent
 /**
  Base class representing various types of experience step action events for mobile content.
 
@@ -19,7 +19,7 @@ import Foundation
    - mobileContentId: The ID of the mobile content associated with the event.
    - stepID: The ID of the step associated with the event.
  */
-internal class ExperienceStepActionEvent: ExperienceActionEvent {
+internal class FlowExperienceStepActionEvent: FlowExperienceActionEvent {
     let stepID: Int
 
     /// Creates a dictionary representation of the event data, including the step ID.
@@ -31,27 +31,27 @@ internal class ExperienceStepActionEvent: ExperienceActionEvent {
         return map
     }
 
-    init(mobileContentID: Int, stepID: Int) {
+    init(flowID: Int, stepID: Int) {
         self.stepID = stepID
-        super.init(mobileContentID: mobileContentID)
+        super.init(flowID: flowID)
     }
 }
 
-// MARK: - ExperienceStepActionEvent Subclasses
+// MARK: - FlowExperienceStepActionEvent Subclasses
 /**
  Represents the 'seen' step action event.
  */
-internal class ExperienceStepSeenEvent: ExperienceStepActionEvent {
+internal class ExperienceStepSeenEvent: FlowExperienceStepActionEvent {
     override var name: String {
-        return SDKEventsName.experienceStepSeen.rawValue
+        return SDKEventsName.flowExperienceStepSeen.rawValue
     }
 }
 
 /**
  Represents the 'completed' step action event.
  */
-internal class ExperienceStepCompletedEvent: ExperienceStepActionEvent {
+internal class ExperienceStepCompletedEvent: FlowExperienceStepActionEvent {
     override var name: String {
-        return SDKEventsName.experienceStepCompleted.rawValue
+        return SDKEventsName.flowExperienceStepCompleted.rawValue
     }
 }

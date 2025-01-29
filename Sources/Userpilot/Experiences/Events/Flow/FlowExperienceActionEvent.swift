@@ -6,26 +6,24 @@
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  This class is responsible for defining experience events.
+//  This class is responsible for defining flow experience events.
 //
 
 import Foundation
 
-// MARK: - ExperienceActionEvent
+// MARK: - FlowExperienceActionEvent
 /**
  Base class representing various types of experience action events for mobile content.
 
  - Parameters:
-   - mobileContentId: The ID of the mobile content associated with the event.
+   - flowContentID: The ID of the mobile content associated with the event.
    - hasDeepLinkContent: To allow fetch next experience or open deep link screen.
  */
-internal class ExperienceActionEvent: SDKEvent {
+internal class FlowExperienceActionEvent: SDKEvent {
     /// Experience ID
-    let contentID: Int
+    let flowID: Int
     /// Has deeplink to open it
     let hasDeepLinkContent: Bool
-    /// Survey form answers
-    let feedback: [Payload]?
 
     /// The action type of the event.
     var name: String {
@@ -50,55 +48,48 @@ internal class ExperienceActionEvent: SDKEvent {
     ///
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
     func toMap() -> [String: Any] {
-        var params: [String: Any] = [
-            "mobile_content_id": contentID
+        return [
+            "mobile_content_id": flowID
         ]
-        if let feedback {
-            params["feedback"] = feedback
-        }
-        return params
     }
 
-    init(mobileContentID: Int, hasDeepLinkContent: Bool = false, feedback: [Payload]? = nil) {
-        self.contentID = mobileContentID
+    init(flowID: Int, hasDeepLinkContent: Bool = false) {
+        self.flowID = flowID
         self.hasDeepLinkContent = hasDeepLinkContent
-        self.feedback = feedback
     }
 }
 
-// MARK: - ExperienceActionEvent Subclasses
+// MARK: - FlowExperienceActionEvent Subclasses
 /**
  Represents the 'seen' action event.
  */
-internal class ExperienceSeenEvent: ExperienceActionEvent {
+internal class ExperienceFlowSeenEvent: FlowExperienceActionEvent {
     override var name: String {
-        return SDKEventsName.experienceSeen.rawValue
+        return SDKEventsName.flowExperienceSeen.rawValue
     }
 }
 
 /**
  Represents the 'dismissed' action event with extra custom parameters.
 */
-internal class ExperienceDismissedEvent: ExperienceActionEvent {
+internal class ExperienceFlowDismissedEvent: FlowExperienceActionEvent {
 
     // Custom parameters for the dismissed event
-    let stepId: Int?
+    let stepId: Int
 
-    init(mobileContentID: Int, stepId: Int? = nil) {
+    init(flowID: Int, stepId: Int) {
         self.stepId = stepId
-        super.init(mobileContentID: mobileContentID)
+        super.init(flowID: flowID)
     }
 
     override var name: String {
-        return SDKEventsName.experienceDismissed.rawValue
+        return SDKEventsName.flowExperienceDismissed.rawValue
     }
 
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
-        if stepId != nil {
-            basePayload["step_id"] = stepId
-        }
+        basePayload["step_id"] = stepId
         return basePayload
     }
 }
@@ -106,8 +97,8 @@ internal class ExperienceDismissedEvent: ExperienceActionEvent {
 /**
  Represents the 'completed' action event.
  */
-internal class ExperienceCompletedEvent: ExperienceActionEvent {
+internal class ExperienceFlowCompletedEvent: FlowExperienceActionEvent {
     override var name: String {
-        return SDKEventsName.experienceCompleted.rawValue
+        return SDKEventsName.flowExperienceCompleted.rawValue
     }
 }

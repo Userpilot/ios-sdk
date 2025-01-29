@@ -17,20 +17,37 @@ internal protocol SDKEvent {
     var hasDeepLink: Bool { get }
 }
 
-extension SDKEvent {
+internal extension SDKEvent {
 
     var hasDeepLink: Bool {
         return false
+    }
+
+    func isEventForCloseExperience() -> Bool {
+        return self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
+        self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
+        self.eventName == SDKEventsName.surveyExperienceDismissed.rawValue ||
+        self.eventName == SDKEventsName.surveyExperienceCompleted.rawValue
     }
 
 }
 
 internal enum SDKEventsName: String {
     case fetchExperienceContent = "get_mobile_content"
-    case experienceSeen = "seen_mobile_content"
-    case experienceDismissed = "dismissed_mobile_content"
-    case experienceCompleted = "complete_mobile_content"
-    case experienceStepSeen = "seen_mobile_content_step"
-    case experienceStepCompleted = "completed_mobile_content_step"
     case fetchExperienceTheme = "fetch_theme"
+
+    case flowExperienceSeen = "seen_mobile_content"
+    case flowExperienceDismissed = "dismissed_mobile_content"
+    case flowExperienceCompleted = "complete_mobile_content"
+    case flowExperienceStepSeen = "seen_mobile_content_step"
+    case flowExperienceStepCompleted = "completed_mobile_content_step"
+
+    case surveyExperienceSeen = "seen_survey"
+    case surveyExperienceDismissed = "dismissed_survey"
+    case surveyExperienceCompleted = "completed_survey"
+    case surveyExperienceSubmitted = "completed_survey_module_batch"
+    case surveyExperienceStepSeen = "seen_survey_module"
+    case surveyExperienceStepDismissed = "dismissed_survey_module"
+    case surveyExperienceStepSkipped = "skipped_survey_module"
+    case surveyExperienceStepSubmitted = "completed_survey_module"
 }

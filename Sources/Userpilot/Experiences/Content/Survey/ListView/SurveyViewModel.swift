@@ -91,6 +91,15 @@ internal class SurveyViewModel {
         }
     }
 
+    /// Triggered the deep link from thank you message.
+    func onDeepLinkTriggered() {
+        guard let surveyContent, let surveyTheme else { return }
+        guard let thankYouContent = surveyContent.modules.last, thankYouContent.type == .completed else { return }
+        guard let deepLink = thankYouContent.metadata?.iosDeepLink, let url = URL(string: deepLink) else { return }
+
+        experiencesPublisher.triggerDeepLink(url: url)
+    }
+
     // MARK: - Experience Event Handling
 
     /**
@@ -98,7 +107,7 @@ internal class SurveyViewModel {
      */
     private func onSurveyOpened() {
         guard let surveyContent else { return }
-        let eventExperienceSeen = ExperienceSeenEvent(mobileContentID: surveyContent.id)
+        let eventExperienceSeen = ExperienceSurveySeenEvent(surveyID: surveyContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
     }
 
@@ -109,19 +118,30 @@ internal class SurveyViewModel {
      */
     func onSurveyDismissed() {
         guard let surveyContent else { return }
-        let eventExperienceDismissed = ExperienceDismissedEvent(mobileContentID: surveyContent.id)
+        let eventExperienceDismissed = ExperienceSurveyDismissedEvent(surveyID: surveyContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
     }
 
     /**
      Sends a socket event indicating that the experience has been completed.
      */
-    func onSurveyCompleted(answersPayload: [Payload]) {
+    func onSurveyCompleted() {
         guard let surveyContent  else { return }
-        let eventContentCompleted = ExperienceCompletedEvent(
-            mobileContentID: surveyContent.id,
-            feedback: answersPayload)
+        let eventContentCompleted = ExperienceSurveyCompletedEvent(surveyID: surveyContent.id)
         experiencesPublisher.publishExperienceEvent(eventContentCompleted)
+    }
+
+    /**
+     Sends a socket event indicating that the experience has been completed.
+     */
+    func onSurveySubmitted(answersPayload: [Payload]) {
+        guard let surveyContent  else { return }
+        let eventContentSubmitted = ExperienceSurveySubmittedEvent(
+            surveyID: surveyContent.id,
+            feedback: answersPayload)
+        experiencesPublisher.publishExperienceEvent(eventContentSubmitted)
+
+        onSurveyCompleted()
     }
 
 }

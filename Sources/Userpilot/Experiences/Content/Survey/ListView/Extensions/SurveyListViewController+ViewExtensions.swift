@@ -69,7 +69,7 @@ internal extension SurveyListViewController {
                 }
             }
 
-            surveyViewModel.onSurveyCompleted(answersPayload: answersPayload)
+            surveyViewModel.onSurveySubmitted(answersPayload: answersPayload)
             showThankYouMessage()
         }
     }
@@ -99,8 +99,8 @@ internal extension SurveyListViewController {
 
     /// trigger thank you message & close the experience
     func showThankYouMessage() {
-        surveyViewModel.showThankYouMessage()
         closeExperience()
+        surveyViewModel.showThankYouMessage()
     }
 }
 

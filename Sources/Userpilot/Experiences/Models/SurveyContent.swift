@@ -25,6 +25,7 @@ internal struct SurveyContent: Codable {
     var screens: [String]
     var screenType: ScreenType
     var localeCode: String
+    var timeDelay: Int
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -36,6 +37,7 @@ internal struct SurveyContent: Codable {
         case screens
         case screenType = "screen_type"
         case localeCode = "locale_code"
+        case timeDelay = "time_delay"
     }
 
     var baseThemeID: Int {

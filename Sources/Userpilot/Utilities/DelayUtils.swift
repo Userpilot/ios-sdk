@@ -39,7 +39,7 @@ class DelayUtils {
     static func cancelDelay() {
         delayTask?.cancel()
     }
-    
+
     static func hasPendingContent() -> Bool {
         return delayTask != nil
     }

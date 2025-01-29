@@ -31,9 +31,17 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
         return thankYouView
     }()
 
+    /// The action button at the bottom of the view.
+    private lazy var actionButton: UPButtonView = {
+        let button = UPButtonView()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(greaterThanOrEqualToConstant: UPButtonView.buttonHeight).isActive = true
+        return button
+    }()
+
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, thankYouView])
+        let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, thankYouView, actionButton])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
@@ -85,8 +93,17 @@ internal extension ThankYouBottomSheetViewController {
     /// content displayed in the bottom sheet is kept up-to-date.
     func bindThankYouView() {
         thankYouView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
-        thankYouView.actionButtonClicked = {[weak self] deeplink in
-            self?.actionButtonClicked(deeplink)
+//        thankYouView.actionButtonClicked = {[weak self] deeplink in
+//            self?.actionButtonClicked(deeplink)
+//            self?.dismiss(animated: true)
+//        }
+
+        // Set up action button with appropriate action and style
+        actionButton.setupViews(
+            title: surveyStep.buttonLabel ?? "Next",
+            theme: surveyTheme
+        ) { [weak self] _ in
+            self?.actionButtonClicked(self?.surveyStep.metadata?.iosDeepLink)
             self?.dismiss(animated: true)
         }
     }

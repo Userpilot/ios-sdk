@@ -136,11 +136,11 @@ internal class ExperienceViewModel {
             totalSteps: mobileContent.steps.count
         )
 
-        let eventExperienceSeen = ExperienceSeenEvent(mobileContentID: mobileContent.id)
+        let eventExperienceSeen = ExperienceFlowSeenEvent(flowID: mobileContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
 
         let eventStepSeen = ExperienceStepSeenEvent(
-            mobileContentID: mobileContent.id,
+            flowID: mobileContent.id,
             stepID: step.id)
         experiencesPublisher.publishExperienceEvent(eventStepSeen)
     }
@@ -170,12 +170,12 @@ internal class ExperienceViewModel {
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
         let eventStepCompleted = ExperienceStepCompletedEvent(
-            mobileContentID: mobileContent.id,
+            flowID: mobileContent.id,
             stepID: step.id)
         experiencesPublisher.publishExperienceEvent(eventStepCompleted)
 
-        let eventContentCompleted = ExperienceCompletedEvent(
-            mobileContentID: mobileContent.id,
+        let eventContentCompleted = ExperienceFlowCompletedEvent(
+            flowID: mobileContent.id,
             hasDeepLinkContent: hasDeepLink)
         experiencesPublisher.publishExperienceEvent(eventContentCompleted)
     }
@@ -213,12 +213,12 @@ internal class ExperienceViewModel {
         )
 
         let eventStepCompleted = ExperienceStepCompletedEvent(
-            mobileContentID: flowContent.id,
+            flowID: flowContent.id,
             stepID: oldStep.id)
         experiencesPublisher.publishExperienceEvent(eventStepCompleted)
 
         let eventStepSeen = ExperienceStepSeenEvent(
-            mobileContentID: flowContent.id,
+            flowID: flowContent.id,
             stepID: currentStep.id)
         experiencesPublisher.publishExperienceEvent(eventStepSeen)
     }
@@ -247,8 +247,8 @@ internal class ExperienceViewModel {
             state: .dismissed
         )
 
-        let eventExperienceDismissed = ExperienceDismissedEvent(
-            mobileContentID: flowContent.id,
+        let eventExperienceDismissed = ExperienceFlowDismissedEvent(
+            flowID: flowContent.id,
             stepId: step.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
     }

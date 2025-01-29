@@ -32,7 +32,7 @@ extension UPLikertView: UPExperienceView {
         guard let surveyStep = surveyStep else { return [:] }
 
         // Find the index of the last selected rating item (or -1 if none is selected)
-        let selectedIndex = ratingItems.lastIndex(where: { $0.isSelected }) ?? -1
+        let selectedIndex = (ratingItems.lastIndex(where: { $0.isSelected }) ?? -1) + 1
 
         // Return the answer as a dictionary with relevant data
         return [

@@ -38,7 +38,16 @@ extension UPMultipleChoiceView: UPExperienceView {
         }
 
         // Filter selected options and map their IDs
-        let selectedOptions = choices.filter { $0.isSelected == true }.map { $0.id }
+        var selectedOptions = choices.filter { $0.isSelected == true }.map { $0.value }
+
+        if let lastChoice = choices.last {
+            if lastChoice.id == ThemeHandler.DefaultValues.surveyOtherChoice && lastChoice.isSelected == true {
+                selectedOptions.dropLast()
+                if let otherOptionText = lastChoice.otherOptionText, !otherOptionText.isEmpty {
+                    selectedOptions.append(ThemeHandler.DefaultValues.surveyOtherChoice+otherOptionText)
+                }
+            }
+        }
 
         // Return the answer payload as a dictionary
         return [

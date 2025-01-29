@@ -107,7 +107,7 @@ internal class ThemeHandler: ThemeHandling {
 
         static let surveySingleTextDefaultCountryCode: String = "+1"
         static let surveySingleTextMaxLength: Int = 50
-        static let surveyOtherChoice: String = "Other"
+        static let surveyOtherChoice: String = "other"
     }
 
     /// Style names used for text formatting in themes.
