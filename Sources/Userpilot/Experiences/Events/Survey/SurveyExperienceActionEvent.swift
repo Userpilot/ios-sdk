@@ -21,6 +21,8 @@ import Foundation
 internal class SurveyExperienceActionEvent: SDKEvent {
     /// Experience ID
     let surveyID: Int
+    /// Has deeplink to open it
+    let hasDeepLinkContent: Bool
 
     /// The action type of the event.
     var name: String {
@@ -37,6 +39,10 @@ internal class SurveyExperienceActionEvent: SDKEvent {
         return toMap()
     }
 
+    var hasDeepLink: Bool {
+        return hasDeepLinkContent
+    }
+
     /// Creates a dictionary representation of the event data.
     ///
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
@@ -47,8 +53,9 @@ internal class SurveyExperienceActionEvent: SDKEvent {
         return params
     }
 
-    init(surveyID: Int) {
+    init(surveyID: Int, hasDeepLinkContent: Bool = false) {
         self.surveyID = surveyID
+        self.hasDeepLinkContent = hasDeepLinkContent
     }
 }
 

@@ -81,6 +81,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     }
 
     @objc private func buttonDismissClicked() {
+        actionButtonClicked(nil)
         dismiss(animated: true)
     }
 }
@@ -93,10 +94,6 @@ internal extension ThankYouBottomSheetViewController {
     /// content displayed in the bottom sheet is kept up-to-date.
     func bindThankYouView() {
         thankYouView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
-//        thankYouView.actionButtonClicked = {[weak self] deeplink in
-//            self?.actionButtonClicked(deeplink)
-//            self?.dismiss(animated: true)
-//        }
 
         // Set up action button with appropriate action and style
         actionButton.setupViews(
@@ -125,6 +122,7 @@ internal extension ThankYouBottomSheetViewController {
 
         buttonDismiss.addTarget(self, action: #selector(buttonDismissClicked), for: .touchUpInside)
     }
+
     /// Configures the general appearance and behavior of the slide-out experience,
     /// including the background color and step progress.
     func setupGeneralStyle() {

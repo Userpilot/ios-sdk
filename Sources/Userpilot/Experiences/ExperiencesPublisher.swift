@@ -43,7 +43,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func triggerDeepLink(url: URL)
 
     /// Show thank you message
-    func showThankYouMessage(_ surveyStep: SurveyStep, _ surveyTheme: SurveyTheme)
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
 }
 
 internal class ExperiencesPublisher: ExperiencesPublishing {
@@ -137,8 +137,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /*
      Show Thank you module
      */
-    func showThankYouMessage(_ surveyStep: SurveyStep, _ surveyTheme: SurveyTheme) {
-        triggerThankYouMessageView(surveyStep, surveyTheme)
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+        triggerThankYouMessageView(surveyContent, surveyTheme)
     }
 
     // MARK: - helper methods
@@ -299,17 +299,14 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                carouselContent = wasCarouselExperience()
+                carouselContent = wasFullScreenExperience()
                 analyticsPublisher.publishFakeReloadScreenEvent()
             }
         }
     }
 
     /**
-     Opens the carousel screen to display carousel content.
-
-     Presents the `CarouselExperienceViewController` with the active carousel content
-     if the conditions for displaying the carousel are met.
+     Opens the triggered flow.
      */
     private func openExperienceFlow() {
         performOn(.main) { [weak self] in
@@ -438,11 +435,11 @@ extension ExperiencesPublisher {
     }
 
     /// check if expereince was Carousel one
-    private func wasCarouselExperience() -> Bool {
+    private func wasFullScreenExperience() -> Bool {
         guard let topViewController = UIApplication.shared.fetchTopViewController() else {
             return false
         }
-        return topViewController.isKind(of: CarouselExperienceViewController.self)
+        return topViewController.isKind(of: CarouselExperienceViewController.self) || topViewController.isKind(of: SurveyListViewController.self)
     }
 }
 
@@ -501,17 +498,24 @@ extension ExperiencesPublisher {
     }
 
     /// Open thank you view as a bottom sheet
-    private func triggerThankYouMessageView(_ surveyStep: SurveyStep, _ surveyTheme: SurveyTheme) {
+    private func triggerThankYouMessageView(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
         performOn(.main) { [weak self] in
             guard
                 let self,
-                let topViewController = UIApplication.shared.fetchTopViewController()
+                let topViewController = UIApplication.shared.fetchTopViewController(),
+                let surveyStep = surveyContent.modules.last
             else { return }
 
             delay(0.5) {
                 let thankYouBottomSheetViewController = ThankYouBottomSheetViewController(
                     surveyStep: surveyStep, surveyTheme: surveyTheme)
                 thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
+                    let eventExperienceSeen = ExperienceSurveyCompletedEvent(
+                        surveyID: surveyContent.id,
+                        hasDeepLinkContent: deepLink != nil
+                    )
+                    self?.publishExperienceEvent(eventExperienceSeen)
+
                     if let deepLink, let url = URL(string: deepLink) {
                         self?.triggerDeepLink(url: url)
                     }

@@ -88,17 +88,7 @@ public class Userpilot: NSObject {
         storage.sessionDate = nil
 
         // Log the initialization of the SDK with the current version
-        config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
-
-        delay(2, closure: {
-//            if let topViewController = UIApplication.shared.fetchTopViewController() {
-//                let carouselExperienceViewController = SurveyListViewController()
-//                carouselExperienceViewController.modalPresentationStyle = .fullScreen
-//                delay(0.5) {
-//                    topViewController.present(carouselExperienceViewController, animated: true)
-//                }
-//            }
-        })
+        config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version()) 
     }
 
 }

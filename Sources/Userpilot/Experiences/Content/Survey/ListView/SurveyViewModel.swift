@@ -81,13 +81,11 @@ internal class SurveyViewModel {
 
     /// Trigger thank you module
     func showThankYouMessage() {
-        guard
-            let surveyContent,
-            let thankYouContent = surveyContent.modules.last,
-            let surveyTheme
-        else { return }
+        guard let surveyContent, let surveyTheme else { return }
         if surveyContent.modules.last?.type == .completed {
-            experiencesPublisher.showThankYouMessage(thankYouContent, surveyTheme)
+            experiencesPublisher.showThankYouMessage(surveyContent, surveyTheme)
+        } else {
+            onSurveyCompleted()
         }
     }
 
@@ -112,23 +110,27 @@ internal class SurveyViewModel {
     }
 
     /**
+     Sends a socket event indicating that a step has been completed.
+    */
+    func onSurveyCompleted() {
+        guard let surveyContent else { return }
+        let deeplink: String? = surveyContent.modules.last?.type == .completed ?
+            surveyContent.modules.last?.metadata?.androidDeepLink : nil
+
+        let eventExperienceSeen = ExperienceSurveyCompletedEvent(
+            surveyID: surveyContent.id,
+            hasDeepLinkContent: deeplink != nil
+        )
+        experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
+    }
+
+    /**
      Sends a socket event indicating that a step has been dismissed.
-     
-     - Parameter step: The step number that was dismissed.
-     */
+    */
     func onSurveyDismissed() {
         guard let surveyContent else { return }
         let eventExperienceDismissed = ExperienceSurveyDismissedEvent(surveyID: surveyContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
-    }
-
-    /**
-     Sends a socket event indicating that the experience has been completed.
-     */
-    func onSurveyCompleted() {
-        guard let surveyContent  else { return }
-        let eventContentCompleted = ExperienceSurveyCompletedEvent(surveyID: surveyContent.id)
-        experiencesPublisher.publishExperienceEvent(eventContentCompleted)
     }
 
     /**
@@ -140,8 +142,6 @@ internal class SurveyViewModel {
             surveyID: surveyContent.id,
             feedback: answersPayload)
         experiencesPublisher.publishExperienceEvent(eventContentSubmitted)
-
-        onSurveyCompleted()
     }
 
 }
