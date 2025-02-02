@@ -7,25 +7,25 @@
 
 import Foundation
 
-internal struct SurveyContentData: Codable {
-    var surveyContent: SurveyContent
+internal struct SurveyContentData: Decodable {
+    let surveyContent: SurveyContent
 
     private enum CodingKeys: String, CodingKey {
         case surveyContent = "surveys"
     }
 }
 
-internal struct SurveyContent: Codable {
-    var id: Int
-    var token: String
-    var type: SurveyType
+internal struct SurveyContent: Decodable {
+    let id: Int
+    let token: String
+    let type: SurveyType
     var modules: [SurveyStep]
-    var metadata: SurveyContentMetaData?
-    var surveyTheme: SurveyMobileTheme
-    var screens: [String]
-    var screenType: ScreenType
-    var localeCode: String
-    var timeDelay: Int
+    let metadata: SurveyContentMetaData?
+    let surveyTheme: SurveyMobileTheme
+    let screens: [String]
+    let screenType: ScreenType
+    let localeCode: String
+    let timeDelay: Int
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -50,9 +50,9 @@ internal struct SurveyContent: Codable {
 
 }
 
-internal struct SurveyMobileTheme: Codable {
-    var id: Int
-    var themeData: SurveyTheme?
+internal struct SurveyMobileTheme: Decodable {
+    let id: Int
+    let themeData: SurveyTheme?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -60,23 +60,23 @@ internal struct SurveyMobileTheme: Codable {
     }
 }
 
-internal struct SurveyContentMetaData: Codable {
-    var buttonLabel: String?
+internal struct SurveyContentMetaData: Decodable {
+    let buttonLabel: String?
 
     private enum CodingKeys: String, CodingKey {
         case buttonLabel = "cta_label"
     }
 }
 
-internal struct SurveyStep: Codable {
-    var id: Int
-    var isRequired: Bool?
-    var logic: [Logic]?
-    var metadata: Metadata?
-    var question: String?
-    var subheader: String?
-    var type: SurveyViewType
-    var buttonLabel: String?
+internal struct SurveyStep: Decodable {
+    let id: Int
+    let isRequired: Bool?
+    let logic: [SurveyLogic]?
+    let metadata: Metadata?
+    let question: String?
+    let subheader: String?
+    let type: SurveyViewType
+    let buttonLabel: String?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -90,41 +90,23 @@ internal struct SurveyStep: Codable {
     }
 }
 
-internal struct Logic: Codable {
-    var action: String?
-    var metadata: LogicMetadata?
-    var moduleId: Int?
-    var operand: String?
-
-    private enum CodingKeys: String, CodingKey {
-        case action
-        case metadata
-        case moduleId = "module_id"
-        case operand
-    }
-}
-
-internal struct LogicMetadata: Codable {
-    var value: String?
-}
-
-internal struct Metadata: Codable {
-    var highScore: String?
-    var lowScore: String?
-    var range: Int?
-    var type: LikertViewType?
-    var placeholder: String?
-    var choices: [Choice]?
-    var isMultiSelect: Bool?
-    var otherChoice: OtherChoice?
-    var enablePropertyCreation: Bool?
-    var inputType: SingleTextType?
-    var maxLength: Int?
-    var propertyName: String?
-    var buttonAction: String?
-    var iosDeepLink: String?
-    var androidDeepLink: String?
-    var enabled: Bool?
+internal struct Metadata: Decodable {
+    let highScore: String?
+    let lowScore: String?
+    let range: Int?
+    let type: LikertViewType?
+    let placeholder: String?
+    let choices: [Choice]?
+    let isMultiSelect: Bool?
+    let otherChoice: OtherChoice?
+    let enablePropertyCreation: Bool?
+    let inputType: SingleTextType?
+    let maxLength: Int?
+    let propertyName: String?
+    let buttonAction: String?
+    let iosDeepLink: String?
+    let androidDeepLink: String?
+    let enabled: Bool?
 
     private enum CodingKeys: String, CodingKey {
         case highScore = "high_score"
@@ -146,24 +128,24 @@ internal struct Metadata: Codable {
     }
 }
 
-internal struct Choice: Codable {
-    var id: String?
-    var value: String?
+internal struct Choice: Decodable {
+    let id: String?
+    let value: String?
     var isSelected: Bool? = false
     var otherOptionText: String?
 }
 
-internal struct OtherChoice: Codable {
-    var enabled: Bool?
-    var placeholder: String?
+internal struct OtherChoice: Decodable {
+    let enabled: Bool?
+    let placeholder: String?
 }
 
-internal enum SurveyType: String, Codable {
+internal enum SurveyType: String, Decodable {
     case list = "list"
     case stepView = "step_view"
 }
 
-internal enum SurveyViewType: String, Codable {
+internal enum SurveyViewType: String, Decodable {
     case likert = "likert_scale"
     case openText = "open_text"
     case multipleChoice = "multiple_choice"
@@ -171,14 +153,14 @@ internal enum SurveyViewType: String, Codable {
     case completed = "completed"
 }
 
-internal enum LikertViewType: String, Codable {
+internal enum LikertViewType: String, Decodable {
     case stars
     case hearts
     case emojis
     case numbers
 }
 
-internal enum SingleTextType: String, Codable {
+internal enum SingleTextType: String, Decodable {
     case phone = "phone_number"
     case number = "number"
     case date = "date"

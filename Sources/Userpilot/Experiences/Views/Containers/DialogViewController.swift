@@ -174,6 +174,16 @@ extension DialogViewController {
             dimmedView.backgroundColor = theme.backdropBackground
         }
     }
+
+    /// Customize the background color of the bottom sheet for `SurveyTheme`
+    func setBackgroundColor(_ theme: SurveyTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        mainContainerView.layer.cornerRadius = theme.borderRadius
+        dimmedView.isHidden = !theme.backdropEnabled
+        if theme.backdropEnabled {
+            dimmedView.backgroundColor = theme.backdropBackground
+        }
+    }
 }
 
 // MARK: - Update constraints on screen rotation

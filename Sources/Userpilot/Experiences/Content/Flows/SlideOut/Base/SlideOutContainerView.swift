@@ -69,7 +69,7 @@ internal class SlideOutContainerView: UIView {
         return stackView
     }()
 
-    weak var slideOutContainerViewDelegate: SlideOutContainerViewDelegate?
+    private weak var slideOutContainerViewDelegate: SlideOutContainerViewDelegate?
 
     private var scrollViewHeightConstraint: NSLayoutConstraint?
     private var storedConstraints: [NSLayoutConstraint] = []

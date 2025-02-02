@@ -227,6 +227,7 @@ internal extension BottomSheetViewController {
     /// Customize the background color of the bottom sheet for `SurveyTheme`
     func setBackgroundColor(_ theme: SurveyTheme) {
         mainContainerView.backgroundColor = theme.backgroundColor
+        mainContainerView.setTopCornerRadius(theme.borderRadius)
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground

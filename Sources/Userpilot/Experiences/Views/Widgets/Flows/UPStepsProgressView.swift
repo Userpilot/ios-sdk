@@ -140,6 +140,22 @@ internal class UPStepsProgressView: UIView {
         }
     }
 
+    /**
+     Sets up the view with the specified number of steps and styling data.
+
+     - Parameters:
+       - stepsCount: The total number of steps to display.
+       - theme: The experience theme used for styling the circles.
+     */
+    func setupView(stepsCount: Int, theme: SurveyTheme, isRTL: Bool = false) {
+        numberOfSteps = stepsCount
+        updateColors(from: theme)
+        setCurrentStep(0)
+        if isRTL {
+            transform = CGAffineTransform(scaleX: -1, y: 1)
+        }
+    }
+
     /// Updates the active and inactive circle colors based on the provided theme data.
     /// - Parameter style: The theme data used for color configuration.
     private func updateColors(from theme: ExperienceTheme) {
@@ -149,6 +165,15 @@ internal class UPStepsProgressView: UIView {
         inactiveCircleColor = theme.isStepsProgressColorManual ?
         theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :
         theme.backgroundColorAsString.invertColor().hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray
+    }
+
+    /// Updates the active and inactive circle colors based on the provided theme data.
+    /// - Parameter style: The theme data used for color configuration.
+    private func updateColors(from theme: SurveyTheme) {
+        activeCircleColor = theme.stepsProgressColor
+
+        inactiveCircleColor = theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(
+            opacity: "0.2")?.rgbaToColor() ?? .gray
     }
 
     /// Sets the current step, optionally animating the transition.

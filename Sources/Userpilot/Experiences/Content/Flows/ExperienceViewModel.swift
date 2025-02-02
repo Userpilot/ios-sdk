@@ -74,9 +74,12 @@ internal class ExperienceViewModel {
             bindData?(false)
             return
         }
-        self.flowContent = mobileContent
-        let baseTheme = themeHandler.getThemeById(mobileContent.baseThemeID)
 
+        // Setup content
+        self.flowContent = mobileContent
+
+        // Setup theme
+        let baseTheme = themeHandler.getThemeById(mobileContent.baseThemeID)
         mobileContent.steps.forEach { step in
             mergedTheme.append(
                 themeHandler.mergeExperienceThemes(
@@ -87,8 +90,8 @@ internal class ExperienceViewModel {
             )
         }
 
-        var shouldBindCarousel = true
         // Handle safe area region in case there is an issue with the data
+        var shouldBindCarousel = true
         if mobileContent.steps.isEmpty ||
             (mobileContent.type == .carousel && carouselTheme.isEmpty) ||
             (mobileContent.type == .slideout &&
@@ -96,6 +99,7 @@ internal class ExperienceViewModel {
             shouldBindCarousel = false
         }
 
+        // Bind data
         bindData?(shouldBindCarousel)
         if shouldBindCarousel {
             onExperienceOpened()

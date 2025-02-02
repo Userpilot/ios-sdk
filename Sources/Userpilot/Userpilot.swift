@@ -88,7 +88,7 @@ public class Userpilot: NSObject {
         storage.sessionDate = nil
 
         // Log the initialization of the SDK with the current version
-        config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version()) 
+        config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
     }
 
 }

@@ -38,14 +38,28 @@ extension UPSingleInputView: UPExperienceView {
     /// - `"value"`: The answer given by the user (formatted based on text field input).
     ///
     /// - Returns: A dictionary representing the answer in a key-value format.
-    func getAnswer() -> Payload {
-        guard let surveyStep = surveyStep else { return [:] }
+    func getAnswerPayload() -> Payload {
+        guard
+            let surveyStep = surveyStep,
+            let answer = getAnswer()
+        else { return nil }
 
         return [
             "id": surveyStep.id,
             "type": surveyStep.type,
-            "value": answer()
+            "value": answer
         ]
+    }
+
+    /// Retrieves the answer and returns it if it is not empty.
+    ///
+    /// This method calls the `answer()` function to retrieve the answer. If the
+    ///  answer is not empty, it returns the answer.
+    /// Otherwise, it returns `nil`.
+    ///
+    /// - Returns: An optional `Any?` representing the answer if it is not empty, or `nil` if the answer is empty.
+    func getAnswer() -> Any? {
+        return answer().isEmpty == false ? answer() : nil
     }
 
     // MARK: - Answer Formatting

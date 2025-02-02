@@ -52,41 +52,28 @@ internal extension SurveyListViewController {
             self?.processSurvey()
         }
         actionButton.updateEnableState(isEnabled: false)
-        delay(1) { [weak self] in
+        delay(0.5) { [weak self] in
             self?.checkActionButtonState()
         }
     }
 
     /// Process survey form answers.
     func processSurvey() {
-        if actionButton.isEnabled {
-            var answersPayload: [[String: Any]?] = []
+        guard actionButton.isEnabled else { return }
 
-            for index in 0..<containerView.subviews.count {
-                let childView = containerView.subviews[index]
-                if let experienceView = childView as? UPExperienceView {
-                    answersPayload.append(experienceView.getAnswer())
-                }
-            }
+        let answersPayload = containerView.subviews
+            .compactMap { ($0 as? UPExperienceView)?.getAnswerPayload() }
+            .compactMap { $0 != nil ? $0 : nil }
 
-            surveyViewModel.onSurveySubmitted(answersPayload: answersPayload)
-            showThankYouMessage()
-        }
+        surveyViewModel.onSurveySubmitted(answersPayload: answersPayload)
+        showThankYouMessage()
     }
 
-    /// Update button enabled state on views state updates
+    /// Update button enabled state based on views' validation status.
     func checkActionButtonState() {
-        var isValidForm = true
-
-        for index in 0..<containerView.subviews.count {
-            let childView = containerView.subviews[index]
-            if let experienceView = childView as? UPExperienceView {
-                if !isValidForm {
-                    break
-                }
-                isValidForm = experienceView.isValidAnswer()
-            }
-        }
+        let isValidForm = containerView.subviews
+            .compactMap { $0 as? UPExperienceView }
+            .allSatisfy { $0.isValidAnswer() }
 
         actionButton.updateEnableState(isEnabled: isValidForm)
     }

@@ -25,7 +25,7 @@ import UIKit
 
 // MARK: - CarouselData
 
-internal struct FlowContentData: Codable {
+internal struct FlowContentData: Decodable {
     let flowContent: FlowContent
 
     private enum CodingKeys: String, CodingKey {
@@ -33,7 +33,7 @@ internal struct FlowContentData: Codable {
     }
 }
 
-internal struct FlowContent: Codable {
+internal struct FlowContent: Decodable {
     let id: Int
     let token: String
     let type: ContentType
@@ -64,7 +64,7 @@ internal struct FlowContent: Codable {
 
 // MARK: - Configuration
 
-internal struct ContentMobileTheme: Codable {
+internal struct ContentMobileTheme: Decodable {
     let id: Int
     let themeData: ExperienceTheme?
 
@@ -76,7 +76,7 @@ internal struct ContentMobileTheme: Codable {
 
 // MARK: - Step
 
-internal struct Step: Codable {
+internal struct Step: Decodable {
     let id: Int
     let order: Int
     let sections: [Section]
@@ -92,13 +92,13 @@ internal struct Step: Codable {
 
 // MARK: - Section
 
-internal struct Section: Codable {
+internal struct Section: Decodable {
     let lines: [Line]
 }
 
 // MARK: - Line
 
-internal struct Line: Codable {
+internal struct Line: Decodable {
     let type: LineType
     let attrs: Attributes?
     let content: [Content]?
@@ -124,7 +124,7 @@ internal struct Line: Codable {
 
 // MARK: - Attributes
 
-internal struct Attributes: Codable {
+internal struct Attributes: Decodable {
     let textAlign: TextAlignmentType?
     let level: HeaderType?
     let src: String?
@@ -152,14 +152,14 @@ internal struct Attributes: Codable {
 
 // MARK: - ActualSize
 
-internal struct ActualSize: Codable {
+internal struct ActualSize: Decodable {
     let height: Int?
     let width: Int?
 }
 
 // MARK: - Style
 
-internal struct Style: Codable {
+internal struct Style: Decodable {
     let height: String?
     let width: String?
     let objectFit: String?
@@ -174,7 +174,7 @@ internal struct Style: Codable {
 
 // MARK: - Content
 
-internal struct Content: Codable {
+internal struct Content: Decodable {
     let text: String?
     let marks: [Mark]?
 
@@ -185,7 +185,7 @@ internal struct Content: Codable {
 
 // MARK: - Mark
 
-internal struct Mark: Codable {
+internal struct Mark: Decodable {
     let type: String?
     let attrs: MarkAttributes?
 
@@ -196,7 +196,7 @@ internal struct Mark: Codable {
 
 // MARK: - MarkAttributes
 
-internal struct MarkAttributes: Codable {
+internal struct MarkAttributes: Decodable {
     let fontSize: String?
     let href: String?
     let color: String?
@@ -209,7 +209,7 @@ internal struct MarkAttributes: Codable {
 
 // MARK: - ButtonAction
 
-internal struct ButtonAction: Codable {
+internal struct ButtonAction: Decodable {
     let buttonAction: String?
     let deepLink: String?
 
@@ -221,19 +221,19 @@ internal struct ButtonAction: Codable {
 
 // MARK: - CarouselType
 
-internal enum ScreenType: String, Codable {
+internal enum ScreenType: String, Decodable {
     case all
     case selected
 }
 
-internal enum ContentType: String, Codable {
+internal enum ContentType: String, Decodable {
     case carousel
     case slideout
 }
 
 // MARK: - LineType
 
-internal enum LineType: String, Codable {
+internal enum LineType: String, Decodable {
     case heading = "heading"
     case paragraph = "paragraph"
     case image = "image"
@@ -243,7 +243,7 @@ internal enum LineType: String, Codable {
 
 // MARK: - HeaderType
 
-internal enum HeaderType: String, Codable {
+internal enum HeaderType: String, Decodable {
     case headerOne = "h1"
     case headerTwo = "h2"
     case headerThree = "h3"
@@ -259,7 +259,7 @@ internal enum HeaderType: String, Codable {
 
 // MARK: - TextAlignmentType
 
-internal enum TextAlignmentType: String, Codable {
+internal enum TextAlignmentType: String, Decodable {
     case center
     case right
     case left

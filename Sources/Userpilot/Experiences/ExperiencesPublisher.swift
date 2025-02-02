@@ -371,7 +371,6 @@ extension ExperiencesPublisher {
                 self?.experienceContent = nil
                 return
             }
-            self.checkSurveyDelayConfiguration(content)
             self.analyticsPublisher.experiencePublished(content.id)
             switch content.type {
             case .list:
@@ -439,7 +438,8 @@ extension ExperiencesPublisher {
         guard let topViewController = UIApplication.shared.fetchTopViewController() else {
             return false
         }
-        return topViewController.isKind(of: CarouselExperienceViewController.self) || topViewController.isKind(of: SurveyListViewController.self)
+        return topViewController.isKind(
+            of: CarouselExperienceViewController.self) || topViewController.isKind(of: SurveyListViewController.self)
     }
 }
 

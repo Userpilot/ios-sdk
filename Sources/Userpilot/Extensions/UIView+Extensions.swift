@@ -31,3 +31,13 @@ internal func distanceFromViewToScreenTop(view: UIView) -> CGFloat? {
     let distance = viewFrameInWindow.minY
     return distance
 }
+
+extension UIView {
+
+    func setTopCornerRadius(_ radius: CGFloat) {
+        self.clipsToBounds = true
+        self.layer.cornerRadius = radius
+        self.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+    }
+
+}

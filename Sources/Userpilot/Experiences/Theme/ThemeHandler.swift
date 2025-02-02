@@ -317,7 +317,9 @@ internal class ThemeHandler: ThemeHandling {
                 primaryColor: surveyTheme?.general?.primaryColor
                     ?? baseTheme?.survey?.general?.primaryColor,
                 backgroundColor: surveyTheme?.general?.backgroundColor
-                    ?? baseTheme?.survey?.general?.backgroundColor
+                    ?? baseTheme?.survey?.general?.backgroundColor,
+                cornerRadius: surveyTheme?.general?.cornerRadius
+                    ?? baseTheme?.survey?.general?.cornerRadius
             ),
             font: SurveyFont(
                 fontFamily: surveyTheme?.font?.fontFamily
@@ -327,7 +329,6 @@ internal class ThemeHandler: ThemeHandling {
                 colorType: surveyTheme?.font?.colorType
                     ?? baseTheme?.survey?.font?.colorType
             ),
-            boxBorder: nil,
             progress: ProgressStyle(
                 color: surveyTheme?.progress?.color
                     ?? baseTheme?.survey?.progress?.color,

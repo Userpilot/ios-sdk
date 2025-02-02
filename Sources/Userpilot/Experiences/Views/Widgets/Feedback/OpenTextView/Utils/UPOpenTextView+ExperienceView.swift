@@ -20,7 +20,6 @@ extension UPOpenTextView: UPExperienceView {
     ///
     /// - Returns: A boolean indicating whether the answer is valid.
     func isValidAnswer() -> Bool {
-        // Check if the survey step is not required or the text field is not empty
         return surveyStep?.isRequired != true || !(textView.text?.isEmpty ?? true)
     }
 
@@ -32,16 +31,28 @@ extension UPOpenTextView: UPExperienceView {
     ///  an empty dictionary is returned.
     ///
     /// - Returns: A dictionary (`Payload`) representing the answer with keys "id", "type", and "value".
-    func getAnswer() -> Payload {
-        guard let surveyStep = surveyStep else {
-            return [:] // return an empty dictionary if surveyStep is nil
-        }
+    func getAnswerPayload() -> Payload {
+        guard
+            let surveyStep = surveyStep,
+            let answer = getAnswer()
+        else { return nil }
 
         return [
             "id": surveyStep.id as Any,
             "type": surveyStep.type as Any,
-            "value": textView.text ?? ""
+            "value": answer
         ]
+    }
+
+    /// Retrieves the answer from the `editText` field, if it contains text.
+    ///
+    /// This method checks if the `editText` field is not empty or `nil`. If it
+    /// contains any text, it returns the text as a `String`.
+    /// Otherwise, it returns `nil`.
+    ///
+    /// - Returns: A `String?` containing the text from the `editText` field, or `nil` if the text is empty or `nil`.
+    func getAnswer() -> Any? {
+        return textView.text?.isEmpty == false ? textView.text : nil
     }
 
 }

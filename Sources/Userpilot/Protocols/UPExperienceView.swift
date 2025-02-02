@@ -18,5 +18,10 @@ internal protocol UPExperienceView: AnyObject {
     /// Retrieves the user's input or answer from the experience view.
     /// - Returns: A `Payload` representing the user's answer.
     ///   `Payload` is defined as `[String: Any]?`.
-    func getAnswer() -> Payload
+    func getAnswerPayload() -> Payload
+
+    /// Retrieves the user's input or answer from the experience view.
+    /// - Returns: A `Payload` representing the user's answer.
+    ///   `Payload` is defined as `[String: Any]?`.
+    func getAnswer() -> Any?
 }

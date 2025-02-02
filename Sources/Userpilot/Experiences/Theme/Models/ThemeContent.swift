@@ -13,7 +13,8 @@ import UIKit
 
 // MARK: - ThemeResponse
 
-internal struct ThemeContent: Codable {
+// swiftlint:disable file_length
+internal struct ThemeContent: Decodable {
     let id: Int?
     let themeData: ThemeData?
 
@@ -25,7 +26,7 @@ internal struct ThemeContent: Codable {
 
 // MARK: - ThemeData
 
-internal struct ThemeData: Codable {
+internal struct ThemeData: Decodable {
     let carousel: ExperienceTheme?
     let slideOut: ExperienceTheme?
     let survey: SurveyTheme?
@@ -43,7 +44,7 @@ internal struct ThemeData: Codable {
 
 // MARK: - CarouselTheme
 
-internal struct ExperienceTheme: Codable {
+internal struct ExperienceTheme: Decodable {
     var button: ButtonStyle?
     var colors: ColorsStyle?
     var dismissContent: DismissContentStyle?
@@ -158,7 +159,7 @@ internal struct ExperienceTheme: Codable {
 
 // MARK: - BackdropStyle
 
-internal struct Backdrop: Codable {
+internal struct Backdrop: Decodable {
     let color: String?
     let enabled: Bool?
     let opacity: Int?
@@ -166,7 +167,7 @@ internal struct Backdrop: Codable {
 
 // MARK: - ButtonStyle
 
-internal struct ButtonStyle: Codable {
+internal struct ButtonStyle: Decodable {
     let backgroundColor: String?
     let labelColor: String?
     let borderColor: String?
@@ -184,7 +185,7 @@ internal struct ButtonStyle: Codable {
 
 // MARK: - ColorsStyle
 
-internal struct ColorsStyle: Codable {
+internal struct ColorsStyle: Decodable {
     let backgroundColor: String?
     let textColor: String?
     let titleColor: String?
@@ -198,7 +199,7 @@ internal struct ColorsStyle: Codable {
 
 // MARK: - DismissContentStyle
 
-internal struct DismissContentStyle: Codable {
+internal struct DismissContentStyle: Decodable {
     let color: String?
     let colorType: ColorType?
     let enabled: Bool?
@@ -211,7 +212,7 @@ internal struct DismissContentStyle: Codable {
 
 // MARK: - GeneralStyle
 
-internal struct GeneralStyle: Codable {
+internal struct GeneralStyle: Decodable {
     let contentAlignment: ContentAlignmentType?
     let fontFamily: String?
 
@@ -223,11 +224,11 @@ internal struct GeneralStyle: Codable {
 
 // MARK: - ProgressStyle
 
-internal struct ProgressStyle: Codable {
+internal struct ProgressStyle: Decodable {
     let color: String?
     let colorType: ColorType?
     let enabled: Bool?
-    let type: String?
+    let type: ProgressStyleType?
 
     private enum CodingKeys: String, CodingKey {
         case color, enabled
@@ -238,7 +239,7 @@ internal struct ProgressStyle: Codable {
 
 // MARK: - ContentAlignmentType
 
-internal enum ContentAlignmentType: String, Codable {
+internal enum ContentAlignmentType: String, Decodable {
     case middle
     case center
     case top
@@ -249,10 +250,9 @@ internal enum ContentAlignmentType: String, Codable {
 
 // MARK: - SurveyTheme
 
-internal struct SurveyTheme: Codable {
+internal struct SurveyTheme: Decodable {
     let general: SurveyGeneral?
     let font: SurveyFont?
-    let boxBorder: SurveyBoxBorder?
     let progress: ProgressStyle?
     let backdrop: Backdrop?
 
@@ -322,25 +322,54 @@ internal struct SurveyTheme: Codable {
         backdropColor.withOpacity(backdropOpacity)
     }
 
+    // progress
+    var isStepsProgressEnabled: Bool {
+        progress?.enabled ?? false
+    }
+
+    var isStepsProgressBallType: Bool {
+        progress?.type == .ball
+    }
+
+    var stepsProgressColor: UIColor {
+        progress?.color?.color ?? .black
+    }
+
+    var stepsProgressColorAsString: String {
+        progress?.color ?? ThemeHandler.DefaultValues.blackColor
+    }
+
+    // corner
+    var isBottomSheetSurvey: Bool {
+        general?.defaultPosition == .bottom
+    }
+
+    // Border
+    var borderRadius: CGFloat {
+        CGFloat(general?.cornerRadius ?? 12)
+    }
+
 }
 
 // MARK: - SurveyGeneral
 
-internal struct SurveyGeneral: Codable {
-    let defaultPosition: String?
+internal struct SurveyGeneral: Decodable {
+    let defaultPosition: SurveyPosition?
     let primaryColor: String?
     let backgroundColor: String?
+    let cornerRadius: Int?
 
     private enum CodingKeys: String, CodingKey {
         case defaultPosition = "default_position"
         case primaryColor = "primary_color"
         case backgroundColor = "background_color"
+        case cornerRadius = "corner_radius"
     }
 }
 
 // MARK: - SurveyFont
 
-internal struct SurveyFont: Codable {
+internal struct SurveyFont: Decodable {
     let fontFamily: String?
     let fontColor: String?
     let colorType: ColorType?
@@ -354,22 +383,17 @@ internal struct SurveyFont: Codable {
 
 // MARK: - SurveyBoxBorder
 
-internal struct SurveyBoxBorder: Codable {
-    let enabled: Bool?
-    let type: String?
-    let width: Int?
-    let shadowIntensity: Int?
-    let color: String?
-
-    private enum CodingKeys: String, CodingKey {
-        case enabled, type, width, color
-        case shadowIntensity = "shadow_intensity"
-    }
+internal enum SurveyPosition: String, Decodable {
+    case center
+    case bottom
 }
 
-// MARK: - SurveyBoxBorder
+internal enum ProgressStyleType: String, Decodable {
+    case bar
+    case ball
+}
 
-internal enum ColorType: String, Codable {
+internal enum ColorType: String, Decodable {
     case manual
     case automatic
 }

@@ -23,7 +23,7 @@ internal class SurveyViewModel {
     private let themeHandler: ThemeHandling
     private let storage: DataStoring
 
-    /// A mutable list of merged theme data for the carousel.
+    /// The merged theme data for the survey.
     private(set) var surveyTheme: SurveyTheme?
 
     /// Mobile content to display.
@@ -45,31 +45,40 @@ internal class SurveyViewModel {
     // MARK: - View Lifecycle
 
     /**
-     Starts the view model by retrieving and setting up the carousel content.
+     Starts the view model by retrieving and setting up the survey content.
      Initializes the theme for each step and binds data for UI updates.
      */
     func onStart() {
         guard
-            let surveyContent = experiencesPublisher.getActiveMobileContent()?.asSurveyContent()
+            var surveyContent = experiencesPublisher.getActiveMobileContent()?.asSurveyContent()
         else {
             bindData?(false)
             return
         }
-        self.surveyContent = surveyContent
-        let baseTheme = themeHandler.getThemeById(surveyContent.baseThemeID)
 
+        // Setup content
+        if let lastModule = surveyContent.modules.last,
+            lastModule.type == .completed,
+            lastModule.metadata?.enabled == false {
+            surveyContent.modules.dropLast()
+        }
+        self.surveyContent = surveyContent
+
+        // Setup theme
+        let baseTheme = themeHandler.getThemeById(surveyContent.baseThemeID)
         surveyTheme = themeHandler.mergeSurveyThemes(
             baseTheme, surveyContent.surveyTheme.themeData
         )
 
-        var shouldBindCarousel = true
+        // Handle safe area region in case there is an issue with the data
+        var shouldBindSurvey = true
         if surveyContent == nil || surveyContent.modules.isEmpty || surveyTheme == nil {
-            shouldBindCarousel = false
+            shouldBindSurvey = false
         }
 
-        bindData?(shouldBindCarousel)
-
-        if shouldBindCarousel {
+        // Bind data
+        bindData?(shouldBindSurvey)
+        if shouldBindSurvey {
             onSurveyOpened()
         }
     }
