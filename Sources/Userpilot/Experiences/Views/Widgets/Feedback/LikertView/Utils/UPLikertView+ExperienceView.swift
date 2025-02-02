@@ -34,7 +34,7 @@ extension UPLikertView: UPExperienceView {
         // Return the answer as a dictionary with relevant data
         return [
             "id": surveyStep.id,
-            "type": surveyStep.type,
+            "type": surveyStep.type.rawValue,
             "value": answer
         ]
     }

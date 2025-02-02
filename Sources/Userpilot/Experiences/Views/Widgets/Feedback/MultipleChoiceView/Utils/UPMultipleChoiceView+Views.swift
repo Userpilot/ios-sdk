@@ -36,6 +36,7 @@ internal extension UPMultipleChoiceView {
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 55
         tableView.isScrollEnabled = false
+        tableView.backgroundColor = .clear
         tableView.separatorStyle = .none
 
         // Add the table view to the view hierarchy.

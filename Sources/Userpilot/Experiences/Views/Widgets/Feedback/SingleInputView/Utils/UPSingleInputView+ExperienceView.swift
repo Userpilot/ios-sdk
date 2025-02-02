@@ -46,7 +46,7 @@ extension UPSingleInputView: UPExperienceView {
 
         return [
             "id": surveyStep.id,
-            "type": surveyStep.type,
+            "type": surveyStep.type.rawValue,
             "value": answer
         ]
     }

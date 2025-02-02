@@ -86,7 +86,7 @@ internal extension SurveyListViewController {
 
     /// trigger thank you message & close the experience
     func showThankYouMessage() {
-        closeExperience()
+        dismiss(animated: true)
         surveyViewModel.showThankYouMessage()
     }
 }

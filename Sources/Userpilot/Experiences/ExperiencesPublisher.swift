@@ -86,6 +86,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Manual experience not check screen
     private var isTriggerManualExperience = false
 
+    var isTriggeringThankYouMessage = false
+
     // MARK: - Initializer
 
     /**
@@ -152,7 +154,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Check experiences state, in case the screen events comes from on resume state after
     /// carousel expereince end
     func fetchAndResetCarouselContentState() -> Bool {
-        guard carouselContent else { return false }
+        if isTriggeringThankYouMessage { return true }
+        guard carouselContent, !isTriggeringThankYouMessage else { return false }
         carouselContent = false
         return true
     }
@@ -499,13 +502,16 @@ extension ExperiencesPublisher {
 
     /// Open thank you view as a bottom sheet
     private func triggerThankYouMessageView(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+        isTriggeringThankYouMessage = true
         performOn(.main) { [weak self] in
             guard
                 let self,
                 let topViewController = UIApplication.shared.fetchTopViewController(),
                 let surveyStep = surveyContent.modules.last
-            else { return }
-
+            else {
+                self?.isTriggeringThankYouMessage = false
+                return
+            }
             delay(0.5) {
                 let thankYouBottomSheetViewController = ThankYouBottomSheetViewController(
                     surveyStep: surveyStep, surveyTheme: surveyTheme)
@@ -519,6 +525,7 @@ extension ExperiencesPublisher {
                     if let deepLink, let url = URL(string: deepLink) {
                         self?.triggerDeepLink(url: url)
                     }
+                    self?.isTriggeringThankYouMessage = false
                 }
                 topViewController.presentBottomSheet(viewController: thankYouBottomSheetViewController)
             }

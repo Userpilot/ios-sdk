@@ -121,19 +121,19 @@ internal class SurveyContainerView: UIView {
 
     // MARK: - UI Setup
 
-    /**
-     Reset height fo Scroll View on screen rotation.
-     */
-    func resetContentHeight(_ size: CGSize) {
-        if let scrollViewHeightConstraint {
-            NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
-        }
-        scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
-            lessThanOrEqualToConstant:
-                screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
-        scrollViewHeightConstraint?.isActive = true
-        self.layoutIfNeeded()
-    }
+//    /**
+//     Reset height fo Scroll View on screen rotation.
+//     */
+//    func resetContentHeight(_ size: CGSize) {
+//        if let scrollViewHeightConstraint {
+//            NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+//        }
+//        scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
+//            lessThanOrEqualToConstant:
+//                screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+//        scrollViewHeightConstraint?.isActive = true
+//        self.layoutIfNeeded()
+//    }
 
     /**
      Sets up the layout and constraints for the view components.
@@ -230,6 +230,13 @@ internal class SurveyContainerView: UIView {
         bindSurveyViews()
     }
 
+    func bindStep(currentStep: Int) {
+        self.currentStep = currentStep
+        updateStepProgress()
+        bindSurveyViews()
+        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent().isRequired == false)
+    }
+
     // MARK: - Component Setup
 
     /**
@@ -251,7 +258,12 @@ internal class SurveyContainerView: UIView {
             title: surveyContent.metadata?.buttonLabel ?? "Next",
             theme: theme
         ) { [weak self] _ in
-            // self?.processSurvey()
+            self?.actionButton.isEnabled = false
+            if self?.getCurrentStepSurveyContent().type == SurveyViewType.completed {
+                self?.surveyContainerViewDelegate?.onAction(nil, nil)
+            }else {
+                self?.getAnswerAndMoveToNextStep()
+            }
         }
         actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent().isRequired == false)
     }

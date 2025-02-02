@@ -29,8 +29,12 @@ internal class SurveyViewModel {
     /// Mobile content to display.
     private(set) var surveyContent: SurveyContent?
 
+    private(set) var currentStep = 0
+
     /// closure to observe the binding state of the content
     var bindData: ((Bool) -> Void)?
+    var closeSurvey: (() -> Void)?
+    var bindNextSurveyStep: (() -> Void)?
 
     // MARK: - Initializers
 
@@ -151,6 +155,59 @@ internal class SurveyViewModel {
             surveyID: surveyContent.id,
             feedback: answersPayload)
         experiencesPublisher.publishExperienceEvent(eventContentSubmitted)
+    }
+
+    /** Logic region, fetch and understand Survey logic, notify screen with next survey step */
+    private func isLastStep() -> Bool {
+        guard let surveyContent else { return false }
+        return currentStep == surveyContent.modules.count - 1
+    }
+
+    // Return current survey step content
+    private func getCurrentStepSurveyContent() -> SurveyStep? {
+        guard let surveyContent else { return nil }
+        return surveyContent.modules[currentStep]
+    }
+
+    func moveToNextSurveyStep(answer: Any?, answerPayload: Payload) {
+        guard let surveyStep = getCurrentStepSurveyContent() else { return }
+        // We are on the last step, close the survey
+        if isLastStep(), surveyStep.type == .completed {
+            closeSurvey?()
+            return
+        }
+
+        // Submit the answer payload in all cases while we are not on the thank you view
+//        if let answer = answer {
+//            onSurveyModuleSubmitted(answerPayload)
+//        } else {
+//            onSurveyModuleSkipped()
+//        }
+
+        // If we are on the last question, close the survey after submitting the answer
+        if isLastStep() {
+            closeSurvey?()
+            return
+        }
+
+        // Get the next step index based on the logic handler
+//        let nextStep = SurveyLogicHandler.getNextQuestionIndex(
+//            currentStep: currentStep,
+//            logic: surveyContent.modules[currentStep].logic ?? [],
+//            answer: answer,
+//            modules: surveyContent.modules
+//        )
+
+        // Determine whether to move to the next question or to a specified step
+        // currentStep = (nextStep == -1) ? (currentStep + 1) : nextStep
+
+        // Update seen state for the next module
+        if getCurrentStepSurveyContent()?.type != .completed {
+            // onSurveyStepSeen()
+        }
+
+        // Update LiveData to notify that the next question is ready
+        bindNextSurveyStep?()
     }
 
 }

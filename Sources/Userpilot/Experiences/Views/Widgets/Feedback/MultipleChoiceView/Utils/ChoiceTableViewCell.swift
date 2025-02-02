@@ -36,8 +36,9 @@ internal class ChoiceTableViewCell: UITableViewCell {
     // MARK: - Setup Cell
     private func setupCell() {
         // Add containerView to contentView
+        backgroundColor = .clear
         contentView.addSubview(containerView)
-
+        contentView.backgroundColor = .clear
         // Configure containerView
         containerView.layer.cornerRadius = 8
         containerView.layer.borderWidth = 1
@@ -83,6 +84,7 @@ internal class ChoiceTableViewCell: UITableViewCell {
         textField.borderStyle = .none
         textField.isUserInteractionEnabled = false
         textField.isHidden = true
+        textField.backgroundColor = .clear
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 8),
             textField.centerYAnchor.constraint(equalTo: iconImageView.centerYAnchor),

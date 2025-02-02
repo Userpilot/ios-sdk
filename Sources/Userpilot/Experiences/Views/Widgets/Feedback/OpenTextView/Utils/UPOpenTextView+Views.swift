@@ -37,6 +37,7 @@ internal extension UPOpenTextView {
         textView.translatesAutoresizingMaskIntoConstraints = false
         textView.font = UIFont.systemFont(ofSize: 14)
         textView.delegate = self
+        textView.backgroundColor = .clear
         textViewContainer.addSubview(textView)
 
         NSLayoutConstraint.activate([

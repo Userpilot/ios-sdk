@@ -73,6 +73,7 @@ extension UPSingleInputView {
         textField.layer.borderColor = UIColor.grayCA.cgColor
         textField.returnKeyType = .done
         textField.delegate = self
+        textField.backgroundColor = .clear
         textField.addTarget(self, action: #selector(textDidChange(_:)), for: .editingChanged)
         addSubview(textField)
 

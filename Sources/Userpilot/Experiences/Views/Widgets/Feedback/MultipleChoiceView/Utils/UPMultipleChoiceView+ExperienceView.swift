@@ -61,8 +61,8 @@ extension UPMultipleChoiceView: UPExperienceView {
 
         // Construct and return the answer payload
         return [
-            "id": surveyStep.id as Any,
-            "type": surveyStep.type as Any,
+            "id": surveyStep.id,
+            "type": surveyStep.type.rawValue,
             "value": selectedOptions
         ]
     }
