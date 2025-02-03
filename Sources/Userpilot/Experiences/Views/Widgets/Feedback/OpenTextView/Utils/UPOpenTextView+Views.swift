@@ -22,8 +22,8 @@ internal extension UPOpenTextView {
         titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
-            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20)
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative)
         ])
 
         // TextView Container setup
@@ -71,8 +71,8 @@ internal extension UPOpenTextView {
         // TextViewContainer constraints
         NSLayoutConstraint.activate([
             textViewContainer.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 16),
-            textViewContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            textViewContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            textViewContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            textViewContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
             textViewContainer.heightAnchor.constraint(equalToConstant: 80)
         ])
 

@@ -51,10 +51,7 @@ internal extension SurveyListViewController {
         ) { [weak self] _ in
             self?.processSurvey()
         }
-        actionButton.updateEnableState(isEnabled: false)
-        delay(0.5) { [weak self] in
-            self?.checkActionButtonState()
-        }
+        actionButton.updateEnableState(isEnabled: surveyViewModel.isAnyQuestionRequired())
     }
 
     /// Process survey form answers.
@@ -65,7 +62,7 @@ internal extension SurveyListViewController {
             .compactMap { ($0 as? UPExperienceView)?.getAnswerPayload() }
             .compactMap { $0 != nil ? $0 : nil }
 
-        surveyViewModel.onSurveySubmitted(answersPayload: answersPayload)
+        surveyViewModel.onSurveyListSubmitted(answersPayload: answersPayload)
         showThankYouMessage()
     }
 
@@ -103,7 +100,7 @@ internal extension SurveyListViewController {
         surveyContent.modules.forEach { surveryStep in
             switch surveryStep.type {
             case .likert:
-                let likertView = UPLikertView()
+                let likertView = UPLikertView(margin: 20)
                 likertView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
@@ -112,7 +109,7 @@ internal extension SurveyListViewController {
                 containerView.addArrangedSubview(likertView)
 
             case .multipleChoice:
-                let multipleChoiceView = UPMultipleChoiceView()
+                let multipleChoiceView = UPMultipleChoiceView(margin: 20)
                 multipleChoiceView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
@@ -121,7 +118,7 @@ internal extension SurveyListViewController {
                 containerView.addArrangedSubview(multipleChoiceView)
 
             case .openText:
-                let openTextView = UPOpenTextView()
+                let openTextView = UPOpenTextView(margin: 20)
                 openTextView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
@@ -130,7 +127,7 @@ internal extension SurveyListViewController {
                 containerView.addArrangedSubview(openTextView)
 
             case .singleInput:
-                let singleInputView = UPSingleInputView()
+                let singleInputView = UPSingleInputView(margin: 20)
                 singleInputView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,

@@ -53,7 +53,16 @@ internal class UPSingleInputView: UIView {
     /// Delegate for handling view state changes
     internal weak var viewStateProtocol: ViewStateDelegate?
 
+    // View Margin left, right
+    internal var margin = CGFloat(0)
+
     // MARK: - Initializers
+
+    init(margin: CGFloat) {
+        self.margin = margin
+        super.init(frame: .zero)
+        setupView()
+    }
 
     /// Initializes the view with a specified frame.
     override init(frame: CGRect) {

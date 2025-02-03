@@ -75,7 +75,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     /// Sets up the content view and binds the view model once the view is loaded.
     override func viewDidLoad() {
         super.viewDidLoad()
-        setContent(contentStackView)
+        setContent(content: contentStackView)
         setupCloseButton()
         bindThankYouView()
     }

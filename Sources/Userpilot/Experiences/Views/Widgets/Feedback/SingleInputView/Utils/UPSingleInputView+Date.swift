@@ -21,7 +21,8 @@ extension UPSingleInputView {
             guard let self, let date else { return }
             let formatter = DateFormatter()
             formatter.dateFormat = "dd/MM/yyyy"
-            textField.text = formatter.string(from: date)
+            self.textField.text = formatter.string(from: date)
+            self.viewStateProtocol?.onViewStateChanged(isValid: self.isValidAnswer())
         }
     }
 }

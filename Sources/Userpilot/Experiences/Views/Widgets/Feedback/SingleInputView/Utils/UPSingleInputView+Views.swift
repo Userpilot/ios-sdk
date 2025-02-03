@@ -101,12 +101,12 @@ extension UPSingleInputView {
         // Apply constraints for the layout
         NSLayoutConstraint.activate([
             titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
-            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
 
             textField.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 16),
-            textField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            textField.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            textField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            textField.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
             textField.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             calendarIconButton.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -16),

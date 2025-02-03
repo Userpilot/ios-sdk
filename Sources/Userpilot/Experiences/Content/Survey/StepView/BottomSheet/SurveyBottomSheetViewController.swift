@@ -1,22 +1,21 @@
 //
-//  SurveyDialogViewController.swift
+//  SurveyBottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 30/01/2025.
+//  Created by Motasem Hamed on 03/02/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  A specialized view controller that displays a survey dialog experience,
+//  A specialized view controller that displays a survey bottom sheet experience,
 //  controlled by an `SurveyViewModel`. It allows dynamic content rendering,
 //  user actions (like closing or triggering deep links), and customizable themes.
 //  The view controller handles the user interface of the bottom sheet and binds the
 //  experience state from the view model to update content and handle actions.
 //
 
-import Foundation
 import UIKit
 
-internal class SurveyDialogViewController: DialogViewController {
+internal class SurveyBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Elements
     /// Container view that holds the slide-out content
@@ -52,7 +51,6 @@ internal class SurveyDialogViewController: DialogViewController {
         setContent(content: surveyContainerView, withoutMargin: true)
     }
 
-    /// Handle screen rotation
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
         coordinator.animate(alongsideTransition: { [weak self] _ in
@@ -64,7 +62,7 @@ internal class SurveyDialogViewController: DialogViewController {
 }
 
 // MARK: - View Model Binding
-extension SurveyDialogViewController {
+extension SurveyBottomSheetViewController {
 
     /// Binds the view model data to the view.
     func bindViewModel() {
@@ -76,7 +74,7 @@ extension SurveyDialogViewController {
                 let surveyContent = self.surveyViewModel.surveyContent,
                 let surveyTheme = self.surveyViewModel.surveyTheme
             else {
-                self?.dismissDialog()
+                self?.dismissBottomSheet()
                 return
             }
             self.setupGeneralStyle()
@@ -91,13 +89,12 @@ extension SurveyDialogViewController {
 
         // trigger bind next survey step
         surveyViewModel.bindNextSurveyStep = { [weak self] in
-            guard let self = self else { return }
-            self.surveyContainerView.bindStep(currentStep: self.surveyViewModel.currentStep ?? 0)
+            self?.surveyContainerView.bindStep(currentStep: self?.surveyViewModel.currentStep ?? 0)
         }
 
         // triger close survey
         surveyViewModel.closeSurvey = { [weak self] in
-            self?.dismissDialog()
+            self?.dismissBottomSheet()
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
@@ -113,19 +110,19 @@ extension SurveyDialogViewController {
 
 // MARK: - UPExperience
 
-extension SurveyDialogViewController: UPExperience {
+extension SurveyBottomSheetViewController: UPExperience {
     func triggerCloseExpereince() {
-        dismissDialog()
+        dismissBottomSheet()
     }
 }
 
 // MARK: - SurveyContainerViewDelegate
 
-extension SurveyDialogViewController: SurveyContainerViewDelegate {
+extension SurveyBottomSheetViewController: SurveyContainerViewDelegate {
 
     func onClose() {
         surveyViewModel.onSurveyDismissed()
-        dismissDialog()
+        dismissBottomSheet()
     }
 
     func onAction(_ answer: Any?, _ answerPayload: Payload) {

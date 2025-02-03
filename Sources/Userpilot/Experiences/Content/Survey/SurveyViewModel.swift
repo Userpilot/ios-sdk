@@ -26,9 +26,10 @@ internal class SurveyViewModel {
     /// The merged theme data for the survey.
     private(set) var surveyTheme: SurveyTheme?
 
-    /// Mobile content to display.
+    /// Survey content to display.
     private(set) var surveyContent: SurveyContent?
 
+    /// Track current survey step
     private(set) var currentStep = 0
 
     /// closure to observe the binding state of the content
@@ -103,12 +104,17 @@ internal class SurveyViewModel {
     }
 
     /// Triggered the deep link from thank you message.
-    func onDeepLinkTriggered() {
+    private func onDeepLinkTriggered() {
         guard let surveyContent, let surveyTheme else { return }
         guard let thankYouContent = surveyContent.modules.last, thankYouContent.type == .completed else { return }
         guard let deepLink = thankYouContent.metadata?.iosDeepLink, let url = URL(string: deepLink) else { return }
 
         experiencesPublisher.triggerDeepLink(url: url)
+    }
+
+    func isAnyQuestionRequired() -> Bool {
+        guard let surveyContent else { return false }
+        return surveyContent.modules.contains { $0.isRequired == true }
     }
 
     // MARK: - Experience Event Handling
@@ -120,6 +126,10 @@ internal class SurveyViewModel {
         guard let surveyContent else { return }
         let eventExperienceSeen = ExperienceSurveySeenEvent(surveyID: surveyContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
+
+        if surveyContent.type == .step {
+            onSurveyStepSeen()
+        }
     }
 
     /**
@@ -141,20 +151,62 @@ internal class SurveyViewModel {
      Sends a socket event indicating that a step has been dismissed.
     */
     func onSurveyDismissed() {
-        guard let surveyContent else { return }
-        let eventExperienceDismissed = ExperienceSurveyDismissedEvent(surveyID: surveyContent.id)
-        experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
+        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        if surveyContent.type == .list {
+            let eventExperienceDismissed = ExperienceSurveyDismissedEvent(surveyID: surveyContent.id)
+            experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
+        } else {
+            let eventStepDismissed = ExperienceSurveyStepDismissedEvent(
+                surveyID: surveyContent.id,
+                moduleID: surveyStep.id,
+                type: surveyStep.type.rawValue)
+            experiencesPublisher.publishExperienceEvent(eventStepDismissed)
+        }
+    }
+
+    private func onSurveyStepSeen() {
+        guard let surveyStep = getCurrentStepSurveyContent() else { return }
+        let eventStepSeen = ExperienceSurveyStepSeenEvent(
+            surveyID: surveyStep.id,
+            moduleID: surveyStep.id,
+            type: surveyStep.type.rawValue
+        )
+        experiencesPublisher.publishExperienceEvent(eventStepSeen)
     }
 
     /**
      Sends a socket event indicating that the experience has been completed.
      */
-    func onSurveySubmitted(answersPayload: [Payload]) {
+    func onSurveyListSubmitted(answersPayload: [Payload]) {
         guard let surveyContent  else { return }
         let eventContentSubmitted = ExperienceSurveySubmittedEvent(
             surveyID: surveyContent.id,
-            feedback: answersPayload)
+            feedback: answersPayload
+        )
         experiencesPublisher.publishExperienceEvent(eventContentSubmitted)
+    }
+
+    private func onSurveyModuleSubmitted(_ answersPayload: Payload) {
+        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+
+        guard let surveyStep = getCurrentStepSurveyContent() else { return }
+        let eventStepSubmitted = ExperienceSurveyStepSubmittedEvent(
+            surveyID: surveyContent.id,
+            moduleID: surveyStep.id,
+            type: surveyStep.type.rawValue,
+            feedback: answersPayload?["value"]
+        )
+        experiencesPublisher.publishExperienceEvent(eventStepSubmitted)
+    }
+
+    private func onSurveyModuleSkipped() {
+        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        let eventStepSkipped = ExperienceSurveyStepSkippedEvent(
+            surveyID: surveyContent.id,
+            moduleID: surveyStep.id,
+            type: surveyStep.type.rawValue
+        )
+        experiencesPublisher.publishExperienceEvent(eventStepSkipped)
     }
 
     /** Logic region, fetch and understand Survey logic, notify screen with next survey step */
@@ -169,41 +221,44 @@ internal class SurveyViewModel {
         return surveyContent.modules[currentStep]
     }
 
-    func moveToNextSurveyStep(answer: Any?, answerPayload: Payload) {
-        guard let surveyStep = getCurrentStepSurveyContent() else { return }
+    func moveToNextSurveyStep(_ answer: Any?, _ answerPayload: Payload) {
+        guard  let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
         // We are on the last step, close the survey
         if isLastStep(), surveyStep.type == .completed {
+            onDeepLinkTriggered()
+            onSurveyCompleted()
             closeSurvey?()
             return
         }
 
         // Submit the answer payload in all cases while we are not on the thank you view
-//        if let answer = answer {
-//            onSurveyModuleSubmitted(answerPayload)
-//        } else {
-//            onSurveyModuleSkipped()
-//        }
+        if let answer = answer {
+            onSurveyModuleSubmitted(answerPayload)
+        } else {
+            onSurveyModuleSkipped()
+        }
 
         // If we are on the last question, close the survey after submitting the answer
         if isLastStep() {
+            onSurveyCompleted()
             closeSurvey?()
             return
         }
 
         // Get the next step index based on the logic handler
-//        let nextStep = SurveyLogicHandler.getNextQuestionIndex(
-//            currentStep: currentStep,
-//            logic: surveyContent.modules[currentStep].logic ?? [],
-//            answer: answer,
-//            modules: surveyContent.modules
-//        )
+        let nextStep = SurveyLogicHandler.getNextQuestionIndex(
+            currentStep: currentStep,
+            stepLogic: surveyContent.modules[currentStep].logic ?? [],
+            answer: answer,
+            surveySteps: surveyContent.modules
+        )
 
         // Determine whether to move to the next question or to a specified step
-        // currentStep = (nextStep == -1) ? (currentStep + 1) : nextStep
+        currentStep = (nextStep == -1) ? (currentStep + 1) : nextStep
 
         // Update seen state for the next module
         if getCurrentStepSurveyContent()?.type != .completed {
-            // onSurveyStepSeen()
+            onSurveyStepSeen()
         }
 
         // Update LiveData to notify that the next question is ready

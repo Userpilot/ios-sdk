@@ -36,7 +36,7 @@ internal class ExperienceViewModel {
         return mergedTheme.first?.slideOut ?? ExperienceTheme()
     }
 
-    /// Mobile content to display.
+    /// Flow content to display.
     private(set) var flowContent: FlowContent?
     var slideOutContent: Step? {
         flowContent?.steps.first
@@ -143,7 +143,7 @@ internal class ExperienceViewModel {
         let eventExperienceSeen = ExperienceFlowSeenEvent(flowID: mobileContent.id)
         experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
 
-        let eventStepSeen = ExperienceStepSeenEvent(
+        let eventStepSeen = ExperienceFlowStepSeenEvent(
             flowID: mobileContent.id,
             stepID: step.id)
         experiencesPublisher.publishExperienceEvent(eventStepSeen)
@@ -173,7 +173,7 @@ internal class ExperienceViewModel {
 
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
-        let eventStepCompleted = ExperienceStepCompletedEvent(
+        let eventStepCompleted = ExperienceFlowStepCompletedEvent(
             flowID: mobileContent.id,
             stepID: step.id)
         experiencesPublisher.publishExperienceEvent(eventStepCompleted)
@@ -216,12 +216,12 @@ internal class ExperienceViewModel {
             totalSteps: flowContent.steps.count
         )
 
-        let eventStepCompleted = ExperienceStepCompletedEvent(
+        let eventStepCompleted = ExperienceFlowStepCompletedEvent(
             flowID: flowContent.id,
             stepID: oldStep.id)
         experiencesPublisher.publishExperienceEvent(eventStepCompleted)
 
-        let eventStepSeen = ExperienceStepSeenEvent(
+        let eventStepSeen = ExperienceFlowStepSeenEvent(
             flowID: flowContent.id,
             stepID: currentStep.id)
         experiencesPublisher.publishExperienceEvent(eventStepSeen)

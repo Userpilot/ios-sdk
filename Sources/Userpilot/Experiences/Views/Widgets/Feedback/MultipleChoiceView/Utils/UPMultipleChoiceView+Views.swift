@@ -24,8 +24,8 @@ internal extension UPMultipleChoiceView {
         titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
-            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20)
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative)
         ])
 
         // Configure the table view properties.
@@ -45,8 +45,8 @@ internal extension UPMultipleChoiceView {
         // Apply layout constraints to the table view.
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 8),
-            tableView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            tableView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            tableView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            tableView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
             tableView.bottomAnchor.constraint(equalTo: bottomAnchor),
             tableView.heightAnchor.constraint(greaterThanOrEqualToConstant: 110)
         ])

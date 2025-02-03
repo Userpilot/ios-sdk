@@ -24,7 +24,6 @@ internal class UPLikertView: UIView {
     internal let collectionView: UICollectionView = {
         let layout = CenteredCollectionViewLayout()
         layout.scrollDirection = .vertical
-        layout.minimumLineSpacing = 10
         layout.minimumInteritemSpacing = 8
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -61,7 +60,17 @@ internal class UPLikertView: UIView {
     // View state delegate for managing view state changes
     internal weak var viewStateProtocol: ViewStateDelegate?
 
+    // View Margin left, right
+    internal var margin = CGFloat(0)
+
     // MARK: - Initializers
+
+    init(margin: CGFloat) {
+        self.margin = margin
+        super.init(frame: .zero)
+        setupViewHierarchy()
+        configureCollectionView()
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -76,7 +85,10 @@ internal class UPLikertView: UIView {
     // MARK: - Setup View
 
     /// Set up the view with the survey step, survey theme, and view state protocol.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, viewStateProtocol: ViewStateDelegate) {
+    func setupView(surveyStep: SurveyStep,
+                   surveyTheme: SurveyTheme,
+                   isDialog: Bool = false,
+                   viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme
         self.viewStateProtocol = viewStateProtocol
@@ -91,7 +103,7 @@ internal class UPLikertView: UIView {
         ratingItems = RatingItem.fillList(surveyStep: surveyStep)
 
         // Calculate and set the item width based on screen width and number of items
-        calculateItemWidth()
+        calculateItemWidth(isDialog: isDialog)
 
         // Reload the collection view data
         collectionView.reloadData()
@@ -100,26 +112,28 @@ internal class UPLikertView: UIView {
     // MARK: - Item Width Calculation
 
     /// Calculates the width of each item in the Likert scale collection view based on screen width and number of items.
-    private func calculateItemWidth() {
+    private func calculateItemWidth(isDialog: Bool) {
         // Handling the case where there are exactly 10 items
+        let margin = CGFloat(40 + (isDialog ? 40 : 0))
         if ratingItems.count == 10 {
-            let screenWidth = UIScreen.main.bounds.width - 40
+            let screenWidth = UIScreen.main.bounds.width - margin
             let minItemWidth: CGFloat = 48
             let itemCountPerRow = max(1, Int(screenWidth / minItemWidth))
             if itemCountPerRow < 10 {
-                let screenWidth = UIScreen.main.bounds.width - 40 - (6 * 8)
+                let screenWidth = UIScreen.main.bounds.width - margin - (6 * 8)
                 itemWidth = screenWidth / CGFloat(7)
-                collectionView.heightAnchor.constraint(greaterThanOrEqualToConstant: 90).isActive = true
+                collectionView.heightAnchor.constraint(equalToConstant: 90).isActive = true
             } else {
-                let screenWidth = UIScreen.main.bounds.width - 40
+                let screenWidth = UIScreen.main.bounds.width - margin
                 let totalSpacing = CGFloat(ratingItems.count - 1) * 8
                 let availableWidth = screenWidth - totalSpacing
                 itemWidth = availableWidth / CGFloat(ratingItems.count)
             }
         } else {
             // Handle case when the number of items is less than 10
-            let screenWidth = Int(UIScreen.main.bounds.width) - 40 - (8 * ratingItems.count)
+            let screenWidth = Int(UIScreen.main.bounds.width) - Int(margin) - (8 * ratingItems.count)
             itemWidth = CGFloat(screenWidth / ratingItems.count)
         }
+
     }
 }

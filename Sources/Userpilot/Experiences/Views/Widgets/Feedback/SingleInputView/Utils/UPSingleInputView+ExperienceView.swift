@@ -25,7 +25,12 @@ extension UPSingleInputView: UPExperienceView {
     ///
     /// - Returns: A boolean indicating whether the answer is valid.
     func isValidAnswer() -> Bool {
-        return surveyStep?.isRequired != true || textField.isValidAnswer()
+        let validAnswer = if surveyStep?.metadata?.inputType == .date {
+            ((textField.text?.count ?? 0) == 10 ) ?? false
+        } else {
+            textField.isValidAnswer()
+        }
+        return surveyStep?.isRequired != true || validAnswer
     }
 
     // MARK: - Get Answer

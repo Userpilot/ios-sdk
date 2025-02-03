@@ -24,7 +24,16 @@ internal class UPMultipleChoiceView: UIView {
 
     internal var choices = [Choice]()
 
+    // View Margin left, right
+    internal var margin = CGFloat(0)
+
     // MARK: - Initializers
+
+    init(margin: CGFloat) {
+        self.margin = margin
+        super.init(frame: .zero)
+        setupView()
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -76,10 +85,8 @@ internal class UPMultipleChoiceView: UIView {
         }
 
         // Adjust the table view height based on the content size.
-        delay(0.2) { [weak self] in
-            let itemCount = self?.choices.count ?? 0
-            let height = self?.tableView.contentSize.height ?? CGFloat((55 * itemCount))
-            self?.tableView.heightAnchor.constraint(equalToConstant: height).isActive = true
-        }
+        let itemCount = self.choices.count ?? 0
+        let height = self.tableView.contentSize.height ?? CGFloat((55 * itemCount))
+        self.tableView.heightAnchor.constraint(equalToConstant: height).isActive = true
     }
 }

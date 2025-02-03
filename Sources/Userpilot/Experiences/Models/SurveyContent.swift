@@ -141,8 +141,8 @@ internal struct OtherChoice: Decodable {
 }
 
 internal enum SurveyType: String, Decodable {
-    case list = "list"
-    case stepView = "step_view"
+    case list
+    case step
 }
 
 internal enum SurveyViewType: String, Decodable {

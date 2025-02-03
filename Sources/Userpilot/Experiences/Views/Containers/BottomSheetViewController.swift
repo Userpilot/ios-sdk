@@ -204,12 +204,12 @@ internal extension BottomSheetViewController {
 internal extension BottomSheetViewController {
 
     /// Set the dynamic content for the bottom sheet
-    func setContent(_ content: UIView) {
+    func setContent(content: UIView, withoutMargin: Bool = false) {
         contentView.addSubview(content)
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: withoutMargin ? -20 : 0),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()

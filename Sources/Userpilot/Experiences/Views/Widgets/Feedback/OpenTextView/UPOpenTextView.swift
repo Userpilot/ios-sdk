@@ -25,7 +25,16 @@ internal class UPOpenTextView: UIView {
     internal var surveyStep: SurveyStep?
     internal weak var viewStateProtocol: ViewStateDelegate?
 
+    // View Margin left, right
+    internal var margin = CGFloat(0)
+
     // MARK: - Initializers
+
+    init(margin: CGFloat) {
+        self.margin = margin
+        super.init(frame: .zero)
+        setupView()
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)

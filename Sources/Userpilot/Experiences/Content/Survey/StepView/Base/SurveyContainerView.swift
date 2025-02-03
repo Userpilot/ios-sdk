@@ -8,6 +8,7 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable all
 internal class SurveyContainerView: UIView {
 
     // MARK: - UI Components
@@ -23,17 +24,7 @@ internal class SurveyContainerView: UIView {
     /// The action button at the bottom of the view.
     private lazy var buttonDismiss: UPDismissButton = {
         let button = UPDismissButton()
-        buttonDismissContainerView.addSubview(buttonDismiss)
         button.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            button.topAnchor.constraint(equalTo: buttonDismissContainerView.topAnchor),
-            button.trailingAnchor.constraint(
-                equalTo: buttonDismissContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.dismissButtonMargin),
-            button.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
-            button.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
-        ])
         button.addTarget(self, action: #selector(buttonDismissClicked), for: .touchUpInside)
         return button
     }()
@@ -62,10 +53,18 @@ internal class SurveyContainerView: UIView {
         return progressView
     }()
 
+    private lazy var spaceView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 8).isActive = true
+        return view
+    }()
+
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, buttonDismissContainerView, scrollView, actionButton, stepsProgressView])
+            barStepsProgressView, buttonDismissContainerView, scrollView, spaceView, actionButton, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
@@ -84,6 +83,7 @@ internal class SurveyContainerView: UIView {
     private let contentContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 0).isActive = true
         return view
     }()
 
@@ -107,6 +107,8 @@ internal class SurveyContainerView: UIView {
     private weak var surveyContainerViewDelegate: SurveyContainerViewDelegate?
     private var currentStep = 0
 
+    private var viewHeight = CGFloat(0)
+    
     // MARK: - Initial Setup
 
     override init(frame: CGRect) {
@@ -121,19 +123,20 @@ internal class SurveyContainerView: UIView {
 
     // MARK: - UI Setup
 
-//    /**
-//     Reset height fo Scroll View on screen rotation.
-//     */
-//    func resetContentHeight(_ size: CGSize) {
-//        if let scrollViewHeightConstraint {
-//            NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
-//        }
-//        scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
-//            lessThanOrEqualToConstant:
-//                screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
-//        scrollViewHeightConstraint?.isActive = true
-//        self.layoutIfNeeded()
-//    }
+    /**
+     Reset height fo Scroll View on screen rotation.
+     */
+    func resetContentHeight(_ size: CGSize) {
+        if viewHeight > (size.height * 0.7) {
+            scrollViewHeightConstraint?.constant = (size.height * 0.7) - 50
+            scrollViewHeightConstraint?.isActive = true
+            self.layoutIfNeeded()
+        }else {
+            scrollViewHeightConstraint?.constant = viewHeight
+            scrollViewHeightConstraint?.isActive = true
+            self.layoutIfNeeded()
+        }
+    }
 
     /**
      Sets up the layout and constraints for the view components.
@@ -220,10 +223,12 @@ internal class SurveyContainerView: UIView {
     func bindStep(withTheme theme: SurveyTheme,
                   andContent surveyContent: SurveyContent,
                   withLocal isRTL: Bool,
+                  andParentViewController parentViewController: UIViewController,
                   surveyContainerViewDelegate surveyContainerViewDelegate: SurveyContainerViewDelegate) {
         self.theme = theme
         self.surveyContent = surveyContent
         self.isRTL = isRTL
+        self.parentViewController = parentViewController
         self.surveyContainerViewDelegate = surveyContainerViewDelegate
 
         setupGeneralStyle()
@@ -246,6 +251,15 @@ internal class SurveyContainerView: UIView {
      */
     private func setupDismissButton() {
         guard let theme else { return }
+        buttonDismissContainerView.addSubview(buttonDismiss)
+        NSLayoutConstraint.activate([
+            buttonDismiss.topAnchor.constraint(equalTo: buttonDismissContainerView.topAnchor),
+            buttonDismiss.trailingAnchor.constraint(
+                equalTo: buttonDismissContainerView.trailingAnchor,
+                constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+            buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
+            buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
+        ])
         buttonDismiss.setupView(theme: theme)
     }
 
@@ -261,7 +275,7 @@ internal class SurveyContainerView: UIView {
             self?.actionButton.isEnabled = false
             if self?.getCurrentStepSurveyContent().type == SurveyViewType.completed {
                 self?.surveyContainerViewDelegate?.onAction(nil, nil)
-            }else {
+            } else {
                 self?.getAnswerAndMoveToNextStep()
             }
         }
@@ -279,7 +293,7 @@ internal class SurveyContainerView: UIView {
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
-                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
+                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count + 1, theme: theme)
             }
         }
     }
@@ -289,7 +303,9 @@ internal class SurveyContainerView: UIView {
         if stepsProgressView.isHidden == false {
             stepsProgressView.setCurrentStep(currentStep)
         } else if barStepsProgressView.isHidden == false {
-            barStepsProgressView.setCurrentStep(currentStep + 1)
+            delay(0.2) {
+                self.barStepsProgressView.setCurrentStep(self.currentStep + 1)
+            }
         }
     }
 
@@ -310,26 +326,25 @@ internal class SurveyContainerView: UIView {
 
     /** Binds the sections of the provided step to the stack view. */
     private func bindSurveyViews() {
-        // guard let surveyContent,  else { return }
-
+        // stepSectionsStackView.clearViews()
         let contentStep = getCurrentStepSurveyContent()
-
+        
+        var newView: UIView?
+        var margin = 0
         switch contentStep.type {
         case .likert:
+            margin = 40
             let likertView = UPLikertView()
-            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, viewStateProtocol: self)
-            stepSectionsStackView.addArrangedSubview(likertView)
-
+            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: true, viewStateProtocol: self)
+            newView = likertView
         case .multipleChoice:
             let multipleChoiceView = UPMultipleChoiceView()
             multipleChoiceView.setupView(surveyStep: contentStep, surveyTheme: theme, viewStateProtocol: self)
-            stepSectionsStackView.addArrangedSubview(multipleChoiceView)
-
+            newView = multipleChoiceView
         case .openText:
             let openTextView = UPOpenTextView()
             openTextView.setupView(surveyStep: contentStep, surveyTheme: theme, viewStateProtocol: self)
-            stepSectionsStackView.addArrangedSubview(openTextView)
-
+            newView = openTextView
         case .singleInput:
             let singleInputView = UPSingleInputView()
             singleInputView.setupView(
@@ -338,15 +353,48 @@ internal class SurveyContainerView: UIView {
                 viewStateProtocol: self,
                 parentViewController: parentViewController
             )
-            stepSectionsStackView.addArrangedSubview(singleInputView)
-
+            newView = singleInputView
         case .completed:
             let thankYouView = UPThankYouView()
             thankYouView.setupView(surveyStep: contentStep, surveyTheme: theme)
-            stepSectionsStackView.addArrangedSubview(thankYouView)
-
+            newView = thankYouView
         default:
             break
+        }
+        
+        if let newView = newView {
+            stepSectionsStackView.addArrangedSubview(newView)
+            updateContent(with: newView, animationSubViews: isPreviousViewSameToCurrentView(), margin: margin)
+        }
+    }
+
+    func updateContent(with newView: UIView, animationSubViews: Bool, margin: Int = 0) {
+        if !animationSubViews {
+            actionButton.alpha = 0
+            barStepsProgressView.alpha = 0
+        }
+        // Remove old views before adding the new one
+        stepSectionsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        stepSectionsStackView.addArrangedSubview(newView)
+
+        // Ensure layout updates before calculating the height
+        stepSectionsStackView.layoutIfNeeded()
+
+        // Calculate the new height required for contentContainerView
+        let newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+
+        
+        // Animate height change smoothly
+        UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
+            self?.scrollViewHeightConstraint?.constant = min(newHeight - CGFloat(margin), screenHeight * 0.7)
+            self?.viewHeight = min(newHeight - CGFloat(margin), screenHeight * 0.7)
+            self?.layoutIfNeeded()
+        })
+        if !animationSubViews {
+            UIView.animate(withDuration: 0.5) { [weak self] in
+                self?.actionButton.alpha = 1
+                self?.barStepsProgressView.alpha = 1
+            }
         }
     }
 
@@ -370,13 +418,18 @@ extension SurveyContainerView {
     private func getCurrentStepSurveyContent() -> SurveyStep {
         return surveyContent.modules[currentStep]
     }
+    
+    private func isPreviousViewSameToCurrentView() -> Bool {
+        if currentStep - 1 < 0 { return false }
+        return surveyContent.modules[currentStep].type == surveyContent.modules[currentStep - 1].type
+    }
 
     private func getStepsCount() -> Int {
         return surveyContent.modules.count
     }
 
     private func isBottomSheetSurveyContent() -> Bool {
-        return theme.general?.defaultPosition == .bottom
+        return theme.general?.position == .bottom
     }
 
     /** In case the logic contains move to Answer, then hide progress */
@@ -399,3 +452,4 @@ extension SurveyContainerView: ViewStateDelegate {
     }
 
 }
+// swiftlint:enable all

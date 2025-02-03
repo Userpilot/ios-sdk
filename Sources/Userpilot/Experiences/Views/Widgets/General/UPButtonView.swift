@@ -111,7 +111,6 @@ internal class UPButtonView: UIButton {
         tintColor = theme.primaryColor
         backgroundColor = theme.primaryColor
         layer.cornerRadius = 12
-        layer.borderWidth = 1
         layer.borderColor = theme.primaryColor.cgColor
     }
 

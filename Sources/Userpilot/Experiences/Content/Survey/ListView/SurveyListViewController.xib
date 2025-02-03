@@ -5,7 +5,6 @@
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -55,22 +54,23 @@
                     <state key="normal" title="Button"/>
                 </button>
                 <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" translatesAutoresizingMaskIntoConstraints="NO" id="FTy-aL-Cpf">
-                    <rect key="frame" x="0.0" y="114" width="393" height="626"/>
+                    <rect key="frame" x="0.0" y="114" width="393" height="614"/>
                     <subviews>
                         <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="24" translatesAutoresizingMaskIntoConstraints="NO" id="M7W-ep-joL">
                             <rect key="frame" x="0.0" y="0.0" width="393" height="100"/>
                             <subviews>
                                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="62U-Zy-bEY">
                                     <rect key="frame" x="0.0" y="0.0" width="393" height="100"/>
-                                    <color key="backgroundColor" systemColor="systemMintColor"/>
+                                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                     <constraints>
                                         <constraint firstAttribute="height" constant="100" placeholder="YES" id="5Rb-dJ-sVf"/>
                                     </constraints>
                                 </view>
                             </subviews>
-                            <color key="tintColor" systemColor="systemCyanColor"/>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         </stackView>
                     </subviews>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <constraints>
                         <constraint firstItem="M7W-ep-joL" firstAttribute="trailing" secondItem="Jux-uj-VkS" secondAttribute="trailing" constant="393" id="2VM-eF-3ET"/>
                         <constraint firstItem="M7W-ep-joL" firstAttribute="top" secondItem="Jux-uj-VkS" secondAttribute="top" id="A57-N4-anm"/>
@@ -89,24 +89,16 @@
                 <constraint firstItem="nTt-J7-kXc" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="0sH-nM-27R"/>
                 <constraint firstItem="j8h-dh-eGS" firstAttribute="trailing" secondItem="lBZ-4A-9KA" secondAttribute="trailing" constant="20" id="2xV-7Y-7d0"/>
                 <constraint firstItem="lBZ-4A-9KA" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" constant="20" id="69P-fu-2CV"/>
-                <constraint firstItem="lBZ-4A-9KA" firstAttribute="top" secondItem="FTy-aL-Cpf" secondAttribute="bottom" constant="12" id="JSH-b7-ltg"/>
+                <constraint firstItem="lBZ-4A-9KA" firstAttribute="top" secondItem="FTy-aL-Cpf" secondAttribute="bottom" constant="24" id="JSH-b7-ltg"/>
                 <constraint firstItem="FTy-aL-Cpf" firstAttribute="trailing" secondItem="j8h-dh-eGS" secondAttribute="trailing" id="Uen-w9-lhi"/>
                 <constraint firstItem="j8h-dh-eGS" firstAttribute="trailing" secondItem="nTt-J7-kXc" secondAttribute="trailing" id="ZTC-Es-Gk7"/>
                 <constraint firstItem="nTt-J7-kXc" firstAttribute="top" secondItem="j8h-dh-eGS" secondAttribute="top" constant="20" id="aC2-L5-Ie0"/>
                 <constraint firstItem="FTy-aL-Cpf" firstAttribute="top" secondItem="nTt-J7-kXc" secondAttribute="bottom" id="cxl-Dr-HO8"/>
-                <constraint firstItem="M7W-ep-joL" firstAttribute="width" secondItem="Oby-9P-aTQ" secondAttribute="width" id="eo0-3Y-Bdi"/>
+                <constraint firstItem="M7W-ep-joL" firstAttribute="width" secondItem="FTy-aL-Cpf" secondAttribute="width" id="eo0-3Y-Bdi"/>
                 <constraint firstItem="FTy-aL-Cpf" firstAttribute="leading" secondItem="j8h-dh-eGS" secondAttribute="leading" id="fT4-90-LPU"/>
                 <constraint firstItem="j8h-dh-eGS" firstAttribute="bottom" secondItem="lBZ-4A-9KA" secondAttribute="bottom" constant="16" id="hnD-6J-OXr"/>
             </constraints>
             <point key="canvasLocation" x="200.76335877862596" y="14.788732394366198"/>
         </view>
     </objects>
-    <resources>
-        <systemColor name="systemCyanColor">
-            <color red="0.1960784314" green="0.67843137249999996" blue="0.90196078430000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-        </systemColor>
-        <systemColor name="systemMintColor">
-            <color red="0.0" green="0.78039215689999997" blue="0.74509803919999995" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-        </systemColor>
-    </resources>
 </document>

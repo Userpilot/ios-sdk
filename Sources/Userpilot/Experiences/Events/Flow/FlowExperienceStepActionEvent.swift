@@ -41,7 +41,7 @@ internal class FlowExperienceStepActionEvent: FlowExperienceActionEvent {
 /**
  Represents the 'seen' step action event.
  */
-internal class ExperienceStepSeenEvent: FlowExperienceStepActionEvent {
+internal class ExperienceFlowStepSeenEvent: FlowExperienceStepActionEvent {
     override var name: String {
         return SDKEventsName.flowExperienceStepSeen.rawValue
     }
@@ -50,7 +50,7 @@ internal class ExperienceStepSeenEvent: FlowExperienceStepActionEvent {
 /**
  Represents the 'completed' step action event.
  */
-internal class ExperienceStepCompletedEvent: FlowExperienceStepActionEvent {
+internal class ExperienceFlowStepCompletedEvent: FlowExperienceStepActionEvent {
     override var name: String {
         return SDKEventsName.flowExperienceStepCompleted.rawValue
     }

@@ -29,7 +29,7 @@ internal class DialogViewController: UIViewController {
     }()
 
     /// View to hold dynamic content within the dialog
-    private lazy var contentView: UIView = {
+    lazy var contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -154,12 +154,12 @@ extension DialogViewController {
 
     /// Sets the content of the dialog.
     /// - Parameter content: A UIView to be displayed in the dialog.
-    func setContent(content: UIView) {
+    func setContent(content: UIView, withoutMargin: Bool = false) {
         contentView.addSubview(content)
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: withoutMargin ? -20 : 0),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
@@ -184,6 +184,15 @@ extension DialogViewController {
             dimmedView.backgroundColor = theme.backdropBackground
         }
     }
+
+//    func updateBaseContent(with newHeight: CGFloat) {
+//        // Remove old views before adding the new one
+//        // Animate height change smoothly
+//        UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: {
+//            self.mainContainerView.heightAnchor.constraint(equalToConstant: newHeight).isActive = true
+//            self.mainContainerView.layoutIfNeeded()
+//        })
+//    }
 }
 
 // MARK: - Update constraints on screen rotation

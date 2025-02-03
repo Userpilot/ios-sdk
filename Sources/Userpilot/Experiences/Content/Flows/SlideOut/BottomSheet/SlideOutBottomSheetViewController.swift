@@ -55,7 +55,7 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
     /// Sets up the content view and binds the view model once the view is loaded.
     override func viewDidLoad() {
         super.viewDidLoad()
-        setContent(slideOutContainerView)
+        setContent(content: slideOutContainerView)
         bindViewModel()
     }
 

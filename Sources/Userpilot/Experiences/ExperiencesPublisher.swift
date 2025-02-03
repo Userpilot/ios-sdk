@@ -328,7 +328,7 @@ extension ExperiencesPublisher {
                 switch experienceContent {
                 case .flow(let content):
                     let experienceViewModel = ExperienceViewModel(container: self.container)
-                    self.analyticsPublisher.experiencePublished(content.id)
+                    self.analyticsPublisher.experiencePublished(.flow, content.id)
                     switch content.type {
                     case .carousel:
                         self.openCarouselExperience(topViewController, experienceViewModel)
@@ -374,19 +374,20 @@ extension ExperiencesPublisher {
                 self?.experienceContent = nil
                 return
             }
-            self.analyticsPublisher.experiencePublished(content.id)
-            switch content.type {
-            case .list:
-                let surveyViewModel = SurveyViewModel(container: self.container)
-                self.openSurveyListExperience(topViewController, surveyViewModel)
-            case .stepView:
-                break
-                //                        if self.isBottomSheetContent(content) {
-                //     self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
-                //                        } else {
-                //                            self.openSlideOutDialogExperience(topViewController, experienceViewModel)
-                //                        }
-            }
+            self.analyticsPublisher.experiencePublished(.survey, content.id)
+            let surveyViewModel = SurveyViewModel(container: self.container)
+            self.openSurveyBottomSheetExperience(topViewController, surveyViewModel)
+//            return
+//            switch content.type {
+//            case .list:
+//                self.openSurveyListExperience(topViewController, surveyViewModel)
+//            case .step:
+//                if self.isBottomSheetSurveyContent(content) {
+//                    self.openSurveyBottomSheetExperience(topViewController, surveyViewModel)
+//                } else {
+//                    self.openSurveyDialogExperience(topViewController, surveyViewModel)
+//                }
+//            }
         }
     }
 
@@ -396,6 +397,14 @@ extension ExperiencesPublisher {
             return themeData.general?.contentAlignment == ContentAlignmentType.bottom
         } else {
             return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience == false
+        }
+    }
+
+    private func isBottomSheetSurveyContent(_ surveyContent: SurveyContent) -> Bool {
+        if let themeData = surveyContent.surveyTheme.themeData, let position = themeData.general?.position {
+            return position == .bottom
+        } else {
+            return themeHandler.getThemeById(surveyContent.surveyTheme.id)?.isDialogSurvey == false
         }
     }
 
@@ -529,6 +538,25 @@ extension ExperiencesPublisher {
                 }
                 topViewController.presentBottomSheet(viewController: thankYouBottomSheetViewController)
             }
+        }
+    }
+
+    /// Open slide out dialog
+    private func openSurveyDialogExperience(_ viewController: UIViewController,
+                                            _ surveyViewModel: SurveyViewModel) {
+        let surveyDialogViewController = SurveyDialogViewController(surveyViewModel: surveyViewModel)
+        delay(0.5) {
+            viewController.presentDialog(viewController: surveyDialogViewController)
+        }
+    }
+
+    /// Open slide out bottom sheet
+    private func openSurveyBottomSheetExperience(_ viewController: UIViewController,
+                                                 _ surveyViewModel: SurveyViewModel) {
+        let surveyBottomSheetViewController = SurveyBottomSheetViewController(
+            surveyViewModel: surveyViewModel)
+        delay(0.5) {
+            viewController.presentBottomSheet(viewController: surveyBottomSheetViewController)
         }
     }
 

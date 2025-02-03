@@ -312,8 +312,8 @@ internal class ThemeHandler: ThemeHandling {
     ) -> SurveyTheme {
         return SurveyTheme(
             general: SurveyGeneral(
-                defaultPosition: surveyTheme?.general?.defaultPosition
-                    ?? baseTheme?.survey?.general?.defaultPosition,
+                position: surveyTheme?.general?.position
+                    ?? baseTheme?.survey?.general?.position,
                 primaryColor: surveyTheme?.general?.primaryColor
                     ?? baseTheme?.survey?.general?.primaryColor,
                 backgroundColor: surveyTheme?.general?.backgroundColor

@@ -27,19 +27,22 @@ extension UPSingleInputView: UITextFieldDelegate {
                    shouldChangeCharactersIn range: NSRange,
                    replacementString string: String) -> Bool {
 
+        var result = true
         // Check the input type and apply specific behavior
         if surveyStep?.metadata?.inputType == .date {
             // Format the input as a date in "dd/MM/yyyy"
-            return formatDate(string)
+            result = formatDate(string)
         } else if surveyStep?.metadata?.inputType == .phone {
             // Allow only numeric characters for phone input
             let allowedCharacters = CharacterSet.decimalDigits
             let isValidInput = string.rangeOfCharacter(from: allowedCharacters.inverted) == nil
-            return isValidInput && isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
+            result = isValidInput && isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
         } else {
             // Default case: Enforce maximum length validation
-            return isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
+            result = isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
         }
+        viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
+        return result
     }
 
     /// Notifies the `viewStateProtocol` when the text in the `UITextField` changes. This allows
@@ -47,7 +50,7 @@ extension UPSingleInputView: UITextFieldDelegate {
     ///
     /// - Parameter textField: The `UITextField` instance whose text has changed.
     @objc func textDidChange(_ textField: UITextField) {
-        viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
+        // viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
     }
 
     /// Handles the Return key tap by dismissing the keyboard.

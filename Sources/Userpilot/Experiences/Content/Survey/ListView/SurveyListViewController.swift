@@ -46,6 +46,7 @@ internal class SurveyListViewController: UIViewController {
     /// Called after the view has been loaded. Sets up initial UI configurations and binds the view model.
     override func viewDidLoad() {
         super.viewDidLoad()
+        containerView.clearViews()
         setupViews()
         bindViewModel()
         registerKeyboardNotifications()

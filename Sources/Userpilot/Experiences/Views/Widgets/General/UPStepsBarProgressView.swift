@@ -45,7 +45,7 @@ class UPStepsBarProgressView: UIView {
         progressLayer.backgroundColor = activeColor.cgColor
         layer.addSublayer(progressLayer)
 
-        layer.cornerRadius = 4
+        layer.cornerRadius = 2
         clipsToBounds = true
     }
 
@@ -88,7 +88,7 @@ class UPStepsBarProgressView: UIView {
         fillColor = theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(
             opacity: "0.2")?.rgbaToColor() ?? .gray
         activeColor = theme.stepsProgressColor
-        currentStep = 0
+        currentStep = 1
         if isRTL {
             transform = CGAffineTransform(scaleX: -1, y: 1)
         }

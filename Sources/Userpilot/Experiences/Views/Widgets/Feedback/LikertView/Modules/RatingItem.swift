@@ -108,8 +108,19 @@ internal struct RatingItem {
             default: return UIImage()
             }
         default:
-            // Default case for 10 smiley icons.
-            return getSmileIcon(for: index, availableRange: 10)
+            switch index {
+            case 0: return UIImage.userpilotImage(named: "icon_smile_one")
+            case 1: return UIImage.userpilotImage(named: "icon_smile_two")
+            case 2: return UIImage.userpilotImage(named: "icon_smile_three")
+            case 3: return UIImage.userpilotImage(named: "icon_smile_four")
+            case 4: return UIImage.userpilotImage(named: "icon_smile_five")
+            case 5: return UIImage.userpilotImage(named: "icon_smile_six")
+            case 6: return UIImage.userpilotImage(named: "icon_smile_seven")
+            case 7: return UIImage.userpilotImage(named: "icon_smile_ten")
+            case 8: return UIImage.userpilotImage(named: "icon_smile_eight")
+            case 9: return UIImage.userpilotImage(named: "icon_smile_ten")
+            default: return UIImage()
+            }
         }
     }
 }

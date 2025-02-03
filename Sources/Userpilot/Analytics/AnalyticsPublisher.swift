@@ -46,7 +46,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     func publishFakeReloadScreenEvent()
 
     /// update seen experiences
-    func experiencePublished(_ experienceId: Int)
+    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int)
 
     /// For experience which are come from start session
     var isStartSession: Bool { get }
@@ -350,11 +350,16 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
             if isScreenTitleChanged {
                 // New screen: start with an empty set of seen experiences
-                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set())
+                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set(), seenSurveys: Set())
             } else {
                 // Same screen: retain the existing seen experiences
                 let seenExperiences = screenViewEntity?.seenExperiences ?? Set()
-                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: seenExperiences)
+                let seenSurveys = screenViewEntity?.seenSurveys ?? Set()
+                screenViewEntity = ScreenViewEntity(
+                    event: event,
+                    seenExperiences: seenExperiences,
+                    seenSurveys: seenSurveys
+                )
             }
         }
     }
@@ -399,7 +404,8 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.metaDataProperty] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: false,
-                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
+                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
+                    AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
                 broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
@@ -595,7 +601,8 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.metaDataProperty] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: true,
-                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
+                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
+                    AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
             }
@@ -603,8 +610,12 @@ extension AnalyticsPublisher {
     }
 
     /// update seen experiences
-    func experiencePublished(_ experienceId: Int) {
-        screenViewEntity?.updateSeenExperiences(experienceId)
+    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int) {
+        if experienceType == .flow {
+            screenViewEntity?.updateSeenFlowExperiences(experienceId)
+        } else {
+            screenViewEntity?.updateSeenSurveyExperiences(experienceId)
+        }
     }
 
 }
@@ -636,5 +647,6 @@ internal extension AnalyticsPublisher {
     static let isSessionStartedProperty = "is_session_start"
     static let fakeReload = "fake_reload"
     static let seenContents = "seen_contents"
+    static let seenSurveys = "seen_surveys"
     private static let eventNameProperty = "event_name"
 }

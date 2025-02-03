@@ -40,6 +40,11 @@ internal struct ThemeData: Decodable {
     var isDialogExperience: Bool {
         slideOut?.general?.contentAlignment == .center
     }
+
+    var isDialogSurvey: Bool {
+        survey?.general?.position == .center
+    }
+
 }
 
 // MARK: - CarouselTheme
@@ -341,7 +346,7 @@ internal struct SurveyTheme: Decodable {
 
     // corner
     var isBottomSheetSurvey: Bool {
-        general?.defaultPosition == .bottom
+        general?.position == .bottom
     }
 
     // Border
@@ -354,13 +359,13 @@ internal struct SurveyTheme: Decodable {
 // MARK: - SurveyGeneral
 
 internal struct SurveyGeneral: Decodable {
-    let defaultPosition: SurveyPosition?
+    let position: SurveyPosition?
     let primaryColor: String?
     let backgroundColor: String?
     let cornerRadius: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case defaultPosition = "default_position"
+        case position = "default_position"
         case primaryColor = "primary_color"
         case backgroundColor = "background_color"
         case cornerRadius = "corner_radius"

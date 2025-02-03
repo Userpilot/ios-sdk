@@ -38,17 +38,17 @@ internal extension UPLikertView {
         // Apply Auto Layout constraints
         NSLayoutConstraint.activate([
             titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
-            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
 
             collectionView.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 16),
-            collectionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            collectionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            collectionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            collectionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
             collectionView.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
 
             bottomRowStackView.topAnchor.constraint(equalTo: collectionView.bottomAnchor, constant: 6),
-            bottomRowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            bottomRowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            bottomRowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
+            bottomRowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
             bottomRowStackView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
