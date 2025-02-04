@@ -20,6 +20,7 @@ internal class UPMultipleChoiceView: UIView {
 
     internal var surveyStep: SurveyStep?
     internal var surveyTheme: SurveyTheme?
+    internal var isRTL = false
     internal weak var viewStateProtocol: ViewStateDelegate?
 
     internal var choices = [Choice]()
@@ -58,13 +59,17 @@ internal class UPMultipleChoiceView: UIView {
     ///   - surveyStep: The survey step containing question metadata and configurations.
     ///   - surveyTheme: The theme to apply to the survey, including fonts and colors.
     ///   - viewStateProtocol: A delegate for managing the state of the view.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, viewStateProtocol: ViewStateDelegate) {
+    func setupView(surveyStep: SurveyStep,
+                   surveyTheme: SurveyTheme,
+                   isRTL: Bool,
+                   viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme
+        self.isRTL = isRTL
         self.viewStateProtocol = viewStateProtocol
 
         // Configure the title description view with survey step and theme.
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
+        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
 
         // Load choices from the survey metadata.
         choices.append(contentsOf: surveyStep.metadata?.choices ?? [])

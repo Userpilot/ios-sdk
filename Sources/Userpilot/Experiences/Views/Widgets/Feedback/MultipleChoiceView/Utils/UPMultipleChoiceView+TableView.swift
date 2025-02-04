@@ -29,7 +29,10 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
         else {
             return UITableViewCell()
         }
-        choiceTableViewCell.bindCell(choice: choices[indexPath.row], surveyStep: surveyStep, surveyTheme: surveyTheme)
+        choiceTableViewCell.bindCell(choice: choices[indexPath.row],
+                                     surveyStep: surveyStep,
+                                     surveyTheme: surveyTheme,
+                                     isRTL: isRTL)
         choiceTableViewCell.selectionStyle = .none
         return choiceTableViewCell
     }
@@ -56,6 +59,13 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
 
         UIView.performWithoutAnimation {
             tableView.reloadData()
+        }
+
+        if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice && choices.last?.isSelected == true {
+            if let cell = tableView.cellForRow(
+                at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
+                cell.showKeyboard()
+            }
         }
     }
 

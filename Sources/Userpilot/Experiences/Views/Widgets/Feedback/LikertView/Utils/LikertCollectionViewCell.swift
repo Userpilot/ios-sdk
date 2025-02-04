@@ -66,7 +66,10 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
     /// Binds data from the provided `ratingItem` and `surveyTheme` to the cell's UI elements.
     /// - Parameter ratingItem: The item representing the individual rating choice in the Likert scale.
     /// - Parameter surveyTheme: The theme that defines the visual appearance of the cell.
-    func bindCell(ratingItem: RatingItem, surveyTheme: SurveyTheme) {
+    func bindCell(ratingItem: RatingItem, surveyTheme: SurveyTheme, isRTL: Bool) {
+        if isRTL {
+            self.contentView.transform = CGAffineTransform(scaleX: -1, y: 1)
+        }
         // Show/hide the content label based on the rating item type
         contentLabel.isHidden = ratingItem.type != .numbers
         contentLabel.text = ratingItem.title

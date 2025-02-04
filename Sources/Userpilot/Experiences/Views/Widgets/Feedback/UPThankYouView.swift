@@ -17,8 +17,6 @@ internal class UPThankYouView: UIView {
     // MARK: - Properties
 
     private let titleDescriptionView = UPTitleDescriptionView()
-//    private let actionButton = UIButton(type: .custom)
-//    var actionButtonClicked: (String?) -> Void = { _ in }
     private var surveyStep: SurveyStep?
 
     // MARK: - Initializers
@@ -37,13 +35,10 @@ internal class UPThankYouView: UIView {
 
     // MARK: - Private Methods
 
-    /// Sets up the view hierarchy by adding the `titleDescriptionView` and `actionButton` to the `UPThankYouView`.
     private func setupViewHierarchy() {
         addSubview(titleDescriptionView)
-        // addSubview(actionButton)
 
         titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
-        // actionButton.translatesAutoresizingMaskIntoConstraints = false
 
         // Activate constraints to position titleDescriptionView within the parent view
         NSLayoutConstraint.activate([
@@ -52,15 +47,6 @@ internal class UPThankYouView: UIView {
             titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             titleDescriptionView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
-
-        // Activate constraints to position actionButton below titleDescriptionView
-//        NSLayoutConstraint.activate([
-//            actionButton.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 24),
-//            actionButton.bottomAnchor.constraint(equalTo: bottomAnchor),
-//            actionButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-//            actionButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-//            actionButton.heightAnchor.constraint(equalToConstant: 50)
-//        ])
     }
 
     // MARK: - Public Methods
@@ -69,31 +55,7 @@ internal class UPThankYouView: UIView {
     /// - Parameters:
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme) {
-        // self.surveyStep = surveyStep
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
-        // setupButton(surveyStep: surveyStep, surveyTheme: surveyTheme)
+    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
+        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
     }
-
-//    func setupView() {
-//        titleDescriptionView.setupView()
-//    }
-//
-//    // MARK: - Public Button Setup
-//
-//    /// Setup button properties, title, and actions.
-//    func setupButton(surveyStep: SurveyStep, surveyTheme: SurveyTheme) {
-//        actionButton.titleLabel?.font = UIFont.matching(fontName: surveyTheme.fontFamily,
-//                                           fontWeight: [.traitBold],
-//                                           fontSize: 16)
-//        actionButton.setTitle(surveyStep.buttonLabel, for: .normal)
-//        actionButton.backgroundColor = surveyTheme.primaryColor
-//        actionButton.setTitleColor(surveyTheme.primaryColorAsString.invertColor().color, for: .normal)
-//        actionButton.layer.cornerRadius = 12
-//        actionButton.addTarget(self, action: #selector(onActionButtonClicked), for: .touchUpInside)
-//    }
-//
-//    @objc func onActionButtonClicked() {
-//        actionButtonClicked(surveyStep?.metadata?.iosDeepLink)
-//    }
 }

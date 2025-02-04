@@ -165,6 +165,7 @@ internal enum SingleTextType: String, Decodable {
     case number = "number"
     case date = "date"
     case email = "email"
+    case text = "text"
     case general = "general"
 }
 

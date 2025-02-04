@@ -376,18 +376,16 @@ extension ExperiencesPublisher {
             }
             self.analyticsPublisher.experiencePublished(.survey, content.id)
             let surveyViewModel = SurveyViewModel(container: self.container)
-            self.openSurveyBottomSheetExperience(topViewController, surveyViewModel)
-//            return
-//            switch content.type {
-//            case .list:
-//                self.openSurveyListExperience(topViewController, surveyViewModel)
-//            case .step:
-//                if self.isBottomSheetSurveyContent(content) {
-//                    self.openSurveyBottomSheetExperience(topViewController, surveyViewModel)
-//                } else {
-//                    self.openSurveyDialogExperience(topViewController, surveyViewModel)
-//                }
-//            }
+            switch content.type {
+            case .list:
+                self.openSurveyListExperience(topViewController, surveyViewModel)
+            case .step:
+                if self.isBottomSheetSurveyContent(content) {
+                    self.openSurveyBottomSheetExperience(topViewController, surveyViewModel)
+                } else {
+                    self.openSurveyDialogExperience(topViewController, surveyViewModel)
+                }
+            }
         }
     }
 
@@ -465,7 +463,7 @@ extension ExperiencesPublisher {
         let carouselExperienceViewController = CarouselExperienceViewController(
             experienceViewModel: experienceViewModel)
         carouselExperienceViewController.modalPresentationStyle = .fullScreen
-        delay(0.5) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.present(carouselExperienceViewController, animated: true)
         }
     }
@@ -474,7 +472,7 @@ extension ExperiencesPublisher {
     private func openSlideOutDialogExperience(_ viewController: UIViewController,
                                               _ experienceViewModel: ExperienceViewModel) {
         let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
-        delay(0.5) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.presentDialog(viewController: slideOutDialogViewController)
         }
     }
@@ -484,27 +482,17 @@ extension ExperiencesPublisher {
                                                    _ experienceViewModel: ExperienceViewModel) {
         let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
             experienceViewModel: experienceViewModel)
-        delay(0.5) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
         }
     }
 
-    private func checkSurveyDelayConfiguration(_ viewController: UIViewController,
-                                               _ surveyViewModel: SurveyViewModel) {
-        if true {
-            DelayUtils.delayAction(delayInSeconds: 4, action: { [weak self] in
-                self?.openSurveyListExperience(viewController, surveyViewModel)
-            })
-        } else {
-            openSurveyListExperience(viewController, surveyViewModel)
-        }
-    }
     /// Open survey list view
     private func openSurveyListExperience(_ viewController: UIViewController,
                                           _ surveyViewModel: SurveyViewModel) {
         let surveyListViewController = SurveyListViewController(surveyViewModel: surveyViewModel)
         surveyListViewController.modalPresentationStyle = .fullScreen
-        delay(0.5) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.present(surveyListViewController, animated: true)
         }
     }
@@ -521,9 +509,9 @@ extension ExperiencesPublisher {
                 self?.isTriggeringThankYouMessage = false
                 return
             }
-            delay(0.5) {
+            delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
                 let thankYouBottomSheetViewController = ThankYouBottomSheetViewController(
-                    surveyStep: surveyStep, surveyTheme: surveyTheme)
+                    surveyContent: surveyContent, surveyTheme: surveyTheme)
                 thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
                     let eventExperienceSeen = ExperienceSurveyCompletedEvent(
                         surveyID: surveyContent.id,
@@ -531,8 +519,10 @@ extension ExperiencesPublisher {
                     )
                     self?.publishExperienceEvent(eventExperienceSeen)
 
-                    if let deepLink, let url = URL(string: deepLink) {
-                        self?.triggerDeepLink(url: url)
+                    delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+                        if let deepLink, let url = URL(string: deepLink) {
+                            self?.triggerDeepLink(url: url)
+                        }
                     }
                     self?.isTriggeringThankYouMessage = false
                 }
@@ -545,7 +535,7 @@ extension ExperiencesPublisher {
     private func openSurveyDialogExperience(_ viewController: UIViewController,
                                             _ surveyViewModel: SurveyViewModel) {
         let surveyDialogViewController = SurveyDialogViewController(surveyViewModel: surveyViewModel)
-        delay(0.5) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.presentDialog(viewController: surveyDialogViewController)
         }
     }
@@ -555,7 +545,7 @@ extension ExperiencesPublisher {
                                                  _ surveyViewModel: SurveyViewModel) {
         let surveyBottomSheetViewController = SurveyBottomSheetViewController(
             surveyViewModel: surveyViewModel)
-        delay(0.5) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.presentBottomSheet(viewController: surveyBottomSheetViewController)
         }
     }

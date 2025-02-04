@@ -48,6 +48,7 @@ internal class ThemeHandler: ThemeHandling {
     /// Default values for various text styles and attributes.
     struct DefaultValues {
         // Carousels & Slide out
+        static let delayTimeForExperience = 0.5
         static let headerTextSize = 16
         static let normalTextSize = 16
         static let dimSlideOutDegree = 40

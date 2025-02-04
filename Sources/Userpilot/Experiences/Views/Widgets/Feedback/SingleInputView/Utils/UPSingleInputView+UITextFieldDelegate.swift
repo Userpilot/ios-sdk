@@ -37,6 +37,11 @@ extension UPSingleInputView: UITextFieldDelegate {
             let allowedCharacters = CharacterSet.decimalDigits
             let isValidInput = string.rangeOfCharacter(from: allowedCharacters.inverted) == nil
             result = isValidInput && isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
+        } else if surveyStep?.metadata?.inputType == .text {
+            // Allow only alphabetic characters for input
+            let allowedCharacters = CharacterSet.letters
+            let isValidInput = string.rangeOfCharacter(from: allowedCharacters.inverted) == nil
+            result = isValidInput && isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
         } else {
             // Default case: Enforce maximum length validation
             result = isStringLengthValid(range, string, surveyStep?.metadata?.maxLength ?? 100)
@@ -50,6 +55,13 @@ extension UPSingleInputView: UITextFieldDelegate {
     ///
     /// - Parameter textField: The `UITextField` instance whose text has changed.
     @objc func textDidChange(_ textField: UITextField) {
+        if surveyStep?.metadata?.inputType == .email {
+            if let email = textField.text, email.isValidEmail() {
+                textField.layer.borderColor = UIColor.grayCA.cgColor
+            } else {
+                textField.layer.borderColor = UIColor.red.cgColor
+            }
+        }
         // viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
     }
 

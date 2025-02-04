@@ -67,7 +67,7 @@ internal class UPTitleDescriptionView: UIView {
     /// - Parameters:
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme) {
+    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
         titleLabel.text = surveyStep.question
         titleLabel.textColor = surveyTheme.textColor
         titleLabel.font = UIFont.matching(
@@ -84,6 +84,11 @@ internal class UPTitleDescriptionView: UIView {
             descriptionLabel.isHidden = false
         } else {
             descriptionLabel.isHidden = true
+        }
+
+        if isRTL {
+            titleLabel.textAlignment = .right
+            descriptionLabel.textAlignment = .right
         }
     }
 

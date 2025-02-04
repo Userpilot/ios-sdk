@@ -53,6 +53,9 @@ internal class UPSingleInputView: UIView {
     /// Delegate for handling view state changes
     internal weak var viewStateProtocol: ViewStateDelegate?
 
+    /// Survey step containing data for the input view
+    internal var isRTL = false
+
     // View Margin left, right
     internal var margin = CGFloat(0)
 
@@ -87,14 +90,16 @@ internal class UPSingleInputView: UIView {
     func setupView(
         surveyStep: SurveyStep,
         surveyTheme: SurveyTheme,
+        isRTL: Bool,
         viewStateProtocol: ViewStateDelegate,
         parentViewController: UIViewController
     ) {
         self.surveyStep = surveyStep
+        self.isRTL = isRTL
         self.viewStateProtocol = viewStateProtocol
         self.parentViewController = parentViewController
 
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
+        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
 
         textField.setPlaceholder(text: surveyStep.metadata?.placeholder ?? "",
                                  color: surveyTheme.textSecondaryColorAlpha80)
@@ -104,5 +109,9 @@ internal class UPSingleInputView: UIView {
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTextSize))
 
         textType = surveyStep.metadata?.inputType ?? .general
+
+        if isRTL {
+            textField.textAlignment = .right
+        }
     }
 }

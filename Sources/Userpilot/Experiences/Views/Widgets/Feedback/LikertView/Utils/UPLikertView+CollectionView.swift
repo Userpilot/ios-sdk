@@ -43,7 +43,9 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
         }
 
         // Bind the rating item data to the cell
-        likertCollectionViewCell.bindCell(ratingItem: ratingItems[indexPath.item], surveyTheme: surveyTheme)
+        likertCollectionViewCell.bindCell(ratingItem: ratingItems[indexPath.item],
+                                          surveyTheme: surveyTheme,
+                                          isRTL: isRTL)
         return likertCollectionViewCell
     }
 

@@ -58,11 +58,14 @@ internal class UPOpenTextView: UIView {
     ///   - surveyStep: The current survey step containing the metadata and placeholder text.
     ///   - surveyTheme: The theme to be applied to the view, including font family.
     ///   - viewStateProtocol: A delegate for managing the view's state.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, viewStateProtocol: ViewStateDelegate) {
+    func setupView(surveyStep: SurveyStep,
+                   surveyTheme: SurveyTheme,
+                   isRTL: Bool,
+                   viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
         self.viewStateProtocol = viewStateProtocol
 
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
+        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
 
         placeholderLabel.text = surveyStep.metadata?.placeholder
         placeholderLabel.textColor = surveyTheme.textSecondaryColorAlpha80
@@ -79,5 +82,8 @@ internal class UPOpenTextView: UIView {
         counterLabel.font = UIFont.matching(
             fontName: surveyTheme.fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+        if isRTL {
+            counterLabel.textAlignment = .left
+        }
     }
 }

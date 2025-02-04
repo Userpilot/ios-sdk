@@ -22,7 +22,7 @@ internal class BottomSheetViewController: UIViewController {
     private lazy var mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = .white
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view

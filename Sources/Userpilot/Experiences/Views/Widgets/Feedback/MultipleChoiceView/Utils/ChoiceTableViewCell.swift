@@ -93,7 +93,7 @@ internal class ChoiceTableViewCell: UITableViewCell {
     }
 
     // MARK: - Binding Data
-    func bindCell(choice: Choice, surveyStep: SurveyStep, surveyTheme: SurveyTheme) {
+    func bindCell(choice: Choice, surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
         textField.textColor = surveyTheme.textColor
         textField.setPlaceholder(text: choice.value ?? "", color: surveyTheme.textColor)
         textField.font = UIFont.matching(
@@ -106,6 +106,9 @@ internal class ChoiceTableViewCell: UITableViewCell {
         label.font = UIFont.matching(
             fontName: surveyTheme.fontFamily, fontWeight: [.traitMonoSpace],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
+        if isRTL {
+            label.textAlignment = .right
+        }
 
         // Styling based on selection state
         if choice.isSelected == true {

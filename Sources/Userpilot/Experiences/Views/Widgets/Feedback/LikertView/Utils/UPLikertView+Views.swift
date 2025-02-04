@@ -18,7 +18,7 @@ internal extension UPLikertView {
     // MARK: - Setup View Hierarchy
 
     /// Sets up the view hierarchy by adding subviews and applying constraints.
-    func setupViewHierarchy() {
+    func setupView() {
         titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
 

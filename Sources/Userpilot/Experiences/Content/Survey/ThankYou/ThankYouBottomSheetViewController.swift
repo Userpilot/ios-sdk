@@ -50,7 +50,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     }()
 
     // MARK: - Properties
-    internal let surveyStep: SurveyStep
+    internal let surveyContent: SurveyContent
     internal let surveyTheme: SurveyTheme
     var actionButtonClicked: (String?) -> Void = { _ in }
 
@@ -59,8 +59,8 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     /// Initializes the `SlideOutBottomSheetViewController` with a given view model.
     ///
     /// - Parameter experienceViewModel: The view model that controls the experience data and behavior.
-    init(surveyStep: SurveyStep, surveyTheme: SurveyTheme) {
-        self.surveyStep = surveyStep
+    init(surveyContent: SurveyContent, surveyTheme: SurveyTheme) {
+        self.surveyContent = surveyContent
         self.surveyTheme = surveyTheme
         super.init(nibName: nil, bundle: nil)
     }
@@ -78,6 +78,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
         setContent(content: contentStackView)
         setupCloseButton()
         bindThankYouView()
+        setupGeneralStyle()
     }
 
     @objc private func buttonDismissClicked() {
@@ -93,14 +94,17 @@ internal extension ThankYouBottomSheetViewController {
     /// This method is responsible for responding to any changes in the view model's state and ensuring the
     /// content displayed in the bottom sheet is kept up-to-date.
     func bindThankYouView() {
-        thankYouView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
+        guard let surveyStep = surveyContent.modules.last else { return }
+        thankYouView.setupView(surveyStep: surveyStep,
+                               surveyTheme: surveyTheme,
+                               isRTL: (surveyContent.localeCode ?? "en").isRTL == true)
 
         // Set up action button with appropriate action and style
         actionButton.setupViews(
             title: surveyStep.buttonLabel ?? "Next",
             theme: surveyTheme
         ) { [weak self] _ in
-            self?.actionButtonClicked(self?.surveyStep.metadata?.iosDeepLink)
+            self?.actionButtonClicked(surveyStep.metadata?.iosDeepLink)
             self?.dismiss(animated: true)
         }
     }

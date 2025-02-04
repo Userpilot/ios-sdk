@@ -56,6 +56,7 @@ internal class UPLikertView: UIView {
     // Survey step and theme data passed for configuration
     internal var surveyStep: SurveyStep?
     internal var surveyTheme: SurveyTheme?
+    internal var isRTL = false
 
     // View state delegate for managing view state changes
     internal weak var viewStateProtocol: ViewStateDelegate?
@@ -68,13 +69,13 @@ internal class UPLikertView: UIView {
     init(margin: CGFloat) {
         self.margin = margin
         super.init(frame: .zero)
-        setupViewHierarchy()
+        setupView()
         configureCollectionView()
     }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setupViewHierarchy()
+        setupView()
         configureCollectionView()
     }
 
@@ -88,13 +89,15 @@ internal class UPLikertView: UIView {
     func setupView(surveyStep: SurveyStep,
                    surveyTheme: SurveyTheme,
                    isDialog: Bool = false,
+                   isRTL: Bool,
                    viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme
+        self.isRTL = isRTL
         self.viewStateProtocol = viewStateProtocol
 
         // Set up the title and description view
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme)
+        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
 
         // Bind the low and high score labels
         bindLowHeightTexts()
@@ -104,6 +107,12 @@ internal class UPLikertView: UIView {
 
         // Calculate and set the item width based on screen width and number of items
         calculateItemWidth(isDialog: isDialog)
+
+        if isRTL {
+            collectionView.transform = CGAffineTransform(scaleX: -1, y: 1)
+            lowScoreTextLabel.textAlignment = .right
+            highScoreTextLabel.textAlignment = .left
+        }
 
         // Reload the collection view data
         collectionView.reloadData()

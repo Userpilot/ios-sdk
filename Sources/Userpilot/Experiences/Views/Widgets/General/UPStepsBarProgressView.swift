@@ -83,7 +83,7 @@ class UPStepsBarProgressView: UIView {
         }
     }
 
-    func setupView(stepsCount: Int, theme: SurveyTheme, isRTL: Bool = false) {
+    func setupView(stepsCount: Int, theme: SurveyTheme, isRTL: Bool) {
         numberOfSteps = stepsCount
         fillColor = theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(
             opacity: "0.2")?.rgbaToColor() ?? .gray

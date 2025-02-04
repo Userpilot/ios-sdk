@@ -50,6 +50,9 @@ internal class SurveyListViewController: UIViewController {
         setupViews()
         bindViewModel()
         registerKeyboardNotifications()
+        if surveyViewModel.isRTL {
+            UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        }
     }
 
     deinit {

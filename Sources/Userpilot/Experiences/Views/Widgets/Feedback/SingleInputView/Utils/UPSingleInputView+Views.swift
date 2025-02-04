@@ -24,14 +24,22 @@ extension UPSingleInputView {
             countryStackView.isHidden = true
             calendarIconButton.isHidden = true
         case .date:
-            textField.setPadding(start: 10, end: 60)
+            if isRTL {
+                textField.setPadding(start: 60, end: 10)
+            } else {
+                textField.setPadding(start: 10, end: 60)
+            }
             textField.keyboardType = .numberPad
-            textField.placeholder = "dd/mm/yyyy"
+            textField.placeholder = surveyStep?.metadata?.placeholder // "dd/mm/yyyy"
             calendarIconButton.isHidden = false
             countryStackView.isHidden = true
             calendarIconButton.tintColor = surveyTheme?.textSecondaryColorAlpha80 ?? .gray
         case .phone:
-            textField.setPadding(start: 120, end: 10)
+            if isRTL {
+                textField.setPadding(start: 10, end: 120)
+            } else {
+                textField.setPadding(start: 120, end: 10)
+            }
             textField.keyboardType = .phonePad
             countryStackView.isHidden = false
             calendarIconButton.isHidden = true
@@ -40,6 +48,11 @@ extension UPSingleInputView {
         case .email:
             textField.setPadding(start: 10, end: 10)
             textField.keyboardType = .emailAddress
+            countryStackView.isHidden = true
+            calendarIconButton.isHidden = true
+        case .text:
+            textField.setPadding(start: 10, end: 10)
+            textField.keyboardType = .default
             countryStackView.isHidden = true
             calendarIconButton.isHidden = true
         case .general:

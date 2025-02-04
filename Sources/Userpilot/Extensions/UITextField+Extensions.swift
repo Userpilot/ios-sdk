@@ -42,7 +42,7 @@ internal extension UITextField {
         case .emailAddress:
             return self.text?.isValidEmail() ?? false
         case .phonePad:
-            return self.text?.isEmpty == false && (self.text?.count ?? 0) > 7
+            return self.text?.isEmpty == false && (self.text?.count ?? 0) > 3
         case .numberPad, .decimalPad:
             return self.text?.isNumeric() ?? false
         default:

@@ -208,14 +208,15 @@ extension SocketManager {
             socketState = .connecting
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: "NX-b7b285fd",
+                SocketManager.tokenKey: "NX-b1623a0c",
                 SocketManager.userIDKey: storage.userID,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,
                 SocketManager.appPropertiesKey: appProperties
             ]
 
-            phoenixSocket = Socket("https://analytex-dev-nxtapp-11893.userpilot.io/mobile/v1/events/websocket", params: socketProperties)
+            phoenixSocket = Socket("https://analytex-dev-nxtapp-11632.userpilot.io/mobile/v1/events/websocket",
+                                   params: socketProperties)
 
             guard let phoenixSocket else { return }
 

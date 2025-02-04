@@ -51,7 +51,7 @@ internal extension SurveyListViewController {
         ) { [weak self] _ in
             self?.processSurvey()
         }
-        actionButton.updateEnableState(isEnabled: surveyViewModel.isAnyQuestionRequired())
+        actionButton.updateEnableState(isEnabled: !surveyViewModel.isAnyQuestionRequired())
     }
 
     /// Process survey form answers.
@@ -104,6 +104,7 @@ internal extension SurveyListViewController {
                 likertView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self
                 )
                 containerView.addArrangedSubview(likertView)
@@ -113,6 +114,7 @@ internal extension SurveyListViewController {
                 multipleChoiceView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self
                 )
                 containerView.addArrangedSubview(multipleChoiceView)
@@ -122,6 +124,7 @@ internal extension SurveyListViewController {
                 openTextView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self
                 )
                 containerView.addArrangedSubview(openTextView)
@@ -131,6 +134,7 @@ internal extension SurveyListViewController {
                 singleInputView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self,
                     parentViewController: self
                 )

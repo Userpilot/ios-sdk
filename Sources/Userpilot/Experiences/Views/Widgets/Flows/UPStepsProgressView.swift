@@ -54,7 +54,7 @@ internal class UPStepsProgressView: UIView {
     // MARK: - Paint Colors
 
     /// The color used to fill active step circles.
-    private var activeCircleColor: UIColor = .blue
+    private var activeCircleColor: UIColor = .black
 
     /// The color used to fill inactive step circles.
     private var inactiveCircleColor: UIColor = .gray

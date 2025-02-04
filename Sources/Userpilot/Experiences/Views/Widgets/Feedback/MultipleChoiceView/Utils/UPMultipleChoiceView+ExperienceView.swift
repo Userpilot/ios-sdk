@@ -50,10 +50,8 @@ extension UPMultipleChoiceView: UPExperienceView {
            lastChoice.id == ThemeHandler.DefaultValues.surveyOtherChoice,
            lastChoice.isSelected == true {
 
-            if let otherText = lastChoice.otherOptionText, !otherText.isEmpty {
-                selectedOptions = selectedOptions.dropLast() +
-                [ThemeHandler.DefaultValues.surveyOtherChoice + otherText]
-            }
+            selectedOptions = selectedOptions.dropLast() +
+            [ThemeHandler.DefaultValues.surveyOtherChoice + (lastChoice.otherOptionText ?? "")]
         }
 
         // Return nil if no options are selected

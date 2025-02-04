@@ -233,6 +233,10 @@ internal class SurveyContainerView: UIView {
 
         setupGeneralStyle()
         bindSurveyViews()
+        
+        if isRTL {
+            UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        }
     }
 
     func bindStep(currentStep: Int) {
@@ -293,7 +297,9 @@ internal class SurveyContainerView: UIView {
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
-                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count + 1, theme: theme)
+                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count + 1,
+                                               theme: theme,
+                                               isRTL: isRTL)
             }
         }
     }
@@ -303,7 +309,8 @@ internal class SurveyContainerView: UIView {
         if stepsProgressView.isHidden == false {
             stepsProgressView.setCurrentStep(currentStep)
         } else if barStepsProgressView.isHidden == false {
-            delay(0.2) {
+            delay(0.2) { [weak self] in
+                guard let self else { return }
                 self.barStepsProgressView.setCurrentStep(self.currentStep + 1)
             }
         }
@@ -333,30 +340,31 @@ internal class SurveyContainerView: UIView {
         var margin = 0
         switch contentStep.type {
         case .likert:
-            margin = 40
+            margin = 0
             let likertView = UPLikertView()
-            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: true, viewStateProtocol: self)
+            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: true, isRTL: isRTL, viewStateProtocol: self)
             newView = likertView
         case .multipleChoice:
             let multipleChoiceView = UPMultipleChoiceView()
-            multipleChoiceView.setupView(surveyStep: contentStep, surveyTheme: theme, viewStateProtocol: self)
+            multipleChoiceView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL, viewStateProtocol: self)
             newView = multipleChoiceView
         case .openText:
             let openTextView = UPOpenTextView()
-            openTextView.setupView(surveyStep: contentStep, surveyTheme: theme, viewStateProtocol: self)
+            openTextView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL, viewStateProtocol: self)
             newView = openTextView
         case .singleInput:
             let singleInputView = UPSingleInputView()
             singleInputView.setupView(
                 surveyStep: contentStep,
                 surveyTheme: theme,
+                isRTL: isRTL,
                 viewStateProtocol: self,
                 parentViewController: parentViewController
             )
             newView = singleInputView
         case .completed:
             let thankYouView = UPThankYouView()
-            thankYouView.setupView(surveyStep: contentStep, surveyTheme: theme)
+            thankYouView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL)
             newView = thankYouView
         default:
             break

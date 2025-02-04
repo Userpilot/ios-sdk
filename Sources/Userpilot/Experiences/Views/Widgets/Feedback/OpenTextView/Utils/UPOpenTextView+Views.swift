@@ -64,7 +64,8 @@ internal extension UPOpenTextView {
 
         NSLayoutConstraint.activate([
             counterLabel.topAnchor.constraint(equalTo: textViewContainer.bottomAnchor),
-            counterLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -26),
+            counterLabel.leadingAnchor.constraint(equalTo: textViewContainer.leadingAnchor, constant: 12),
+            counterLabel.trailingAnchor.constraint(equalTo: textViewContainer.trailingAnchor, constant: -12),
             counterLabel.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor)
         ])
 
