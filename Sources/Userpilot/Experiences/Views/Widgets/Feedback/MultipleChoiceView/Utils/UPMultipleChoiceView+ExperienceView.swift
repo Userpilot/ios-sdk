@@ -43,7 +43,7 @@ extension UPMultipleChoiceView: UPExperienceView {
         }
 
         // Extract selected option IDs
-        var selectedOptions = choices.filter { $0.isSelected == true }.map { $0.value }
+        var selectedOptions = choices.filter { $0.isSelected == true }.map { $0.id }
 
         // Handle "Other" option logic
         if let lastChoice = choices.last,
