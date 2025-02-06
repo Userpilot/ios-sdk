@@ -62,7 +62,7 @@ extension UPSingleInputView: UITextFieldDelegate {
                 textField.layer.borderColor = UIColor.red.cgColor
             }
         }
-        // viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
+        viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
     }
 
     /// Handles the Return key tap by dismissing the keyboard.

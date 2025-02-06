@@ -66,6 +66,8 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
                 at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
                 cell.showKeyboard()
             }
+        } else {
+            self.endEditing(true)
         }
     }
 

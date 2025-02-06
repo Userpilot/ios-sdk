@@ -27,7 +27,8 @@ internal extension SDKEvent {
         return self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
         self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
         self.eventName == SDKEventsName.surveyExperienceDismissed.rawValue ||
-        self.eventName == SDKEventsName.surveyExperienceCompleted.rawValue
+        self.eventName == SDKEventsName.surveyExperienceCompleted.rawValue ||
+        self.eventName == SDKEventsName.surveyExperienceStepDismissed.rawValue
     }
 
 }

@@ -14,7 +14,7 @@
 import Foundation
 import UIKit
 
-extension UIColor {
+internal extension UIColor {
     // static let gray = UIColor(hexString: "#656567")
     static let lightGray = UIColor(hex: "#EBEBEB")
     static let grayCA = UIColor(hex: "#CACACE")
@@ -71,7 +71,7 @@ internal extension UIColor {
 
 }
 
-extension UIColor {
+internal extension UIColor {
     // Function to generate a random color
     static func random() -> UIColor {
         let red = CGFloat.random(in: 0...1)

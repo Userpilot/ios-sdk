@@ -19,6 +19,7 @@ internal extension UPLikertView {
 
     /// Sets up the view hierarchy by adding subviews and applying constraints.
     func setupView() {
+        backgroundColor = .clear
         titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -61,6 +62,7 @@ internal extension UPLikertView {
         forCellWithReuseIdentifier: LikertCollectionViewCell.identifier)
         collectionView.dataSource = self
         collectionView.delegate = self
+        collectionView.backgroundColor = .clear
     }
 
     // MARK: - Bind Low and High Score Texts

@@ -14,6 +14,14 @@ internal class SurveyContainerView: UIView {
     // MARK: - UI Components
 
     /// A container for the dismiss button, with a fixed height.
+    private lazy var headerSpaceView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 8).isActive = true
+        return view
+    }()
+    
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -64,7 +72,7 @@ internal class SurveyContainerView: UIView {
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, buttonDismissContainerView, scrollView, spaceView, actionButton, stepsProgressView])
+            barStepsProgressView, headerSpaceView, buttonDismissContainerView, scrollView, spaceView, actionButton, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
@@ -297,6 +305,7 @@ internal class SurveyContainerView: UIView {
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
+                headerSpaceView.isHidden = true
                 barStepsProgressView.setupView(stepsCount: surveyContent.modules.count + 1,
                                                theme: theme,
                                                isRTL: isRTL)

@@ -7,7 +7,7 @@
 
 import Foundation
 
-class DelayUtils {
+internal class DelayUtils {
 
     // A reference to the ongoing delay task
     private static var delayTask: DispatchWorkItem?

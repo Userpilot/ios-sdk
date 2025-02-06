@@ -36,6 +36,7 @@ internal class UPTitleDescriptionView: UIView {
     // MARK: - Private Methods
 
     private func setupViews() {
+        backgroundColor = .clear
         titleLabel.numberOfLines = 0
         descriptionLabel.numberOfLines = 0
 
@@ -90,12 +91,5 @@ internal class UPTitleDescriptionView: UIView {
             titleLabel.textAlignment = .right
             descriptionLabel.textAlignment = .right
         }
-    }
-
-    func setupView() {
-        titleLabel.text = "AAAAA test stseas d asd as AAAAA test stseas d asd as AAAAA test stseas d asd as"
-        descriptionLabel.text = "AAAAA test stseas d asd asAAAAA test stseas d asd as AAAAA" +
-        " test stseas d asd as AAAAA test stseas d asd as AAAAA test stseas d asd as AAAAA" +
-        " test stseas d asd as AAAAA test stseas d asd as"
     }
 }

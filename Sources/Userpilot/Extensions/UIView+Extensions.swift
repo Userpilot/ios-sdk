@@ -32,7 +32,7 @@ internal func distanceFromViewToScreenTop(view: UIView) -> CGFloat? {
     return distance
 }
 
-extension UIView {
+internal extension UIView {
 
     func setTopCornerRadius(_ radius: CGFloat) {
         self.clipsToBounds = true

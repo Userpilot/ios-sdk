@@ -36,6 +36,7 @@ internal class UPThankYouView: UIView {
     // MARK: - Private Methods
 
     private func setupViewHierarchy() {
+        backgroundColor = .clear
         addSubview(titleDescriptionView)
 
         titleDescriptionView.translatesAutoresizingMaskIntoConstraints = false

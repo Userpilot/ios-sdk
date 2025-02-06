@@ -11,7 +11,7 @@
 
 import Foundation
 
-struct SurveyLogicHandler {
+internal struct SurveyLogicHandler {
 
     // Determines the next question index based on the current step, logic rules, provided answer, and survey steps.
     // - Parameters:

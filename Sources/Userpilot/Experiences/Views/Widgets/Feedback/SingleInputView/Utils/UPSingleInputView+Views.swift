@@ -65,6 +65,7 @@ extension UPSingleInputView {
 
     // MARK: - Setup View
     func setupView() {
+        backgroundColor = .clear
         // Setup countryStackView
         countryStackView.addArrangedSubviews([countrySelectorButton, downArrowButton, separatorView])
         countryStackView.axis = .horizontal

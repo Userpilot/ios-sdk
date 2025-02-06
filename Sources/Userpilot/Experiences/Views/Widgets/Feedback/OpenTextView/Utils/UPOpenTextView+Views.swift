@@ -15,6 +15,7 @@ internal extension UPOpenTextView {
 
     /// Sets up the views.
     func setupView() {
+        backgroundColor = .clear
         addSubview(titleDescriptionView)
         addSubview(textViewContainer)
 
