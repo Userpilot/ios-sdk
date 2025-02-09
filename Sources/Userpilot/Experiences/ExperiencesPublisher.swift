@@ -28,7 +28,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func getActiveMobileContent() -> ExperienceContent?
 
     /// check active experience
-    func fetchAndResetCarouselContentState() -> Bool
+    func validateFullScreenContentAndScreen(_ event: Event) -> Bool
 
     /// Send experience event to backend
     func publishExperienceEvent(_ sdkEvent: SDKEvent)
@@ -153,7 +153,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Check experiences state, in case the screen events comes from on resume state after
     /// carousel expereince end
-    func fetchAndResetCarouselContentState() -> Bool {
+    func validateFullScreenContentAndScreen(_ event: Event) -> Bool {
+        if event.screenTitle != currentScreen { return false }
         if isTriggeringThankYouMessage { return true }
         guard carouselContent, !isTriggeringThankYouMessage else { return false }
         carouselContent = false

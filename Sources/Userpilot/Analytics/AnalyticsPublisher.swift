@@ -293,7 +293,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func screen(_ event: Event) {
         tryCatch {
-            if experiencesPublisher?.fetchAndResetCarouselContentState() == true {
+            if experiencesPublisher?.validateFullScreenContentAndScreen(event) == true {
                 return
             }
             if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
