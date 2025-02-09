@@ -293,9 +293,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func screen(_ event: Event) {
         tryCatch {
-            if experiencesPublisher?.fetchAndResetCarouselContentState() == true {
-                return
-            }
             if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
             }
@@ -590,6 +587,9 @@ extension AnalyticsPublisher {
         tryCatch {
             guard canRequestExperienceEvent else { return }
             if let screenViewEntity {
+                if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
+                    return
+                }
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
                 payload[AnalyticsPublisher.metaDataProperty] = [

@@ -27,9 +27,6 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Get current experience
     func getActiveMobileContent() -> MobileContent?
 
-    /// check active experience
-    func fetchAndResetCarouselContentState() -> Bool
-
     /// Send experience event to backend
     func publishExperienceEvent(_ sdkEvent: SDKEvent)
 
@@ -76,9 +73,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Holds the active carousel content, if any, that is being displayed.
     private var mobileContent: MobileContent?
-
-    /// Holds last experience triggered by SDK
-    private var carouselContent = false
 
     /// Manual experience not check screen
     private var isTriggerManualExperience = false
@@ -137,14 +131,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     func getActiveMobileContent() -> MobileContent? {
         defer { mobileContent = nil }
         return mobileContent
-    }
-
-    /// Check experiences state, in case the screen events comes from on resume state after
-    /// carousel expereince end
-    func fetchAndResetCarouselContentState() -> Bool {
-        guard carouselContent else { return false }
-        carouselContent = false
-        return true
     }
 
     /// Try to handle the deep link internally
@@ -287,7 +273,6 @@ extension ExperiencesPublisher {
             if let mobileContent {
                 checkCachedThemes(mobileContent.baseThemeID)
             } else {
-                carouselContent = wasCarouselExperience()
                 analyticsPublisher.publishFakeReloadScreenEvent()
             }
         }
@@ -391,11 +376,13 @@ extension ExperiencesPublisher {
     }
 
     /// check if expereince was Carousel one
-    private func wasCarouselExperience() -> Bool {
+    private func wasExperienceExperience() -> Bool {
         guard let topViewController = UIApplication.shared.fetchTopViewController() else {
             return false
         }
-        return topViewController.isKind(of: CarouselExperienceViewController.self)
+        return topViewController.isKind(of: CarouselExperienceViewController.self) ||
+        topViewController.isKind(of: SlideOutDialogViewController.self) ||
+        topViewController.isKind(of: SlideOutBottomSheetViewController.self)
     }
 }
 // swiftlint:enable file_length
