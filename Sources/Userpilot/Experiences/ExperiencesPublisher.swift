@@ -27,9 +27,6 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Get current experience
     func getActiveMobileContent() -> ExperienceContent?
 
-    /// check active experience
-    func validateFullScreenContentAndScreen(_ event: Event) -> Bool
-
     /// Send experience event to backend
     func publishExperienceEvent(_ sdkEvent: SDKEvent)
 
@@ -82,9 +79,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Holds the active carousel content, if any, that is being displayed.
     private var experienceContent: ExperienceContent?
-
-    /// Holds last experience triggered by SDK
-    private var carouselContent = false
 
     /// Manual experience not check screen
     private var isTriggerManualExperience = false
@@ -152,16 +146,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     func getActiveMobileContent() -> ExperienceContent? {
         defer { experienceContent = nil }
         return experienceContent
-    }
-
-    /// Check experiences state, in case the screen events comes from on resume state after
-    /// carousel expereince end
-    func validateFullScreenContentAndScreen(_ event: Event) -> Bool {
-        if event.screenTitle != currentScreen { return false }
-        if isTriggeringThankYouMessage { return true }
-        guard carouselContent, !isTriggeringThankYouMessage else { return false }
-        carouselContent = false
-        return true
     }
 
     /// Try to handle the deep link internally
@@ -326,7 +310,6 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                carouselContent = wasFullScreenExperience()
                 analyticsPublisher.publishFakeReloadScreenEvent()
             }
         }
@@ -503,15 +486,6 @@ extension ExperiencesPublisher {
         topViewController.isKind(of: SlideOutDialogViewController.self) ||
         topViewController.isKind(of: BottomSheetViewController.self) ||
         topViewController.isKind(of: SurveyListViewController.self)
-    }
-
-    /// check if expereince was Carousel one
-    private func wasFullScreenExperience() -> Bool {
-        guard let topViewController = UIApplication.shared.fetchTopViewController() else {
-            return false
-        }
-        return topViewController.isKind(
-            of: CarouselExperienceViewController.self) || topViewController.isKind(of: SurveyListViewController.self)
     }
 }
 

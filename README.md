@@ -13,10 +13,12 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Installation](#installation)
       - [Prerequisites](#prerequisites)
       - [Cocoapods](#cocoapods)
-      - [Swift Package Manager](#swift-package-manager)
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
+ - [📝 Documentation](#-documentation)
+ - [🎬 Samples](#-samples)
+ - [📄 License](#-license)
 
 ## 🚀 Getting Started
 
@@ -42,15 +44,6 @@ Before you begin, ensure your iOS project meets the following requirements:
     ```
     
 2. Run `pod install` in your project directory.
-
-#### Swift Package Manager
-
-1. In Xcode, navigate to **File -> Add Packages**.
-2. Enter the package URL: https://github.com/Userpilot/ios-sdk.
-3. For **Dependency Rule**, select **Up to Next Major Version**.
-4. Click **Add Package**.
-
-Once integrated, the Userpilot SDK is available throughout your application.
 
 ### Initializing
 
@@ -166,7 +159,7 @@ userpilot.anonymous()
 Triggers a specific experience programmatically using its unique ID. This API allows you to manually initiate an experience within your application.
 
 ```swift
-userpilot.trigger(EXPERIENCE_ID)
+userpilot.triggerExperience(EXPERIENCE_ID)
 ```
 
 ### Configurations (Optional)
@@ -233,3 +226,15 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
 }
 ```
+
+## 📝 Documentation
+
+Full documentation is available at https://docs.userpilot.com/
+
+## 🎬 Samples
+
+The `Sample` directory in repository contains a full example swift app providing references for usage of the Userpilot API.
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE) for more information.
