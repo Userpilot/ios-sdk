@@ -51,12 +51,13 @@ internal class UPOpenTextView: UIView {
     /// Configures the view with a title, description, and placeholder text for the text view.
     ///
     /// This method sets up the various UI elements within the `UPOpenTextView`. It
-    ///  configures the `titleDescriptionView` with the survey step and theme,
+    /// configures the `titleDescriptionView` with the survey step and theme,
     /// sets the placeholder text for the `placeholderLabel`, and adjusts the font based on the theme settings.
     ///
     /// - Parameters:
     ///   - surveyStep: The current survey step containing the metadata and placeholder text.
     ///   - surveyTheme: The theme to be applied to the view, including font family.
+    ///   - isRTL: Boolean indicating if the layout should be right-to-left.
     ///   - viewStateProtocol: A delegate for managing the view's state.
     func setupView(surveyStep: SurveyStep,
                    surveyTheme: SurveyTheme,
@@ -67,23 +68,74 @@ internal class UPOpenTextView: UIView {
 
         titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
 
-        placeholderLabel.text = surveyStep.metadata?.placeholder
-        placeholderLabel.textColor = surveyTheme.textSecondaryColorAlpha80
+        configureViews(placeholder: surveyStep.metadata?.placeholder,
+                   textColor: surveyTheme.textColor,
+                   secondaryTextColor: surveyTheme.textSecondaryColorAlpha80,
+                   fontFamily: surveyTheme.fontFamily,
+                   isRTL: isRTL)
+    }
+
+    /// Configures the view with a follow-up question and placeholder text.
+    ///
+    /// - Parameters:
+    ///   - followUpQuestion: The follow-up question object containing the question text.
+    ///   - placeholder: The placeholder text for the text view.
+    ///   - npsTheme: The theme settings for the view.
+    ///   - isRTL: Boolean indicating if the layout should be right-to-left.
+    ///   - viewStateProtocol: A delegate for managing the view's state.
+    func setupView(followUpQuestion: FollowUpQuestion?,
+                   placeholder: String?,
+                   npsTheme: NPSTheme,
+                   isRTL: Bool,
+                   viewStateProtocol: ViewStateDelegate) {
+        guard let followUpQuestion else { return }
+        self.viewStateProtocol = viewStateProtocol
+
+        titleDescriptionView.setupView(
+            title: followUpQuestion.question,
+            subHeader: nil,
+            npsTheme: npsTheme,
+            isRTL: isRTL)
+
+        configureViews(placeholder: placeholder,
+                   textColor: npsTheme.textColor,
+                   secondaryTextColor: npsTheme.textSecondaryColorAlpha80,
+                   fontFamily: npsTheme.fontFamily,
+                   isRTL: isRTL)
+    }
+
+    /// Applies the theme styles to the text view, placeholder label, and counter label.
+    ///
+    /// - Parameters:
+    ///   - placeholder: The placeholder text for the text view.
+    ///   - textColor: The main text color.
+    ///   - secondaryTextColor: The secondary text color for the counter label.
+    ///   - fontFamily: The font family to be applied.
+    ///   - isRTL: Boolean indicating if the layout should be right-to-left.
+    private func configureViews(placeholder: String?,
+                                textColor: UIColor,
+                                secondaryTextColor: UIColor,
+                                fontFamily: String?,
+                                isRTL: Bool) {
+        placeholderLabel.text = placeholder
+        placeholderLabel.textColor = secondaryTextColor
         placeholderLabel.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [],
+            fontName: fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTextSize))
 
-        textView.textColor = surveyTheme.textColor
+        textView.textColor = textColor
         textView.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [],
+            fontName: fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTextSize))
 
-        counterLabel.textColor = surveyTheme.textSecondaryColorAlpha80
+        counterLabel.textColor = secondaryTextColor
         counterLabel.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [],
+            fontName: fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+
         if isRTL {
             counterLabel.textAlignment = .left
         }
     }
+
 }

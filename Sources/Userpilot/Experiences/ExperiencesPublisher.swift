@@ -36,6 +36,9 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Manually trigger experience
     func triggerExperience(_ experienceID: String)
 
+    /// Manually trigger fake reload
+    func triggerFakeReload()
+
     /// Manually end experience
     func endExperience()
 
@@ -173,6 +176,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         }
     }
 
+    /// Manually trigger fake reload
+    func triggerFakeReload() {
+        analyticsPublisher.publishFakeReloadScreenEvent()
+    }
+
 }
 
 // MARK: - SocketSubscription
@@ -207,6 +215,9 @@ extension ExperiencesPublisher: SocketSubscription {
             } else if let contentPayload = message.payload["surveys"] as? [String: Any],
                 !contentPayload.isEmpty, let surveyContentData = response.toSurveyContent() {
                 experienceContent =  ExperienceContent.survey(content: surveyContentData.surveyContent)
+            } else if let contentPayload = message.payload["nps"] as? [String: Any],
+                !contentPayload.isEmpty, let npsContentData = response.toNPSContent() {
+                experienceContent =  ExperienceContent.nps(content: npsContentData.npsContent)
             }
             isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
         }
@@ -217,8 +228,12 @@ extension ExperiencesPublisher: SocketSubscription {
             }
         }
 
-        if let mobileContent = experienceContent {
-            checkCachedThemes(mobileContent.experienceThemeId())
+        if let experienceContent = experienceContent {
+            if experienceContent.asNPSContent() != nil {
+                openExperienceFlow()
+            } else {
+                checkCachedThemes(experienceContent.experienceThemeId())
+            }
         }
     }
 
@@ -240,10 +255,18 @@ extension ExperiencesPublisher: SocketSubscription {
             } else if let mobileContents = payload["surveys"] as? [String: Any],
                 !mobileContents.isEmpty, let surveyContentData = payload.toJSONString()?.toSurveyContent() {
                 experienceContent =  ExperienceContent.survey(content: surveyContentData.surveyContent)
+            } else if let mobileContents = payload["nps"] as? [String: Any],
+                !mobileContents.isEmpty, let npsContentData = payload.toJSONString()?.toNPSContent() {
+                experienceContent =  ExperienceContent.nps(content: npsContentData.npsContent)
             }
+
             if let experienceContent {
                 isTriggerManualExperience = true
-                checkCachedThemes(experienceContent.experienceThemeId())
+                if experienceContent.asNPSContent() != nil {
+                    openExperienceFlow()
+                } else {
+                    checkCachedThemes(experienceContent.experienceThemeId())
+                }
             }
         }
     }
@@ -343,8 +366,43 @@ extension ExperiencesPublisher {
 
                 case .survey(let content):
                     self.checkSurveyDelayConfiguration(content)
+
+                case .nps(let content):
+                    self.checkNPSDelayConfiguration(content)
                 }
             }
+        }
+    }
+
+    /**
+     Check nps delay, in case we have a delay, so start a delay timer
+     */
+    private func checkNPSDelayConfiguration(_ content: NPSContent) {
+        if content.timeDelay != 0 {
+            delay(Double(content.timeDelay)) { [weak self] in
+                self?.handleNPSExperience()
+            }
+        } else {
+            handleNPSExperience()
+        }
+    }
+
+    /**
+    Publish survey experience
+    */
+    private func handleNPSExperience() {
+        performOn(.main) { [weak self] in
+            guard
+                let self,
+                let topViewController = UIApplication.shared.fetchTopViewController(),
+                self.canShowExperience()
+            else {
+                self?.isTriggerManualExperience = false
+                self?.experienceContent = nil
+                return
+            }
+            let npsViewModel = NPSViewModel(container: self.container)
+            self.openNPSBottomSheetExperience(topViewController, npsViewModel)
         }
     }
 
@@ -423,6 +481,9 @@ extension ExperiencesPublisher {
             isForAllScreens = content.isForAllScreens
             screens = content.screens
         case .survey(let content):
+            isForAllScreens = content.isForAllScreens
+            screens = content.screens
+        case .nps(let content):
             isForAllScreens = content.isForAllScreens
             screens = content.screens
         }
@@ -548,6 +609,16 @@ extension ExperiencesPublisher {
             surveyViewModel: surveyViewModel)
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
             viewController.presentBottomSheet(viewController: surveyBottomSheetViewController)
+        }
+    }
+
+    /// Open slide out bottom sheet
+    private func openNPSBottomSheetExperience(_ viewController: UIViewController,
+                                              _ npsViewModel: NPSViewModel) {
+        delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            let npsBottomSheetViewController = NPSBottomSheetViewController(
+                npsViewModel: npsViewModel)
+            viewController.presentBottomSheet(viewController: npsBottomSheetViewController)
         }
     }
 

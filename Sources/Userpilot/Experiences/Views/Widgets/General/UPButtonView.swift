@@ -51,7 +51,13 @@ internal class UPButtonView: UIButton {
         let actualHight = text.height(
             withFont: font,
             width: self.bounds.width - edgeInsets) + edgeInsets
-        return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
+        if self.bounds.width == 0 {
+            let attributes: [NSAttributedString.Key: Any] = [.font: font]
+            let size = text.size(withAttributes: attributes)
+            return CGSize(width: size.width + 40, height: max(actualHight, 40))
+        } else {
+            return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
+        }
     }
 
     // MARK: - Setup Methods
@@ -112,6 +118,40 @@ internal class UPButtonView: UIButton {
         backgroundColor = theme.primaryColor
         layer.cornerRadius = 12
         layer.borderColor = theme.primaryColor.cgColor
+    }
+
+    func setupViews(
+        title: String?,
+        npsTheme: NPSTheme,
+        isSecondaryButton: Bool,
+        isDismissButton: Bool,
+        callback: ((ButtonAction?) -> Void)?) {
+
+            // Apply theme-based styling properties to the button
+            titleLabel?.font = UIFont.matching(
+                fontName: npsTheme.fontFamily,
+                fontWeight: !isSecondaryButton ? [.traitBold] : [],
+                fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
+            )
+
+            if isSecondaryButton {
+                setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
+            } else {
+                setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
+            }
+
+            setTitle(title, for: .normal)
+            contentHorizontalAlignment = .center
+
+            tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+            backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+
+            layer.cornerRadius = 12
+            layer.borderWidth = 1
+            layer.borderColor = (isSecondaryButton && !isDismissButton) ?
+            npsTheme.textSecondaryColorAlpha80.cgColor : UIColor.clear.cgColor
+
+            self.callback = callback
     }
 
     /// Applies font.

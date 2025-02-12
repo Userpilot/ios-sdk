@@ -332,6 +332,10 @@ internal struct SurveyTheme: Decodable {
         progress?.enabled ?? false
     }
 
+    var isStepsProgressColorManual: Bool {
+        progress?.colorType == .manual
+    }
+
     var isStepsProgressBallType: Bool {
         progress?.type == .ball
     }

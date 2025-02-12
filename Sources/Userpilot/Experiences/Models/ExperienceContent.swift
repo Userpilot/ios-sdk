@@ -13,6 +13,7 @@
 internal enum ExperienceContent {
     case flow(content: FlowContent)   // Represents a flow content.
     case survey(content: SurveyContent) // Represents a survey content.
+    case nps(content: NPSContent) // Represents a survey content.
 }
 
 // Extensions for ExperienceContent to provide access to content and other properties.
@@ -20,7 +21,7 @@ internal enum ExperienceContent {
 extension ExperienceContent {
 
     /// Safely retrieves the FlowContent if the current instance is of type .flow.
-    /// - Returns: The FlowContent associated with this enum case, or nil if it's not of type .flow.
+    /// - Returns: The FlowContent associated with this enum case, or nil if it's not of type flow.
     func asFlowContent() -> FlowContent? {
         if case let .flow(content) = self {
             return content
@@ -29,9 +30,18 @@ extension ExperienceContent {
     }
 
     /// Safely retrieves the SurveyContent if the current instance is of type .survey.
-    /// - Returns: The SurveyContent associated with this enum case, or nil if it's not of type .survey.
+    /// - Returns: The SurveyContent associated with this enum case, or nil if it's not of type survey.
     func asSurveyContent() -> SurveyContent? {
         if case let .survey(content) = self {
+            return content
+        }
+        return nil
+    }
+
+    /// Safely retrieves the NPSContent if the current instance is of type .survey.
+    /// - Returns: The NPSContent associated with this enum case, or nil if it's not of type nps.
+    func asNPSContent() -> NPSContent? {
+        if case let .nps(content) = self {
             return content
         }
         return nil
@@ -45,6 +55,8 @@ extension ExperienceContent {
             return content.localeCode
         case .survey(let content):
             return content.localeCode
+        case .nps(let content):
+            return content.localeCode
         }
     }
 
@@ -56,6 +68,8 @@ extension ExperienceContent {
             return content.baseThemeID
         case .survey(let content):
             return content.baseThemeID
+        case .nps(let content):
+            return 0
         }
     }
 
@@ -66,6 +80,8 @@ extension ExperienceContent {
         case .flow(let content):
             return content
         case .survey(let content):
+            return content
+        case .nps(let content):
             return content
         }
     }

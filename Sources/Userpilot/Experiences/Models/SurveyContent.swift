@@ -103,9 +103,8 @@ internal struct Metadata: Decodable {
     let inputType: SingleTextType?
     let maxLength: Int?
     let propertyName: String?
-    let buttonAction: String?
+    let buttonAction: ButtonActionType?
     let iosDeepLink: String?
-    let androidDeepLink: String?
     let enabled: Bool?
 
     private enum CodingKeys: String, CodingKey {
@@ -123,7 +122,6 @@ internal struct Metadata: Decodable {
         case propertyName = "property_name"
         case buttonAction = "button_action"
         case iosDeepLink = "ios_deep_link"
-        case androidDeepLink = "android_deep_link"
         case enabled
     }
 }
@@ -169,10 +167,15 @@ internal enum SingleTextType: String, Decodable {
     case general = "general"
 }
 
+internal enum ButtonActionType: String, Decodable {
+    case doNothing = "do_nothing"
+    case deepLink = "deep_link"
+}
+
 // MARK: - String Extension for JSON Deserialization
 
 internal extension String {
-    /// Converts a JSON string into a `CarouselData` object using `JSONDecoder`.
+    /// Converts a JSON string into a `SurveyContentData` object using `JSONDecoder`.
     func toSurveyContent() -> SurveyContentData? {
         if let surveyContent: SurveyContentData = self.toObject() {
             return surveyContent

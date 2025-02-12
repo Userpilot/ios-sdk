@@ -75,6 +75,12 @@ internal class UPImageView: UIView {
         }
     }
 
+    /// load image by URL
+    func setupView(url: String, imageLoader: ImageLoading) {
+        imageView.contentMode = .scaleAspectFit
+        imageLoader.loadImage(target: imageView, url: url, blurHash: nil, size: CGSize(width: 100, height: 100))
+    }
+
     /// Sets up accessibility for the image view.
     /// - Parameter line: The `Line` object containing accessibility attributes.
     private func setupAccessibility(for line: Line) {

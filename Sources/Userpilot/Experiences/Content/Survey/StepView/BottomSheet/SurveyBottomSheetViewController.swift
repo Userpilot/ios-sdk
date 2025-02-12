@@ -49,6 +49,11 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
         super.viewDidLoad()
         bindViewModel()
         setContent(content: surveyContainerView, withoutMargin: true)
+        registerKeyboardNotifications()
+    }
+
+    deinit {
+        removeKeyboardNotifications()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {

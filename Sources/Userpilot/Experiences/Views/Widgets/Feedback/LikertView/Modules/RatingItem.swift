@@ -40,6 +40,18 @@ internal struct RatingItem {
             )
         }
     }
+    
+    static func fillList(_ answer: Int) -> [RatingItem] {
+        let range = ThemeHandler.DefaultValues.surveyDefaultLikertViewCount
+        return (0..<range).map { index in
+            RatingItem(
+                type: .numbers,
+                title: "\(index + 1)",
+                image: nil,
+                isSelected: index <= answer ? true : false
+            )
+        }
+    }
 
     // MARK: - Private Methods
 

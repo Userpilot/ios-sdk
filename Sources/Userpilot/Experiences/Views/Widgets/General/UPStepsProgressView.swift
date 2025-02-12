@@ -121,7 +121,6 @@ internal class UPStepsProgressView: UIView {
         color.setFill()
         path.fill()
     }
-
     // MARK: - Public Methods
 
     /**
@@ -130,14 +129,10 @@ internal class UPStepsProgressView: UIView {
      - Parameters:
        - stepsCount: The total number of steps to display.
        - theme: The experience theme used for styling the circles.
+       - isRTL: A boolean indicating whether the layout should be right-to-left.
      */
     func setupView(stepsCount: Int, theme: ExperienceTheme, isRTL: Bool = false) {
-        numberOfSteps = stepsCount
-        updateColors(from: theme)
-        setCurrentStep(0)
-        if isRTL {
-            transform = CGAffineTransform(scaleX: -1, y: 1)
-        }
+        configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
     }
 
     /**
@@ -145,9 +140,31 @@ internal class UPStepsProgressView: UIView {
 
      - Parameters:
        - stepsCount: The total number of steps to display.
-       - theme: The experience theme used for styling the circles.
+       - theme: The survey theme used for styling the circles.
+       - isRTL: A boolean indicating whether the layout should be right-to-left.
      */
     func setupView(stepsCount: Int, theme: SurveyTheme, isRTL: Bool = false) {
+        configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
+    }
+
+    /**
+     Sets up the view with the specified number of steps and styling data.
+
+     - Parameters:
+       - stepsCount: The total number of steps to display.
+       - theme: The NPS theme used for styling the circles.
+       - isRTL: A boolean indicating whether the layout should be right-to-left.
+     */
+    func setupView(stepsCount: Int, theme: NPSTheme, isRTL: Bool = false) {
+        configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
+    }
+
+    /// Configures the view with the given step count and theme.
+    /// - Parameters:
+    ///   - stepsCount: The total number of steps to display.
+    ///   - theme: The theme used for styling the circles.
+    ///   - isRTL: A boolean indicating whether the layout should be right-to-left.
+    private func configureView(stepsCount: Int, theme: Any, isRTL: Bool) {
         numberOfSteps = stepsCount
         updateColors(from: theme)
         setCurrentStep(0)
@@ -157,23 +174,39 @@ internal class UPStepsProgressView: UIView {
     }
 
     /// Updates the active and inactive circle colors based on the provided theme data.
-    /// - Parameter style: The theme data used for color configuration.
-    private func updateColors(from theme: ExperienceTheme) {
-        activeCircleColor = theme.isStepsProgressColorManual ?
-        theme.stepsProgressColor : theme.backgroundColorAsString.invertColor().color
+    /// - Parameter theme: The theme data used for color configuration.
+    private func updateColors(from theme: Any) {
+        switch theme {
+        case let theme as ExperienceTheme:
+            activeCircleColor = theme.isStepsProgressColorManual ?
+            theme.stepsProgressColor : theme.backgroundColorAsString.invertColor().color
 
-        inactiveCircleColor = theme.isStepsProgressColorManual ?
-        theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :
-        theme.backgroundColorAsString.invertColor().hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray
-    }
+            inactiveCircleColor = theme.isStepsProgressColorManual ?
+            theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :
+            theme.backgroundColorAsString.invertColor().hexToRgb().updateRgbaOpacity(
+                opacity: "0.2")?.rgbaToColor() ?? .gray
 
-    /// Updates the active and inactive circle colors based on the provided theme data.
-    /// - Parameter style: The theme data used for color configuration.
-    private func updateColors(from theme: SurveyTheme) {
-        activeCircleColor = theme.stepsProgressColor
+        case let theme as SurveyTheme:
+            activeCircleColor = theme.isStepsProgressColorManual ?
+            theme.stepsProgressColor : theme.backgroundColorAsString.invertColor().color
 
-        inactiveCircleColor = theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(
-            opacity: "0.2")?.rgbaToColor() ?? .gray
+            inactiveCircleColor = theme.isStepsProgressColorManual ?
+            theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :
+            theme.backgroundColorAsString.invertColor().hexToRgb().updateRgbaOpacity(
+                opacity: "0.2")?.rgbaToColor() ?? .gray
+
+        case let theme as NPSTheme:
+            activeCircleColor = theme.isStepsProgressColorManual ?
+            theme.stepsProgressColor : theme.backgroundColorAsString.invertColor().color
+
+            inactiveCircleColor = theme.isStepsProgressColorManual ?
+            theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :
+            theme.backgroundColorAsString.invertColor().hexToRgb().updateRgbaOpacity(
+                opacity: "0.2")?.rgbaToColor() ?? .gray
+
+        default:
+            break
+        }
     }
 
     /// Sets the current step, optionally animating the transition.

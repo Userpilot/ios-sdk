@@ -49,6 +49,9 @@ internal class BottomSheetViewController: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
         view.alpha = 0
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
         return view
     }()
 
@@ -213,6 +216,9 @@ internal extension BottomSheetViewController {
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
     }
 
     /// Customize the background color of the bottom sheet for `ExperienceTheme`
@@ -232,6 +238,14 @@ internal extension BottomSheetViewController {
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
+    }
+
+    /// Customize the background color of the bottom sheet for `SurveyTheme`
+    func setBackgroundColor(_ theme: NPSTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        mainContainerView.setTopCornerRadius(16)
+        dimmedView.isHidden = false
+        dimmedView.backgroundColor = .black.withOpacity(0.4)
     }
 }
 

@@ -18,7 +18,7 @@ internal class SurveyContainerView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 8).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 8).isActive = true
         return view
     }()
     
@@ -50,14 +50,14 @@ internal class SurveyContainerView: UIView {
     private lazy var barStepsProgressView: UPStepsBarProgressView = {
         let progressView = UPStepsBarProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.heightAnchor.constraint(greaterThanOrEqualToConstant: 5).isActive = true
+        progressView.heightAnchor.constraint(equalToConstant: 5).isActive = true
         return progressView
     }()
 
     private lazy var stepsProgressView: UPStepsProgressView = {
         let progressView = UPStepsProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.heightAnchor.constraint(greaterThanOrEqualToConstant: 20).isActive = true
+        progressView.heightAnchor.constraint(equalToConstant: 20).isActive = true
         return progressView
     }()
 
@@ -65,7 +65,7 @@ internal class SurveyContainerView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 8).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 8).isActive = true
         return view
     }()
 
@@ -113,8 +113,8 @@ internal class SurveyContainerView: UIView {
     private var surveyContent: SurveyContent!
     private var isRTL = false
     private weak var surveyContainerViewDelegate: SurveyContainerViewDelegate?
+    private var appSemanticContentAttribute: UISemanticContentAttribute = .forceLeftToRight
     private var currentStep = 0
-
     private var viewHeight = CGFloat(0)
     
     // MARK: - Initial Setup
@@ -135,14 +135,15 @@ internal class SurveyContainerView: UIView {
      Reset height fo Scroll View on screen rotation.
      */
     func resetContentHeight(_ size: CGSize) {
-        if viewHeight > (size.height * 0.7) {
-            scrollViewHeightConstraint?.constant = (size.height * 0.7) - 50
-            scrollViewHeightConstraint?.isActive = true
-            self.layoutIfNeeded()
-        }else {
-            scrollViewHeightConstraint?.constant = viewHeight
-            scrollViewHeightConstraint?.isActive = true
-            self.layoutIfNeeded()
+        stepsProgressView.setNeedsDisplay()
+
+        // Calculate the target height, considering the screen size and a 50-point padding
+        let targetHeight = min(size.height * 0.7 - 50, viewHeight)
+
+        // Update the scroll view height constraint only if necessary
+        if scrollViewHeightConstraint?.constant != targetHeight {
+            scrollViewHeightConstraint?.constant = targetHeight
+            layoutIfNeeded()
         }
     }
 
@@ -242,9 +243,14 @@ internal class SurveyContainerView: UIView {
         setupGeneralStyle()
         bindSurveyViews()
         
+        appSemanticContentAttribute = UIView.appearance().semanticContentAttribute
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
         }
+    }
+
+    deinit {
+        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute
     }
 
     func bindStep(currentStep: Int) {
@@ -306,7 +312,7 @@ internal class SurveyContainerView: UIView {
             } else {
                 stepsProgressView.isHidden = true
                 headerSpaceView.isHidden = true
-                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count + 1,
+                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count,
                                                theme: theme,
                                                isRTL: isRTL)
             }
@@ -320,7 +326,7 @@ internal class SurveyContainerView: UIView {
         } else if barStepsProgressView.isHidden == false {
             delay(0.2) { [weak self] in
                 guard let self else { return }
-                self.barStepsProgressView.setCurrentStep(self.currentStep + 1)
+                self.barStepsProgressView.setCurrentStep(self.currentStep)
             }
         }
     }

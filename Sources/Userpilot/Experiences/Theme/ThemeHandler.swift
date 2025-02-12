@@ -89,6 +89,7 @@ internal class ThemeHandler: ThemeHandling {
         static let closeButtonAlpha = 0.8
         static let dismissButtonMargin = CGFloat(10)
         static let iconImageDimensions = 38
+        static let npsImageDimensions = 100
 
         /// Survey
         static let surveyItemRatingMinWidth: Int = 80

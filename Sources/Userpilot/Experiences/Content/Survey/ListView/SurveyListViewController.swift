@@ -27,6 +27,7 @@ internal class SurveyListViewController: UIViewController {
 
     /// View model managing the carousel experience state and actions.
     internal let surveyViewModel: SurveyViewModel
+    private var appSemanticContentAttribute: UISemanticContentAttribute = .forceLeftToRight
 
     // MARK: - Initializers
 
@@ -50,12 +51,15 @@ internal class SurveyListViewController: UIViewController {
         setupViews()
         bindViewModel()
         registerKeyboardNotifications()
+
+        appSemanticContentAttribute = UIView.appearance().semanticContentAttribute
         if surveyViewModel.isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
         }
     }
 
     deinit {
+        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute
         removeKeyboardNotifications()
     }
 

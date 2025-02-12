@@ -35,8 +35,7 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         // Attempt to dequeue a reusable cell
         guard
-            let likertCollectionViewCell: LikertCollectionViewCell = collectionView.dequeueReusableCell(for: indexPath),
-            let surveyTheme = self.surveyTheme
+            let likertCollectionViewCell: LikertCollectionViewCell = collectionView.dequeueReusableCell(for: indexPath)
         else {
             // Return an empty cell if dequeue fails
             return UICollectionViewCell()
@@ -45,6 +44,7 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
         // Bind the rating item data to the cell
         likertCollectionViewCell.bindCell(ratingItem: ratingItems[indexPath.item],
                                           surveyTheme: surveyTheme,
+                                          npsTheme: npsTheme,
                                           isRTL: isRTL)
         return likertCollectionViewCell
     }

@@ -56,6 +56,7 @@ internal class UPLikertView: UIView {
     // Survey step and theme data passed for configuration
     internal var surveyStep: SurveyStep?
     internal var surveyTheme: SurveyTheme?
+    internal var npsTheme: NPSTheme?
     internal var isRTL = false
 
     // View state delegate for managing view state changes
@@ -100,13 +101,53 @@ internal class UPLikertView: UIView {
         titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
 
         // Bind the low and high score labels
-        bindLowHeightTexts()
+        bindLowHeightTexts(
+            lowScore: surveyStep.metadata?.lowScore,
+            highScore: surveyStep.metadata?.highScore,
+            textColor: surveyTheme.textColor,
+            fontFamily: surveyTheme.fontFamily)
 
         // Populate the rating items based on the survey step data
         ratingItems = RatingItem.fillList(surveyStep: surveyStep)
 
         // Calculate and set the item width based on screen width and number of items
         calculateItemWidth(isDialog: isDialog)
+
+        if isRTL {
+            collectionView.transform = CGAffineTransform(scaleX: -1, y: 1)
+            lowScoreTextLabel.textAlignment = .right
+            highScoreTextLabel.textAlignment = .left
+        }
+
+        // Reload the collection view data
+        collectionView.reloadData()
+    }
+
+    /// Set up the view with the survey step, survey theme, and view state protocol.
+    func setupView(npsStep: NPSStep,
+                   npsTheme: NPSTheme,
+                   isRTL: Bool,
+                   answer: Int,
+                   viewStateProtocol: ViewStateDelegate) {
+        self.npsTheme = npsTheme
+        self.isRTL = isRTL
+        self.viewStateProtocol = viewStateProtocol
+
+        // Set up the title and description view
+        titleDescriptionView.setupView(title: npsStep.survey.question, subHeader: nil, npsTheme: npsTheme, isRTL: isRTL)
+
+        // Bind the low and high score labels
+        bindLowHeightTexts(
+            lowScore: npsStep.survey.lowScore,
+            highScore: npsStep.survey.highScore,
+            textColor: npsTheme.textColor,
+            fontFamily: npsTheme.fontFamily)
+
+        // Populate the rating items based on the survey step data
+        ratingItems = RatingItem.fillList(answer)
+
+        // Calculate and set the item width based on screen width and number of items
+        calculateItemWidth(isDialog: false)
 
         if isRTL {
             collectionView.transform = CGAffineTransform(scaleX: -1, y: 1)

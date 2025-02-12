@@ -104,7 +104,9 @@ internal extension ThankYouBottomSheetViewController {
             title: surveyStep.buttonLabel ?? "Next",
             theme: surveyTheme
         ) { [weak self] _ in
-            self?.actionButtonClicked(surveyStep.metadata?.iosDeepLink)
+            self?.actionButtonClicked(
+                surveyStep.metadata?.buttonAction == .deepLink ?
+                surveyStep.metadata?.iosDeepLink : nil)
             self?.dismiss(animated: true)
         }
     }

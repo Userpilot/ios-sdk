@@ -69,19 +69,57 @@ internal class UPTitleDescriptionView: UIView {
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
     func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
-        titleLabel.text = surveyStep.question
-        titleLabel.textColor = surveyTheme.textColor
-        titleLabel.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [.traitBold],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize))
+        configureLabels(
+            title: surveyStep.question,
+            subHeader: surveyStep.subheader,
+            textColor: surveyTheme.textColor,
+            fontFamily: surveyTheme.fontFamily,
+            isRTL: isRTL
+        )
+    }
 
-        // Conditionally set description label based on the presence of subheader
-        if let subHeader = surveyStep.subheader, !subHeader.isEmpty {
-            descriptionLabel.text = surveyStep.subheader
-            descriptionLabel.textColor = surveyTheme.textColor
+    /// Sets up the view with data from the provided NPS theme.
+    /// - Parameters:
+    ///   - title: The main title text.
+    ///   - subHeader: The optional subheader text.
+    ///   - npsTheme: The theme containing style properties for the text.
+    ///   - isRTL: A Boolean indicating whether the layout should be right-to-left.
+    func setupView(title: String?, subHeader: String?, npsTheme: NPSTheme, isRTL: Bool) {
+        configureLabels(
+            title: title,
+            subHeader: subHeader,
+            textColor: npsTheme.textColor,
+            fontFamily: npsTheme.fontFamily,
+            isRTL: isRTL
+        )
+    }
+
+    /// Configures the labels with the given properties.
+    /// - Parameters:
+    ///   - title: The main title text.
+    ///   - subHeader: The optional subheader text.
+    ///   - textColor: The text color for both labels.
+    ///   - fontFamily: The font family to be used.
+    ///   - isRTL: A Boolean indicating whether the layout should be right-to-left.
+    private func configureLabels(title: String?,
+                                 subHeader: String?,
+                                 textColor: UIColor,
+                                 fontFamily: String?,
+                                 isRTL: Bool) {
+        titleLabel.text = title
+        titleLabel.textColor = textColor
+        titleLabel.font = UIFont.matching(
+            fontName: fontFamily, fontWeight: [.traitBold],
+            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize)
+        )
+
+        if let subHeader, !subHeader.isEmpty {
+            descriptionLabel.text = subHeader
+            descriptionLabel.textColor = textColor
             descriptionLabel.font = UIFont.matching(
-                fontName: surveyTheme.fontFamily, fontWeight: [],
-                fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
+                fontName: fontFamily, fontWeight: [],
+                fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize)
+            )
             descriptionLabel.isHidden = false
         } else {
             descriptionLabel.isHidden = true
@@ -92,4 +130,5 @@ internal class UPTitleDescriptionView: UIView {
             descriptionLabel.textAlignment = .right
         }
     }
+
 }

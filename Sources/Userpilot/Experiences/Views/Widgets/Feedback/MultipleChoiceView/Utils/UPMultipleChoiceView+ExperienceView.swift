@@ -10,6 +10,8 @@
 //  Provides methods to validate the answer and retrieve the answer payload.
 //
 
+import Foundation
+
 extension UPMultipleChoiceView: UPExperienceView {
 
     // MARK: - UPExperienceView
@@ -50,8 +52,11 @@ extension UPMultipleChoiceView: UPExperienceView {
            lastChoice.id == ThemeHandler.DefaultValues.surveyOtherChoice,
            lastChoice.isSelected == true {
 
-            selectedOptions = selectedOptions.dropLast() +
-            [ThemeHandler.DefaultValues.surveyOtherChoice + (lastChoice.otherOptionText ?? "")]
+            if let otherChiceCell = tableView.cellForRow(
+                at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
+                selectedOptions = selectedOptions.dropLast() +
+                [ThemeHandler.DefaultValues.surveyOtherChoice + (otherChiceCell.getOtherOptionText() ?? "")]
+            }
         }
 
         // Return nil if no options are selected

@@ -66,7 +66,7 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
     /// Binds data from the provided `ratingItem` and `surveyTheme` to the cell's UI elements.
     /// - Parameter ratingItem: The item representing the individual rating choice in the Likert scale.
     /// - Parameter surveyTheme: The theme that defines the visual appearance of the cell.
-    func bindCell(ratingItem: RatingItem, surveyTheme: SurveyTheme, isRTL: Bool) {
+    func bindCell(ratingItem: RatingItem, surveyTheme: SurveyTheme?, npsTheme: NPSTheme?, isRTL: Bool) {
         if isRTL {
             self.contentView.transform = CGAffineTransform(scaleX: -1, y: 1)
         }
@@ -74,7 +74,7 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
         contentLabel.isHidden = ratingItem.type != .numbers
         contentLabel.text = ratingItem.title
         contentLabel.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [],
+            fontName: fontFamily(surveyTheme, npsTheme), fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize))
 
         // Show/hide the content image based on the rating item type
@@ -83,14 +83,37 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
 
         // Update background and text colors based on selection state
         contentView.backgroundColor = ratingItem.isSelected ?
-            surveyTheme.primaryColor : surveyTheme.secondaryColor
+            primaryColor(surveyTheme, npsTheme) : secondaryColor(surveyTheme, npsTheme)
 
         contentImageView.tintColor = ratingItem.isSelected ?
-            surveyTheme.primaryColorAsString.invertColor().color :
-            surveyTheme.backgroundColorAsString.invertColor().color
+            primaryColorAsString(surveyTheme, npsTheme) :
+            backgroundColorAsString(surveyTheme, npsTheme)
 
         contentLabel.textColor = ratingItem.isSelected ?
-            surveyTheme.primaryColorAsString.invertColor().color :
-            surveyTheme.backgroundColorAsString.invertColor().color
+            primaryColorAsString(surveyTheme, npsTheme)  :
+            backgroundColorAsString(surveyTheme, npsTheme)
     }
+
+    private func fontFamily(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> String? {
+        surveyTheme?.fontFamily ?? npsTheme?.fontFamily
+    }
+
+    private func primaryColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+        surveyTheme?.primaryColor ?? npsTheme?.primaryColor ?? .black
+    }
+
+    private func secondaryColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+        surveyTheme?.secondaryColor ?? npsTheme?.secondaryColor ?? .black.withAlphaComponent(0.2)
+    }
+
+    private func primaryColorAsString(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+        surveyTheme?.primaryColorAsString.invertColor().color ??
+        npsTheme?.primaryColorAsString.invertColor().color ?? .white
+    }
+
+    private func backgroundColorAsString(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+        surveyTheme?.backgroundColorAsString.invertColor().color ??
+        npsTheme?.backgroundColorAsString.invertColor().color ?? .black
+    }
+
 }

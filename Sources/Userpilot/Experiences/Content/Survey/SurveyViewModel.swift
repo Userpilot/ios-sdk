@@ -7,8 +7,8 @@
 //
 //  [Brief Description]
 //  This class is responsible for managing the state and interactions of the survey experience.
-//  It integrates with various dependencies such as the experiences publisher, theme handler,
-//  and storage to handle the experience flow, including data retrieval, theme merging, and
+//  It integrates with various dependencies such as the experiences publisher, theme handler, to
+//  handle the experience flow, including data retrieval, theme merging, and
 //  sending analytics events through socket requests.
 //
 
@@ -21,7 +21,6 @@ internal class SurveyViewModel {
     /// Weak reference to the owning `Userpilot` instance.
     private let experiencesPublisher: ExperiencesPublishing
     private let themeHandler: ThemeHandling
-    private let storage: DataStoring
 
     /// The merged theme data for the survey.
     private(set) var surveyTheme: SurveyTheme?
@@ -44,7 +43,6 @@ internal class SurveyViewModel {
     init(container: DIContainer) {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.storage = container.resolve(DataStoring.self)
     }
 
     // MARK: - View Lifecycle
@@ -105,10 +103,15 @@ internal class SurveyViewModel {
 
     /// Triggered the deep link from thank you message.
     private func onDeepLinkTriggered() {
-        guard let surveyContent, let surveyTheme else { return }
-        guard let thankYouContent = surveyContent.modules.last, thankYouContent.type == .completed else { return }
-        guard let deepLink = thankYouContent.metadata?.iosDeepLink, let url = URL(string: deepLink) else { return }
-
+        guard
+            let surveyContent,
+            let surveyTheme,
+            let thankYouContent = surveyContent.modules.last,
+            thankYouContent.type == .completed,
+            thankYouContent.metadata?.buttonAction == .deepLink,
+            let deepLink = thankYouContent.metadata?.iosDeepLink,
+            let url = URL(string: deepLink)
+        else { return }
         experiencesPublisher.triggerDeepLink(url: url)
     }
 
@@ -137,8 +140,10 @@ internal class SurveyViewModel {
     */
     func onSurveyCompleted() {
         guard let surveyContent else { return }
-        let deeplink: String? = surveyContent.modules.last?.type == .completed ?
-            surveyContent.modules.last?.metadata?.androidDeepLink : nil
+        let deeplink: String? = (
+            surveyContent.modules.last?.type == .completed
+            && surveyContent.modules.last?.metadata?.buttonAction == .deepLink
+        ) ? surveyContent.modules.last?.metadata?.iosDeepLink : nil
 
         let eventExperienceSeen = ExperienceSurveyCompletedEvent(
             surveyID: surveyContent.id,
@@ -151,7 +156,11 @@ internal class SurveyViewModel {
      Sends a socket event indicating that a step has been dismissed.
     */
     func onSurveyDismissed() {
-        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard
+            let surveyContent,
+            let surveyStep = getCurrentStepSurveyContent(),
+            surveyStep.type != .completed
+        else { return }
         if surveyContent.type == .list {
             let eventExperienceDismissed = ExperienceSurveyDismissedEvent(surveyID: surveyContent.id)
             experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
