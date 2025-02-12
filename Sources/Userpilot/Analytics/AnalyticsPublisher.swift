@@ -293,7 +293,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func screen(_ event: Event) {
         tryCatch {
-            if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
+            if experiencesPublisher?.canRequestScreenEvent() == false ||
+                eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
             }
             setupScreenEvent(event)

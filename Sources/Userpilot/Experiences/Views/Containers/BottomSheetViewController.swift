@@ -61,11 +61,14 @@ internal class BottomSheetViewController: UIViewController {
     private let minDismissiblePanHeight: CGFloat = 20
     /// Minimum spacing between the top edge of the view and the bottom sheet
     private var minTopSpacing: CGFloat = 100
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - View Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(
+           for: self.view.semanticContentAttribute)
         setupViews()
         // setupGestures()
     }
@@ -74,6 +77,13 @@ internal class BottomSheetViewController: UIViewController {
         super.viewDidAppear(animated)
         animatePresent()
     }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+        ? .forceLeftToRight : .forceRightToLeft
+    }
+
 }
 
 // MARK: - Setup Views
@@ -216,9 +226,6 @@ internal extension BottomSheetViewController {
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
-        view.addTapGesture { [weak self] in
-            self?.view.endEditing(true)
-        }
     }
 
     /// Customize the background color of the bottom sheet for `ExperienceTheme`

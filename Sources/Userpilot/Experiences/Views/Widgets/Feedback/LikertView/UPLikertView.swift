@@ -181,7 +181,7 @@ internal class UPLikertView: UIView {
             }
         } else {
             // Handle case when the number of items is less than 10
-            let screenWidth = Int(UIScreen.main.bounds.width) - Int(margin) - (8 * ratingItems.count)
+            let screenWidth = Int(UIScreen.main.bounds.width) - Int(margin) - (8 * (ratingItems.count - 1))
             itemWidth = CGFloat(screenWidth / ratingItems.count)
         }
 

@@ -13,8 +13,12 @@ import UIKit
 
 internal extension UPOpenTextView {
 
-    /// Sets up the views.
+    // Sets up the views.
+    // swiftlint:disable:next function_body_length
     func setupView() {
+        addTapGesture { [weak self] in
+            self?.endEditing(true)
+        }
         backgroundColor = .clear
         addSubview(titleDescriptionView)
         addSubview(textViewContainer)

@@ -65,7 +65,7 @@ internal class SurveyContainerView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: 8).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 0).isActive = true
         return view
     }()
 
@@ -111,9 +111,9 @@ internal class SurveyContainerView: UIView {
     private var parentViewController: UIViewController!
     private var theme: SurveyTheme!
     private var surveyContent: SurveyContent!
+    private var isDialogContent: Bool = false
     private var isRTL = false
     private weak var surveyContainerViewDelegate: SurveyContainerViewDelegate?
-    private var appSemanticContentAttribute: UISemanticContentAttribute = .forceLeftToRight
     private var currentStep = 0
     private var viewHeight = CGFloat(0)
     
@@ -232,25 +232,22 @@ internal class SurveyContainerView: UIView {
     func bindStep(withTheme theme: SurveyTheme,
                   andContent surveyContent: SurveyContent,
                   withLocal isRTL: Bool,
+                  isDialogContent isDialog: Bool,
                   andParentViewController parentViewController: UIViewController,
                   surveyContainerViewDelegate surveyContainerViewDelegate: SurveyContainerViewDelegate) {
         self.theme = theme
         self.surveyContent = surveyContent
         self.isRTL = isRTL
+        self.isDialogContent = isDialog
         self.parentViewController = parentViewController
         self.surveyContainerViewDelegate = surveyContainerViewDelegate
 
         setupGeneralStyle()
         bindSurveyViews()
-        
-        appSemanticContentAttribute = UIView.appearance().semanticContentAttribute
+
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
         }
-    }
-
-    deinit {
-        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute
     }
 
     func bindStep(currentStep: Int) {
@@ -355,9 +352,9 @@ internal class SurveyContainerView: UIView {
         var margin = 0
         switch contentStep.type {
         case .likert:
-            margin = 0
+            margin = 40
             let likertView = UPLikertView()
-            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: true, isRTL: isRTL, viewStateProtocol: self)
+            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: isDialogContent, isRTL: isRTL, viewStateProtocol: self)
             newView = likertView
         case .multipleChoice:
             let multipleChoiceView = UPMultipleChoiceView()
@@ -404,13 +401,16 @@ internal class SurveyContainerView: UIView {
         stepSectionsStackView.layoutIfNeeded()
 
         // Calculate the new height required for contentContainerView
-        let newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-
-        
+        var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+        if (newView is UPLikertView) {
+            newHeight -= 40
+        }else if (newView is UPMultipleChoiceView) {
+            newHeight += 40
+        }
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
-            self?.scrollViewHeightConstraint?.constant = min(newHeight - CGFloat(margin), screenHeight * 0.7)
-            self?.viewHeight = min(newHeight - CGFloat(margin), screenHeight * 0.7)
+            self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
+            self?.viewHeight = min(newHeight, screenHeight * 0.7)
             self?.layoutIfNeeded()
         })
         if !animationSubViews {

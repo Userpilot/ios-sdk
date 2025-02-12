@@ -19,6 +19,9 @@ internal extension UPMultipleChoiceView {
     /// constraints for proper layout and appearance, registers the table view cell, and disables scrolling
     /// for the table view as its height is dynamically adjusted based on its content.
     func setupView() {
+        addTapGesture { [weak self] in
+            self?.endEditing(true)
+        }
         backgroundColor = .clear
         // Add and configure the title description view.
         addSubview(titleDescriptionView)

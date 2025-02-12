@@ -64,7 +64,11 @@ extension UPSingleInputView {
     }
 
     // MARK: - Setup View
+    // swiftlint:disable:next function_body_length
     func setupView() {
+        addTapGesture { [weak self] in
+            self?.endEditing(true)
+        }
         backgroundColor = .clear
         // Setup countryStackView
         countryStackView.addArrangedSubviews([countrySelectorButton, downArrowButton, separatorView])

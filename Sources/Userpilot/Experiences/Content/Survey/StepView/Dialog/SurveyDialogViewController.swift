@@ -84,6 +84,7 @@ extension SurveyDialogViewController {
                 withTheme: surveyTheme,
                 andContent: surveyContent,
                 withLocal: self.surveyViewModel.isRTL,
+                isDialogContent: true,
                 andParentViewController: self,
                 surveyContainerViewDelegate: self
             )

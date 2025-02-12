@@ -45,6 +45,7 @@ internal class DialogViewController: UIViewController {
     }()
 
     private var mainContainerWidthConstraint: NSLayoutConstraint?
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - View Lifecycle
 
@@ -55,7 +56,15 @@ internal class DialogViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(
+           for: self.view.semanticContentAttribute)
         animatePresent()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+        ? .forceLeftToRight : .forceRightToLeft
     }
 
     /// Calculates the dialog width ratio based on the given size.

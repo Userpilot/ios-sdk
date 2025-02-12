@@ -143,7 +143,6 @@ internal class NPSContainerView: UIView {
     private var npsContent: NPSContent!
     private var isRTL = false
     private weak var npsContainerViewDelegate: NPSContainerViewDelegate?
-    private var appSemanticContentAttribute: UISemanticContentAttribute = .forceLeftToRight
 
     private var currentStep = 0
     private var viewHeight = CGFloat(0)
@@ -292,17 +291,11 @@ internal class NPSContainerView: UIView {
         bindSurveyViews()
         setupActionButton()
 
-        appSemanticContentAttribute = UIView.appearance().semanticContentAttribute
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
         }
     }
 
-    
-    deinit {
-        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute
-    }
-    
     // MARK: - Section Binding Methods
 
     /** Binds the sections of the provided step to the stack view. */

@@ -126,6 +126,8 @@ internal class ChoiceTableViewCell: UITableViewCell {
             showTextField(true)
             if let otherText = choice.otherOptionText, !otherText.isEmpty {
                 textField.text = otherText
+            } else {
+                textField.text = ""
             }
             if choice.isSelected == true {
                 textField.isUserInteractionEnabled = true

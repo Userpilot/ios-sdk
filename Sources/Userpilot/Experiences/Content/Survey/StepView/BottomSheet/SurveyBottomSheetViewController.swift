@@ -87,6 +87,7 @@ extension SurveyBottomSheetViewController {
                 withTheme: surveyTheme,
                 andContent: surveyContent,
                 withLocal: self.surveyViewModel.isRTL,
+                isDialogContent: false,
                 andParentViewController: self,
                 surveyContainerViewDelegate: self
             )

@@ -60,12 +60,13 @@ internal class SurveyViewModel {
         }
 
         // Setup content
-        if let lastModule = surveyContent.modules.last,
-            lastModule.type == .completed,
-            lastModule.metadata?.enabled == false {
-            surveyContent.modules.dropLast()
-        }
         self.surveyContent = surveyContent
+        if let lastModule = surveyContent.modules.last,
+           lastModule.type == .completed,
+           lastModule.metadata?.enabled == false {
+            let listWithoutCompleteMessage = Array(surveyContent.modules.dropLast())
+            self.surveyContent?.modules = listWithoutCompleteMessage
+        }
 
         // Setup theme
         let baseTheme = themeHandler.getThemeById(surveyContent.baseThemeID)

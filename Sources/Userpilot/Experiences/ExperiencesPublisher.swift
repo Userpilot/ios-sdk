@@ -39,6 +39,9 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Manually end experience
     func endExperience()
 
+    /// Determine if can requst screen event
+    func canRequestScreenEvent() -> Bool
+
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL)
 
@@ -113,6 +116,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     }
 
     // MARK: - SDK APIs
+
+    /// Determine if can requst screen event
+    func canRequestScreenEvent() -> Bool {
+        return !isTriggeringThankYouMessage
+    }
 
     /**
      Starts the experience for a given experience ID. This method can be used to
