@@ -66,5 +66,28 @@ internal extension UITextField {
         let position = self.position(from: self.beginningOfDocument, offset: position)
         self.selectedTextRange = self.textRange(from: position!, to: position!)
     }
+    
+    /// Disable auto correct and suggestions
+    func disableAutoCorrect() {
+        self.autocorrectionType = .no
+        self.spellCheckingType = .no
+        self.smartQuotesType = .no
+        self.smartDashesType = .no
+        self.smartInsertDeleteType = .no
+        self.autocapitalizationType = .none
+    }
 
+}
+
+extension UITextView {
+
+    /// Disable auto correct and suggestions
+    func disableAutoCorrect() {
+        self.autocorrectionType = .no
+        self.spellCheckingType = .no
+        self.smartQuotesType = .no
+        self.smartDashesType = .no
+        self.smartInsertDeleteType = .no
+        self.autocapitalizationType = .none
+    }
 }

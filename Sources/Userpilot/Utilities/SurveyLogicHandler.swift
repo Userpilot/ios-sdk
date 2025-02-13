@@ -31,7 +31,7 @@ internal struct SurveyLogicHandler {
 
         for logic in stepLogic {
             // Handle NOT_KNOWN and KNOWN cases
-            if logic.operand == .notKnown || logic.operand == .known {
+            if (answer == nil && logic.operand == .notKnown) || logic.operand == .known {
                 return resolveAction(logic: logic, currentStep: currentStep, surveySteps: surveySteps)
             }
 
