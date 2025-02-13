@@ -73,8 +73,30 @@ internal class ExperienceSurveySeenEvent: SurveyExperienceActionEvent {
  Represents the 'dismissed' action event.
  */
 internal class ExperienceSurveyDismissedEvent: SurveyExperienceActionEvent {
+    // Custom parameters for the Submitted event
+    let moduleID: Int?
+    let type: String?
+
+    init(surveyID: Int, moduleID: Int?, type: String?) {
+        self.moduleID = moduleID
+        self.type = type
+        super.init(surveyID: surveyID)
+    }
+
     override var name: String {
         return SDKEventsName.surveyExperienceDismissed.rawValue
+    }
+
+    /// Combines base event payload with custom parameters.
+    override var eventPayload: [String: Any] {
+        var basePayload = super.eventPayload
+        if moduleID != nil {
+            basePayload["module_id"] = moduleID
+        }
+        if type != nil {
+            basePayload["type"] = type
+        }
+        return basePayload
     }
 }
 

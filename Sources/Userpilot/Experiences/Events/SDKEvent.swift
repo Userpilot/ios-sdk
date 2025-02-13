@@ -28,7 +28,6 @@ internal extension SDKEvent {
         self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
         self.eventName == SDKEventsName.surveyExperienceDismissed.rawValue ||
         self.eventName == SDKEventsName.surveyExperienceCompleted.rawValue ||
-        self.eventName == SDKEventsName.surveyExperienceStepDismissed.rawValue ||
         self.eventName == SDKEventsName.npsExperienceDismissed.rawValue
     }
 
@@ -49,7 +48,6 @@ internal enum SDKEventsName: String {
     case surveyExperienceCompleted = "completed_survey"
     case surveyExperienceSubmitted = "completed_survey_module_batch"
     case surveyExperienceStepSeen = "seen_survey_module"
-    case surveyExperienceStepDismissed = "dismissed_survey_module"
     case surveyExperienceStepSkipped = "skipped_survey_module"
     case surveyExperienceStepSubmitted = "completed_survey_module"
 

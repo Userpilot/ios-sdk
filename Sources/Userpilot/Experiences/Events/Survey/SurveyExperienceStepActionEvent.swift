@@ -49,15 +49,6 @@ internal class ExperienceSurveyStepSeenEvent: SurveyExperienceStepActionEvent {
 /**
  Represents the 'completed' step action event.
  */
-internal class ExperienceSurveyStepDismissedEvent: SurveyExperienceStepActionEvent {
-    override var name: String {
-        return SDKEventsName.surveyExperienceStepDismissed.rawValue
-    }
-}
-
-/**
- Represents the 'completed' step action event.
- */
 internal class ExperienceSurveyStepSkippedEvent: SurveyExperienceStepActionEvent {
     override var name: String {
         return SDKEventsName.surveyExperienceStepSkipped.rawValue
