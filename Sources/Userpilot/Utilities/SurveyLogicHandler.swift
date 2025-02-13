@@ -26,7 +26,7 @@ internal struct SurveyLogicHandler {
         stepLogic: [SurveyLogic],
         answer: Any?,
         surveySteps: [SurveyStep]
-    ) -> Int {
+    ) -> (Int, Bool) {
         let normalizedAnswer = mapListAnswerToAnswer(answer)
 
         for logic in stepLogic {
@@ -71,21 +71,22 @@ internal struct SurveyLogicHandler {
             }
         }
 
-        return currentStep + 1
+        return (currentStep + 1, false)
     }
 
     /// Process the action when the logic operand/condition is met
-    private static func resolveAction(logic: SurveyLogic, currentStep: Int, surveySteps: [SurveyStep]) -> Int {
+    private static func resolveAction(logic: SurveyLogic, currentStep: Int, surveySteps: [SurveyStep]) -> (Int, Bool) {
         switch logic.action {
         case .endSurvey:
-            return surveySteps.count - 1
+            return (surveySteps.count - 1, true)
         case .goToNextModule:
-            return currentStep + 1
+            return (currentStep + 1, false)
         case .goToModule:
-            return logic.moduleId.flatMap { moduleId in
+            let index = logic.moduleId.flatMap { moduleId in
                 surveySteps.firstIndex { $0.id == moduleId } } ?? (currentStep + 1)
+            return (index, false)
         default:
-            return currentStep + 1
+            return (currentStep + 1, false)
         }
     }
 

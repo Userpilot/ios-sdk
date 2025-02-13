@@ -251,12 +251,18 @@ internal class SurveyViewModel {
         }
 
         // Get the next step index based on the logic handler
-        let nextStep = SurveyLogicHandler.getNextQuestionIndex(
+        let (nextStep, endSurvey) = SurveyLogicHandler.getNextQuestionIndex(
             currentStep: currentStep,
             stepLogic: surveyContent.modules[currentStep].logic ?? [],
             answer: answer,
             surveySteps: surveyContent.modules
         )
+
+        if endSurvey {
+            onSurveyCompleted()
+            closeSurvey?()
+            return
+        }
 
         // Determine whether to move to the next question or to a specified step
         currentStep = (nextStep == -1) ? (currentStep + 1) : nextStep
