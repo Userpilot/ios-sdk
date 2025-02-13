@@ -61,8 +61,7 @@ internal class DialogViewController: UIViewController {
         animatePresent()
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
+    deinit {
         UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
         ? .forceLeftToRight : .forceRightToLeft
     }

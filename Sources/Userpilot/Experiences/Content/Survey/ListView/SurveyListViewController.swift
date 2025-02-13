@@ -58,15 +58,11 @@ internal class SurveyListViewController: UIViewController {
         }
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
+    deinit {
         if let appSemanticContentAttribute {
             UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
             ? .forceLeftToRight : .forceRightToLeft
         }
-    }
-
-    deinit {
         removeKeyboardNotifications()
     }
 

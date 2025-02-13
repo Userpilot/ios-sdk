@@ -26,7 +26,6 @@ internal extension SurveyListViewController {
                 return
             }
             // Set up the general style and reload data when view model data changes.
-            self?.setupLocale()
             self?.setupGeneralStyle()
             self?.bindSurveyViews()
         }

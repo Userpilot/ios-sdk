@@ -42,6 +42,7 @@ internal class CarouselExperienceViewController: UIViewController {
 
     /// View model managing the carousel experience state and actions.
     internal let experienceViewModel: ExperienceViewModel
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Initializers
 
@@ -63,6 +64,17 @@ internal class CarouselExperienceViewController: UIViewController {
         super.viewDidLoad()
         setupViews()
         bindViewModel()
+
+        if experienceViewModel.isRTL {
+            appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
+        }
+    }
+
+    deinit {
+        if let appSemanticContentAttribute {
+            UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+            ? .forceLeftToRight : .forceRightToLeft
+        }
     }
 
     /// Handle screen rotation

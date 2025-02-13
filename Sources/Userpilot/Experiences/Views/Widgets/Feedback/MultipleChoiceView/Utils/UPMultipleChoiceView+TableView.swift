@@ -39,6 +39,7 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         // Handle the "Other" choice input if present.
+        let isOtherChoiceWasUnselect = choices.last?.isSelected ?? false
         if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice {
             if let cell = tableView.cellForRow(
                 at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
@@ -61,7 +62,9 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
             tableView.reloadData()
         }
 
-        if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice && choices.last?.isSelected == true {
+        if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice &&
+            choices.last?.isSelected == true &&
+            isOtherChoiceWasUnselect {
             if let cell = tableView.cellForRow(
                 at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
                 cell.showKeyboard()

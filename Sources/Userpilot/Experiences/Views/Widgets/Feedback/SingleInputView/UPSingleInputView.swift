@@ -17,7 +17,7 @@ internal class UPSingleInputView: UIView {
     // MARK: - Properties
 
     /// The parent view controller
-    internal var parentViewController: UIViewController?
+    internal weak var parentViewController: UIViewController?
 
     /// Title and description view
     internal let titleDescriptionView = UPTitleDescriptionView()

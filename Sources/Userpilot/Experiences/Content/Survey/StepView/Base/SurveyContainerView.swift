@@ -108,7 +108,7 @@ internal class SurveyContainerView: UIView {
     private var storedConstraints: [NSLayoutConstraint] = []
 
     // MARK: - Properties
-    private var parentViewController: UIViewController!
+    private weak var parentViewController: UIViewController!
     private var theme: SurveyTheme!
     private var surveyContent: SurveyContent!
     private var isDialogContent: Bool = false
@@ -403,9 +403,9 @@ internal class SurveyContainerView: UIView {
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
         if (newView is UPLikertView) {
-            newHeight -= 40
+            newHeight -= 40 // decrease extra size for collection view
         }else if (newView is UPMultipleChoiceView) {
-            newHeight += 40
+            newHeight += 40 // The space around tableview
         }
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in

@@ -24,11 +24,6 @@ internal extension SurveyListViewController {
         }
     }
 
-    /// Setup UI locale depending on Experience content
-    func setupLocale() {
-
-    }
-
     /// Configures the general style for the carousel experience view.
     /// Sets up background color, dismiss button visibility, and step progress indicator.
     func setupGeneralStyle() {
