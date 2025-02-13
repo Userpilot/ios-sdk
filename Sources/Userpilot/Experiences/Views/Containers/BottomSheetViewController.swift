@@ -67,8 +67,7 @@ internal class BottomSheetViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(
-           for: self.view.semanticContentAttribute)
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
         setupViews()
         // setupGestures()
     }

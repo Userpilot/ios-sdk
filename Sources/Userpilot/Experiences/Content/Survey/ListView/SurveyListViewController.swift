@@ -52,17 +52,25 @@ internal class SurveyListViewController: UIViewController {
         bindViewModel()
         registerKeyboardNotifications()
 
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         if surveyViewModel.isRTL {
-            appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
         }
     }
 
-    deinit {
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
         if let appSemanticContentAttribute {
             UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
             ? .forceLeftToRight : .forceRightToLeft
         }
+    }
+
+    deinit {
         removeKeyboardNotifications()
     }
 

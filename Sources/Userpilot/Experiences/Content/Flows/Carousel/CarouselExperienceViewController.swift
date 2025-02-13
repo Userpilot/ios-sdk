@@ -70,7 +70,8 @@ internal class CarouselExperienceViewController: UIViewController {
         }
     }
 
-    deinit {
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
         if let appSemanticContentAttribute {
             UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
             ? .forceLeftToRight : .forceRightToLeft
