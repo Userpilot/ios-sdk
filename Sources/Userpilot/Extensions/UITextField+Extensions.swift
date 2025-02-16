@@ -66,7 +66,7 @@ internal extension UITextField {
         let position = self.position(from: self.beginningOfDocument, offset: position)
         self.selectedTextRange = self.textRange(from: position!, to: position!)
     }
-    
+
     /// Disable auto correct and suggestions
     func disableAutoCorrect() {
         self.autocorrectionType = .no

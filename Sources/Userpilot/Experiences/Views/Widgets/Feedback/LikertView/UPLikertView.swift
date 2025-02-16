@@ -178,12 +178,17 @@ internal class UPLikertView: UIView {
                 let totalSpacing = CGFloat(ratingItems.count - 1) * 8
                 let availableWidth = screenWidth - totalSpacing
                 itemWidth = availableWidth / CGFloat(ratingItems.count)
+                collectionView.heightAnchor.constraint(equalToConstant: 40).isActive = true
             }
         } else {
             // Handle case when the number of items is less than 10
             let screenWidth = Int(UIScreen.main.bounds.width) - Int(margin) - (8 * (ratingItems.count - 1))
             itemWidth = CGFloat(screenWidth / ratingItems.count)
+            collectionView.heightAnchor.constraint(equalToConstant: 40).isActive = true
         }
+    }
 
+    func collectionViewHeight() -> Int {
+        return Int(collectionView.frame.height)
     }
 }

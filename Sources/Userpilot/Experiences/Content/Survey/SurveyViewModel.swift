@@ -258,7 +258,7 @@ internal class SurveyViewModel {
             surveySteps: surveyContent.modules
         )
 
-        if endSurvey {
+        if endSurvey && surveyContent.modules.last?.type != .completed {
             onSurveyCompleted()
             closeSurvey?()
             return

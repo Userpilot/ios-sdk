@@ -94,4 +94,8 @@ internal class UPMultipleChoiceView: UIView {
         let height = self.tableView.contentSize.height ?? CGFloat((55 * itemCount))
         self.tableView.heightAnchor.constraint(equalToConstant: height).isActive = true
     }
+
+    func choicesCount() -> Int {
+        return choices.count
+    }
 }

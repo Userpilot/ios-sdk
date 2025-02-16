@@ -72,7 +72,7 @@ internal class SurveyContainerView: UIView {
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, headerSpaceView, buttonDismissContainerView, scrollView, spaceView, actionButton, stepsProgressView])
+            barStepsProgressView, headerSpaceView, buttonDismissContainerView, scrollView, actionButton, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
@@ -402,10 +402,11 @@ internal class SurveyContainerView: UIView {
 
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-        if (newView is UPLikertView) {
-            newHeight -= 40 // decrease extra size for collection view
-        }else if (newView is UPMultipleChoiceView) {
-            newHeight += 40 // The space around tableview
+        if let likertView = newView as? UPLikertView {
+            let collectionHeight = likertView.collectionViewHeight()
+            newHeight -= (collectionHeight == 40) ? 80 : 40
+        }else if let multiChoiceView = newView as? UPMultipleChoiceView {
+            newHeight += CGFloat(5 * (multiChoiceView.choicesCount() - 1))
         }
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in

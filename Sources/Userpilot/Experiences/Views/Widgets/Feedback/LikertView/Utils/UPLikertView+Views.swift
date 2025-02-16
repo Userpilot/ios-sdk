@@ -45,7 +45,6 @@ internal extension UPLikertView {
             collectionView.topAnchor.constraint(equalTo: titleDescriptionView.bottomAnchor, constant: 16),
             collectionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
             collectionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin.negative),
-            collectionView.heightAnchor.constraint(equalToConstant: 40),
 
             bottomRowStackView.topAnchor.constraint(equalTo: collectionView.bottomAnchor, constant: 6),
             bottomRowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: margin),
