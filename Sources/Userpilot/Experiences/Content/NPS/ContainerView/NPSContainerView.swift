@@ -594,7 +594,7 @@ extension NPSContainerView {
         } else {
             if theme.isStepsProgressBallType {
                 barStepsProgressView.isHidden = true
-                stepsProgressView.setupView(stepsCount: 3, theme: theme)
+                stepsProgressView.setupView(stepsCount: 3, theme: theme, isRTL: isRTL)
             } else {
                 stepsProgressView.isHidden = true
                 barStepsProgressView.setupView(stepsCount: 3, theme: theme, isRTL: isRTL)

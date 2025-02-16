@@ -155,7 +155,7 @@ internal class UPStepsProgressView: UIView {
        - theme: The NPS theme used for styling the circles.
        - isRTL: A boolean indicating whether the layout should be right-to-left.
      */
-    func setupView(stepsCount: Int, theme: NPSTheme, isRTL: Bool = false) {
+    func setupView(stepsCount: Int, theme: NPSTheme, isRTL: Bool) {
         configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
     }
 
