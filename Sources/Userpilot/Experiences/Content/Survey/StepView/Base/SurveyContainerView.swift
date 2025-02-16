@@ -284,7 +284,7 @@ internal class SurveyContainerView: UIView {
 
         // Set up the action button with the step's button configuration and theme.
         actionButton.setupViews(
-            title: surveyContent.metadata?.buttonLabel ?? "Next",
+            title: getCurrentStepSurveyContent().buttonLabel ?? "Next",
             theme: theme
         ) { [weak self] _ in
             self?.actionButton.isEnabled = false
@@ -347,12 +347,11 @@ internal class SurveyContainerView: UIView {
     private func bindSurveyViews() {
         // stepSectionsStackView.clearViews()
         let contentStep = getCurrentStepSurveyContent()
-        
+        setupActionButton()
+
         var newView: UIView?
-        var margin = 0
         switch contentStep.type {
         case .likert:
-            margin = 40
             let likertView = UPLikertView()
             likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: isDialogContent, isRTL: isRTL, viewStateProtocol: self)
             newView = likertView
@@ -384,11 +383,11 @@ internal class SurveyContainerView: UIView {
         
         if let newView = newView {
             stepSectionsStackView.addArrangedSubview(newView)
-            updateContent(with: newView, animationSubViews: isPreviousViewSameToCurrentView(), margin: margin)
+            updateContent(with: newView, animationSubViews: isPreviousViewSameToCurrentView())
         }
     }
 
-    func updateContent(with newView: UIView, animationSubViews: Bool, margin: Int = 0) {
+    func updateContent(with newView: UIView, animationSubViews: Bool) {
         if !animationSubViews {
             actionButton.alpha = 0
             barStepsProgressView.alpha = 0
@@ -404,7 +403,7 @@ internal class SurveyContainerView: UIView {
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
         if let likertView = newView as? UPLikertView {
             let collectionHeight = likertView.collectionViewHeight()
-            newHeight -= (collectionHeight == 40) ? 80 : 40
+            newHeight -= (collectionHeight == 40) ? 40 : 40
         }else if let multiChoiceView = newView as? UPMultipleChoiceView {
             newHeight += CGFloat(5 * (multiChoiceView.choicesCount() - 1))
         }
@@ -430,7 +429,6 @@ internal class SurveyContainerView: UIView {
 
     private func setupGeneralStyle() {
         setupDismissButton()
-        setupActionButton()
         setupStepsProgress()
     }
 
