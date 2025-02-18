@@ -158,12 +158,14 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL) {
-        if let navigationDelegate = userpilot?.navigationDelegate {
-            navigationDelegate.navigate(to: url) { _ in }
-        } else {
-            if url.isHttpOrHttps,
-                UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        delay(0.5) { [weak self] in
+            if let navigationDelegate = self?.userpilot?.navigationDelegate {
+                navigationDelegate.navigate(to: url) { _ in }
+            } else {
+                if url.isHttpOrHttps,
+                   UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
             }
         }
     }

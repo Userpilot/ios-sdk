@@ -42,11 +42,11 @@ internal struct RatingItem {
     }
     
     static func fillList(_ answer: Int) -> [RatingItem] {
-        let range = ThemeHandler.DefaultValues.surveyDefaultLikertViewCount
+        let range = ThemeHandler.DefaultValues.npsDefaultLikertViewCount
         return (0..<range).map { index in
             RatingItem(
                 type: .numbers,
-                title: "\(index + 1)",
+                title: "\(index)",
                 image: nil,
                 isSelected: index <= answer ? true : false
             )

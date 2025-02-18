@@ -123,7 +123,7 @@ internal struct ButtonData: Decodable {
         case buttonAction = "button_action"
         case buttonText = "button_text"
         case close, enabled
-        case iosDeepLink = "ios_deep_link"
+        case iosDeepLink = "deep_link_ios"
     }
 }
 

@@ -100,6 +100,7 @@ internal class ThemeHandler: ThemeHandling {
         static let surveyPromptButtonTextSize: CGFloat = 12
         static let surveyDescriptionTextTopMargin: Int = 10
         static let surveyDefaultLikertViewCount: Int = 10
+        static let npsDefaultLikertViewCount: Int = 11
         static let surveyMaxTextFieldCharCount: Int = 500
         static let surveyPromptViewButtonMargin: Int = 50
         static let surveyContentTopMargin24: Int = 24

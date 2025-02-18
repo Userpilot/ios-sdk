@@ -165,7 +165,7 @@ internal class UPLikertView: UIView {
     private func calculateItemWidth(isDialog: Bool) {
         // Handling the case where there are exactly 10 items
         let margin = CGFloat(40 + (isDialog ? 40 : 0))
-        if ratingItems.count == 10 {
+        if ratingItems.count == 10 || ratingItems.count == 11 {
             let screenWidth = UIScreen.main.bounds.width - margin
             let minItemWidth: CGFloat = 48
             let itemCountPerRow = max(1, Int(screenWidth / minItemWidth))

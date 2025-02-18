@@ -12,7 +12,16 @@ internal class NPSContainerView: UIView {
     
     // MARK: - UI Components
     
-    /// A container for the dismiss button, with a fixed height.    
+    /// Header space view
+    private lazy var spaceView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        view.heightAnchor.constraint(equalToConstant: 0).isActive = true
+        return view
+    }()
+    
+    /// A container for the dismiss button, with a fixed height.
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -25,24 +34,20 @@ internal class NPSContainerView: UIView {
     private var buttonDismiss: UPButtonView?
     
     /// The action button at the bottom of the view.
-    private lazy var actionButton: UPButtonView = {
-        let button = UPButtonView()
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(greaterThanOrEqualToConstant: UPButtonView.buttonHeight).isActive = true
-        return button
-    }()
-    
+    private var actionButton: UPButtonView?
+
     /// The update score button
     private lazy var updateAnswerButton: UPButtonView = {
         let button = UPButtonView()
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(greaterThanOrEqualToConstant: UPButtonView.buttonHeight).isActive = true
+        button.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
         return button
     }()
     
     /// A vertical stack view contains footer action buttons
     private lazy var footerButtonsStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: [updateAnswerButton, actionButton])
+        //let stackView = UIStackView(arrangedSubviews: [updateAnswerButton, actionButton])
+        let stackView = UIStackView()
         stackView.axis = .horizontal
         stackView.backgroundColor = .clear
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
@@ -78,7 +83,7 @@ internal class NPSContainerView: UIView {
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
+            barStepsProgressView, spaceView, buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
@@ -200,7 +205,7 @@ internal class NPSContainerView: UIView {
 
             // Disable autoresizing masks for custom layout
             [scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
-             actionButton, contentStackView].forEach {
+             contentStackView].forEach {
                 $0.translatesAutoresizingMaskIntoConstraints = false
             }
 
@@ -303,10 +308,14 @@ internal class NPSContainerView: UIView {
         var newView: UIView?
         switch currentStep {
         case 0:
+            if let logo = theme.logo {
+                imageContainerView.isHidden = false
+            }
             let likertView = UPLikertView()
             likertView.setupView(npsStep: npsContent.content, npsTheme: theme, isRTL: isRTL, answer: userAnswer, viewStateProtocol: self)
             newView = likertView
         case 1:
+            imageContainerView.isHidden = true
             let openTextView = UPOpenTextView()
             openTextView.setupView(followUpQuestion: getFollowUpQuestion(), placeholder: npsContent.content.followUp.placeholder, npsTheme: theme, isRTL: isRTL, viewStateProtocol: self)
             newView = openTextView
@@ -346,7 +355,7 @@ internal class NPSContainerView: UIView {
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
 
         if (currentStep == 0) {
-            newHeight -= 120
+            newHeight -= 100
         }
         
         // Animate height change smoothly
@@ -506,6 +515,15 @@ extension NPSContainerView {
         buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor, constant: 20).isActive = true
         return buttonDismiss
     }
+    
+    private func getActionButton() -> UPButtonView {
+        actionButton?.removeFromSuperview()
+        let button = UPButtonView()
+        button.backgroundColor = .clear
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
+        return button
+    }
 
     private func setupDismissButton(for step: Int) {
         switch step {
@@ -522,7 +540,7 @@ extension NPSContainerView {
         default:
             if let completedData = getThankYouMessage() {
                 buttonDismiss?.setupViews(
-                    title: completedData.button.buttonText ?? "Close",
+                    title: completedData.button.close ?? "Close",
                     npsTheme: theme,
                     isSecondaryButton: true,
                     isDismissButton: true
@@ -534,7 +552,11 @@ extension NPSContainerView {
     }
 
     private func setupFollowUpButtons() {
-        actionButton.setupViews(
+        // Set up action button
+        actionButton = getActionButton()
+        footerButtonsStackView.addArrangedSubviews([updateAnswerButton, actionButton!])
+
+        actionButton?.setupViews(
             title: npsContent.content.followUp.submit ?? "Submit",
             npsTheme: theme,
             isSecondaryButton: false,
@@ -561,9 +583,14 @@ extension NPSContainerView {
 
     private func setupThankYouButtons() {
         if let completedData = getThankYouMessage() {
-            actionButton.isHidden = !completedData.button.enabled
+            actionButton?.isHidden = !completedData.button.enabled
             updateAnswerButton.isHidden = true
-            actionButton.setupViews(
+
+            if (!completedData.button.enabled) { return }
+            footerButtonsStackView.clearViews()
+            actionButton = getActionButton()
+            footerButtonsStackView.addArrangedSubviews([actionButton!])
+            actionButton?.setupViews(
                 title: completedData.button.buttonText ?? "Done",
                 npsTheme: theme,
                 isSecondaryButton: false,

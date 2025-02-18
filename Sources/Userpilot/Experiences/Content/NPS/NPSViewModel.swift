@@ -74,15 +74,6 @@ internal class NPSViewModel {
     var isRTL: Bool {
         return (npsContent?.localeCode ?? "en").isRTL == true
     }
-
-    // Triggered the deep link from thank you message.
-//    private func onDeepLinkTriggered() {
-//        guard let surveyContent, let surveyTheme else { return }
-//        guard let thankYouContent = surveyContent.modules.last, thankYouContent.type == .completed else { return }
-//        guard let deepLink = thankYouContent.metadata?.iosDeepLink, let url = URL(string: deepLink) else { return }
-//
-//        experiencesPublisher.triggerDeepLink(url: url)
-//    }
     // MARK: - Experience Event Handling
 
     /**
@@ -119,8 +110,6 @@ internal class NPSViewModel {
            let deepLink = completedData?.button.iosDeepLink,
            let url = URL(string: deepLink) {
             experiencesPublisher.triggerDeepLink(url: url)
-        } else {
-            experiencesPublisher.triggerFakeReload()
         }
     }
 
