@@ -68,9 +68,10 @@ internal class UPTitleDescriptionView: UIView {
     /// - Parameters:
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
+    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isListView: Bool, isRTL: Bool) {
         configureLabels(
             title: surveyStep.question,
+            showRequiredDot: isListView && surveyStep.isRequired == true,
             subHeader: surveyStep.subheader,
             textColor: surveyTheme.textColor,
             fontFamily: surveyTheme.fontFamily,
@@ -87,6 +88,7 @@ internal class UPTitleDescriptionView: UIView {
     func setupView(title: String?, subHeader: String?, npsTheme: NPSTheme, isRTL: Bool) {
         configureLabels(
             title: title,
+            showRequiredDot: false,
             subHeader: subHeader,
             textColor: npsTheme.textColor,
             fontFamily: npsTheme.fontFamily,
@@ -94,19 +96,37 @@ internal class UPTitleDescriptionView: UIView {
         )
     }
 
-    /// Configures the labels with the given properties.
-    /// - Parameters:
-    ///   - title: The main title text.
-    ///   - subHeader: The optional subheader text.
-    ///   - textColor: The text color for both labels.
-    ///   - fontFamily: The font family to be used.
-    ///   - isRTL: A Boolean indicating whether the layout should be right-to-left.
+    // Configures the labels with the given properties.
+    // - Parameters:
+    //   - title: The main title text.
+    //   - subHeader: The optional subheader text.
+    //   - textColor: The text color for both labels.
+    //   - fontFamily: The font family to be used.
+    //   - isRTL: A Boolean indicating whether the layout should be right-to-left.
+    // swiftlint:disable:next function_parameter_count
     private func configureLabels(title: String?,
+                                 showRequiredDot: Bool,
                                  subHeader: String?,
                                  textColor: UIColor,
                                  fontFamily: String?,
                                  isRTL: Bool) {
-        titleLabel.text = title
+
+        if let title, !title.isEmpty {
+            let attributedTitle = NSMutableAttributedString(string: title)
+
+            if showRequiredDot {
+                let redStar = NSAttributedString(
+                    string: " *",
+                    attributes: [.foregroundColor: UIColor.red]
+                )
+                attributedTitle.append(redStar)
+            }
+
+            titleLabel.attributedText = attributedTitle
+        } else {
+            titleLabel.text = title
+        }
+
         titleLabel.textColor = textColor
         titleLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [.traitBold],

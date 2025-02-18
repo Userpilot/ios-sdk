@@ -353,21 +353,38 @@ internal class SurveyContainerView: UIView {
         switch contentStep.type {
         case .likert:
             let likertView = UPLikertView()
-            likertView.setupView(surveyStep: contentStep, surveyTheme: theme, isDialog: isDialogContent, isRTL: isRTL, viewStateProtocol: self)
+            likertView.setupView(
+                surveyStep: contentStep,
+                surveyTheme: theme,
+                isListView: false,
+                isDialog: isDialogContent,
+                isRTL: isRTL,
+                viewStateProtocol: self)
             newView = likertView
         case .multipleChoice:
             let multipleChoiceView = UPMultipleChoiceView()
-            multipleChoiceView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL, viewStateProtocol: self)
+            multipleChoiceView.setupView(
+                surveyStep: contentStep,
+                surveyTheme: theme,
+                isListView: false,
+                isRTL: isRTL,
+                viewStateProtocol: self)
             newView = multipleChoiceView
         case .openText:
             let openTextView = UPOpenTextView()
-            openTextView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL, viewStateProtocol: self)
+            openTextView.setupView(
+                surveyStep: contentStep,
+                surveyTheme: theme,
+                isListView: false,
+                isRTL: isRTL,
+                viewStateProtocol: self)
             newView = openTextView
         case .singleInput:
             let singleInputView = UPSingleInputView()
             singleInputView.setupView(
                 surveyStep: contentStep,
                 surveyTheme: theme,
+                isListView: false,
                 isRTL: isRTL,
                 viewStateProtocol: self,
                 parentViewController: parentViewController

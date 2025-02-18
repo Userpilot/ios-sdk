@@ -61,12 +61,17 @@ internal class UPOpenTextView: UIView {
     ///   - viewStateProtocol: A delegate for managing the view's state.
     func setupView(surveyStep: SurveyStep,
                    surveyTheme: SurveyTheme,
+                   isListView: Bool,
                    isRTL: Bool,
                    viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
         self.viewStateProtocol = viewStateProtocol
 
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
+        titleDescriptionView.setupView(
+            surveyStep: surveyStep,
+            surveyTheme: surveyTheme,
+            isListView: isListView,
+            isRTL: isRTL)
 
         configureViews(placeholder: surveyStep.metadata?.placeholder,
                    textColor: surveyTheme.textColor,

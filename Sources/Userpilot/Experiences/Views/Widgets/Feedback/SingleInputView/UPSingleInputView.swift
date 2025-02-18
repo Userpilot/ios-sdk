@@ -81,15 +81,17 @@ internal class UPSingleInputView: UIView {
 
     // MARK: - Public Methods
 
-    /// Sets up the view with the provided survey step, theme, view state delegate, and parent view controller.
-    /// - Parameters:
-    ///   - surveyStep: The survey step containing data to display.
-    ///   - surveyTheme: The theme to apply styles from.
-    ///   - viewStateProtocol: The delegate for handling view state changes.
-    ///   - parentViewController: The parent view controller managing this view.
+    // Sets up the view with the provided survey step, theme, view state delegate, and parent view controller.
+    // - Parameters:
+    //   - surveyStep: The survey step containing data to display.
+    //   - surveyTheme: The theme to apply styles from.
+    //   - viewStateProtocol: The delegate for handling view state changes.
+    //   - parentViewController: The parent view controller managing this view.
+    // swiftlint:disable:next function_parameter_count
     func setupView(
         surveyStep: SurveyStep,
         surveyTheme: SurveyTheme,
+        isListView: Bool,
         isRTL: Bool,
         viewStateProtocol: ViewStateDelegate,
         parentViewController: UIViewController
@@ -99,7 +101,11 @@ internal class UPSingleInputView: UIView {
         self.viewStateProtocol = viewStateProtocol
         self.parentViewController = parentViewController
 
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
+        titleDescriptionView.setupView(
+            surveyStep: surveyStep,
+            surveyTheme: surveyTheme,
+            isListView: isListView,
+            isRTL: isRTL)
 
         textField.setPlaceholder(text: surveyStep.metadata?.placeholder ?? "",
                                  color: surveyTheme.textSecondaryColorAlpha80)

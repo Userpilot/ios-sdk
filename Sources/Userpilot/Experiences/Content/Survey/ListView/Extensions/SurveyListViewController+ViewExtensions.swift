@@ -86,6 +86,7 @@ internal extension SurveyListViewController {
 // MARK: - Bind custom views to the survey list view
 
 internal extension SurveyListViewController {
+    // swiftlint:disable:next function_body_length
     func bindSurveyViews() {
         guard
             let surveyContent = surveyViewModel.surveyContent,
@@ -99,6 +100,8 @@ internal extension SurveyListViewController {
                 likertView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isListView: true,
+                    isDialog: false,
                     isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self
                 )
@@ -109,6 +112,7 @@ internal extension SurveyListViewController {
                 multipleChoiceView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isListView: true,
                     isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self
                 )
@@ -119,6 +123,7 @@ internal extension SurveyListViewController {
                 openTextView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isListView: true,
                     isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self
                 )
@@ -129,6 +134,7 @@ internal extension SurveyListViewController {
                 singleInputView.setupView(
                     surveyStep: surveryStep,
                     surveyTheme: surveyTheme,
+                    isListView: true,
                     isRTL: surveyViewModel.isRTL,
                     viewStateProtocol: self,
                     parentViewController: self

@@ -57,7 +57,11 @@ internal class UPThankYouView: UIView {
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
     func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
+        titleDescriptionView.setupView(
+            surveyStep: surveyStep,
+            surveyTheme: surveyTheme,
+            isListView: false,
+            isRTL: isRTL)
     }
 
     /// Sets up the view with the provided completed data and theme.

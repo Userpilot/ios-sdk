@@ -61,6 +61,7 @@ internal class UPMultipleChoiceView: UIView {
     ///   - viewStateProtocol: A delegate for managing the state of the view.
     func setupView(surveyStep: SurveyStep,
                    surveyTheme: SurveyTheme,
+                   isListView: Bool,
                    isRTL: Bool,
                    viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
@@ -69,7 +70,11 @@ internal class UPMultipleChoiceView: UIView {
         self.viewStateProtocol = viewStateProtocol
 
         // Configure the title description view with survey step and theme.
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
+        titleDescriptionView.setupView(
+            surveyStep: surveyStep,
+            surveyTheme: surveyTheme,
+            isListView: isListView,
+            isRTL: isRTL)
 
         // Load choices from the survey metadata.
         choices.append(contentsOf: surveyStep.metadata?.choices ?? [])

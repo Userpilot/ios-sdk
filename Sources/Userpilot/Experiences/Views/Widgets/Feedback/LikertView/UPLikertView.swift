@@ -86,10 +86,12 @@ internal class UPLikertView: UIView {
 
     // MARK: - Setup View
 
-    /// Set up the view with the survey step, survey theme, and view state protocol.
+    // Set up the view with the survey step, survey theme, and view state protocol.
+    // swiftlint:disable:next function_parameter_count
     func setupView(surveyStep: SurveyStep,
                    surveyTheme: SurveyTheme,
-                   isDialog: Bool = false,
+                   isListView: Bool,
+                   isDialog: Bool,
                    isRTL: Bool,
                    viewStateProtocol: ViewStateDelegate) {
         self.surveyStep = surveyStep
@@ -98,7 +100,11 @@ internal class UPLikertView: UIView {
         self.viewStateProtocol = viewStateProtocol
 
         // Set up the title and description view
-        titleDescriptionView.setupView(surveyStep: surveyStep, surveyTheme: surveyTheme, isRTL: isRTL)
+        titleDescriptionView.setupView(
+            surveyStep: surveyStep,
+            surveyTheme: surveyTheme,
+            isListView: isListView,
+            isRTL: isRTL)
 
         // Bind the low and high score labels
         bindLowHeightTexts(
