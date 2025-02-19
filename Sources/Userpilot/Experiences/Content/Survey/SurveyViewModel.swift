@@ -159,14 +159,21 @@ internal class SurveyViewModel {
     func onSurveyDismissed() {
         guard
             let surveyContent,
-            let surveyStep = getCurrentStepSurveyContent(),
-            surveyStep.type != .completed
+            let surveyStep = getCurrentStepSurveyContent()
         else { return }
-        let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
-            surveyID: surveyContent.id,
-            moduleID: surveyContent.type == .list ? nil : surveyStep.id,
-            type: surveyContent.type == .list ? nil : surveyStep.type.rawValue)
-        experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
+        if surveyStep.type == .completed {
+            let eventExperienceSeen = ExperienceSurveyCompletedEvent(
+                surveyID: surveyContent.id,
+                hasDeepLinkContent: false
+            )
+            experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
+        } else {
+            let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
+                surveyID: surveyContent.id,
+                moduleID: surveyContent.type == .list ? nil : surveyStep.id,
+                type: surveyContent.type == .list ? nil : surveyStep.type.rawValue)
+            experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
+        }
     }
 
     private func onSurveyStepSeen() {
