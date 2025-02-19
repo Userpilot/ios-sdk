@@ -25,6 +25,9 @@ internal class BottomSheetViewController: UIViewController {
         view.backgroundColor = .white
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
         return view
     }()
 
@@ -49,9 +52,9 @@ internal class BottomSheetViewController: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
         view.alpha = 0
-        view.addTapGesture { [weak self] in
-            self?.view.endEditing(true)
-        }
+//        view.addTapGesture { [weak self] in
+//            self?.view.endEditing(true)
+//        }
         return view
     }()
 

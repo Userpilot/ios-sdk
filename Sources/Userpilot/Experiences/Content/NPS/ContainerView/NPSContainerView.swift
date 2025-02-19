@@ -293,8 +293,8 @@ internal class NPSContainerView: UIView {
         
         setupGeneralStyle()
         bindProgressBar()
-        setupActionButton()
         bindSurveyViews()
+        setupActionButton()
 
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
@@ -468,8 +468,8 @@ extension NPSContainerView: ViewStateDelegate {
         if let answer = upExperienceView.getAnswer() as? Int {
             userAnswer = answer
             currentStep = 1
-            setupActionButton()
             bindSurveyViews()
+            setupActionButton()
         }
     }
 
@@ -579,8 +579,8 @@ extension NPSContainerView {
             self?.getFollowUpAnswer()
             self?.npsContainerViewDelegate?.onNPSSubmitted(self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
             self?.currentStep = 2
-            self?.setupActionButton()
             self?.bindSurveyViews()
+            self?.setupActionButton()
         }
         
         updateAnswerButton.setupViews(
@@ -590,8 +590,8 @@ extension NPSContainerView {
             isDismissButton: false
         ) { [weak self] _ in
             self?.currentStep = 0
-            self?.setupActionButton()
             self?.bindSurveyViews()
+            self?.setupActionButton()
         }
     }
 
