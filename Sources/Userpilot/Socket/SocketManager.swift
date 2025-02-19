@@ -288,7 +288,7 @@ extension SocketManager {
      */
     private func closeSocket() {
         tryCatch {
-            if let phoenixChannel, !phoenixChannel.isClosed {
+            if let phoenixChannel, !phoenixChannel.isClosed, phoenixChannel.isJoined {
                 phoenixChannel.leave(timeout: 0.0)
                 phoenixSocket?.remove(phoenixChannel)
             }
