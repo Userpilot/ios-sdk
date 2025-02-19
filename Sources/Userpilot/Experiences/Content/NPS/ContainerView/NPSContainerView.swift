@@ -105,7 +105,7 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 0).isActive = true
+        //view.heightAnchor.constraint(equalToConstant: 0).isActive = true
         return view
     }()
     
@@ -293,8 +293,8 @@ internal class NPSContainerView: UIView {
         
         setupGeneralStyle()
         bindProgressBar()
-        bindSurveyViews()
         setupActionButton()
+        bindSurveyViews()
 
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
@@ -334,9 +334,11 @@ internal class NPSContainerView: UIView {
     }
 
     func updateContent(with newView: UIView, animationSubViews: Bool) {
+        newView.alpha = 0
         buttonDismissContainerView.alpha = 0
         barStepsProgressView.alpha = 0
         stepsProgressView.alpha = 0
+        imageContainerView.alpha = 0
         
         // Remove old views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach {
@@ -353,21 +355,33 @@ internal class NPSContainerView: UIView {
         
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-
-        if (currentStep == 0) {
-            newHeight -= 100
-        }
         
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
-            self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
+            if let scrollViewHeightConstraint = self?.scrollViewHeightConstraint {
+                NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+            }
+            self?.scrollViewHeightConstraint = self?.scrollView.heightAnchor.constraint(
+                lessThanOrEqualToConstant: min(newHeight, screenHeight * 0.7))
+            self?.scrollViewHeightConstraint?.isActive = true
+
+            // self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
             self?.viewHeight = min(newHeight, screenHeight * 0.7)
             self?.layoutIfNeeded()
         })
-        UIView.animate(withDuration: 0.5) { [weak self] in
-            self?.buttonDismissContainerView.alpha = 1
-            self?.barStepsProgressView.alpha = 1
-            self?.stepsProgressView.alpha = 1
+        delay(0.2) { [weak self] in
+            UIView.animate(withDuration: 0.1) { [weak self] in
+                newView.alpha = 1
+            }
+        }
+        
+        delay(0.2) { [weak self] in
+            UIView.animate(withDuration: 0.2) { [weak self] in
+                self?.buttonDismissContainerView.alpha = 1
+                self?.barStepsProgressView.alpha = 1
+                self?.stepsProgressView.alpha = 1
+                self?.imageContainerView.alpha = 1
+            }
         }
     }
 
@@ -454,8 +468,8 @@ extension NPSContainerView: ViewStateDelegate {
         if let answer = upExperienceView.getAnswer() as? Int {
             userAnswer = answer
             currentStep = 1
-            bindSurveyViews()
             setupActionButton()
+            bindSurveyViews()
         }
     }
 
@@ -565,8 +579,8 @@ extension NPSContainerView {
             self?.getFollowUpAnswer()
             self?.npsContainerViewDelegate?.onNPSSubmitted(self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
             self?.currentStep = 2
-            self?.bindSurveyViews()
             self?.setupActionButton()
+            self?.bindSurveyViews()
         }
         
         updateAnswerButton.setupViews(
@@ -576,8 +590,8 @@ extension NPSContainerView {
             isDismissButton: false
         ) { [weak self] _ in
             self?.currentStep = 0
-            self?.bindSurveyViews()
             self?.setupActionButton()
+            self?.bindSurveyViews()
         }
     }
 

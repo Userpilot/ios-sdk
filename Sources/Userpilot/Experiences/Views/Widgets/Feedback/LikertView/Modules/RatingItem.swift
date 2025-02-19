@@ -48,7 +48,7 @@ internal struct RatingItem {
                 type: .numbers,
                 title: "\(index)",
                 image: nil,
-                isSelected: index <= answer ? true : false
+                isSelected: index < answer ? true : false
             )
         }
     }

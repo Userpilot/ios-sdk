@@ -91,7 +91,7 @@ internal class SurveyContainerView: UIView {
     private let contentContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(greaterThanOrEqualToConstant: 0).isActive = true
+        // view.heightAnchor.constraint(greaterThanOrEqualToConstant: 0).isActive = true
         return view
     }()
 
@@ -405,6 +405,7 @@ internal class SurveyContainerView: UIView {
     }
 
     func updateContent(with newView: UIView, animationSubViews: Bool) {
+        newView.alpha = 0
         if !animationSubViews {
             actionButton.alpha = 0
             barStepsProgressView.alpha = 0
@@ -418,22 +419,38 @@ internal class SurveyContainerView: UIView {
 
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-        if let likertView = newView as? UPLikertView {
-            let collectionHeight = likertView.collectionViewHeight()
-            newHeight -= (collectionHeight == 40) ? 40 : 40
-        }else if let multiChoiceView = newView as? UPMultipleChoiceView {
-            newHeight += CGFloat(5 * (multiChoiceView.choicesCount() - 1))
-        }
+//        if let likertView = newView as? UPLikertView {
+//            let collectionHeight = likertView.collectionViewHeight()
+//            newHeight -= (collectionHeight == 40) ? 40 : 40
+//        }else if let multiChoiceView = newView as? UPMultipleChoiceView {
+//            newHeight += CGFloat(5 * (multiChoiceView.choicesCount() - 1))
+//        }
         // Animate height change smoothly
+        
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
-            self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
+            if let scrollViewHeightConstraint = self?.scrollViewHeightConstraint {
+                NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+            }
+            self?.scrollViewHeightConstraint = self?.scrollView.heightAnchor.constraint(
+                lessThanOrEqualToConstant: min(newHeight, screenHeight * 0.7))
+            self?.scrollViewHeightConstraint?.isActive = true
             self?.viewHeight = min(newHeight, screenHeight * 0.7)
             self?.layoutIfNeeded()
+//            self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
+//            self?.viewHeight = min(newHeight, screenHeight * 0.7)
+//            self?.layoutIfNeeded()
         })
+        delay(0.2) { [weak self] in
+            UIView.animate(withDuration: 0.1) { [weak self] in
+                newView.alpha = 1
+            }
+        }
         if !animationSubViews {
-            UIView.animate(withDuration: 0.5) { [weak self] in
-                self?.actionButton.alpha = 1
-                self?.barStepsProgressView.alpha = 1
+            delay(0.2) { [weak self] in
+                UIView.animate(withDuration: 0.5) { [weak self] in
+                    self?.actionButton.alpha = 1
+                    self?.barStepsProgressView.alpha = 1
+                }
             }
         }
     }
