@@ -559,7 +559,7 @@ extension NPSContainerView {
                     isSecondaryButton: true,
                     isDismissButton: true
                 ) { [weak self] _ in
-                    self?.npsContainerViewDelegate?.onEndNPS(completedData: self?.getThankYouMessage())
+                    self?.npsContainerViewDelegate?.onEndNPS(completedData: nil)
                 }
             }
         }
