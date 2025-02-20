@@ -104,6 +104,10 @@ extension UPOpenTextView: UITextViewDelegate {
     /// This method hides the placeholder label when the text view is not empty and updates the character counter.
     /// It also triggers the `onViewStateChanged` callback to notify the delegate of the state change.
     func textViewDidChange(_ textView: UITextView) {
+        if textView.text.count > maxLength {
+            textView.text = String(textView.text.prefix(maxLength))
+        }
+        
         placeholderLabel.isHidden = !textView.text.isEmpty
         updateCounter()
         viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())

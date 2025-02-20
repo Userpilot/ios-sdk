@@ -112,7 +112,10 @@ internal class UPTitleDescriptionView: UIView {
                                  isRTL: Bool) {
 
         if let title, !title.isEmpty {
-            let attributedTitle = NSMutableAttributedString(string: title)
+            let attributedTitle = NSMutableAttributedString(
+                string: title,
+                attributes: [.foregroundColor: textColor]
+            )
 
             if showRequiredDot {
                 let redStar = NSAttributedString(
@@ -125,9 +128,9 @@ internal class UPTitleDescriptionView: UIView {
             titleLabel.attributedText = attributedTitle
         } else {
             titleLabel.text = title
+            titleLabel.textColor = textColor
         }
 
-        titleLabel.textColor = textColor
         titleLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [.traitBold],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize)
