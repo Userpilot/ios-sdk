@@ -635,10 +635,10 @@ extension NPSContainerView {
         } else {
             if theme.isStepsProgressBallType {
                 barStepsProgressView.isHidden = true
-                stepsProgressView.setupView(stepsCount: 3, theme: theme, isRTL: isRTL)
+                stepsProgressView.setupView(stepsCount: 2, theme: theme, isRTL: isRTL)
             } else {
                 stepsProgressView.isHidden = true
-                barStepsProgressView.setupView(stepsCount: 3, theme: theme, isRTL: isRTL)
+                barStepsProgressView.setupView(stepsCount: 2, theme: theme, isRTL: isRTL)
             }
         }
     }
