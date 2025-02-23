@@ -107,7 +107,7 @@ extension UPOpenTextView: UITextViewDelegate {
         if textView.text.count > maxLength {
             textView.text = String(textView.text.prefix(maxLength))
         }
-        
+
         placeholderLabel.isHidden = !textView.text.isEmpty
         updateCounter()
         viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())

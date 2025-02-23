@@ -203,6 +203,10 @@ internal struct NPSTheme: Decodable {
         progress?.color ?? ThemeHandler.DefaultValues.blackColor
     }
 
+    // radius
+    var borderRadius: CGFloat {
+        CGFloat(box?.radius ?? 12)
+    }
 }
 
 // MARK: - NPSThemeGeneral
@@ -246,12 +250,7 @@ internal struct ProgressBarTheme: Decodable {
 
 // MARK: - NPSThemeBox
 internal struct NPSThemeBox: Decodable {
-    let color: String
-    let enabled: Bool
-    let intensity: Int
-    let radius: Int
-    let type: String
-    let width: Int
+    let radius: Int?
 }
 
 // MARK: - Enums

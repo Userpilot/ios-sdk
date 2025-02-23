@@ -70,7 +70,7 @@ extension UPSingleInputView: UITextFieldDelegate {
     /// - Parameter textField: The `UITextField` instance where the Return key was tapped.
     /// - Returns: `true` to allow the default behavior of resigning the keyboard.
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        textField.resignFirstResponder()
+        textField.endEditing(true)
         return true
     }
 

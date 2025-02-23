@@ -25,6 +25,9 @@ internal class DialogViewController: UIViewController {
         view.backgroundColor = .clear
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
         return view
     }()
 
@@ -41,6 +44,9 @@ internal class DialogViewController: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
         view.alpha = 0
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
         return view
     }()
 

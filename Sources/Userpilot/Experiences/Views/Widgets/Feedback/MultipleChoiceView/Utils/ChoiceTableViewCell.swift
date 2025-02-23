@@ -85,6 +85,9 @@ internal class ChoiceTableViewCell: UITableViewCell {
         textField.isUserInteractionEnabled = false
         textField.isHidden = true
         textField.backgroundColor = .clear
+        textField.returnKeyType = .done
+        textField.delegate = self
+        textField.tag = ThemeHandler.DefaultValues.surveyOtherChoiceTag
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 8),
             textField.centerYAnchor.constraint(equalTo: iconImageView.centerYAnchor),
@@ -93,7 +96,8 @@ internal class ChoiceTableViewCell: UITableViewCell {
     }
 
     // MARK: - Binding Data
-    func bindCell(choice: Choice, surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
+    func bindCell(choice: Choice, surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool,
+                  indexPath: IndexPath) {
         textField.textColor = surveyTheme.textColor
         textField.setPlaceholder(text: choice.value ?? "", color: surveyTheme.textColor)
         textField.font = UIFont.matching(
@@ -123,6 +127,7 @@ internal class ChoiceTableViewCell: UITableViewCell {
 
         // Handle 'Other' option
         if choice.id == ThemeHandler.DefaultValues.surveyOtherChoice {
+            textField.customTag = "\(ThemeHandler.DefaultValues.surveyOtherChoiceTag):\(indexPath.row)"
             showTextField(true)
             if let otherText = choice.otherOptionText, !otherText.isEmpty {
                 textField.text = otherText
@@ -168,4 +173,19 @@ internal class ChoiceTableViewCell: UITableViewCell {
             )
         }
     }
+}
+
+// MARK: - UITextFieldDelegate Extension for UPSingleInputView
+
+extension ChoiceTableViewCell: UITextFieldDelegate {
+
+    /// Handles the Return key tap by dismissing the keyboard.
+    ///
+    /// - Parameter textField: The `UITextField` instance where the Return key was tapped.
+    /// - Returns: `true` to allow the default behavior of resigning the keyboard.
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.endEditing(true)
+        return true
+    }
+
 }

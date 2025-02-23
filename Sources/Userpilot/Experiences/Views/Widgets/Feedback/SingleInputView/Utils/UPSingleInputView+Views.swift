@@ -30,7 +30,7 @@ extension UPSingleInputView {
                 textField.setPadding(start: 10, end: 60)
             }
             textField.keyboardType = .numberPad
-            textField.placeholder = "dd/mm/yyyy" // surveyStep?.metadata?.placeholder
+            textField.placeholder = "dd/mm/yyyy"
             calendarIconButton.isHidden = false
             countryStackView.isHidden = true
             calendarIconButton.tintColor = surveyTheme?.textSecondaryColorAlpha80 ?? .gray

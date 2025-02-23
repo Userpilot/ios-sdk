@@ -41,3 +41,18 @@ internal extension UIView {
     }
 
 }
+
+/// Extension to Find First Responder
+internal extension UIView {
+    var firstResponder: UIResponder? {
+        if self.isFirstResponder {
+            return self
+        }
+        for subview in subviews {
+            if let firstResponder = subview.firstResponder {
+                return firstResponder
+            }
+        }
+        return nil
+    }
+}

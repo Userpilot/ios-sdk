@@ -11,6 +11,7 @@
 
 import Foundation
 import UIKit
+import ObjectiveC
 
 internal extension UITextField {
 
@@ -89,5 +90,17 @@ extension UITextView {
         self.smartDashesType = .no
         self.smartInsertDeleteType = .no
         self.autocapitalizationType = .none
+    }
+}
+
+private var customTagKey: UInt8 = 0
+internal extension UITextField {
+    var customTag: String? {
+        get {
+            return objc_getAssociatedObject(self, &customTagKey) as? String
+        }
+        set {
+            objc_setAssociatedObject(self, &customTagKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
     }
 }

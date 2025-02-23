@@ -32,7 +32,8 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
         choiceTableViewCell.bindCell(choice: choices[indexPath.row],
                                      surveyStep: surveyStep,
                                      surveyTheme: surveyTheme,
-                                     isRTL: isRTL)
+                                     isRTL: isRTL,
+                                     indexPath: indexPath)
         choiceTableViewCell.selectionStyle = .none
         return choiceTableViewCell
     }
