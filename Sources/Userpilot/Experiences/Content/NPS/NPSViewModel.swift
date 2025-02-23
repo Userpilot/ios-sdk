@@ -97,7 +97,7 @@ internal class NPSViewModel {
     func onNPSSubmitted(_ userAnswer: Int, _ userFollowUpKey: String, _ userFollowUp: String) {
         guard let npsContent else { return }
         let eventExperienceSubmitted = ExperienceNPSSubmittedEvent(
-            score: userAnswer,
+            score: userAnswer - 1,
             npsKey: npsContent.content.survey.key ?? "",
             feedback: userFollowUp,
             feedbackKey: userFollowUpKey
