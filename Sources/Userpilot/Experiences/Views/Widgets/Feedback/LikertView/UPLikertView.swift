@@ -170,7 +170,7 @@ internal class UPLikertView: UIView {
     /// Calculates the width of each item in the Likert scale collection view based on screen width and number of items.
     private func calculateItemWidth(isDialog: Bool) {
         // Handling the case where there are exactly 10 items
-        let margin = CGFloat(40 + (isDialog ? 40 : 0))
+        let margin = CGFloat(40 + (isDialog ? 50 : 0))
         if ratingItems.count == 10 || ratingItems.count == 11 {
             let screenWidth = UIScreen.main.bounds.width - margin
             let minItemWidth: CGFloat = 48

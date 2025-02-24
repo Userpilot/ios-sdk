@@ -72,7 +72,8 @@ internal class SurveyContainerView: UIView {
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, headerSpaceView, buttonDismissContainerView, scrollView, actionButton, stepsProgressView])
+            barStepsProgressView, headerSpaceView, buttonDismissContainerView, scrollView, spaceView, actionButton,
+            stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
