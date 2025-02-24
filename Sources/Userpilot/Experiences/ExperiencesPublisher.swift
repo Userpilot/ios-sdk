@@ -311,6 +311,11 @@ extension ExperiencesPublisher {
         analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
 
         if sdkEvent.isEventForCloseExperience() {
+            experienceContent = nil
+            return
+        }
+
+        if sdkEvent.isEventForCloseExperience() {
 
             if sdkEvent.hasDeepLink {
                 experienceContent = nil

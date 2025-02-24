@@ -29,6 +29,10 @@ internal extension SDKEvent {
         self.eventName == SDKEventsName.surveyExperienceDismissed.rawValue ||
         self.eventName == SDKEventsName.surveyExperienceCompleted.rawValue
     }
+    
+    func isEventForCloseNPSExperience() -> Bool {
+        return self.eventName == SDKEventsName.npsExperienceDismissed.rawValue
+    }
 
 }
 
