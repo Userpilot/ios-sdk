@@ -355,7 +355,7 @@ internal class NPSContainerView: UIView {
         
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-        
+
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
             if let scrollViewHeightConstraint = self?.scrollViewHeightConstraint {
@@ -597,10 +597,12 @@ extension NPSContainerView {
 
     private func setupThankYouButtons() {
         if let completedData = getThankYouMessage() {
-            actionButton?.isHidden = !completedData.button.enabled
-            updateAnswerButton.isHidden = true
-
-            if (!completedData.button.enabled) { return }
+            stepsProgressView.isHidden = true
+            barStepsProgressView.isHidden = true
+            if (!completedData.button.enabled) {
+                footerButtonsStackView.isHidden = true
+                return
+            }
             footerButtonsStackView.clearViews()
             actionButton = getActionButton()
             footerButtonsStackView.addArrangedSubviews([actionButton!])

@@ -108,8 +108,8 @@ internal class UPSingleInputView: UIView {
             isRTL: isRTL)
 
         textField.setPlaceholder(text: surveyStep.metadata?.placeholder ?? "",
-                                 color: surveyTheme.textSecondaryColorAlpha80)
-        textField.textColor = surveyTheme.textColor
+                                 color: ThemeHandler.DefaultValues.grayColor)
+        textField.textColor = surveyTheme.backgroundColorAsString.invertColor().color
         textField.font = UIFont.matching(
             fontName: surveyTheme.fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTextSize))

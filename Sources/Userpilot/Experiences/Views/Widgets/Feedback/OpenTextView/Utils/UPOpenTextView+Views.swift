@@ -34,7 +34,7 @@ internal extension UPOpenTextView {
         // TextView Container setup
         textViewContainer.translatesAutoresizingMaskIntoConstraints = false
         textViewContainer.layer.borderWidth = 1
-        textViewContainer.layer.borderColor = UIColor.grayCA.cgColor
+        textViewContainer.layer.borderColor = ThemeHandler.DefaultValues.grayColor.cgColor
         textViewContainer.layer.cornerRadius = 8
         addSubview(textViewContainer)
 

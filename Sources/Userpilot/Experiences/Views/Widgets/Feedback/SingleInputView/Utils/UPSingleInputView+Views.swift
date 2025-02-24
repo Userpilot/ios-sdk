@@ -33,7 +33,7 @@ extension UPSingleInputView {
             textField.placeholder = "dd/mm/yyyy"
             calendarIconButton.isHidden = false
             countryStackView.isHidden = true
-            calendarIconButton.tintColor = surveyTheme?.textSecondaryColorAlpha80 ?? .gray
+            calendarIconButton.tintColor = ThemeHandler.DefaultValues.grayColor
         case .phone:
             if isRTL {
                 textField.setPadding(start: 10, end: 120)
@@ -43,8 +43,8 @@ extension UPSingleInputView {
             textField.keyboardType = .phonePad
             countryStackView.isHidden = false
             calendarIconButton.isHidden = true
-            downArrowButton.tintColor = surveyTheme?.textSecondaryColorAlpha80 ?? .gray
-            countrySelectorButton.config(with: "+1", and: surveyTheme?.textSecondaryColorAlpha80 ?? .gray)
+            downArrowButton.tintColor = ThemeHandler.DefaultValues.grayColor
+            countrySelectorButton.config(with: "+1", and: ThemeHandler.DefaultValues.grayColor)
         case .email:
             textField.setPadding(start: 10, end: 10)
             textField.keyboardType = .emailAddress
@@ -88,7 +88,7 @@ extension UPSingleInputView {
         textField.borderStyle = .none
         textField.layer.borderWidth = 1
         textField.layer.cornerRadius = 8
-        textField.layer.borderColor = UIColor.grayCA.cgColor
+        textField.layer.borderColor = ThemeHandler.DefaultValues.grayColor.cgColor
         textField.returnKeyType = .done
         textField.delegate = self
         textField.backgroundColor = .clear
