@@ -149,7 +149,7 @@ internal class UPButtonView: UIButton {
             layer.cornerRadius = 12
             layer.borderWidth = 1
             layer.borderColor = (isSecondaryButton && !isDismissButton) ?
-            npsTheme.textSecondaryColorAlpha80.cgColor : UIColor.clear.cgColor
+            ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
 
             self.callback = callback
     }

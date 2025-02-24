@@ -75,7 +75,7 @@ internal class UPOpenTextView: UIView {
 
         configureViews(placeholder: surveyStep.metadata?.placeholder,
                    textColor: surveyTheme.textColor,
-                   secondaryTextColor: surveyTheme.textSecondaryColorAlpha80,
+                   secondaryTextColor: ThemeHandler.DefaultValues.grayColor,
                    fontFamily: surveyTheme.fontFamily,
                    isRTL: isRTL)
     }
@@ -104,7 +104,7 @@ internal class UPOpenTextView: UIView {
 
         configureViews(placeholder: placeholder,
                    textColor: npsTheme.textColor,
-                   secondaryTextColor: npsTheme.textSecondaryColorAlpha80,
+                   secondaryTextColor: ThemeHandler.DefaultValues.grayColor,
                    fontFamily: npsTheme.fontFamily,
                    isRTL: isRTL)
     }

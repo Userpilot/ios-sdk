@@ -72,6 +72,7 @@ internal class ThemeHandler: ThemeHandling {
         }
         static let blackColor = "#000000"
         static let whiteColor = "#FFFFFF"
+        static let grayColor = "#DDE2E5".color
         static let distanceBetweenSections = CGFloat(12)
         static let contentMargin = CGFloat(20)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)

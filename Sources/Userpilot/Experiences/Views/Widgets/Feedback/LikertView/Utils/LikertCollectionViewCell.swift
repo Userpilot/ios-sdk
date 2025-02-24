@@ -86,12 +86,12 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
             primaryColor(surveyTheme, npsTheme) : secondaryColor(surveyTheme, npsTheme)
 
         contentImageView.tintColor = ratingItem.isSelected ?
-            primaryColorAsString(surveyTheme, npsTheme) :
-            backgroundColorAsString(surveyTheme, npsTheme)
+            contentSelectedColor(surveyTheme, npsTheme) :
+            contentUnselectedColor(surveyTheme, npsTheme)
 
         contentLabel.textColor = ratingItem.isSelected ?
-            primaryColorAsString(surveyTheme, npsTheme)  :
-            backgroundColorAsString(surveyTheme, npsTheme)
+            contentSelectedColor(surveyTheme, npsTheme)  :
+            contentUnselectedColor(surveyTheme, npsTheme)
     }
 
     private func fontFamily(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> String? {
@@ -106,12 +106,12 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
         surveyTheme?.secondaryColor ?? npsTheme?.secondaryColor ?? .black.withAlphaComponent(0.2)
     }
 
-    private func primaryColorAsString(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
-        surveyTheme?.secondContentColor ?? npsTheme?.secondContentColor ?? .white
+    private func contentSelectedColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+        surveyTheme?.primaryColorAsString.invertColor().color ??
+        npsTheme?.primaryColorAsString.invertColor().color ?? .black
     }
 
-    private func backgroundColorAsString(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
-        surveyTheme?.secondContentColor ?? npsTheme?.secondContentColor ?? .black
+    private func contentUnselectedColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+        surveyTheme?.textColor ?? npsTheme?.textColor ?? .black
     }
-
 }
