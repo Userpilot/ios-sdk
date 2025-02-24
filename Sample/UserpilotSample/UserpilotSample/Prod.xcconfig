@@ -1,0 +1,19 @@
+//
+//  prod.xcconfig
+//  UserpilotSample
+//
+//  Created by Motasem Hamed on 24/02/2025.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://help.apple.com/xcode/#/dev745c5c974
+
+SLASH=/
+
+//#include "Pods/Target Support Files/Pods-Fruits/Pods-Fruits.release.xcconfig"
+
+// app
+APP_NAME = Userpilot
+APP_ICON = AppIcon
+
+// environment

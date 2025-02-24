@@ -8,4 +8,12 @@
 // Configuration settings file format documentation can be found at:
 // https://help.apple.com/xcode/#/dev745c5c974
 
-IS_INTERNAL_RELEASE = true
+SLASH=/
+
+//#include "Pods/Target Support Files/Pods-Fruits/Pods-Fruits.debug.xcconfig"
+  
+// app
+APP_NAME = Userpilot Dev
+APP_ICON = AppIconDev
+
+// environment
