@@ -170,7 +170,7 @@ internal struct NPSTheme: Decodable {
         if font?.colorType == .manual {
             font?.fontColor?.color ?? .black
         } else {
-            primaryColor
+            backgroundColorAsString.invertColor().color
         }
     }
 
