@@ -197,7 +197,7 @@ internal class UPStepsProgressView: UIView {
 
         case let theme as NPSTheme:
             activeCircleColor = theme.isStepsProgressColorManual ?
-            theme.stepsProgressColor : theme.backgroundColorAsString.invertColor().color
+            theme.stepsProgressColor : theme.primaryColor
 
             inactiveCircleColor = theme.isStepsProgressColorManual ?
             theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :

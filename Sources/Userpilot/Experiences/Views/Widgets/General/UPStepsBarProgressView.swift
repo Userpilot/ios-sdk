@@ -120,8 +120,8 @@ class UPStepsBarProgressView: UIView {
         numberOfSteps = stepsCount
         activeColor = getActiveColor(from: theme)
 
-        // Apply the color with reduced opacity (20%) to the fill color
-        fillColor = getFillColor(from: theme).hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray
+        // Apply clear color 
+        fillColor = UIColor.clear
 
         currentStep = 1
 
@@ -139,7 +139,11 @@ class UPStepsBarProgressView: UIView {
         case let theme as SurveyTheme:
             return theme.stepsProgressColor
         case let theme as NPSTheme:
-            return theme.stepsProgressColor
+            if theme.isStepsProgressColorManual {
+                return theme.stepsProgressColor
+            } else {
+                return theme.primaryColor
+            }
         default:
             return .black
         }
