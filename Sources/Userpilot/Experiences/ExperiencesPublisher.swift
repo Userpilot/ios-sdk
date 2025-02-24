@@ -461,6 +461,7 @@ extension ExperiencesPublisher {
     /// Validates whether the experience can be shown based on the current application state.
     private func canShowExperience() -> Bool {
         guard
+            experienceContent != nil,
             !hasActiveExperience(),
             let experienceContent
         else { return false }
@@ -507,6 +508,7 @@ extension ExperiencesPublisher {
     private func openCarouselExperience(_ viewController: UIViewController,
                                         _ experienceViewModel: ExperienceViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            guard let self, self.canShowExperience() else { return }
             let carouselExperienceViewController = CarouselExperienceViewController(
                 experienceViewModel: experienceViewModel)
             carouselExperienceViewController.modalPresentationStyle = .fullScreen
@@ -518,6 +520,7 @@ extension ExperiencesPublisher {
     private func openSlideOutDialogExperience(_ viewController: UIViewController,
                                               _ experienceViewModel: ExperienceViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            guard let self, self.canShowExperience() else { return }
             let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
             viewController.presentDialog(viewController: slideOutDialogViewController)
         }
@@ -527,6 +530,7 @@ extension ExperiencesPublisher {
     private func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
                                                    _ experienceViewModel: ExperienceViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            guard let self, self.canShowExperience() else { return }
             let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
                 experienceViewModel: experienceViewModel)
             viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
@@ -537,6 +541,7 @@ extension ExperiencesPublisher {
     private func openSurveyListExperience(_ viewController: UIViewController,
                                           _ surveyViewModel: SurveyViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            guard let self, self.canShowExperience() else { return }
             let surveyListViewController = SurveyListViewController(surveyViewModel: surveyViewModel)
             surveyListViewController.modalPresentationStyle = .fullScreen
             viewController.present(surveyListViewController, animated: true)
@@ -581,6 +586,7 @@ extension ExperiencesPublisher {
     private func openSurveyDialogExperience(_ viewController: UIViewController,
                                             _ surveyViewModel: SurveyViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            guard let self, self.canShowExperience() else { return }
             let surveyDialogViewController = SurveyDialogViewController(surveyViewModel: surveyViewModel)
             viewController.presentDialog(viewController: surveyDialogViewController)
         }
@@ -590,7 +596,7 @@ extension ExperiencesPublisher {
     private func openSurveyBottomSheetExperience(_ viewController: UIViewController,
                                                  _ surveyViewModel: SurveyViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
-            guard let self else { return }
+            guard let self, self.canShowExperience() else { return }
             let surveyBottomSheetViewController = SurveyBottomSheetViewController(
                 surveyViewModel: surveyViewModel)
             viewController.presentBottomSheet(viewController: surveyBottomSheetViewController)
@@ -601,6 +607,7 @@ extension ExperiencesPublisher {
     private func openNPSBottomSheetExperience(_ viewController: UIViewController,
                                               _ npsViewModel: NPSViewModel) {
         delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+            guard let self, self.canShowExperience() else { return }
             let npsBottomSheetViewController = NPSBottomSheetViewController(
                 npsViewModel: npsViewModel)
             viewController.presentBottomSheet(viewController: npsBottomSheetViewController)
