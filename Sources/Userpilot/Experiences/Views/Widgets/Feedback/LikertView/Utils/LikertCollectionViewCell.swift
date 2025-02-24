@@ -107,13 +107,11 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
     }
 
     private func primaryColorAsString(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
-        surveyTheme?.primaryColorAsString.invertColor().color ??
-        npsTheme?.primaryColorAsString.invertColor().color ?? .white
+        surveyTheme?.secondContentColor ?? npsTheme?.secondContentColor ?? .white
     }
 
     private func backgroundColorAsString(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
-        surveyTheme?.backgroundColorAsString.invertColor().color ??
-        npsTheme?.backgroundColorAsString.invertColor().color ?? .black
+        surveyTheme?.secondContentColor ?? npsTheme?.secondContentColor ?? .black
     }
 
 }

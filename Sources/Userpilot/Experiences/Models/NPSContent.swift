@@ -173,6 +173,14 @@ internal struct NPSTheme: Decodable {
             backgroundColorAsString.invertColor().color
         }
     }
+    
+    var secondContentColor: UIColor {
+        if font?.colorType == .manual {
+            font?.fontColor?.color ?? .black
+        } else {
+            primaryColor
+        }
+    }
 
     var textSecondaryColorAlpha80: UIColor {
         textColor.withAlphaComponent(0.8)

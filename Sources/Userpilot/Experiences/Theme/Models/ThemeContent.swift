@@ -298,6 +298,14 @@ internal struct SurveyTheme: Decodable {
         }
     }
 
+    var secondContentColor: UIColor {
+        if font?.colorType == .manual {
+            font?.fontColor?.color ?? .black
+        } else {
+            primaryColor
+        }
+    }
+    
     var textSecondaryColorAlpha80: UIColor {
         textColor.withAlphaComponent(0.8)
     }
