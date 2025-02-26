@@ -310,7 +310,7 @@ extension ExperiencesPublisher {
     func publishExperienceEvent(_ sdkEvent: SDKEvent) {
         analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
 
-        if sdkEvent.isEventForCloseExperience() {
+        if sdkEvent.isEventForCloseNPSExperience() {
             experienceContent = nil
             return
         }
@@ -325,7 +325,9 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                analyticsPublisher.publishFakeReloadScreenEvent()
+                if !isTriggerManualExperience {
+                    analyticsPublisher.publishFakeReloadScreenEvent()
+                }
             }
         }
     }
