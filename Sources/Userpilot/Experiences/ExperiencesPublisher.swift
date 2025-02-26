@@ -213,8 +213,8 @@ extension ExperiencesPublisher: SocketSubscription {
                 !contentPayload.isEmpty, let npsContentData = response.toNPSContent() {
                 experienceContent =  ExperienceContent.nps(content: npsContentData.npsContent)
             }
-            isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
         }
+        isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
 
         if eventName == SDKEventsName.fetchExperienceTheme.rawValue {
             if let themeData = response.toMobileTheme(), themeData.id != nil {
@@ -344,7 +344,6 @@ extension ExperiencesPublisher {
                 self?.experienceContent = nil
                 return
             }
-            self.isTriggerManualExperience = false
 
             if let experienceContent {
                 switch experienceContent {
