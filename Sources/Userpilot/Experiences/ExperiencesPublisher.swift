@@ -86,7 +86,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Manual experience not check screen
     private var isTriggerManualExperience = false
 
-    var isTriggeringThankYouMessage = false
+    /// A flag to indicate triggering thank you message for survey list view
+    private var isTriggeringThankYouMessage = false
+
+    /// A special flag to prevent screen event after manual triggering content
+    private let onSecondFlag = OneSecondFlag()
 
     // MARK: - Initializer
 
@@ -119,7 +123,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Determine if can requst screen event
     func canRequestScreenEvent() -> Bool {
-        return !isTriggeringThankYouMessage
+        return !onSecondFlag.isActive && !hasActiveExperience() && !isTriggeringThankYouMessage
     }
 
     /**
@@ -158,7 +162,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL) {
-        delay(0.5) { [weak self] in
+        delay(ThemeHandler.DefaultValues.delayTimeForDeepLink) { [weak self] in
             if let navigationDelegate = self?.userpilot?.navigationDelegate {
                 navigationDelegate.navigate(to: url) { _ in }
             } else {
@@ -325,7 +329,9 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                if !isTriggerManualExperience {
+                if isTriggerManualExperience {
+                    onSecondFlag.activate()
+                } else {
                     analyticsPublisher.publishFakeReloadScreenEvent()
                 }
             }

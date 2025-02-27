@@ -1,8 +1,13 @@
 //
 //  DelayUtils.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 26/01/2025.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  [Brief Description]
+//  Provides utility methods for delaying the execution of actions with support for
+//  task cancellation. Useful for debouncing or scheduling delayed operations.
 //
 
 import Foundation

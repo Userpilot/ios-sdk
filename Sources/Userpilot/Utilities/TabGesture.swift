@@ -1,8 +1,12 @@
 //
-//  TabGesture.swift
-//  Userpilot
+//  TabGesture.kt
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 26/01/2025.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  [Brief Description]
+//  A class to add tab gesture to any view.
 //
 
 import UIKit

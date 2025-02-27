@@ -1,7 +1,18 @@
+//
+//  EventThrottle.swift
+//  Userpilot SDK
+//
+//  Created by Motasem Hamed on 11/11/2024.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  [Brief Description]
+//  Implements event throttling to prevent processing events with the same name
+//  more frequently than the specified throttle duration. Supports both generic
+//  and screen-specific event types.
+//
+
 import Foundation
 
-/// A class that implements event throttling, ensuring that events with the same name
-/// are not processed more frequently than the specified throttle duration.
 internal class EventThrottle {
 
     /// The minimum duration (in seconds) between consecutive events for the same name.
