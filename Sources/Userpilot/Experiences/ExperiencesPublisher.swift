@@ -209,16 +209,18 @@ extension ExperiencesPublisher: SocketSubscription {
         if eventName == EventType.screenEvent || eventName == SDKEventsName.fetchExperienceContent.rawValue {
             if let contentPayload = message.payload["mobile_contents"] as? [String: Any],
                !contentPayload.isEmpty, let flowContentData = response.toFlowContent() {
+                isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
                 experienceContent =  ExperienceContent.flow(content: flowContentData.flowContent)
             } else if let contentPayload = message.payload["surveys"] as? [String: Any],
                 !contentPayload.isEmpty, let surveyContentData = response.toSurveyContent() {
+                isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
                 experienceContent =  ExperienceContent.survey(content: surveyContentData.surveyContent)
             } else if let contentPayload = message.payload["nps"] as? [String: Any],
                 !contentPayload.isEmpty, let npsContentData = response.toNPSContent() {
+                isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
                 experienceContent =  ExperienceContent.nps(content: npsContentData.npsContent)
             }
         }
-        isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
 
         if eventName == SDKEventsName.fetchExperienceTheme.rawValue {
             if let themeData = response.toMobileTheme(), themeData.id != nil {
@@ -242,7 +244,7 @@ extension ExperiencesPublisher: SocketSubscription {
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
             guard
-                DelayUtils.hasPendingContent() && (experienceContent == nil || !hasActiveExperience()),
+                experienceContent == nil && !hasActiveExperience(),
                 payload.keys.contains("request_id"),
                 payload["request_id"] as? Int == nil
             else { return }
@@ -384,7 +386,7 @@ extension ExperiencesPublisher {
      */
     private func checkNPSDelayConfiguration(_ content: NPSContent) {
         if content.timeDelay != 0 {
-            delay(Double(content.timeDelay)) { [weak self] in
+            DelayUtils.delayAction(delayInSeconds: Double(content.timeDelay)) { [weak self] in
                 self?.handleNPSExperience()
             }
         } else {
@@ -416,7 +418,7 @@ extension ExperiencesPublisher {
      */
     private func checkSurveyDelayConfiguration(_ content: SurveyContent) {
         if content.timeDelay != 0 {
-            delay(Double(content.timeDelay)) { [weak self] in
+            DelayUtils.delayAction(delayInSeconds: Double(content.timeDelay)) { [weak self] in
                 self?.handleSurveyExperience(content)
             }
         } else {
@@ -506,7 +508,7 @@ extension ExperiencesPublisher {
             return false
         }
         return topViewController.isKind(of: CarouselExperienceViewController.self) ||
-        topViewController.isKind(of: SlideOutDialogViewController.self) ||
+        topViewController.isKind(of: DialogViewController.self) ||
         topViewController.isKind(of: BottomSheetViewController.self) ||
         topViewController.isKind(of: SurveyListViewController.self)
     }
