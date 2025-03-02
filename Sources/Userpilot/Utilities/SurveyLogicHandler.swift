@@ -95,7 +95,7 @@ internal struct SurveyLogicHandler {
         if let answerList = answer as? [String], answerList.count == 1 {
             return answerList.first ?? ""
         }
-        return String(describing: answer ?? "")
+        return (answer as? String) ?? ""
     }
 
     /// Export the logic metadata value as string

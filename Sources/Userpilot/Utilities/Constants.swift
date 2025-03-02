@@ -24,6 +24,7 @@ let isDebugMode = false
 // swiftlint:disable identifier_name
 internal struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
+    static let EXPERIENCE_QUEUE = "userpilot-experience-queue"
     static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
     static let THROTTLE_QUEUE = "userpilot-throttle-queue"
 }

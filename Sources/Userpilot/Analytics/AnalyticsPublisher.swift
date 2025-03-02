@@ -297,6 +297,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
             }
+            // Once that trigger screen event is met, cancel current pending experience directly.
+            experiencesPublisher?.cancelPendingSurveyContent()
             setupScreenEvent(event)
             flushPriorityEvents()
         }
