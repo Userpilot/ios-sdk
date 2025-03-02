@@ -293,13 +293,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func screen(_ event: Event) {
         tryCatch {
+            setupScreenEvent(event)
             if experiencesPublisher?.canRequestScreenEvent() == false ||
                 eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
             }
-            // Once that trigger screen event is met, cancel current pending experience directly.
-            experiencesPublisher?.cancelPendingSurveyContent()
-            setupScreenEvent(event)
             flushPriorityEvents()
         }
     }
@@ -349,6 +347,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
             if isScreenTitleChanged {
+                // Once that trigger screen event is met, cancel current pending experience directly.
+                experiencesPublisher?.cancelPendingSurveyContent()
+
                 // New screen: start with an empty set of seen experiences
                 screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set(), seenSurveys: Set())
             } else {
