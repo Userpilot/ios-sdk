@@ -130,7 +130,7 @@ internal class UPButtonView: UIButton {
             // Apply theme-based styling properties to the button
             titleLabel?.font = UIFont.matching(
                 fontName: npsTheme.fontFamily,
-                fontWeight: !isSecondaryButton ? [.traitBold] : [],
+                fontWeight: !isDismissButton ? [.traitBold] : [],
                 fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
             )
 

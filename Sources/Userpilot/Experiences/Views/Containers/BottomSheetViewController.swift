@@ -114,13 +114,13 @@ private extension BottomSheetViewController {
         ])
 
         // Add top draggable bar view
-        mainContainerView.addSubview(topBarView)
-        NSLayoutConstraint.activate([
-            topBarView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
-            topBarView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
-            topBarView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor),
-            topBarView.heightAnchor.constraint(equalToConstant: 20)
-        ])
+//        mainContainerView.addSubview(topBarView)
+//        NSLayoutConstraint.activate([
+//            topBarView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
+//            topBarView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
+//            topBarView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor),
+//            topBarView.heightAnchor.constraint(equalToConstant: 20)
+//        ])
 
         // Add content view
         mainContainerView.addSubview(contentView)
@@ -131,7 +131,7 @@ private extension BottomSheetViewController {
             contentView.trailingAnchor.constraint(
                 equalTo: mainContainerView.trailingAnchor,
                 constant: ThemeHandler.DefaultValues.contentMargin.negative),
-            contentView.topAnchor.constraint(equalTo: topBarView.bottomAnchor),
+            contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
             contentView.bottomAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)

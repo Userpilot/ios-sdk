@@ -83,7 +83,7 @@ internal class NPSContainerView: UIView {
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, spaceView, buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
+            spaceView, buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
@@ -210,6 +210,7 @@ internal class NPSContainerView: UIView {
             }
 
             // Add subviews
+            addSubview(barStepsProgressView)
             addSubview(contentStackView)
             scrollView.addSubview(contentContainerView)
             contentContainerView.addSubview(stepSectionsStackView)
@@ -230,6 +231,10 @@ internal class NPSContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
+                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
+                barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
+                barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
+
                 contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
                 contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
                 contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),

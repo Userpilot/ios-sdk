@@ -18,7 +18,7 @@ internal class SurveyContainerView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: 8).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 0).isActive = true
         return view
     }()
     
@@ -72,7 +72,7 @@ internal class SurveyContainerView: UIView {
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            barStepsProgressView, headerSpaceView, buttonDismissContainerView, scrollView, spaceView, actionButton,
+            headerSpaceView, buttonDismissContainerView, scrollView, spaceView, actionButton,
             stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
@@ -173,6 +173,7 @@ internal class SurveyContainerView: UIView {
             }
 
             // Add subviews
+            addSubview(barStepsProgressView)
             addSubview(contentStackView)
             scrollView.addSubview(contentContainerView)
             contentContainerView.addSubview(stepSectionsStackView)
@@ -188,7 +189,11 @@ internal class SurveyContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
+                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
+                barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
+                barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
+
+                contentStackView.topAnchor.constraint(equalTo: barStepsProgressView.bottomAnchor),
                 contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
                 contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
                 contentStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
@@ -309,12 +314,17 @@ internal class SurveyContainerView: UIView {
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
-                headerSpaceView.isHidden = true
+                //headerSpaceView.isHidden = true
                 barStepsProgressView.setupView(stepsCount: surveyContent.modules.count,
                                                theme: theme,
                                                isRTL: isRTL)
             }
         }
+        barStepsProgressView.isHidden = false
+        barStepsProgressView.setupView(stepsCount: surveyContent.modules.count,
+                                       theme: theme,
+                                       isRTL: isRTL)
+        self.barStepsProgressView.setCurrentStep(1)
     }
 
     /** Update the progress of the current step in the survey dialog. */
