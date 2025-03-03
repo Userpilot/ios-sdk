@@ -320,11 +320,6 @@ internal class SurveyContainerView: UIView {
                                                isRTL: isRTL)
             }
         }
-        barStepsProgressView.isHidden = false
-        barStepsProgressView.setupView(stepsCount: surveyContent.modules.count,
-                                       theme: theme,
-                                       isRTL: isRTL)
-        self.barStepsProgressView.setCurrentStep(1)
     }
 
     /** Update the progress of the current step in the survey dialog. */

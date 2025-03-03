@@ -31,6 +31,13 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
         return thankYouView
     }()
 
+    private lazy var spaceView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        return thankYouView
+    }()
+
     /// The action button at the bottom of the view.
     private lazy var actionButton: UPButtonView = {
         let button = UPButtonView()
@@ -41,7 +48,8 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
 
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, thankYouView, actionButton])
+        let stackView = UIStackView(arrangedSubviews:
+            [buttonDismissContainerView, thankYouView, spaceView, actionButton])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
