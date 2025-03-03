@@ -44,8 +44,8 @@ internal class UPThankYouView: UIView {
         // Activate constraints to position titleDescriptionView within the parent view
         NSLayoutConstraint.activate([
             titleDescriptionView.topAnchor.constraint(equalTo: topAnchor),
-            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            titleDescriptionView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            titleDescriptionView.trailingAnchor.constraint(equalTo: trailingAnchor),
             titleDescriptionView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }

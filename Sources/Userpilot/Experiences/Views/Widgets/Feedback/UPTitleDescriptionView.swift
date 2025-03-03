@@ -17,6 +17,7 @@ internal class UPTitleDescriptionView: UIView {
 
     private let titleLabel = UILabel()
     private let descriptionLabel = UILabel()
+    private let spaceView = UIView()
 
     // MARK: - Initializers
 
@@ -42,6 +43,7 @@ internal class UPTitleDescriptionView: UIView {
 
         addSubview(titleLabel)
         addSubview(descriptionLabel)
+        addSubview(spaceView)
     }
 
     /// Sets up the constraints for the labels using Auto Layout.
@@ -58,7 +60,12 @@ internal class UPTitleDescriptionView: UIView {
             descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
             descriptionLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
             descriptionLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            descriptionLabel.bottomAnchor.constraint(equalTo: bottomAnchor)
+
+            spaceView.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 4),
+            spaceView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            spaceView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            spaceView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            spaceView.heightAnchor.constraint(equalToConstant: 20)
         ])
     }
 
