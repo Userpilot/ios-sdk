@@ -11,22 +11,13 @@ import UIKit
 internal class NPSContainerView: UIView {
     
     // MARK: - UI Components
-    
-    /// Header space view
-    private lazy var spaceView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: 0).isActive = true
-        return view
-    }()
-    
+
     /// A container for the dismiss button, with a fixed height.
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 50).isActive = true
         return view
     }()
     
@@ -83,11 +74,11 @@ internal class NPSContainerView: UIView {
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            spaceView, buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
+            buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = ThemeHandler.DefaultValues.smallDistanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -134,7 +125,7 @@ internal class NPSContainerView: UIView {
         let stackView = UIStackView()
         stackView.axis = .vertical
         stackView.backgroundColor = .clear
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = ThemeHandler.DefaultValues.smallDistanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -529,9 +520,11 @@ extension NPSContainerView {
         buttonDismissContainerView.addSubview(buttonDismiss)
         buttonDismiss.backgroundColor = .clear
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false
-        buttonDismiss.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        buttonDismiss.topAnchor.constraint(equalTo: buttonDismissContainerView.topAnchor).isActive = true
-        buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor, constant: 20).isActive = true
+        NSLayoutConstraint.activate([
+            buttonDismiss.heightAnchor.constraint(equalToConstant: 30),
+            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor, constant: 10),
+            buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor, constant: 20)
+        ])
         return buttonDismiss
     }
     

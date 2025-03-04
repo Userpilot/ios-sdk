@@ -14,18 +14,10 @@ internal class SurveyContainerView: UIView {
     // MARK: - UI Components
 
     /// A container for the dismiss button, with a fixed height.
-    private lazy var headerSpaceView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: 0).isActive = true
-        return view
-    }()
-    
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
+        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize + 10).isActive = true
         return view
     }()
 
@@ -72,7 +64,7 @@ internal class SurveyContainerView: UIView {
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            headerSpaceView, buttonDismissContainerView, scrollView, spaceView, actionButton,
+            buttonDismissContainerView, scrollView, spaceView, actionButton,
             stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
@@ -274,7 +266,7 @@ internal class SurveyContainerView: UIView {
         guard let theme else { return }
         buttonDismissContainerView.addSubview(buttonDismiss)
         NSLayoutConstraint.activate([
-            buttonDismiss.topAnchor.constraint(equalTo: buttonDismissContainerView.topAnchor),
+            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor,
                 constant: ThemeHandler.DefaultValues.dismissButtonMargin),
@@ -314,7 +306,6 @@ internal class SurveyContainerView: UIView {
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
-                //headerSpaceView.isHidden = true
                 barStepsProgressView.setupView(stepsCount: surveyContent.modules.count,
                                                theme: theme,
                                                isRTL: isRTL)
@@ -425,14 +416,8 @@ internal class SurveyContainerView: UIView {
 
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-//        if let likertView = newView as? UPLikertView {
-//            let collectionHeight = likertView.collectionViewHeight()
-//            newHeight -= (collectionHeight == 40) ? 40 : 40
-//        }else if let multiChoiceView = newView as? UPMultipleChoiceView {
-//            newHeight += CGFloat(5 * (multiChoiceView.choicesCount() - 1))
-//        }
+
         // Animate height change smoothly
-        
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
             if let scrollViewHeightConstraint = self?.scrollViewHeightConstraint {
                 NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
@@ -442,9 +427,6 @@ internal class SurveyContainerView: UIView {
             self?.scrollViewHeightConstraint?.isActive = true
             self?.viewHeight = min(newHeight, screenHeight * 0.7)
             self?.layoutIfNeeded()
-//            self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
-//            self?.viewHeight = min(newHeight, screenHeight * 0.7)
-//            self?.layoutIfNeeded()
         })
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.1) { [weak self] in

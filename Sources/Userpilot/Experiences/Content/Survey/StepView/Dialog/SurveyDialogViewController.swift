@@ -49,7 +49,7 @@ internal class SurveyDialogViewController: DialogViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bindViewModel()
-        setContent(content: surveyContainerView, withoutMargin: true)
+        setContent(content: surveyContainerView, withMargin: CGFloat(-40))
     }
 
     /// Handle screen rotation

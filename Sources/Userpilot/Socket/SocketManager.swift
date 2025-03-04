@@ -287,13 +287,13 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        tryCatch {
-            if let phoenixChannel, !phoenixChannel.isClosed, phoenixChannel.isJoined {
-                phoenixChannel.leave(timeout: 0.0)
-                phoenixSocket?.remove(phoenixChannel)
-            }
-            if let phoenixSocket {
-                phoenixSocket.disconnect()
+        performOn(.main) { [weak self] in
+            tryCatch {
+                if let channel = self?.phoenixChannel, !channel.isClosed {
+                    channel.leave(timeout: 0.0)
+                    self?.phoenixSocket?.remove(channel)
+                }
+                self?.phoenixSocket?.disconnect()
             }
         }
     }
