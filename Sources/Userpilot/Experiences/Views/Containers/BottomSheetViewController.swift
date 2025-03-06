@@ -25,9 +25,6 @@ internal class BottomSheetViewController: UIViewController {
         view.backgroundColor = .white
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
-        view.addTapGesture { [weak self] in
-            self?.view.endEditing(true)
-        }
         return view
     }()
 
@@ -85,6 +82,9 @@ internal class BottomSheetViewController: UIViewController {
         ? .forceLeftToRight : .forceRightToLeft
     }
 
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
 }
 
 // MARK: - Setup Views

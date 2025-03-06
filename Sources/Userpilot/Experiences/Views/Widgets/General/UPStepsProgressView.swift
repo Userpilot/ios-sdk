@@ -187,8 +187,7 @@ internal class UPStepsProgressView: UIView {
                 opacity: "0.2")?.rgbaToColor() ?? .gray
 
         case let theme as SurveyTheme:
-            activeCircleColor = theme.isStepsProgressColorManual ?
-            theme.stepsProgressColor : theme.backgroundColorAsString.invertColor().color
+            activeCircleColor = theme.stepsProgressColor
 
             inactiveCircleColor = theme.isStepsProgressColorManual ?
             theme.stepsProgressColorAsString.hexToRgb().updateRgbaOpacity(opacity: "0.2")?.rgbaToColor() ?? .gray :

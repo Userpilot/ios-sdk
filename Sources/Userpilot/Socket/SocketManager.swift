@@ -208,7 +208,7 @@ extension SocketManager {
             socketState = .connecting
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: "NX-ae3f534e",
+                SocketManager.tokenKey: "NX-b7b285fd",
                 SocketManager.userIDKey: storage.userID,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,

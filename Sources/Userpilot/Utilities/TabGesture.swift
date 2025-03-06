@@ -10,8 +10,7 @@
 //
 
 import UIKit
-
-internal final class BindableGestureRecognizer: UITapGestureRecognizer {
+internal final class BindableGestureRecognizer: UITapGestureRecognizer, UIGestureRecognizerDelegate {
     private var action: () -> Void
 
     /// Initializes the gesture recognizer with a closure to be executed on tap.
@@ -22,6 +21,21 @@ internal final class BindableGestureRecognizer: UITapGestureRecognizer {
         self.addTarget(self, action: #selector(execute))
     }
 
+    /// Overrides the touch handling to ensure gesture works with keyboard
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+
+        // Attempt to end editing (dismiss keyboard) if needed
+        if let view = self.view {
+            view.endEditing(true)
+        }
+    }
+
+    
+    // Allow simultaneous recognition with other gestures (like button taps)
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
+        }
     /// Executes the stored action when the gesture is recognized.
     @objc private func execute() {
         action()

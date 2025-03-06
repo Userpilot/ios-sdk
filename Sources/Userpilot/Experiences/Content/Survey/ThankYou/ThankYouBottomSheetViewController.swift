@@ -34,7 +34,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     private lazy var spaceView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 40).isActive = true
         return thankYouView
     }()
 

@@ -416,6 +416,13 @@ internal class SurveyContainerView: UIView {
 
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+        if newView.isKind(of: UPLikertView.self) {
+            if isDialogContent {
+                newHeight = newHeight - 20
+            }else {
+                newHeight = newHeight - 40
+            }
+        }
 
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in

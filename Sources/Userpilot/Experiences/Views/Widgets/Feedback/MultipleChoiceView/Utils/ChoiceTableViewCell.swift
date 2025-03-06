@@ -117,7 +117,7 @@ internal class ChoiceTableViewCell: UITableViewCell {
         // Styling based on selection state
         if choice.isSelected == true {
             containerView.layer.borderColor = surveyTheme.primaryColor.cgColor
-            containerView.backgroundColor = surveyTheme.secondaryColor
+            containerView.backgroundColor = surveyTheme.primaryColor.withAlphaComponent(0.1)
             iconImageView.tintColor = surveyTheme.primaryColor
         } else {
             containerView.layer.borderColor = surveyTheme.textSecondaryColor.cgColor
