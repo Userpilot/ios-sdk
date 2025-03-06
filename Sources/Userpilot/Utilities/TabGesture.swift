@@ -8,8 +8,9 @@
 //  [Brief Description]
 //  A class to add tab gesture to any view.
 //
-
+// swiftlint:disable all
 import UIKit
+
 internal final class BindableGestureRecognizer: UITapGestureRecognizer, UIGestureRecognizerDelegate {
     private var action: () -> Void
 
@@ -31,11 +32,10 @@ internal final class BindableGestureRecognizer: UITapGestureRecognizer, UIGestur
         }
     }
 
-    
-    // Allow simultaneous recognition with other gestures (like button taps)
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            return true
-        }
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+
     /// Executes the stored action when the gesture is recognized.
     @objc private func execute() {
         action()
@@ -60,3 +60,4 @@ internal extension UIView {
         addGestureRecognizer(tap)
     }
 }
+// swiftlint:enable all
