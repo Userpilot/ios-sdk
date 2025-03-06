@@ -82,9 +82,6 @@ internal class BottomSheetViewController: UIViewController {
         ? .forceLeftToRight : .forceRightToLeft
     }
 
-    @objc private func dismissKeyboard() {
-        view.endEditing(true)
-    }
 }
 
 // MARK: - Setup Views
