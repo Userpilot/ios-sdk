@@ -34,7 +34,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func triggerExperience(_ experienceID: String)
 
     /// Manually end experience
-    func endExperience()
+    func endExperience(manualClose: Bool)
 
     /// Determine if can requst screen event
     func canRequestScreenEvent() -> Bool
@@ -81,6 +81,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// The current screen name in the application, used to track active screens.
     private var currentScreen: String = ""
+
+    /// Debouncer to request fake reload in safe time
+    private lazy var debounce = Debouncer(delay: 200)
 
     /// Holds the active carousel content, if any, that is being displayed.
     private var experienceContent: ExperienceContent?
@@ -150,9 +153,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /*
      End experience manually
      */
-    func endExperience() {
+    func endExperience(manualClose: Bool) {
         guard let experience = UIApplication.shared.fetchTopViewController() else { return }
-        (experience as? UPExperience)?.triggerCloseExpereince()
+        (experience as? UPExperience)?.triggerCloseExpereince(manualClose: manualClose)
     }
 
     /*
@@ -366,7 +369,12 @@ extension ExperiencesPublisher {
                 if isTriggerManualExperience {
                     oneSecondFlag.activate()
                 } else {
-                    analyticsPublisher.publishFakeReloadScreenEvent()
+                    debounce.debounce { [weak self] in
+                        guard let self else { return }
+                        if self.analyticsPublisher.screenEntity?.event.screenTitle == self.currentScreen {
+                            self.analyticsPublisher.publishFakeReloadScreenEvent()
+                        }
+                    }
                 }
             }
         }
@@ -671,6 +679,7 @@ extension ExperiencesPublisher {
     /// A delegate method, on new screen opened cancel pending/processing content
     func cancelPendingSurveyContent() {
         delayUtils.cancelDelay()
+        endExperience(manualClose: false)
         resetExperienceContent()
     }
 

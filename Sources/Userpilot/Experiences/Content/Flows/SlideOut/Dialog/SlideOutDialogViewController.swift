@@ -122,7 +122,7 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
 // MARK: - UPExperience
 
 extension SlideOutDialogViewController: UPExperience {
-    func triggerCloseExpereince() {
+    func triggerCloseExpereince(manualClose: Bool) {
         dismissDialog()
     }
 }

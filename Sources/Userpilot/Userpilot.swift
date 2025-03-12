@@ -303,6 +303,6 @@ extension Userpilot {
      */
     @objc
     public func endExperience() {
-        experiencesPublisher.endExperience()
+        experiencesPublisher.endExperience(manualClose: true)
     }
 }

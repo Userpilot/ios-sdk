@@ -101,14 +101,14 @@ internal class ChoiceTableViewCell: UITableViewCell {
         textField.textColor = surveyTheme.textColor
         textField.setPlaceholder(text: choice.value ?? "", color: surveyTheme.textColor)
         textField.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [.traitMonoSpace],
+            fontName: surveyTheme.fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
 
         label.text = choice.value
         label.textColor = surveyTheme.textColor
         iconImageView.image = getIcon(for: choice, with: surveyStep)
         label.font = UIFont.matching(
-            fontName: surveyTheme.fontFamily, fontWeight: [.traitMonoSpace],
+            fontName: surveyTheme.fontFamily, fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
         if isRTL {
             label.textAlignment = .right

@@ -96,7 +96,7 @@ extension NPSBottomSheetViewController {
 // MARK: - UPExperience
 
 extension NPSBottomSheetViewController: UPExperience {
-    func triggerCloseExpereince() {
+    func triggerCloseExpereince(manualClose: Bool) {
         dismissBottomSheet()
     }
 }

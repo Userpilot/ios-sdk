@@ -117,7 +117,7 @@ extension SurveyBottomSheetViewController {
 // MARK: - UPExperience
 
 extension SurveyBottomSheetViewController: UPExperience {
-    func triggerCloseExpereince() {
+    func triggerCloseExpereince(manualClose: Bool) {
         dismissBottomSheet()
     }
 }

@@ -50,6 +50,9 @@ internal protocol AnalyticsPublishing: AnyObject {
 
     /// For experience which are come from start session
     var isStartSession: Bool { get }
+
+    /// To return current screen entity
+    var screenEntity: ScreenViewEntity? { get }
 }
 
 /**
@@ -103,7 +106,7 @@ internal class AnalyticsPublisher {
     private var cachedIdentifyEvent: Event?
 
     /// Tracks the last screen viewed, bool for fake reload state.
-    private var screenViewEntity: ScreenViewEntity?
+    private(set) var screenViewEntity: ScreenViewEntity?
 
     /// Tracks the first event to open the socket.
     private var cachedEvent: Event?
@@ -575,6 +578,11 @@ extension AnalyticsPublisher {
     /// For experience which are come from start session
     var isStartSession: Bool {
         startSession
+    }
+
+    /// For experience which are come from start session
+    var screenEntity: ScreenViewEntity? {
+        screenViewEntity
     }
 
     /// publish experience event

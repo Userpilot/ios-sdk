@@ -115,7 +115,7 @@ extension SurveyDialogViewController {
 // MARK: - UPExperience
 
 extension SurveyDialogViewController: UPExperience {
-    func triggerCloseExpereince() {
+    func triggerCloseExpereince(manualClose: Bool) {
         dismissDialog()
     }
 }
