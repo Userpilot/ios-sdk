@@ -103,6 +103,7 @@
 		AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseNavigationController.swift; sourceTree = "<group>"; };
 		AB6DBD442C68D8560009BB11 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Exensions.swift"; sourceTree = "<group>"; };
+		AB8AC4F92D89609F00B0BEFE /* UserpilotSample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UserpilotSample.entitlements; sourceTree = "<group>"; };
 		ABAC8E682CE9CF21005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventsViewController.xib; sourceTree = "<group>"; };
 		ABAC8E6B2CE9CF21005EEC9D /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/SDKEventsViewController.xcstrings; sourceTree = "<group>"; };
 		ABAC8E6C2CE9E9D0005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventTableViewCell.xib; sourceTree = "<group>"; };
@@ -468,6 +469,7 @@
 		C5C897B72C5CFFFA0083928E /* UserpilotSample */ = {
 			isa = PBXGroup;
 			children = (
+				AB8AC4F92D89609F00B0BEFE /* UserpilotSample.entitlements */,
 				AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */,
 				ABC0B5142CB3CBB200139174 /* Resources */,
 				ABACA85E2C96E0C2006C9B77 /* Dialogs */,
@@ -888,6 +890,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UserpilotSample/UserpilotSample.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -920,6 +923,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UserpilotSample/UserpilotSample.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

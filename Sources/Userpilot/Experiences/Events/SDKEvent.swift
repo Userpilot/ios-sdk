@@ -33,4 +33,7 @@ internal enum SDKEventsName: String {
     case experienceStepSeen = "seen_mobile_content_step"
     case experienceStepCompleted = "completed_mobile_content_step"
     case fetchExperienceTheme = "fetch_theme"
+
+    case pushNotificationToken = "user_token"
+    case pushNotificationOpened = "opened_push_notification"
 }

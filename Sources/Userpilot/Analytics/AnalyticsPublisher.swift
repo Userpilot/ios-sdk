@@ -40,7 +40,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     var canRequestExperienceEvent: Bool { get }
 
     /// publish experience event
-    func publishExperienceEvent(_ sdkEvent: SDKEvent, socketSubscription: SocketSubscription)
+    func publishExperienceEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription)
 
     /// publish fake reload event
     func publishFakeReloadScreenEvent()
@@ -570,10 +570,13 @@ extension AnalyticsPublisher {
     /// publish experience event
     func publishExperienceEvent(
         _ sdkEvent: SDKEvent,
+        isExpereinceEvent: Bool,
         socketSubscription: SocketSubscription
     ) {
         tryCatch {
-            guard canRequestExperienceEvent else { return }
+            if isExpereinceEvent {
+                guard canRequestExperienceEvent else { return }
+            }
             socketManager.publish(
                 sdkEvent.eventName,
                 payload: sdkEvent.eventPayload,
