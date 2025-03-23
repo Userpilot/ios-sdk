@@ -109,7 +109,7 @@ class UserpilotManager {
 extension UserpilotManager: UserpilotNavigationDelegate {
 
     func navigate(to url: URL, completion: @escaping (Bool) -> Void) {
-        delay(3) {
+        delay(1) {
             if url.scheme == "userpilot-example" {
                 guard let destination = url.host else {
                     completion(false)
@@ -151,7 +151,7 @@ extension UserpilotManager: UserpilotAnalyticsDelegate {
         if let topViewController =
             FlowRoutingManager.topMostController(),
            topViewController.isKind(of: IdentifyViewController.self) {
-            (topViewController as? IdentifyViewController)?.onUserIdentified("\(prettyPrint(settings()))")
+            (topViewController as? IdentifyViewController)?.onUserIdentified(settings())
         } else {
             FlowRoutingManager.shared.showAlertMessage(
                 "User identify successfully!\nUser details:\n\(prettyPrint(settings()))")

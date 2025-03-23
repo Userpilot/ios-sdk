@@ -33,6 +33,9 @@
                     <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <state key="normal" title="Button"/>
                     <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
+                    <connections>
+                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="gA3-8z-gCS"/>
+                    </connections>
                 </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>

@@ -240,7 +240,7 @@ extension ExperiencesPublisher {
      - Parameter themeID: A theme ID for which data needs to be fetched.
      */
     private func fetchThemeData(_ themeID: Int) {
-        guard analyticsPublisher.canRequestExperienceEvent else {
+        guard analyticsPublisher.canRequestEvent else {
             mobileContent = nil
             return
         }

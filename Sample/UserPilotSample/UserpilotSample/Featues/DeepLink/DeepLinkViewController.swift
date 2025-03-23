@@ -10,6 +10,9 @@ import UIKit
 
 class DeepLinkViewController: UIViewController {
 
+    @IBAction func onBackButtonClicked(_ sender: UIButton) {
+        close()
+    }
 }
 
 // MARK: - Instance

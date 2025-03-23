@@ -37,7 +37,7 @@ internal protocol AnalyticsPublishing: AnyObject {
                 shouldClearCachedIdentifyEvent: Bool)
 
     /// check socket state
-    var canRequestExperienceEvent: Bool { get }
+    var canRequestEvent: Bool { get }
 
     /// publish experience event
     func publishExperienceEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription)
@@ -558,7 +558,7 @@ private extension AnalyticsPublisher {
 extension AnalyticsPublisher {
 
     /// check socket state
-    var canRequestExperienceEvent: Bool {
+    var canRequestEvent: Bool {
         socketManager.isSocketOpened
     }
 
@@ -575,7 +575,7 @@ extension AnalyticsPublisher {
     ) {
         tryCatch {
             if isExpereinceEvent {
-                guard canRequestExperienceEvent else { return }
+                guard canRequestEvent else { return }
             }
             socketManager.publish(
                 sdkEvent.eventName,
@@ -588,7 +588,7 @@ extension AnalyticsPublisher {
     /// publish fake reload event
     func publishFakeReloadScreenEvent() {
         tryCatch {
-            guard canRequestExperienceEvent else { return }
+            guard canRequestEvent else { return }
             if let screenViewEntity {
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return

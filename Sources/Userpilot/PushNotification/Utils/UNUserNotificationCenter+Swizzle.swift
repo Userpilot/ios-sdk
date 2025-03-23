@@ -109,28 +109,6 @@ extension UNUserNotificationCenter {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if let aps = response.notification.request.content.userInfo["aps"] as? [String: Any] {
-             if let alert = aps["alert"] as? [String: Any] {
-                 let title = alert["title"] as? String ?? "No Title"
-                 let body = alert["body"] as? String ?? "No Body"
-                 print("Notification Title: \(title)")
-                 print("Notification Body: \(body)")
-             } else if let alert = aps["alert"] as? String {
-                 // Handle simple alert string
-                 print("Notification Alert: \(alert)")
-             }
-
-             if let badge = aps["badge"] as? Int {
-                 print("Badge: \(badge)")
-             }
-
-             if let sound = aps["sound"] as? String {
-                 print("Sound: \(sound)")
-             }
-         } else {
-             print("Failed to parse APS data")
-         }
-
         if UserpilotNotification(userInfo: response.notification.request.content.userInfo) != nil {
             PushNotificationAutoConfig.didReceive(
                 response,

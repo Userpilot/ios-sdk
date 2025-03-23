@@ -113,6 +113,8 @@ internal class PushMonitor: PushMonitoring, SocketSubscription {
     ///
     /// - Parameter deviceToken: The device token received from APNs.
     func setPushToken(_ deviceToken: Data?) {
+        // Cache the token in all cases so in next identify in same session, we will sync it
+        cachedToken = deviceToken
         guard
             let newToken = deviceToken?.map { String(format: "%02x", $0) }.joined(),
             storage.pushToken != newToken
@@ -120,7 +122,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription {
             return
         }
 
-        if analyticsPublisher.canRequestExperienceEvent {
+        if analyticsPublisher.canRequestEvent {
             analyticsPublisher.publishExperienceEvent(
                 PushNotificationTokenEvent(
                     appToken: config.token,
@@ -128,8 +130,6 @@ internal class PushMonitor: PushMonitoring, SocketSubscription {
                     token: newToken),
                 isExpereinceEvent: false,
                 socketSubscription: self)
-        } else {
-            cachedToken = deviceToken
         }
     }
 
@@ -143,7 +143,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription {
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ status: Bool) {
         if eventName == SDKEventsName.pushNotificationToken.rawValue {
             storage.pushToken = payload?["token"] as? String
-            cachedToken = nil
+            // cachedToken = nil
         }
     }
 
@@ -179,25 +179,19 @@ internal class PushMonitor: PushMonitoring, SocketSubscription {
         self.pushAuthorizationStatus = newStatus
 
         if shouldPublish || newStatus == .notDetermined {
-            // Define the notification types (alerts, sounds, badges)
-               let options: UNAuthorizationOptions = [.alert, .sound, .badge]
-
-               // Request permission for push notifications
-               UNUserNotificationCenter.current().requestAuthorization(options: options) { (granted, error) in
-                   if granted {
-                       print("Push notification permission granted.")
-                       // Register for remote notifications if permission is granted
-                       DispatchQueue.main.async {
-                           UIApplication.shared.registerForRemoteNotifications()
-                       }
-                   } else {
-                       if let errorDescription = error?.localizedDescription {
-                           print("Permission denied or failed to request: \(errorDescription)")
-                       } else {
-                           print("Permission denied or failed to request: Unknown error")
-                       }
-                   }
-               }
+            let options: UNAuthorizationOptions = [.alert, .sound, .badge]
+            // Request permission for push notifications
+            UNUserNotificationCenter.current().requestAuthorization(options: options) { [weak self] (granted, _) in
+                if granted {
+                    self?.config.logger.info("Push notification permission granted.")
+                    // Register for remote notifications if permission is granted
+                    DispatchQueue.main.async {
+                        UIApplication.shared.registerForRemoteNotifications()
+                    }
+                } else {
+                    self?.config.logger.info("Permission denied or failed to request.")
+                }
+            }
         }
 
         completion?(newStatus)
@@ -245,7 +239,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription {
         }
 
         // Handle deferred notification if analytics event is not yet allowed
-        guard analyticsPublisher.canRequestExperienceEvent else {
+        guard analyticsPublisher.canRequestEvent else {
             deferredNotification = parsedNotification
             completionHandler?()
             return true
