@@ -173,6 +173,10 @@ internal func tryCatch<T>(code: () throws -> T, defaultValue: T? = nil) -> T? {
 /// Use default iOS User Agent to revent Cloudflare blocking
 internal func getUserAgent() -> String {
     let mm = 5
+    
+    
+    
+    
     if Thread.isMainThread {
         let webView = WKWebView()
         return webView.value(forKey: "userAgent") as? String ??
