@@ -19,7 +19,6 @@ import SwiftPhoenixClient
  The `ExperiencesPublishing` protocol defines the required methods for managing experiences,
  such as starting the service, retrieving active carousel content, and sending socket requests.
  */
-// swiftlint:disable file_length
 internal protocol ExperiencesPublishing: AnyObject {
     /// Start new experience
     func start()
@@ -385,4 +384,3 @@ extension ExperiencesPublisher {
         topViewController.isKind(of: SlideOutBottomSheetViewController.self)
     }
 }
-// swiftlint:enable file_length

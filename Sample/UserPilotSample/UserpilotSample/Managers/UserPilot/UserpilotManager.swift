@@ -145,7 +145,6 @@ extension UserpilotManager: UserpilotAnalyticsDelegate {
 
     func prettyPrint(_ dictionary: [String: Any]) -> String {
         if let jsonData = try? JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted),
-           // swiftlint:disable:next non_optional_string_data_conversion
            let jsonString = String(data: jsonData, encoding: .utf8) {
             return jsonString
         } else {
