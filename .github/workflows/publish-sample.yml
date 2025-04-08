@@ -55,6 +55,10 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles          
 
+      - name: List available schemes
+        run: |
+          xcodebuild -list -project /Sample/UserpilotSample/UserpilotSample.xcodeproj
+            
       - name: build archive
         run: |
           xcodebuild -scheme "UserpilotSample" \
