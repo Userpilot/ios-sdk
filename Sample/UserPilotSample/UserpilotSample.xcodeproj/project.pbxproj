@@ -503,6 +503,7 @@
 				C5C897B22C5CFFFA0083928E /* Frameworks */,
 				C5C897B32C5CFFFA0083928E /* Resources */,
 				AB20F94D2C5E62D8008C0157 /* SwiftLint */,
+				ABA40A512DA55C8300C68251 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -612,6 +613,24 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ \"$(uname -m)\" == arm64 ]]; then\n    export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\n\nif which swiftlint > /dev/null; then\n  swiftlint --fix && swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 			showEnvVarsInLog = 0;
+		};
+		ABA40A512DA55C8300C68251 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 12;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Add Homebrew to path\nif [[ $(arch) == 'arm64' ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nelse\n  export PATH=\"/usr/local/bin:$PATH\"\nfi\n\n# Run swiftlint on app and local package folder\nif which swiftlint >/dev/null; then\n  echo \"Running SwiftLint for app...\"\n  swiftlint --quiet\n\n  echo \"Running SwiftLint for SDK package...\"\n  swiftlint --quiet ../../../ios-sdk # Adjust path to your SDK package\n\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

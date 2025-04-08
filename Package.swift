@@ -16,9 +16,6 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/SimplyDanny/SwiftLintPlugins",
-            exact: "0.57.1"),
-        .package(
             url: "https://github.com/davidstump/SwiftPhoenixClient",
             exact: "5.2.2")
         ],
@@ -29,9 +26,6 @@ let package = Package(
             name: "Userpilot",
             dependencies: [
                 .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient")
-            ],
-            plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .testTarget(
