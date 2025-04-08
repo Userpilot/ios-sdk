@@ -172,19 +172,14 @@ internal func tryCatch<T>(code: () throws -> T, defaultValue: T? = nil) -> T? {
 
 /// Use default iOS User Agent to revent Cloudflare blocking
 internal func getUserAgent() -> String {
-    let mm = 5
-    
-    
-    
-    
     if Thread.isMainThread {
         let webView = WKWebView()
         return webView.value(forKey: "userAgent") as? String ??
         "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
     } else {
-        DispatchQueue.main.sync {
+        return DispatchQueue.main.sync {
             let webView = WKWebView()
-            //// swiftlint:disable:next line_length
+            // swiftlint:disable:next line_length
             return webView.value(forKey: "userAgent") as? String ?? "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
         }
     }
