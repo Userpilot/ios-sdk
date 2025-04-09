@@ -11,6 +11,7 @@ on:
 jobs:
   build_sample_app:
     runs-on: macos-latest
+
     steps:
       - name: Check Xcode version
         run: /usr/bin/xcodebuild -version
@@ -41,11 +42,6 @@ jobs:
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
-
-      # Optional: Uncomment to debug schemes
-      # - name: List available schemes
-      #   run: |
-      #     xcodebuild -list -project ./Sample/UserpilotSample/UserpilotSample.xcodeproj
 
       - name: Install SwiftLint
         run: brew install swiftlint
@@ -78,6 +74,16 @@ jobs:
           name: UserpilotSample.ipa
           path: ${{ runner.temp }}/build/UserpilotSample.ipa
           retention-days: 3
+
+  upload_to_firebase:
+    needs: build_sample_app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: UserpilotSample.ipa
+          path: ./build
 
       - name: Upload .ipa to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
