@@ -1,6 +1,6 @@
 # Userpilot iOS SDK
 
-<!-- VERSION_BADGE -->
+![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
 
 ## Introduction
 
