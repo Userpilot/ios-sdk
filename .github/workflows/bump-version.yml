@@ -89,10 +89,18 @@ jobs:
       - name: Update README with version badge
         run: |
           badge_url="https://img.shields.io/github/v/tag/${{ github.repository }}?label=version"
+            
+          # Debug: print README before modification
+          echo "Before sed: $(cat README.md)"
+          
           # macOS requires the empty string for the backup extension
           sed -i '' "s|<!-- VERSION_BADGE -->|![version]($badge_url)|" README.md
+      
+          # Debug: print README after modification
+          echo "After sed: $(cat README.md)"
+            
           git add README.md
-          git commit -m "📝 update version badge in README"
+          git commit -m "📝 update version badge in README" || echo "No changes to commit"
           git push
 
       # - name: Generate changelog from git log
