@@ -1,0 +1,121 @@
+name: Bump iOS SDK Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Which part to bump (major, minor, patch, beta)'
+        required: true
+        default: 'beta'
+
+jobs:
+  bump:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git config
+        run: |
+          git config user.name "motasem-userpilot"
+          git config user.email "motasem@userpilot.co"
+
+      - name: Bump version in Version.swift
+        id: bump_version
+        run: |
+          file="Sources/Userpilot/Version.swift"
+
+          major=$(grep 'private let versionMajor' "$file" | grep -oE '[0-9]+')
+          minor=$(grep 'private let versionMinor' "$file" | grep -oE '[0-9]+')
+          patch_line=$(grep 'private let versionPatch' "$file")
+          patch_with_beta=$(echo "$patch_line" | grep -oE '[0-9]+(-beta\.[0-9]+)?')
+
+          patch=$(echo "$patch_with_beta" | cut -d'-' -f1)
+          beta=$(echo "$patch_with_beta" | grep -oE 'beta\.[0-9]+' | cut -d'.' -f2)
+
+          bump="${{ github.event.inputs.bump }}"
+
+          case "$bump" in
+            major)
+              ((major+=1)); minor=0; patch=0; beta=""
+              ;;
+            minor)
+              ((minor+=1)); patch=0; beta=""
+              ;;
+            patch)
+              ((patch+=1)); beta=""
+              ;;
+            beta)
+              if [[ -z "$beta" ]]; then beta=1; else ((beta+=1)); fi
+              ;;
+            *)
+              echo "Invalid bump type: $bump"
+              exit 1
+              ;;
+          esac
+
+          new_patch="$patch"
+          if [[ "$bump" == "beta" || -n "$beta" ]]; then
+            new_patch="$new_patch-beta.$beta"
+          fi
+
+          new_version="$major.$minor.$new_patch"
+          echo "New version: $new_version"
+
+          # Update Version.swift
+          sed -i "" "s/versionMajor = \".*\"/versionMajor = \"$major\"/" "$file"
+          sed -i "" "s/versionMinor = \".*\"/versionMinor = \"$minor\"/" "$file"
+          sed -i "" "s/versionPatch = \".*\"/versionPatch = \"$new_patch\"/" "$file"
+          
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Commit and push version bump
+        run: |
+          git add Sources/Userpilot/Version.swift
+          git commit -m "🔖 bump iOS SDK version to ${{ steps.bump_version.outputs.new_version }}"
+          git push
+
+      - name: Tag the version
+        run: |
+          git tag v${{ steps.bump_version.outputs.new_version }}
+          git push origin v${{ steps.bump_version.outputs.new_version }}
+
+      - name: Update README with version badge
+        run: |
+          badge_url="https://img.shields.io/github/v/tag/${{ github.repository }}?label=version"
+          sed -i "" "s|<!-- VERSION_BADGE -->|![version]($badge_url)|" README.md
+          git add README.md
+          git commit -m "📝 update version badge in README"
+          git push
+
+      # - name: Generate changelog from git log
+      #   id: changelog
+      #   run: |
+      #     latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+      #     echo "latest tag: $latest_tag"
+      #     if [ -n "$latest_tag" ]; then
+      #       changelog=$(git log "$latest_tag"..HEAD --pretty=format:"- %s")
+      #     else
+      #       changelog=$(git log --pretty=format:"- %s")
+      #     fi
+
+      #     echo "changelog<<EOF" >> $GITHUB_OUTPUT
+      #     echo "$changelog" >> $GITHUB_OUTPUT
+      #     echo "EOF" >> $GITHUB_OUTPUT
+
+      # - name: Create GitHub Release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: v${{ steps.bump_version.outputs.new_version }}
+      #     release_name: "iOS SDK v${{ steps.bump_version.outputs.new_version }}"
+      #     body: |
+      #       📦 **iOS SDK Release: v${{ steps.bump_version.outputs.new_version }}**
+
+      #       Changelog:
+      #       ${{ steps.changelog.outputs.changelog }}
+
+      #     draft: false
+      #     prerelease: ${{ contains(steps.bump_version.outputs.new_version, 'beta') }}
