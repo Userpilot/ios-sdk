@@ -25,6 +25,14 @@ jobs:
           git config user.name "motasem-userpilot"
           git config user.email "motasem@userpilot.co"
 
+      - name: Validate bump input
+        run: |
+          bump="${{ github.event.inputs.bump }}"
+          if [[ ! "$bump" =~ ^(major|minor|patch|beta)$ ]]; then
+            echo "Invalid bump type: $bump"
+            exit 1
+          fi
+      
       - name: Bump version in Version.swift
         id: bump_version
         run: |
