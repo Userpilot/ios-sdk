@@ -84,12 +84,13 @@ jobs:
       - name: Tag the version
         run: |
           git tag v${{ steps.bump_version.outputs.new_version }}
-          git push origin v${{ steps.bump_version.outputs.new_version }}
+          git push origin ${{ steps.bump_version.outputs.new_version }}
 
       - name: Update README with version badge
         run: |
           badge_url="https://img.shields.io/github/v/tag/${{ github.repository }}?label=version"
-          sed -i "" "s|<!-- VERSION_BADGE -->|![version]($badge_url)|" README.md
+          # macOS requires the empty string for the backup extension
+          sed -i '' "s|<!-- VERSION_BADGE -->|![version]($badge_url)|" README.md
           git add README.md
           git commit -m "📝 update version badge in README"
           git push
