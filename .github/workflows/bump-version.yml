@@ -1,10 +1,6 @@
 name: Bump iOS SDK Version
 
 on:
-  push:
-    branches:
-      - '**'
-
   workflow_dispatch:
     inputs:
       bump:
