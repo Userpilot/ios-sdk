@@ -28,7 +28,7 @@ jobs:
       - name: Bump version in Version.swift
         id: bump_version
         run: |
-          file="Sources/Userpilot/Version.swift"
+          file="./Sources/Userpilot/Version.swift"
 
           major=$(grep 'private let versionMajor' "$file" | grep -oE '[0-9]+')
           minor=$(grep 'private let versionMinor' "$file" | grep -oE '[0-9]+')
@@ -76,7 +76,7 @@ jobs:
 
       - name: Commit and push version bump
         run: |
-          git add Sources/Userpilot/Version.swift
+          git add ./Sources/Userpilot/Version.swift
           git commit -m "🔖 bump iOS SDK version to ${{ steps.bump_version.outputs.new_version }}"
           git push
 
