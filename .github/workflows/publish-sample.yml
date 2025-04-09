@@ -47,6 +47,9 @@ jobs:
       #   run: |
       #     xcodebuild -list -project ./Sample/UserpilotSample/UserpilotSample.xcodeproj
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
       - name: Build sample app archive
         run: |
           xcodebuild -project ./Sample/UserpilotSample/UserpilotSample.xcodeproj \

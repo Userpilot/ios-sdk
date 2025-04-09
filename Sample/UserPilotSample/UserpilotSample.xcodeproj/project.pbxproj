@@ -616,6 +616,7 @@
 		};
 		ABA40A512DA55C8300C68251 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 12;
 			files = (
 			);
