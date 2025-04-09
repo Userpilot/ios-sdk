@@ -1,6 +1,10 @@
 name: Bump iOS SDK Version
 
 on:
+  push:
+    branches:
+      - '**'
+
   workflow_dispatch:
     inputs:
       bump:
@@ -34,7 +38,8 @@ jobs:
           patch=$(echo "$patch_with_beta" | cut -d'-' -f1)
           beta=$(echo "$patch_with_beta" | grep -oE 'beta\.[0-9]+' | cut -d'.' -f2)
 
-          bump="${{ github.event.inputs.bump }}"
+          # Use the bump input from workflow_dispatch or default to 'beta' for push events
+          bump="${{ github.event.inputs.bump || 'beta' }}"
 
           case "$bump" in
             major)
