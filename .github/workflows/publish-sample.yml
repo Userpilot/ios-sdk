@@ -115,6 +115,13 @@ jobs:
           # Make sure we're in a git repository
           git status
 
+      # 🔧 Install GitHub CLI for fetching PR comments
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli.repo?brand=cli&repo=stable | sudo tee /etc/apt/sources.list.d/github-cli.list
+          sudo apt update
+          sudo apt install gh
+
       # 📝 Generate release notes dynamically based on commit or PR data
       - name: Generate release notes
         run: |
