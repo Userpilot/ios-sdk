@@ -96,6 +96,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 📥 First checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # This fetches all history for all branches and tags
+
       # 📥 Download the previously uploaded .ipa file
       - name: Download the artifact
         uses: actions/download-artifact@v4
