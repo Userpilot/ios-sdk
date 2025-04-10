@@ -109,8 +109,11 @@ jobs:
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git fetch origin ${{ github.event.pull_request.head.ref }}
+          # Explicitly check out both base and head branches to make sure we have all the data
           git checkout ${{ github.event.pull_request.base.ref }}
           git checkout ${{ github.event.pull_request.head.ref }}
+          # Make sure we're in a git repository
+          git status
 
       # 📝 Generate release notes dynamically based on commit or PR data
       - name: Generate release notes
