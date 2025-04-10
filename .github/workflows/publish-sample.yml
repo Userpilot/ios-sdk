@@ -121,20 +121,29 @@ jobs:
           echo "📱 Firebase Release Notes" > release-notes.txt
           echo "" >> release-notes.txt
           
+          # Check if the action is triggered by a pull request
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "📦 PR Title: ${{ github.event.pull_request.title }}" > release-notes.txt
+            echo "📦 PR Title: ${{ github.event.pull_request.title }}" >> release-notes.txt
             echo "🔗 PR Link: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}" >> release-notes.txt
             echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
             echo "" >> release-notes.txt
             echo "📋 Commits in this PR:" >> release-notes.txt
             git log origin/${{ github.event.pull_request.base.ref }}..origin/${{ github.event.pull_request.head.ref }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
+
+            # Fetch comments on the PR for release notes
+            echo "💬 PR Comments:" >> release-notes.txt
+            gh pr view ${{ github.event.pull_request.number }} --json comments -q ".comments[].body" >> release-notes.txt
           else
-            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" > release-notes.txt
+            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" >> release-notes.txt
             echo "🔗 Commit Link: https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> release-notes.txt
             echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
             echo "" >> release-notes.txt
             echo "📋 Commits in this Push:" >> release-notes.txt
             git log ${{ github.event.before }}..${{ github.event.after }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
+
+            # Fetch comments on the branch commits for release notes
+            echo "💬 Commit Comments:" >> release-notes.txt
+            gh pr view --repo ${{ github.repository }} --json comments -q ".comments[].body" >> release-notes.txt
           fi
 
       # 🚀 Upload the .ipa file to Firebase App Distribution along with the release notes
