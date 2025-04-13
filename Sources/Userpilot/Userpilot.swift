@@ -231,8 +231,8 @@ extension Userpilot {
      */
     @objc
     public func logout() {
-        clean()
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
+        clean()
     }
 
     /**
