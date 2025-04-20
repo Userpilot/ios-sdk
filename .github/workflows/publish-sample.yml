@@ -1,0 +1,153 @@
+# 📦 GitHub Actions workflow to build an iOS ipa and upload it to Firebase App Distribution
+# This workflow runs on every push and pull request across all branches.
+
+name: "Publish iOS Sample App"
+
+on:
+  # 🔄 Trigger on push to any branch
+  push:
+    branches:
+      - '**' 
+
+  # 🔄 Trigger workflow on pull requests
+  pull_request:
+    branches:
+      - '**'
+
+  # 🎛️ Allows manual triggering of the workflow through the GitHub UI, with input to specify the app
+  workflow_dispatch:
+
+jobs:
+  build_sample_app:
+    runs-on: macos-latest  # Required to build iOS apps
+
+    steps:
+      # 🔧 Print the Xcode version used by the runner
+      - name: Check Xcode version
+        run: /usr/bin/xcodebuild -version
+
+      # 📥 Checkout the source code from the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 🔐 Setup signing credentials (certificate & provisioning profile)
+      - name: Install Apple certificate and provisioning profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      # ✅ Install SwiftLint for static code analysis (optional but good practice)
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      # 🛠️ Build the sample iOS app into an archived .xcarchive file
+      - name: Build sample app archive
+        run: |
+          xcodebuild -project ./Sample/UserpilotSample/UserpilotSample.xcodeproj \
+          -scheme "UserpilotSample" \
+          -archivePath $RUNNER_TEMP/UserpilotSample.xcarchive \
+          -sdk iphoneos \
+          -configuration Debug \
+          -destination generic/platform=iOS \
+          clean archive
+
+      # 📦 Export the .ipa file from the archived app using ExportOptions.plist
+      - name: Export .ipa file
+        env:
+          EXPORT_OPTIONS_PLIST: ${{ secrets.EXPORT_OPTIONS_PLIST }}
+        run: |
+          EXPORT_OPTS_PATH=$RUNNER_TEMP/ExportOptions.plist
+          echo -n "$EXPORT_OPTIONS_PLIST" | base64 --decode -o $EXPORT_OPTS_PATH
+
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/UserpilotSample.xcarchive \
+            -exportOptionsPlist $EXPORT_OPTS_PATH \
+            -exportPath $RUNNER_TEMP/build
+
+      # ☁️ Upload the generated .ipa file as a GitHub Actions artifact (available for 3 days)
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UserpilotSample.ipa
+          path: ${{ runner.temp }}/build/UserpilotSample.ipa
+          retention-days: 3
+
+
+  upload_to_firebase:
+    needs: build_sample_app  # Run this job after the build job is complete
+    runs-on: ubuntu-latest
+
+    steps:
+      # 📥 First checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # This fetches all history for all branches and tags
+
+      # 📥 Download the previously uploaded .ipa file
+      - name: Download the artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: UserpilotSample.ipa
+          path: ./build
+
+      # 🧳 Fetch base and head branches (for pull requests) if the workflow is triggered by a pull request
+      - name: Fetch base and head branches
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git fetch origin ${{ github.event.pull_request.head.ref }}
+
+      # 📝 Generate release notes dynamically based on commit or PR data
+      - name: Generate release notes
+        run: |
+          echo "📱 Firebase Release Notes" > release-notes.txt
+          echo "" >> release-notes.txt
+          
+          # For pull request events, include PR details and commit list
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "📦 PR Title: ${{ github.event.pull_request.title }}" > release-notes.txt
+            echo "🔗 PR Link: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}" >> release-notes.txt
+            echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
+            echo "" >> release-notes.txt
+            echo "📋 Commits in this PR:" >> release-notes.txt
+            git log origin/${{ github.event.pull_request.base.ref }}..origin/${{ github.event.pull_request.head.ref }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
+          else
+            # For push events, include commit details
+            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" > release-notes.txt
+            echo "🔗 Commit Link: https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> release-notes.txt
+            echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
+            echo "" >> release-notes.txt
+            echo "📋 Commits in this Push:" >> release-notes.txt
+            git log ${{ github.event.before }}..${{ github.event.after }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
+          fi
+
+
+      # 🚀 Upload the .ipa file to Firebase App Distribution along with the release notes
+      - name: Upload .ipa to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}   # Firebase App ID stored in secrets
+          serviceCredentialsFileContent: ${{ secrets.CREDENTIAL_FILE_CONTENT }} # Firebase credentials
+          groups: productteam                     # Firebase distribution group                      
+          file: ./build/UserpilotSample.ipa       # Path to ipa
+          releaseNotesFile: release-notes.txt      # Add release notes to the Firebase build

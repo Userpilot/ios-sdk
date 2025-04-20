@@ -1,0 +1,128 @@
+# 🔖 GitHub Actions workflow to bump iOS SDK version (major, minor, patch, or beta)
+# Can be triggered on any push OR manually via the workflow_dispatch input.
+
+name: Bump iOS SDK Version
+
+on:
+  push:
+    branches:
+      - '**'  # Trigger on push to any branch
+
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Which part to bump (major, minor, patch, beta)'  # Manual bump input
+        required: true
+        default: 'beta'
+
+jobs:
+  bump:
+    runs-on: macos-latest  # macOS is used because sed behaves differently here
+
+    steps:
+      # 📥 Checkout the latest source code from the repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ⚙️ Set up Git user identity for commits
+      - name: Set up Git config
+        run: |
+          git config user.name "motasem-userpilot"
+          git config user.email "motasem@userpilot.co"
+
+      # ✅ Validate the bump input (must be one of major, minor, patch, beta)
+      - name: Validate bump input
+        run: |
+          bump="${{ github.event.inputs.bump }}"
+          if [[ ! "$bump" =~ ^(major|minor|patch|beta)$ ]]; then
+            echo "Invalid bump type: $bump"
+            exit 1
+          fi
+
+      # 🔧 Bump version numbers inside Version.swift file
+      - name: Bump version in Version.swift
+        id: bump_version
+        run: |
+          file="./Sources/Userpilot/Version.swift"
+
+          # Extract current version parts
+          major=$(grep 'private let versionMajor' "$file" | grep -oE '[0-9]+')
+          minor=$(grep 'private let versionMinor' "$file" | grep -oE '[0-9]+')
+          patch_line=$(grep 'private let versionPatch' "$file")
+          patch_with_beta=$(echo "$patch_line" | grep -oE '[0-9]+(-beta\.[0-9]+)?')
+
+          patch=$(echo "$patch_with_beta" | cut -d'-' -f1)
+          beta=$(echo "$patch_with_beta" | grep -oE 'beta\.[0-9]+' | cut -d'.' -f2)
+
+          # Determine bump type (default to beta if triggered by push)
+          bump="${{ github.event.inputs.bump || 'beta' }}"
+
+          # Update version based on bump type
+          case "$bump" in
+            major)
+              ((major+=1)); minor=0; patch=0; beta=""
+              ;;
+            minor)
+              ((minor+=1)); patch=0; beta=""
+              ;;
+            patch)
+              ((patch+=1)); beta=""
+              ;;
+            beta)
+              if [[ -z "$beta" ]]; then beta=1; else ((beta+=1)); fi
+              ;;
+            *)
+              echo "Invalid bump type: $bump"
+              exit 1
+              ;;
+          esac
+
+          # Construct the new patch (include -beta.X if needed)
+          new_patch="$patch"
+          if [[ "$bump" == "beta" || -n "$beta" ]]; then
+            new_patch="$new_patch-beta.$beta"
+          fi
+
+          # Full version string
+          new_version="$major.$minor.$new_patch"
+          echo "New version: $new_version"
+
+          # 📝 Update the version values in Version.swift
+          sed -i "" "s/versionMajor = \".*\"/versionMajor = \"$major\"/" "$file"
+          sed -i "" "s/versionMinor = \".*\"/versionMinor = \"$minor\"/" "$file"
+          sed -i "" "s/versionPatch = \".*\"/versionPatch = \"$new_patch\"/" "$file"
+          
+          # Output the new version to be used in next steps
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      # 📦 Commit and push the version bump to the repository
+      - name: Commit and push version bump
+        run: |
+          git add ./Sources/Userpilot/Version.swift
+          git commit -m "🔖 bump iOS SDK version to ${{ steps.bump_version.outputs.new_version }}"
+          git push
+
+      # 🏷️ Tag the new version and push the tag
+      - name: Tag the version
+        run: |
+          git tag ${{ steps.bump_version.outputs.new_version }}
+          git push origin ${{ steps.bump_version.outputs.new_version }}
+
+      # 📝 Update the README with the new version badge
+      - name: Update README with version badge
+        run: |
+          badge_url="https://img.shields.io/github/v/tag/${{ github.repository }}?label=version"
+            
+          # Debug: print README before modification
+          echo "Before sed: $(cat README.md)"
+          
+          # Replace placeholder with badge image
+          sed -i '' "s|<!-- VERSION_BADGE -->|![version]($badge_url)|" README.md
+          
+          # Debug: print README after modification
+          echo "After sed: $(cat README.md)"
+            
+          # Commit the updated README if there are changes
+          git add README.md
+          git commit -m "📝 update version badge in README" || echo "No changes to commit"
+          git push

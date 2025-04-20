@@ -153,6 +153,8 @@
 				AB791F182D0B6638008E4523 /* Userpilot in Frameworks */,
 				AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */,
 				ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */,
+				AB2694522DA559BD001B9615 /* Userpilot in Frameworks */,
+				AB26944F2DA5585A001B9615 /* Userpilot in Frameworks */,
 				ABB390082D07140A0091FE7A /* Userpilot in Frameworks */,
 				AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */,
 				AB76616F2D1305AF0044BA57 /* Userpilot in Frameworks */,
@@ -503,6 +505,7 @@
 				C5C897B22C5CFFFA0083928E /* Frameworks */,
 				C5C897B32C5CFFFA0083928E /* Resources */,
 				AB20F94D2C5E62D8008C0157 /* SwiftLint */,
+				ABA40A512DA55C8300C68251 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -610,6 +613,24 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ \"$(uname -m)\" == arm64 ]]; then\n    export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\n\nif which swiftlint > /dev/null; then\n  swiftlint --fix && swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 			showEnvVarsInLog = 0;
+		};
+		ABA40A512DA55C8300C68251 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 12;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Add Homebrew to path\nif [[ $(arch) == 'arm64' ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nelse\n  export PATH=\"/usr/local/bin:$PATH\"\nfi\n\n# Run swiftlint on app and local package folder\nif which swiftlint >/dev/null; then\n  echo \"Running SwiftLint for app...\"\n  swiftlint --quiet\n\n  echo \"Running SwiftLint for SDK package...\"\n  swiftlint --quiet ../../../ios-sdk # Adjust path to your SDK package\n\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -899,9 +920,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = UserpilotSample/UserpilotSample.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YXTPH2TH3D;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -920,6 +943,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.sample.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "UserPilotSample12-11-2024";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -934,9 +958,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = UserpilotSample/UserpilotSample.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YXTPH2TH3D;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -955,6 +981,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "UserPilotSample12-11-2024";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

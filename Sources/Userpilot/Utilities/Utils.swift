@@ -182,6 +182,8 @@ internal func getUserAgent() -> String {
             let webView = WKWebView()
             return webView.value(forKey: "userAgent") as? String ??
             "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+            // swiftlint:disable:next line_length
+            // return webView.value(forKey: "userAgent") as? String ?? "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
         }
     }
 }

@@ -1,5 +1,7 @@
 # Userpilot iOS SDK
 
+![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
+
 ## Introduction
 
 Userpilot iOS SDK enables you to capture user insights and deliver personalized in-app experiences in real time. With just a one-time setup, you can immediately begin leveraging Userpilot’s analytics and engagement features to understand user behaviors and guide their journeys in-app.
