@@ -43,7 +43,7 @@ internal class SlideOutContainerView: UIView {
         view.heightAnchor.constraint(equalToConstant: 0).isActive = true
         return view
     }()
-    
+
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, scrollView, spaceView, actionButton])

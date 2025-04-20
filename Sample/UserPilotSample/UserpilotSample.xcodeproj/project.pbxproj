@@ -17,6 +17,7 @@
 		AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C22CD261F100924844 /* CustomEventViewController.xib */; };
 		AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942C62CD2624000924844 /* EventsViewController.xib */; };
 		AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942CA2CD2626C00924844 /* EventTableViewCell.xib */; };
+		AB25648E2DB4F1BC00393126 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB25648D2DB4F1BC00393126 /* Userpilot */; };
 		AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB3D7E1F2D1413EA00FC4ECF /* Userpilot */; };
 		AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB46B0A32D07134B0054D249 /* Userpilot */; };
 		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
@@ -148,6 +149,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB25648E2DB4F1BC00393126 /* Userpilot in Frameworks */,
 				AB791F182D0B6638008E4523 /* Userpilot in Frameworks */,
 				AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */,
 				ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */,
@@ -514,6 +516,7 @@
 				ABFD957F2D0E096500F8F757 /* Userpilot */,
 				AB76616E2D1305AF0044BA57 /* Userpilot */,
 				AB3D7E1F2D1413EA00FC4ECF /* Userpilot */,
+				AB25648D2DB4F1BC00393126 /* Userpilot */,
 			);
 			productName = UserPilotSample;
 			productReference = C5C897B52C5CFFFA0083928E /* UserpilotSample.app */;
@@ -545,7 +548,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB3D7E1E2D1413EA00FC4ECF /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */,
+				AB25648C2DB4F1BC00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -980,13 +983,17 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB3D7E1E2D1413EA00FC4ECF /* XCLocalSwiftPackageReference "../../../userpilot-ios-sdk" */ = {
+		AB25648C2DB4F1BC00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../userpilot-ios-sdk";
+			relativePath = "../../../ios-sdk";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		AB25648D2DB4F1BC00393126 /* Userpilot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Userpilot;
+		};
 		AB3D7E1F2D1413EA00FC4ECF /* Userpilot */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Userpilot;

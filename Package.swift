@@ -12,7 +12,7 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "Userpilot",
-            targets: ["Userpilot"]),
+            targets: ["Userpilot"])
     ],
     dependencies: [
         .package(
@@ -28,7 +28,7 @@ let package = Package(
         .target(
             name: "Userpilot",
             dependencies: [
-                .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient"),
+                .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient")
             ],
             resources: [
                .process("Resources")
@@ -39,6 +39,6 @@ let package = Package(
         ),
         .testTarget(
             name: "UserpilotTests",
-            dependencies: ["Userpilot"]),
+            dependencies: ["Userpilot"])
     ]
 )
