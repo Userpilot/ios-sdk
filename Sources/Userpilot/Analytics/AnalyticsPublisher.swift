@@ -681,3 +681,4 @@ internal extension AnalyticsPublisher {
     static let seenSurveys = "seen_surveys"
     private static let eventNameProperty = "event_name"
 }
+// swiftlint:enable file_length

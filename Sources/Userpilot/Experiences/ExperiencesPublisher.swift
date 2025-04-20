@@ -11,6 +11,7 @@
 //  manages the lifecycle of the experiences displayed within the application.
 //
 
+// swiftlint:disable file_length
 import Foundation
 import UIKit
 import SwiftPhoenixClient
@@ -328,7 +329,7 @@ extension ExperiencesPublisher {
      - Parameter themeID: A theme ID for which data needs to be fetched.
      */
     private func fetchThemeData(_ themeID: Int) {
-        guard analyticsPublisher.canRequestExperienceEvent else {
+        guard analyticsPublisher.canRequestEvent else {
             resetExperienceContent()
             return
         }
@@ -690,3 +691,4 @@ extension ExperiencesPublisher {
     }
 
 }
+// swiftlint:enable file_length

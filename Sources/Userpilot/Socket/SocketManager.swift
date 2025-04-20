@@ -214,10 +214,10 @@ extension SocketManager {
                 SocketManager.autoPropertiesKey: autoProperties,
                 SocketManager.appPropertiesKey: appProperties
             ]
-
-            // swiftlint:disable:next line_length 
-            phoenixSocket = Socket("https://analytex-dev-nxtapp-11632.userpilot.io/mobile/v1/events/websocket",
-                                   params: socketProperties)
+            phoenixSocket = Socket(
+                "https://analytex-dev-nxtapp-11632.userpilot.io/mobile/v1/events/websocket",
+                params: socketProperties
+            )
 
             guard let phoenixSocket else { return }
 
