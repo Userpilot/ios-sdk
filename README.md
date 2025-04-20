@@ -13,6 +13,7 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Installation](#installation)
       - [Prerequisites](#prerequisites)
       - [Cocoapods](#cocoapods)
+      - [Swift Package Manager](#swift-package-manager)
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
@@ -44,6 +45,15 @@ Before you begin, ensure your iOS project meets the following requirements:
     ```
     
 2. Run `pod install` in your project directory.
+
+#### Swift Package Manager
+
+1. In Xcode, navigate to **File -> Add Packages**.
+2. Enter the package URL: https://github.com/Userpilot/ios-sdk.
+3. For **Dependency Rule**, select **Up to Next Major Version**.
+4. Click **Add Package**.
+
+Once integrated, the Userpilot SDK is available throughout your application.
 
 ### Initializing
 

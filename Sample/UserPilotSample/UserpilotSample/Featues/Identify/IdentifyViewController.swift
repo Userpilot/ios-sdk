@@ -105,8 +105,8 @@ extension IdentifyViewController {
         UserpilotManager.shared.identify(userID: userID, properties: userProperties, company: companyProperties)
     }
 
-    func onUserIdentified(_ user: String) {
-        labelAuthorizedUser.text = user
+    func onUserIdentified(_ user: [String: Any]) {
+        labelAuthorizedUser.attributedText = user.formattedJSONLabel()
     }
 
 }

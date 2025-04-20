@@ -89,6 +89,19 @@ class UserpilotManager {
         userpilot?.endExperience()
     }
 
+    func setPushToken(deviceToken: Data) {
+        userpilot?.setPushToken(deviceToken)
+    }
+
+    public func didReceiveNotification(response: UNNotificationResponse,
+                                       completionHandler: @escaping () -> Void) -> Bool {
+        return userpilot?.didReceiveNotification(response: response, completionHandler: completionHandler) ?? false
+    }
+
+    public func didReceiveNotification(_ payload: [AnyHashable: Any]) -> Bool {
+        return userpilot?.didReceiveNotification(payload: payload) ?? false
+    }
+
 }
 
 // MARK: - UserpilotNavigationDelegate
@@ -96,26 +109,28 @@ class UserpilotManager {
 extension UserpilotManager: UserpilotNavigationDelegate {
 
     func navigate(to url: URL, completion: @escaping (Bool) -> Void) {
-        if url.scheme == "userpilot-example" {
-            guard let destination = url.host else {
+        delay(1) {
+            if url.scheme == "userpilot-example" {
+                guard let destination = url.host else {
+                    completion(false)
+                    return
+                }
+                if destination == "demo" {
+                    FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
+                } else if destination == "identify" {
+                    FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
+                } else if destination == "screen_one" {
+                    FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
+                } else if destination == "screen_two" {
+                    FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
+                }
+                completion(true)
+            } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                completion(true)
+            } else {
                 completion(false)
-                return
             }
-            if destination == "demo" {
-                FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
-            } else if destination == "identify" {
-                FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
-            } else if destination == "screen_one" {
-                FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
-            } else if destination == "screen_two" {
-                FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
-            }
-            completion(true)
-        } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
-            UIApplication.shared.open(url, options: [:], completionHandler: nil)
-            completion(true)
-        } else {
-            completion(false)
         }
     }
 
@@ -136,7 +151,7 @@ extension UserpilotManager: UserpilotAnalyticsDelegate {
         if let topViewController =
             FlowRoutingManager.topMostController(),
            topViewController.isKind(of: IdentifyViewController.self) {
-            (topViewController as? IdentifyViewController)?.onUserIdentified("\(prettyPrint(settings()))")
+            (topViewController as? IdentifyViewController)?.onUserIdentified(settings())
         } else {
             FlowRoutingManager.shared.showAlertMessage(
                 "User identify successfully!\nUser details:\n\(prettyPrint(settings()))")

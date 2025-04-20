@@ -37,10 +37,10 @@ internal protocol AnalyticsPublishing: AnyObject {
                 shouldClearCachedIdentifyEvent: Bool)
 
     /// check socket state
-    var canRequestExperienceEvent: Bool { get }
+    var canRequestEvent: Bool { get }
 
     /// publish experience event
-    func publishExperienceEvent(_ sdkEvent: SDKEvent, socketSubscription: SocketSubscription)
+    func publishExperienceEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?)
 
     /// publish fake reload event
     func publishFakeReloadScreenEvent()
@@ -72,6 +72,9 @@ internal class AnalyticsPublisher {
 
     /// Weak reference to the owning `Userpilot` instance.
     private weak var userpilot: Userpilot?
+
+    /// The configuration settings for the `Userpilot` SDK.
+    private let config: Userpilot.Config
 
     /// SDK logger.
     private let logger: Logging
@@ -124,6 +127,7 @@ internal class AnalyticsPublisher {
     init(container: DIContainer) {
         self.container = container
         self.userpilot = container.owner
+        self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.socketManager = container.resolve(SocketEvents.self)
@@ -167,6 +171,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Clear all cached data and close the socket.
      */
     func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool = false) {
+        if shouldClearCachedIdentifyEvent && canRequestEvent {
+            if let token = storage.pushToken {
+                publishExperienceEvent(
+                    UserLogoutEvent(
+                        appToken: config.token,
+                        userID: storage.userID,
+                        token: token),
+                    isExpereinceEvent: false,
+                    socketSubscription: nil
+                )
+            }
+        }
         startSession = true
         screenViewEntity?.resetState()
         socketManager.updateSocketState(socketState, forceUpdateState: true)
@@ -571,7 +587,7 @@ private extension AnalyticsPublisher {
 extension AnalyticsPublisher {
 
     /// check socket state
-    var canRequestExperienceEvent: Bool {
+    var canRequestEvent: Bool {
         socketManager.isSocketOpened
     }
 
@@ -588,10 +604,13 @@ extension AnalyticsPublisher {
     /// publish experience event
     func publishExperienceEvent(
         _ sdkEvent: SDKEvent,
-        socketSubscription: SocketSubscription
+        isExpereinceEvent: Bool,
+        socketSubscription: SocketSubscription?
     ) {
         tryCatch {
-            guard canRequestExperienceEvent else { return }
+            if isExpereinceEvent {
+                guard canRequestEvent else { return }
+            }
             socketManager.publish(
                 sdkEvent.eventName,
                 payload: sdkEvent.eventPayload,
@@ -603,7 +622,7 @@ extension AnalyticsPublisher {
     /// publish fake reload event
     func publishFakeReloadScreenEvent() {
         tryCatch {
-            guard canRequestExperienceEvent else { return }
+            guard canRequestEvent else { return }
             if let screenViewEntity {
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return

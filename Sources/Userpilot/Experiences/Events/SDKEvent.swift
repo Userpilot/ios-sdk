@@ -57,4 +57,9 @@ internal enum SDKEventsName: String {
     case npsExperienceSeen = "seen_NPS"
     case npsExperienceDismissed = "dismiss_NPS"
     case npsExperienceSubmitted = "NPS_feedback"
+
+    case pushNotificationToken = "user_token"
+    case pushNotificationOpened = "opened_push_notification"
+    case userLogout = "user_logout"
+
 }

@@ -34,12 +34,12 @@
                     <state key="normal" title="Button"/>
                     <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
                     <connections>
-                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="bb2-89-0ye"/>
+                    <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="bb2-89-0ye"/>
                     </connections>
                 </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
-            <color key="backgroundColor" red="0.59718651028981862" green="0.7803921568627451" blue="0.76637003358754563" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color key="backgroundColor" red="0.59607843137254901" green="0.7803921568627451" blue="0.76470588235294112" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
             <constraints>
                 <constraint firstItem="WuL-Ex-tZv" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="ZUy-8E-1KB"/>
                 <constraint firstItem="WuL-Ex-tZv" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" constant="16" id="k9u-6I-5f9"/>
