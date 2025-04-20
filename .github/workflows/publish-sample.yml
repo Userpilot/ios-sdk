@@ -1,24 +1,42 @@
 # 📦 GitHub Actions workflow to build an iOS ipa and upload it to Firebase App Distribution
-# This workflow runs on every push and pull request across all branches.
+# This workflow runs on every push and pull request across all branches, and allows manual triggers.
+# It first cancels any previous running instances of this workflow to avoid conflicts.
 
 name: "Publish iOS Sample App"
 
 on:
-  # 🔄 Trigger on push to any branch
-  push:
-    branches:
-      - '**' 
+  # # 🔄 Trigger on push to any branch
+  # push:
+  #   branches:
+  #     - '**'
 
-  # 🔄 Trigger workflow on pull requests
-  pull_request:
-    branches:
-      - '**'
+  # # 🔄 Trigger on pull requests
+  # pull_request:
+  #   branches:
+  #     - '**'
 
-  # 🎛️ Allows manual triggering of the workflow through the GitHub UI, with input to specify the app
+  # 🎛️ Allows manual triggering of the workflow through the GitHub UI
   workflow_dispatch:
 
+# 🛡️ Set default permissions needed for canceling workflows and reading repository contents
+permissions:
+  actions: write
+  contents: read
+
 jobs:
+  # 🔴 Cancel any previously running workflow runs (for this workflow) on the same branch
+  cancel_previous:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # 🛠️ Build the iOS Sample App into an .ipa file
   build_sample_app:
+    needs: cancel_previous  # Run this job after canceling previous runs
     runs-on: macos-latest  # Required to build iOS apps
 
     steps:
@@ -91,49 +109,47 @@ jobs:
           path: ${{ runner.temp }}/build/UserpilotSample.ipa
           retention-days: 3
 
-
+  # ☁️ Upload the built .ipa file to Firebase App Distribution
   upload_to_firebase:
-    needs: build_sample_app  # Run this job after the build job is complete
+    needs: [cancel_previous, build_sample_app]  # Wait for both cancel and build jobs
     runs-on: ubuntu-latest
 
     steps:
-      # 📥 First checkout the repository
+      # 📥 Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # This fetches all history for all branches and tags
+          fetch-depth: 0  # Fetch all history for accurate changelogs
 
-      # 📥 Download the previously uploaded .ipa file
+      # 📥 Download the previously uploaded .ipa artifact
       - name: Download the artifact
         uses: actions/download-artifact@v4
         with:
           name: UserpilotSample.ipa
           path: ./build
 
-      # 🧳 Fetch base and head branches (for pull requests) if the workflow is triggered by a pull request
+      # 🧳 Fetch base and head branches for pull request workflows
       - name: Fetch base and head branches
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git fetch origin ${{ github.event.pull_request.head.ref }}
 
-      # 📝 Generate release notes dynamically based on commit or PR data
+      # 📝 Generate dynamic release notes based on commit or PR data
       - name: Generate release notes
         run: |
           echo "📱 Firebase Release Notes" > release-notes.txt
           echo "" >> release-notes.txt
           
-          # For pull request events, include PR details and commit list
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "📦 PR Title: ${{ github.event.pull_request.title }}" > release-notes.txt
+            echo "📦 PR Title: ${{ github.event.pull_request.title }}" >> release-notes.txt
             echo "🔗 PR Link: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}" >> release-notes.txt
             echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
             echo "" >> release-notes.txt
             echo "📋 Commits in this PR:" >> release-notes.txt
             git log origin/${{ github.event.pull_request.base.ref }}..origin/${{ github.event.pull_request.head.ref }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
           else
-            # For push events, include commit details
-            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" > release-notes.txt
+            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" >> release-notes.txt
             echo "🔗 Commit Link: https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> release-notes.txt
             echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
             echo "" >> release-notes.txt
@@ -141,13 +157,12 @@ jobs:
             git log ${{ github.event.before }}..${{ github.event.after }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
           fi
 
-
-      # 🚀 Upload the .ipa file to Firebase App Distribution along with the release notes
+      # 🚀 Upload the .ipa to Firebase App Distribution along with release notes
       - name: Upload .ipa to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}   # Firebase App ID stored in secrets
-          serviceCredentialsFileContent: ${{ secrets.CREDENTIAL_FILE_CONTENT }} # Firebase credentials
-          groups: productteam                     # Firebase distribution group                      
-          file: ./build/UserpilotSample.ipa       # Path to ipa
-          releaseNotesFile: release-notes.txt      # Add release notes to the Firebase build
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.CREDENTIAL_FILE_CONTENT }}
+          groups: productteam
+          file: ./build/UserpilotSample.ipa
+          releaseNotesFile: release-notes.txt
