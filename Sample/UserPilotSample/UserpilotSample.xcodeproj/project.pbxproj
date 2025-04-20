@@ -49,7 +49,6 @@
 		ABCD7E312CE48212008393E5 /* EnvironmentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */; };
 		ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */; };
 		ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */; };
-		ABD07B282D6C4ED000619C47 /* Prod.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = ABD07B272D6C4ED000619C47 /* Prod.xcconfig */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
 		ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */; };
@@ -532,7 +531,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1520;
-				LastUpgradeCheck = 1520;
+				LastUpgradeCheck = 1620;
 				TargetAttributes = {
 					C5C897B42C5CFFFA0083928E = {
 						CreatedOnToolsVersion = 15.2;
@@ -566,7 +565,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ABD07B282D6C4ED000619C47 /* Prod.xcconfig in Resources */,
 				ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */,
 				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
 				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
