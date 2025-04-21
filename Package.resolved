@@ -1,15 +1,6 @@
 {
   "pins" : [
     {
-      "identity" : "swiftlintplugins",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/SimplyDanny/SwiftLintPlugins",
-      "state" : {
-        "revision" : "f9731bef175c3eea3a0ca960f1be78fcc2bc7853",
-        "version" : "0.57.1"
-      }
-    },
-    {
       "identity" : "swiftphoenixclient",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/davidstump/SwiftPhoenixClient",
