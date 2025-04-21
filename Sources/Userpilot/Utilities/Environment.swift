@@ -14,9 +14,10 @@ import Foundation
 
 internal struct Environment {
 
+    // Environment configuration
+    private static let environmentType: EnvironmentType = .PRODUCTION
     private static let socketUrl = "<#SOCKET_URL#>"
     private static let clientToken = "<#TOKEN#>"
-    private static var environmentType: EnvironmentType = .PRODUCTION
 
     /**
      Enum representing the possible environment types.
