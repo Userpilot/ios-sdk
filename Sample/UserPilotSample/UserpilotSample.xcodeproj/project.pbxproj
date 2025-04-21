@@ -46,7 +46,6 @@
 		ABC0AE182C7205CE00BB9F62 /* UserpilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */; };
 		ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */; };
 		ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */; };
-		ABCD7E312CE48212008393E5 /* EnvironmentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */; };
 		ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */; };
 		ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
@@ -117,7 +116,6 @@
 		ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserpilotManager.swift; sourceTree = "<group>"; };
 		ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Regular.ttf"; sourceTree = "<group>"; };
 		ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwitcher-Grypen-Regular.ttf"; sourceTree = "<group>"; };
-		ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentManager.swift; sourceTree = "<group>"; };
 		ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkViewController.swift; sourceTree = "<group>"; };
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABD07B272D6C4ED000619C47 /* Prod.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Prod.xcconfig; sourceTree = "<group>"; };
@@ -153,8 +151,6 @@
 				AB791F182D0B6638008E4523 /* Userpilot in Frameworks */,
 				AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */,
 				ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */,
-				AB2694522DA559BD001B9615 /* Userpilot in Frameworks */,
-				AB26944F2DA5585A001B9615 /* Userpilot in Frameworks */,
 				ABB390082D07140A0091FE7A /* Userpilot in Frameworks */,
 				AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */,
 				AB76616F2D1305AF0044BA57 /* Userpilot in Frameworks */,
@@ -219,7 +215,6 @@
 				ABC0AE162C7205BA00BB9F62 /* Userpilot */,
 				AB6DBD3B2C68CDB90009BB11 /* Routing */,
 				AB585F652CD79D8C00E2A66D /* StorageManager.swift */,
-				ABCD7E302CE48212008393E5 /* EnvironmentManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -651,7 +646,6 @@
 				ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */,
 				AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
-				ABCD7E312CE48212008393E5 /* EnvironmentManager.swift in Sources */,
 				ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */,
 				ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */,
 				ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */,

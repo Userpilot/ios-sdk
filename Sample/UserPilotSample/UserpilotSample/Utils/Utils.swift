@@ -18,12 +18,6 @@ func delay(_ delay: Double, closure: @escaping () -> Void) {
 
 }
 
-// Function to read from the plist
-func readConfigValue(forKey key: String) -> Any? {
-    return Bundle.main.infoDictionary?[key]
-}
-
-
 extension Dictionary where Key == String, Value == Any {
     func formattedJSONLabel() -> NSAttributedString {
         let attributedText = NSMutableAttributedString()

@@ -1,8 +1,13 @@
 //
-//  File.swift
-//  
+//  SDKEvent.swift
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 24/11/2024.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  [Brief Description]
+//  This file defines the `SDKEvent` protocol and related event names used within the SDK
+//  to track and manage different types of user experience events.
 //
 
 import Foundation
@@ -61,5 +66,4 @@ internal enum SDKEventsName: String {
     case pushNotificationToken = "user_token"
     case pushNotificationOpened = "opened_push_notification"
     case userLogout = "user_logout"
-
 }
