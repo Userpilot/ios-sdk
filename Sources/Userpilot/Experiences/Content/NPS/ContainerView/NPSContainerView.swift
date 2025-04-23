@@ -304,7 +304,7 @@ internal class NPSContainerView: UIView {
         var newView: UIView?
         switch currentStep {
         case 0:
-            if let logo = theme.logo {
+            if let logo = theme.logo, !logo.isEmpty {
                 imageContainerView.isHidden = false
             }
             let likertView = UPLikertView()
@@ -383,7 +383,7 @@ internal class NPSContainerView: UIView {
 
     // MARK: - Action Methods
     private func setupGeneralStyle() {
-        if let logo = theme.logo {
+        if let logo = theme.logo, !logo.isEmpty {
             imageView.setupView(url: logo, imageLoader: imageLoader)
         } else {
             imageContainerView.isHidden = true
