@@ -26,7 +26,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func getActiveMobileContent() -> ExperienceContent?
 
     /// Send experience event to backend
-    func publishExperienceEvent(_ sdkEvent: SDKEvent)
+    func publishSDKEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceID: String)
@@ -144,7 +144,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     func triggerExperience(_ experienceID: String) {
         readWriteLock.read { [weak self] in
             guard self?.experienceContent == nil else { return }
-            self?.publishExperienceEvent(ExperienceContentEvent(experienceID: experienceID))
+            self?.publishSDKEvent(ExperienceContentEvent(experienceID: experienceID))
         }
     }
 
@@ -332,7 +332,7 @@ extension ExperiencesPublisher {
             return
         }
 
-        publishExperienceEvent(ThemeContentEvent(themeID: themeID, token: config.token))
+        publishSDKEvent(ThemeContentEvent(themeID: themeID, token: config.token))
     }
 
 }
@@ -346,7 +346,7 @@ extension ExperiencesPublisher {
      
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
-    func publishExperienceEvent(_ sdkEvent: SDKEvent) {
+    func publishSDKEvent(_ sdkEvent: SDKEvent) {
         analyticsPublisher.publishExperienceEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: self)
 
         if sdkEvent.isEventForCloseNPSExperience() {
@@ -579,7 +579,7 @@ extension ExperiencesPublisher {
                         surveyID: surveyContent.id,
                         hasDeepLinkContent: deepLink != nil
                     )
-                    self?.publishExperienceEvent(eventExperienceSeen)
+                    self?.publishSDKEvent(eventExperienceSeen)
 
                     delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
                         if let deepLink, let url = URL(string: deepLink) {

@@ -141,12 +141,12 @@ internal class ExperienceViewModel {
         )
 
         let eventExperienceSeen = ExperienceFlowSeenEvent(flowID: mobileContent.id)
-        experiencesPublisher.publishExperienceEvent(eventExperienceSeen)
+        experiencesPublisher.publishSDKEvent(eventExperienceSeen)
 
         let eventStepSeen = ExperienceFlowStepSeenEvent(
             flowID: mobileContent.id,
             stepID: step.id)
-        experiencesPublisher.publishExperienceEvent(eventStepSeen)
+        experiencesPublisher.publishSDKEvent(eventStepSeen)
     }
 
     /**
@@ -176,12 +176,12 @@ internal class ExperienceViewModel {
         let eventStepCompleted = ExperienceFlowStepCompletedEvent(
             flowID: mobileContent.id,
             stepID: step.id)
-        experiencesPublisher.publishExperienceEvent(eventStepCompleted)
+        experiencesPublisher.publishSDKEvent(eventStepCompleted)
 
         let eventContentCompleted = ExperienceFlowCompletedEvent(
             flowID: mobileContent.id,
             hasDeepLinkContent: hasDeepLink)
-        experiencesPublisher.publishExperienceEvent(eventContentCompleted)
+        experiencesPublisher.publishSDKEvent(eventContentCompleted)
     }
 
     /**
@@ -219,12 +219,12 @@ internal class ExperienceViewModel {
         let eventStepCompleted = ExperienceFlowStepCompletedEvent(
             flowID: flowContent.id,
             stepID: oldStep.id)
-        experiencesPublisher.publishExperienceEvent(eventStepCompleted)
+        experiencesPublisher.publishSDKEvent(eventStepCompleted)
 
         let eventStepSeen = ExperienceFlowStepSeenEvent(
             flowID: flowContent.id,
             stepID: currentStep.id)
-        experiencesPublisher.publishExperienceEvent(eventStepSeen)
+        experiencesPublisher.publishSDKEvent(eventStepSeen)
     }
 
     /**
@@ -254,7 +254,7 @@ internal class ExperienceViewModel {
         let eventExperienceDismissed = ExperienceFlowDismissedEvent(
             flowID: flowContent.id,
             stepId: step.id)
-        experiencesPublisher.publishExperienceEvent(eventExperienceDismissed)
+        experiencesPublisher.publishSDKEvent(eventExperienceDismissed)
     }
 
     // MARK: - Deep Link Handling
