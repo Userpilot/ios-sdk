@@ -81,7 +81,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     private var currentScreen: String = ""
 
     /// Debouncer to request fake reload in safe time
-    private lazy var debounce = Debouncer(delay: 0.5)
+    private lazy var debounce = Debouncer(delay: 0.2)
 
     /// Holds the active carousel content, if any, that is being displayed.
     private var experienceContent: ExperienceContent?
@@ -364,8 +364,9 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                oneSecondFlag.activate()
-                if !isTriggerManualExperience {
+                if isTriggerManualExperience {
+                    oneSecondFlag.activate()
+                } else {
                     debounce.debounce { [weak self] in
                         guard let self else { return }
                         if self.analyticsPublisher.screenEntity?.event.screenTitle == self.currentScreen {
