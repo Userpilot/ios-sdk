@@ -19,11 +19,10 @@ app entering the background or foreground.
  */
 internal protocol SessionMonitoring: AnyObject {
     /// Starts the session monitoring process, setting up observers for app lifecycle events.
-    func start()
     func reset()
 }
 
-internal class SessionMonitor: SessionMonitoring {
+internal class SessionMonitor: SessionMonitoring, BootUp {
 
     /// The analytics publisher responsible for flushing and resuming events.
     private let analyticsPublisher: AnalyticsPublishing

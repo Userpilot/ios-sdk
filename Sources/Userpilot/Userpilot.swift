@@ -62,8 +62,8 @@ public class Userpilot: NSObject {
     /// The delegate object that manages and observes experience presentations.
     @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
 
-    // the bootup manager for boots inuse managers
-    // private lazy var bootManager = BootManager(components: [sessionMonitor, experiencesPublisher, pushMonitor])
+    /// the bootup manager for boots inuse managers
+    private lazy var bootManager = BootManager(components: [sessionMonitor, experiencesPublisher, pushMonitor])
 
     // MARK: - Initialization
 
@@ -76,6 +76,7 @@ public class Userpilot: NSObject {
      - Parameter config: A `Config` object that contains various initialization settings like logging,
      API keys, and anonymous user tracking settings.
      */
+
     @objc
     public init(config: Config) {
         self.config = config
@@ -84,10 +85,8 @@ public class Userpilot: NSObject {
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // start session monitoring
-        sessionMonitor.start()
-
-        pushMonitor.start()
+        // start boots up managers
+        bootManager.initialize()
 
         // register pushMonitoring for push notification auto config
         PushNotificationAutoConfig.register(observer: pushMonitor)
@@ -98,7 +97,6 @@ public class Userpilot: NSObject {
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
     }
-
 }
 
 // MARK: - Public Methods

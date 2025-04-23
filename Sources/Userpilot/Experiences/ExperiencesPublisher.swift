@@ -21,8 +21,6 @@ import SwiftPhoenixClient
  such as starting the service, retrieving active carousel content, and sending socket requests.
  */
 internal protocol ExperiencesPublishing: AnyObject {
-    /// Start new experience
-    func start()
 
     /// Get current experience
     func getActiveMobileContent() -> ExperienceContent?
@@ -49,7 +47,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
 }
 
-internal class ExperiencesPublisher: ExperiencesPublishing {
+internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
 
     // MARK: - Properties
 

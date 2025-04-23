@@ -16,7 +16,6 @@ import SwiftPhoenixClient
 /// `PushMonitoring` protocol defines the methods required to handle push notifications, token
 /// management, and status updates.
 internal protocol PushMonitoring: AnyObject {
-    func start()
 
     /// The current push authorization status.
     var pushAuthorizationStatus: UNAuthorizationStatus { get }
@@ -60,7 +59,7 @@ internal protocol PushMonitoring: AnyObject {
 /// `PushMonitor` is responsible for managing push notifications, including token management, push status updates,
 /// and handling received notifications. It interacts with the `PushNotificationAutoConfig` and
 /// publishes analytics events.
-internal class PushMonitor: PushMonitoring, SocketSubscription {
+internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
 
     private weak var userpilot: Userpilot?
     private let config: Userpilot.Config
