@@ -45,25 +45,3 @@ extension UIApplication {
         )
     }
 }
-
-//// MARK: - Swizzle Application Delegate for Device Token Registration
-// extension UIApplication {
-//
-//    static func swizzleDidRegisterForDeviceToken() {
-//        let originalSelector =
-// #selector(UIApplicationDelegate.application(_:didRegisterForRemoteNotificationsWithDeviceToken:))
-//        let swizzledSelector =
-//            #selector(userpilot__application(_:didRegisterForRemoteNotificationsWithDeviceToken:))
-//
-//        swizzleMethodIfNeeded(originalSelector: originalSelector, swizzledSelector: swizzledSelector, in: Self.self)
-//    }
-//
-//    @objc
-//    private func userpilot__application(_ application: UIApplication,
-//                                        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-//        print("[UserPilot] Device Token Registered: \(deviceToken)")
-//
-//        // Call original implementation
-//        userpilot__application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
-//    }
-// }
