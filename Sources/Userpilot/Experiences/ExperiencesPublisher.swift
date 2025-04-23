@@ -366,7 +366,8 @@ extension ExperiencesPublisher {
             } else {
                 oneSecondFlag.activate()
                 if !isTriggerManualExperience {
-                    debounce.debounce {
+                    debounce.debounce { [weak self] in
+                        guard let self else { return }
                         if self.analyticsPublisher.screenEntity?.event.screenTitle == self.currentScreen {
                             self.analyticsPublisher.publishFakeReloadScreenEvent()
                         }
@@ -687,3 +688,4 @@ extension ExperiencesPublisher {
     }
 
 }
+// swiftlint:enable file_length
