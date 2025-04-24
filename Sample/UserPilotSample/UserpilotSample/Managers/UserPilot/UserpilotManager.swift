@@ -98,10 +98,6 @@ class UserpilotManager {
         return userpilot?.didReceiveNotification(response: response, completionHandler: completionHandler) ?? false
     }
 
-    public func didReceiveNotification(_ payload: [AnyHashable: Any]) -> Bool {
-        return userpilot?.didReceiveNotification(payload: payload) ?? false
-    }
-
 }
 
 // MARK: - UserpilotNavigationDelegate

@@ -355,15 +355,4 @@ extension Userpilot {
             completionHandler: completionHandler)
     }
 
-    /// Called when the client app is opened from a push notification.
-    ///
-    /// - Parameter payload: The payload received from the push notification. This dictionary
-    /// contains the data sent by the server.
-    ///
-    /// - Returns: A `Bool` indicating whether Userpilot successfully processed the notification.
-    ///  If `true` is returned, Userpilot handled the notification. If `false` is returned,
-    ///  it is not a Userpilot-related push notification.
-    public func didReceiveNotification(payload: [AnyHashable: Any]) -> Bool {
-        return pushMonitor.didReceiveNotification(payload: payload)
-    }
 }

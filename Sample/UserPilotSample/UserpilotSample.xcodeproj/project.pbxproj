@@ -20,6 +20,7 @@
 		AB2564912DB4F4AB00393126 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB2564902DB4F4AB00393126 /* Userpilot */; };
 		AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB3D7E1F2D1413EA00FC4ECF /* Userpilot */; };
 		AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB46B0A32D07134B0054D249 /* Userpilot */; };
+		AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */; };
 		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
 		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
@@ -91,6 +92,7 @@
 		AB1942C92CD2626C00924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/EventTableViewCell.xib; sourceTree = "<group>"; };
 		AB1942CC2CD2626C00924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventTableViewCell.xcstrings; sourceTree = "<group>"; };
 		AB2564922DB4F55000393126 /* UserpilotSample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UserpilotSample.entitlements; sourceTree = "<group>"; };
+		AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+PushNotification.swift"; sourceTree = "<group>"; };
 		AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationsDialogViewController.swift; sourceTree = "<group>"; };
 		AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ConfigurationsDialogViewController.xib; sourceTree = "<group>"; };
 		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
@@ -469,6 +471,7 @@
 		C5C897B72C5CFFFA0083928E /* UserpilotSample */ = {
 			isa = PBXGroup;
 			children = (
+				AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */,
 				AB2564922DB4F55000393126 /* UserpilotSample.entitlements */,
 				AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */,
 				ABC0B5142CB3CBB200139174 /* Resources */,
@@ -667,6 +670,7 @@
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
 				AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */,
+				AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

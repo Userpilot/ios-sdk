@@ -42,13 +42,6 @@ internal protocol PushMonitoring: AnyObject {
     /// - Returns: A boolean indicating whether the notification was successfully handled.
     func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool
 
-    /// Handles the received notification payload.
-    ///
-    /// - Parameter payload: The user info dictionary containing the notification's payload.
-    ///
-    /// - Returns: A boolean indicating whether the notification was successfully handled.
-    func didReceiveNotification(payload: [AnyHashable: Any]) -> Bool
-
     /// Attempts to handle a deferred notification response.
     ///
     /// - Returns: A boolean indicating whether the deferred response was successfully processed.
@@ -207,15 +200,6 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     /// - Returns: A boolean indicating whether the notification was successfully handled.
     func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool {
         return processNotification(response.notification.request.content.userInfo, completionHandler: completionHandler)
-    }
-
-    /// Handles a received notification payload and processes it.
-    ///
-    /// - Parameter payload: The user info dictionary containing the notification's payload.
-    ///
-    /// - Returns: A boolean indicating whether the notification was successfully handled.
-    func didReceiveNotification(payload: [AnyHashable: Any]) -> Bool {
-        return processNotification(payload, completionHandler: nil)
     }
 
     /// Processes a notification and executes the appropriate response based on the notification's content.

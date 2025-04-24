@@ -8,7 +8,7 @@ There are two options for configuring push notification: automatic or manual.
 
 ## Prerequisites
 
-It is recommended to have [configured your iOS push settings in Userpilot settings Studio](https://nxtg-dev-nxtapp-11707.userpilot.io/settings/mobile) before configuring push notifications in your app.
+It is recommended to have [configured your iOS push settings in Userpilot settings Studio](https://run.userpilot.io/settings/mobile) before configuring push notifications in your app.
 
 ## Enabling Push Notification Capabilities
 

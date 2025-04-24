@@ -19,6 +19,7 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
+    - [Push Notification](#push-notification)
  - [📝 Documentation](#-documentation)
  - [🎬 Samples](#-samples)
  - [📄 License](#-license)
@@ -186,6 +187,7 @@ userpilot = Userpilot(
         .logging(true) // Enable or disable logging
 )
 userpilot.navigationDelegate = self
+userpilot.analyticsDelegate = self
 userpilot.experienceDelegate = self
 ```
 
@@ -238,6 +240,12 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
 }
 ```
+
+### Push Notification
+
+UserPilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, supported features, and integration details, please refer to the [Push Notifications Guide](https://github.com/Userpilot/ios-sdk/blob/main/Sources/Userpilot/Userpilot.docc/PushNotifications.md) or [Manually Configuring Push Notifications](https://github.com/Userpilot/ios-sdk/blob/main/Sources/Userpilot/Userpilot.docc/PushNotificationsManually.md).
+
+
 
 ## 📝 Documentation
 

@@ -6,11 +6,10 @@ There are two options for configuring push notification: automatic or manual.
 
 > Tip: Automatic configuration is the quickest and simplest way to configure push notifications and is recommended for most customers. Refer to <doc:PushNotifications> for automatic configuration instructions.
 
-Follow in tutorial form with <doc:PushNotificationsTutorial>.
 
 ## Prerequisites
 
-It is recommended to have [configured your iOS push settings in Userpilot Studio](https://nxtg-dev-nxtapp-11707.userpilot.io/settings/mobile) before configuring push notifications in your app.
+It is recommended to have [configured your iOS push settings in Userpilot Studio](https://run.userpilot.io/settings/mobile) before configuring push notifications in your app.
 
 ## Manual App Configuration
 
@@ -83,3 +82,7 @@ func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent noti
     completionHandler([.banner, .list])
 }
 ```
+
+
+#### Example
+For more details refer to [AppDelegate+PushNotification.swif](https://github.com/Userpilot/ios-sdk/blob/main/Sample/UserPilotSample/UserpilotSample/AppDelegate+PushNotification.swift)
