@@ -40,7 +40,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     var canRequestEvent: Bool { get }
 
     /// publish experience event
-    func publishExperienceEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?)
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?)
 
     /// publish fake reload event
     func publishFakeReloadScreenEvent()
@@ -173,7 +173,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool = false) {
         if shouldClearCachedIdentifyEvent && canRequestEvent {
             if let token = storage.pushToken {
-                publishExperienceEvent(
+                publishInternalSDKEvent(
                     UserLogoutEvent(
                         appToken: config.token,
                         userID: storage.userID,
@@ -602,7 +602,7 @@ extension AnalyticsPublisher {
     }
 
     /// publish experience event
-    func publishExperienceEvent(
+    func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
         isExpereinceEvent: Bool,
         socketSubscription: SocketSubscription?

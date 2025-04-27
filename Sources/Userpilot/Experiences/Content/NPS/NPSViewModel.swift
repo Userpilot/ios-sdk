@@ -82,7 +82,7 @@ internal class NPSViewModel {
     private func onNPSOpened() {
         guard let npsContent else { return }
         let eventExperienceSeen = ExperienceNPSSeenEvent()
-        experiencesPublisher.publishSDKEvent(eventExperienceSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
     }
 
     /**
@@ -91,7 +91,7 @@ internal class NPSViewModel {
     func onNPSDismissed() {
         guard let npsContent else { return }
         let eventExperienceDismissed = ExperienceNPSDismissedEvent()
-        experiencesPublisher.publishSDKEvent(eventExperienceDismissed)
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
     }
 
     func onNPSSubmitted(_ userAnswer: Int, _ userFollowUpKey: String, _ userFollowUp: String) {
@@ -102,7 +102,7 @@ internal class NPSViewModel {
             feedback: userFollowUp,
             feedbackKey: userFollowUpKey
         )
-        experiencesPublisher.publishSDKEvent(eventExperienceSubmitted)
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceSubmitted)
     }
 
     func endNPS(_ completedData: CompletedData?) {

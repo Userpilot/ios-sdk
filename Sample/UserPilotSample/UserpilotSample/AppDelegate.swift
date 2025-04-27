@@ -18,7 +18,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         UserpilotManager.shared.initialize()
 
         // Automatically configure for push notifications by Userpilot SDK
-        Userpilot.enableAutomaticPushConfig()
+        // Userpilot.enableAutomaticPushConfig()
 
         return true
     }

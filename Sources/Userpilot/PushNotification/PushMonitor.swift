@@ -115,7 +115,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
         }
 
         if analyticsPublisher.canRequestEvent {
-            analyticsPublisher.publishExperienceEvent(
+            analyticsPublisher.publishInternalSDKEvent(
                 PushNotificationTokenEvent(
                     appToken: config.token,
                     userID: storage.userID,
@@ -278,7 +278,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
             "notification_id": Int(parsedNotification.notificationID) ?? 0
         ]
 
-        analyticsPublisher.publishExperienceEvent(PushNotificationOpenedEvent(payload: properties),
+        analyticsPublisher.publishInternalSDKEvent(PushNotificationOpenedEvent(payload: properties),
                                                   isExpereinceEvent: false,
                                                   socketSubscription: self)
 

@@ -26,7 +26,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func getActiveMobileContent() -> ExperienceContent?
 
     /// Send experience event to backend
-    func publishSDKEvent(_ sdkEvent: SDKEvent)
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceID: String)
@@ -144,7 +144,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     func triggerExperience(_ experienceID: String) {
         readWriteLock.read { [weak self] in
             guard self?.experienceContent == nil else { return }
-            self?.publishSDKEvent(ExperienceContentEvent(experienceID: experienceID))
+            self?.publishInternalSDKEvent(ExperienceContentEvent(experienceID: experienceID))
         }
     }
 
@@ -332,7 +332,7 @@ extension ExperiencesPublisher {
             return
         }
 
-        publishSDKEvent(ThemeContentEvent(themeID: themeID, token: config.token))
+        publishInternalSDKEvent(ThemeContentEvent(themeID: themeID, token: config.token))
     }
 
 }
@@ -346,8 +346,8 @@ extension ExperiencesPublisher {
      
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
-    func publishSDKEvent(_ sdkEvent: SDKEvent) {
-        analyticsPublisher.publishExperienceEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: self)
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+        analyticsPublisher.publishInternalSDKEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: self)
 
         if sdkEvent.isEventForCloseNPSExperience() {
             resetExperienceContent()
@@ -580,7 +580,7 @@ extension ExperiencesPublisher {
                         surveyID: surveyContent.id,
                         hasDeepLinkContent: deepLink != nil
                     )
-                    self?.publishSDKEvent(eventExperienceSeen)
+                    self?.publishInternalSDKEvent(eventExperienceSeen)
 
                     delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
                         if let deepLink, let url = URL(string: deepLink) {

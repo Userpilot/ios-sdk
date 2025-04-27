@@ -6,7 +6,7 @@
 //
 
 // Disabled in favor of automatic configuration
-/*
+
 import Foundation
 import UserNotifications
 import UIKit
@@ -86,4 +86,3 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         }
     }
 }
-*/

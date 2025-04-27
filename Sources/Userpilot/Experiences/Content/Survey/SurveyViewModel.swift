@@ -129,7 +129,7 @@ internal class SurveyViewModel {
     private func onSurveyOpened() {
         guard let surveyContent else { return }
         let eventExperienceSeen = ExperienceSurveySeenEvent(surveyID: surveyContent.id)
-        experiencesPublisher.publishSDKEvent(eventExperienceSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
 
         if surveyContent.type == .step {
             onSurveyStepSeen()
@@ -150,7 +150,7 @@ internal class SurveyViewModel {
             surveyID: surveyContent.id,
             hasDeepLinkContent: deeplink != nil
         )
-        experiencesPublisher.publishSDKEvent(eventExperienceSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
     }
 
     /**
@@ -166,13 +166,13 @@ internal class SurveyViewModel {
                 surveyID: surveyContent.id,
                 hasDeepLinkContent: false
             )
-            experiencesPublisher.publishSDKEvent(eventExperienceSeen)
+            experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
         } else {
             let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
                 surveyID: surveyContent.id,
                 moduleID: surveyContent.type == .list ? nil : surveyStep.id,
                 type: surveyContent.type == .list ? nil : surveyStep.type.rawValue)
-            experiencesPublisher.publishSDKEvent(eventExperienceDismissed)
+            experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
         }
     }
 
@@ -183,7 +183,7 @@ internal class SurveyViewModel {
             moduleID: surveyStep.id,
             type: surveyStep.type.rawValue
         )
-        experiencesPublisher.publishSDKEvent(eventStepSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
     }
 
     /**
@@ -195,7 +195,7 @@ internal class SurveyViewModel {
             surveyID: surveyContent.id,
             feedback: answersPayload
         )
-        experiencesPublisher.publishSDKEvent(eventContentSubmitted)
+        experiencesPublisher.publishInternalSDKEvent(eventContentSubmitted)
     }
 
     private func onSurveyModuleSubmitted(_ answersPayload: Payload) {
@@ -208,7 +208,7 @@ internal class SurveyViewModel {
             type: surveyStep.type.rawValue,
             feedback: answersPayload?["value"]
         )
-        experiencesPublisher.publishSDKEvent(eventStepSubmitted)
+        experiencesPublisher.publishInternalSDKEvent(eventStepSubmitted)
     }
 
     private func onSurveyModuleSkipped() {
@@ -218,7 +218,7 @@ internal class SurveyViewModel {
             moduleID: surveyStep.id,
             type: surveyStep.type.rawValue
         )
-        experiencesPublisher.publishSDKEvent(eventStepSkipped)
+        experiencesPublisher.publishInternalSDKEvent(eventStepSkipped)
     }
 
     /** Logic region, fetch and understand Survey logic, notify screen with next survey step */
