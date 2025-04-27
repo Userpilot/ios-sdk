@@ -98,7 +98,7 @@ extension UPSingleInputView {
 
         // Setup calendar button
         calendarIconButton.translatesAutoresizingMaskIntoConstraints = false
-        calendarIconButton.setImage(UIImage.userpilotImage(named: "icon_calander"), for: .normal)
+        calendarIconButton.setImage(UIImage.userpilotImage(named: "userpilot_icon_calander"), for: .normal)
         calendarIconButton.addTarget(self, action: #selector(showDatePicker), for: .touchUpInside)
         addSubview(calendarIconButton)
         calendarIconButton.isHidden = true
@@ -109,7 +109,7 @@ extension UPSingleInputView {
 
         // Setup down arrow button
         downArrowButton.translatesAutoresizingMaskIntoConstraints = false
-        downArrowButton.setImage(UIImage.userpilotImage(named: "icon_down_arrow"), for: .normal)
+        downArrowButton.setImage(UIImage.userpilotImage(named: "userpilot_icon_down_arrow"), for: .normal)
         downArrowButton.addTarget(self, action: #selector(showCoutriesPopupMenu), for: .touchUpInside)
         addSubview(countryStackView)
 

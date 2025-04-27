@@ -68,9 +68,9 @@ internal struct RatingItem {
 
         switch metadataType {
         case .stars:
-            return UIImage.userpilotImage(named: "icon_star")
+            return UIImage.userpilotImage(named: "userpilot_icon_star")
         case .hearts:
-            return UIImage.userpilotImage(named: "icon_heart")
+            return UIImage.userpilotImage(named: "userpilot_icon_heart")
         default:
             // Return icons based on the range of items (3, 5, 7, etc.).
             switch metadata?.range {
@@ -94,43 +94,43 @@ internal struct RatingItem {
         switch availableRange {
         case 3:
             switch index {
-            case 0: return UIImage.userpilotImage(named: "icon_smile_three")
-            case 1: return UIImage.userpilotImage(named: "icon_smile_five")
-            case 2: return UIImage.userpilotImage(named: "icon_smile_nine")
+            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
+            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_five")
+            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_nine")
             default: return UIImage()
             }
         case 5:
             switch index {
-            case 0: return UIImage.userpilotImage(named: "icon_smile_three")
-            case 1: return UIImage.userpilotImage(named: "icon_smile_five")
-            case 2: return UIImage.userpilotImage(named:  "icon_smile_six")
-            case 3: return UIImage.userpilotImage(named: "icon_smile_nine")
-            case 4: return UIImage.userpilotImage(named: "icon_smile_ten")
+            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
+            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_five")
+            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_six")
+            case 3: return UIImage.userpilotImage(named: "userpilot_icon_smile_nine")
+            case 4: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
             default: return UIImage()
             }
         case 7:
             switch index {
-            case 0: return UIImage.userpilotImage(named: "icon_smile_one")
-            case 1: return UIImage.userpilotImage(named: "icon_smile_three")
-            case 2: return UIImage.userpilotImage(named: "icon_smile_five")
-            case 3: return UIImage.userpilotImage(named: "icon_smile_six")
-            case 4: return UIImage.userpilotImage(named: "icon_smile_seven")
-            case 5: return UIImage.userpilotImage(named: "icon_smile_nine")
-            case 6: return UIImage.userpilotImage(named: "icon_smile_ten")
+            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_one")
+            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
+            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_five")
+            case 3: return UIImage.userpilotImage(named: "userpilot_icon_smile_six")
+            case 4: return UIImage.userpilotImage(named: "userpilot_icon_smile_seven")
+            case 5: return UIImage.userpilotImage(named: "userpilot_icon_smile_nine")
+            case 6: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
             default: return UIImage()
             }
         default:
             switch index {
-            case 0: return UIImage.userpilotImage(named: "icon_smile_one")
-            case 1: return UIImage.userpilotImage(named: "icon_smile_two")
-            case 2: return UIImage.userpilotImage(named: "icon_smile_three")
-            case 3: return UIImage.userpilotImage(named: "icon_smile_four")
+            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_one")
+            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_two")
+            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
+            case 3: return UIImage.userpilotImage(named: "userpilot_icon_smile_four")
             case 4: return UIImage.userpilotImage(named: "icon_smile_five")
-            case 5: return UIImage.userpilotImage(named: "icon_smile_six")
-            case 6: return UIImage.userpilotImage(named: "icon_smile_seven")
-            case 7: return UIImage.userpilotImage(named: "icon_smile_ten")
-            case 8: return UIImage.userpilotImage(named: "icon_smile_eight")
-            case 9: return UIImage.userpilotImage(named: "icon_smile_ten")
+            case 5: return UIImage.userpilotImage(named: "userpilot_icon_smile_six")
+            case 6: return UIImage.userpilotImage(named: "userpilot_icon_smile_seven")
+            case 7: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
+            case 8: return UIImage.userpilotImage(named: "userpilot_icon_smile_eight")
+            case 9: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
             default: return UIImage()
             }
         }

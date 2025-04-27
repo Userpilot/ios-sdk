@@ -161,13 +161,15 @@ internal class ChoiceTableViewCell: UITableViewCell {
     private func getIcon(for choice: Choice, with surveyStep: SurveyStep) -> UIImage? {
         if surveyStep.metadata?.isMultiSelect == true {
             return UIImage(
-                named: choice.isSelected == true ? "icon_check_box_selected" : "icon_check_box_unselected",
+                named: choice.isSelected == true ?
+                "userpilot_icon_check_box_selected" : "userpilot_icon_check_box_unselected",
                 in: Userpilot.resourceBundle,
                 compatibleWith: nil
             )
         } else {
             return UIImage(
-                named: choice.isSelected == true ? "icon_radio_button_selected" : "icon_radio_button_unselected",
+                named: choice.isSelected == true ?
+                "userpilot_icon_radio_button_selected" : "userpilot_icon_radio_button_unselected",
                 in: Userpilot.resourceBundle,
                 compatibleWith: nil
             )

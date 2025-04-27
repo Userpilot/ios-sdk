@@ -42,12 +42,12 @@ internal class UPDismissButton: UIButton {
     private func applyConfiguration() {
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.plain()
-            config.image = UIImage.userpilotImage(named: "icon_close")
+            config.image = UIImage.userpilotImage(named: "userpilot_icon_close")
             config.imagePlacement = .leading
             config.imagePadding = 0
             self.configuration = config
         } else {
-            self.setImage(UIImage.userpilotImage(named: "icon_close"), for: .normal)
+            self.setImage(UIImage.userpilotImage(named: "userpilot_icon_close"), for: .normal)
             self.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
             self.contentHorizontalAlignment = .left
         }
