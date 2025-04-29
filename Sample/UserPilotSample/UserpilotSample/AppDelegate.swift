@@ -16,9 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // Override point for customization after application launch.
         UserpilotManager.shared.initialize()
-        setupPush(application: application)
+        // setupPush(application: application)
         // Automatically configure for push notifications by Userpilot SDK
-        // Userpilot.enableAutomaticPushConfig()
+        Userpilot.enableAutomaticPushConfig()
 
         return true
     }

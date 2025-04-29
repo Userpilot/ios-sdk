@@ -173,7 +173,10 @@ extension Userpilot {
      */
     @objc
     public func identify(userID: String, properties: Payload = nil, company: Payload = nil) {
-        if userID.trim().isEmpty { return }
+        guard userID.trim().isNotEmpty else {
+            config.logger.error("Invalid user id - empty string")
+            return
+        }
         logout()
         let event = Event(type: .identify(userID.trim()), properties: properties, company: company)
         analyticsPublisher.publish(event)
@@ -188,8 +191,7 @@ extension Userpilot {
     @objc
     public func anonymous() {
         logout()
-        let userID = "\(config.token)_\(anonymousFactory())"
-        identify(userID: userID)
+        identify(userID: "\(config.token)_\(anonymousFactory())")
     }
 
     /**
@@ -202,6 +204,10 @@ extension Userpilot {
      */
     @objc
     public func screen(_ title: String) {
+        guard title.trim().isNotEmpty else {
+            config.logger.error("Invalid screen title - empty string")
+            return
+        }
         analyticsPublisher.publish(Event(type: .screen(title)))
     }
 
@@ -218,6 +224,10 @@ extension Userpilot {
      */
     @objc
     public func track(eventName: String, properties: Payload = nil) {
+        guard eventName.trim().isNotEmpty else {
+            config.logger.error("Invalid event name - empty string")
+            return
+        }
         analyticsPublisher.publish(Event(type: .event(eventName), properties: properties))
     }
 
@@ -305,6 +315,10 @@ extension Userpilot {
      */
     @objc
     public func triggerExperience(_ experienceID: String) {
+        guard experienceID.trim().isNotEmpty else {
+            config.logger.error("Invalid experience id - empty string")
+            return
+        }
         experiencesPublisher.triggerExperience(experienceID)
     }
 
