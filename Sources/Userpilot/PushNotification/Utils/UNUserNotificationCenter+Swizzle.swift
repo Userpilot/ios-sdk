@@ -1,8 +1,15 @@
 //
-//  UNUserNotificationCenter+Swizzle.swift
-//  Userpilot
+//  UserpilotUNUserNotificationCenterDelegate.swift
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 17/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  The `UserpilotUNUserNotificationCenterDelegate` provides a fallback delegate for
+//  UNUserNotificationCenter in case no other delegate is set. This file also includes
+//  a swizzled getter for accessing the delegate, enabling interception of push notification
+//  events. It ensures Userpilot push notifications are properly handled even when no
+//  custom notification delegate is provided in the host app.
 //
 
 import UIKit

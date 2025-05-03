@@ -1,8 +1,14 @@
 //
-//  UIApplicationDelegate+Swizzle.swift
-//  Userpilot
+//  UIApplication+PushSwizzling.swift
+//  Userpilot SDK
 //
 //  Created by Motasem Hamed on 17/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  This extension of `UIApplication` handles method swizzling for
+//  `didRegisterForRemoteNotificationsWithDeviceToken`. It allows the SDK to intercept
+//  push token registration events and forward them to Userpilot, even if the app delegate
+//  doesn't explicitly implement the corresponding method.
 //
 
 import UIKit

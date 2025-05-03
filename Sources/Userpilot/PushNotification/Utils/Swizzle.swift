@@ -1,12 +1,14 @@
 //
-//  Swizzle.swift
+//  Swizzler.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 17/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
-//  A swizzleer class to setup push swizzling.
+//  This utility provides a method-swizzling mechanism used primarily for delegate method interception,
+//  such as handling optional UIApplicationDelegate methods (e.g., push token registration).
+//  It works by injecting placeholder implementations when necessary and safely replacing original method
+//  implementations at runtime, even when those methods are optional and not defined at compile time.
 //
 
 import UIKit
@@ -61,7 +63,7 @@ internal enum Swizzler {
 
         // this should never be nil since the method gets added above
         guard let originalMethod =
-                originalMethod ?? class_getInstanceMethod(targetClass, targetSelector) else { return }
+            originalMethod ?? class_getInstanceMethod(targetClass, targetSelector) else { return }
 
         // swizzle the new implementation to inject our own custom logic
 
