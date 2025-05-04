@@ -86,14 +86,14 @@ extension SurveyDialogViewController {
                 withLocal: self.surveyViewModel.isRTL,
                 isDialogContent: true,
                 andParentViewController: self,
-                surveyContainerViewDelegate: self
+                withSurveyContainerViewDelegate: self
             )
         }
 
         // trigger bind next survey step
         surveyViewModel.bindNextSurveyStep = { [weak self] in
-            guard let self = self else { return }
-            self.surveyContainerView.bindStep(currentStep: self.surveyViewModel.currentStep ?? 0)
+            guard let self else { return }
+            self.surveyContainerView.bindStep(currentStep: self.surveyViewModel.currentStep)
         }
 
         // triger close survey

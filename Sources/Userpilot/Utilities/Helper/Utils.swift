@@ -144,11 +144,7 @@ internal var isLandscape: Bool {
 ///
 /// - Parameter code: The closure to execute. It is a block that takes no parameters and returns no result.
 internal func tryCatch(code: () throws -> Void) {
-    do {
-        try? code()
-    } catch {
-        // Ignoring any errors
-    }
+    _ = try? code()
 }
 
 /// Executes a block of code inside a `do-catch` block, catching and returning a default value in case

@@ -47,7 +47,7 @@ internal class NPSViewModel {
      */
     func onStart() {
         guard
-            var npsContent = experiencesPublisher.getActiveMobileContent()?.asNPSContent()
+            let npsContent = experiencesPublisher.getActiveMobileContent()?.asNPSContent()
         else {
             bindData?(false)
             return
@@ -57,17 +57,9 @@ internal class NPSViewModel {
         // Setup theme
         npsTheme = npsContent.npsTheme
 
-        // Handle safe area region in case there is an issue with the data
-        var shouldBindSurvey = true
-        if npsContent == nil || npsTheme == nil {
-            shouldBindSurvey = false
-        }
-
         // Bind data
-        bindData?(shouldBindSurvey)
-        if shouldBindSurvey {
-            onNPSOpened()
-        }
+        bindData?(true)
+        onNPSOpened()
     }
 
     /// Return wither the content is RTL
@@ -80,7 +72,7 @@ internal class NPSViewModel {
      Sends a socket event indicating that an experience has been opened.
      */
     private func onNPSOpened() {
-        guard let npsContent else { return }
+        guard npsContent != nil else { return }
         let eventExperienceSeen = ExperienceNPSSeenEvent()
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
     }
@@ -89,7 +81,7 @@ internal class NPSViewModel {
      Sends a socket event indicating that a step has been dismissed.
     */
     func onNPSDismissed() {
-        guard let npsContent else { return }
+        guard npsContent != nil else { return }
         let eventExperienceDismissed = ExperienceNPSDismissedEvent()
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
     }

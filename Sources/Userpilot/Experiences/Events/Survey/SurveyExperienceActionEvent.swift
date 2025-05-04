@@ -47,7 +47,7 @@ internal class SurveyExperienceActionEvent: SDKEvent {
     ///
     /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
     func toMap() -> [String: Any] {
-        var params: [String: Any] = [
+        let params: [String: Any] = [
             "survey_id": surveyID
         ]
         return params

@@ -105,7 +105,7 @@ internal extension ThankYouBottomSheetViewController {
         guard let surveyStep = surveyContent.modules.last else { return }
         thankYouView.setupView(surveyStep: surveyStep,
                                surveyTheme: surveyTheme,
-                               isRTL: (surveyContent.localeCode ?? "en").isRTL == true)
+                               isRTL: surveyContent.localeCode.isRTL == true)
 
         // Set up action button with appropriate action and style
         actionButton.setupViews(

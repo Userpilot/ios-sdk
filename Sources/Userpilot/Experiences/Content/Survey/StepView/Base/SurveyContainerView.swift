@@ -232,7 +232,7 @@ internal class SurveyContainerView: UIView {
                   withLocal isRTL: Bool,
                   isDialogContent isDialog: Bool,
                   andParentViewController parentViewController: UIViewController,
-                  surveyContainerViewDelegate surveyContainerViewDelegate: SurveyContainerViewDelegate) {
+                  withSurveyContainerViewDelegate surveyContainerViewDelegate: SurveyContainerViewDelegate) {
         self.theme = theme
         self.surveyContent = surveyContent
         self.isRTL = isRTL
@@ -278,7 +278,7 @@ internal class SurveyContainerView: UIView {
 
     /** Configures the action button based on the step's data. */
     private func setupActionButton() {
-        guard let surveyContent, let theme else { return }
+        guard surveyContent != nil, let theme else { return }
 
         // Set up the action button with the step's button configuration and theme.
         actionButton.setupViews(
@@ -391,8 +391,6 @@ internal class SurveyContainerView: UIView {
             let thankYouView = UPThankYouView()
             thankYouView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL)
             newView = thankYouView
-        default:
-            break
         }
         
         if let newView = newView {
@@ -437,6 +435,7 @@ internal class SurveyContainerView: UIView {
         })
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.1) { [weak self] in
+                guard self != nil else { return }
                 newView.alpha = 1
             }
         }

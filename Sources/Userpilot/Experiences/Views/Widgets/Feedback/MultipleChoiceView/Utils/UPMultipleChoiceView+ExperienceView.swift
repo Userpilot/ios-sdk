@@ -83,7 +83,11 @@ extension UPMultipleChoiceView: UPExperienceView {
         if selectedIds.isEmpty {
             return nil
         }
-        return surveyStep?.metadata?.isMultiSelect == true ? selectedIds : selectedIds.first
+        if surveyStep?.metadata?.isMultiSelect == true {
+            return selectedIds
+        } else {
+            return selectedIds.first ?? nil
+        }
     }
 
 }

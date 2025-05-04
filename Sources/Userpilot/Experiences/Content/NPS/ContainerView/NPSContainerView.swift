@@ -350,7 +350,7 @@ internal class NPSContainerView: UIView {
 
         
         // Calculate the new height required for contentContainerView
-        var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+        let newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
 
         // Animate height change smoothly
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
@@ -367,6 +367,7 @@ internal class NPSContainerView: UIView {
         })
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.1) { [weak self] in
+                guard self != nil else { return }
                 newView.alpha = 1
             }
         }
@@ -637,8 +638,10 @@ extension NPSContainerView {
                 barStepsProgressView.isHidden = true
                 stepsProgressView.setupView(stepsCount: 2, theme: theme, isRTL: isRTL)
             } else {
-                stepsProgressView.isHidden = true
-                barStepsProgressView.setupView(stepsCount: 2, theme: theme, isRTL: isRTL)
+                if let theme {
+                    stepsProgressView.isHidden = true
+                    barStepsProgressView.setupView(stepsCount: 2, theme: theme, isRTL: isRTL)
+                }
             }
         }
     }

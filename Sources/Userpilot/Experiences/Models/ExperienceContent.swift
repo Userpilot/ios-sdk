@@ -68,7 +68,7 @@ extension ExperienceContent {
             return content.baseThemeID
         case .survey(let content):
             return content.baseThemeID
-        case .nps(let content):
+        case .nps:
             return 0
         }
     }

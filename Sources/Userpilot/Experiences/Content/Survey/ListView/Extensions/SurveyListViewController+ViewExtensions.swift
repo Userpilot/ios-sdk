@@ -55,7 +55,6 @@ internal extension SurveyListViewController {
 
         let answersPayload = containerView.subviews
             .compactMap { ($0 as? UPExperienceView)?.getAnswerPayload() }
-            .compactMap { $0 != nil ? $0 : nil }
 
         surveyViewModel.onSurveyListSubmitted(answersPayload: answersPayload)
         showThankYouMessage()

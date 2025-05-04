@@ -108,7 +108,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
         // Cache the token in all cases so in next identify in same session, we will sync it
         cachedToken = deviceToken
         guard
-            let newToken = deviceToken?.map { String(format: "%02x", $0) }.joined(),
+            let newToken = deviceToken?.map({ String(format: "%02x", $0) }).joined(),
             storage.pushToken != newToken
         else {
             return

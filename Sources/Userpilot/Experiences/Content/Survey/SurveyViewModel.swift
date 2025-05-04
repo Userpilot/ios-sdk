@@ -53,7 +53,7 @@ internal class SurveyViewModel {
      */
     func onStart() {
         guard
-            var surveyContent = experiencesPublisher.getActiveMobileContent()?.asSurveyContent()
+            let surveyContent = experiencesPublisher.getActiveMobileContent()?.asSurveyContent()
         else {
             bindData?(false)
             return
@@ -76,7 +76,7 @@ internal class SurveyViewModel {
 
         // Handle safe area region in case there is an issue with the data
         var shouldBindSurvey = true
-        if surveyContent == nil || surveyContent.modules.isEmpty || surveyTheme == nil {
+        if surveyContent.modules.isEmpty || surveyTheme == nil {
             shouldBindSurvey = false
         }
 
@@ -106,7 +106,6 @@ internal class SurveyViewModel {
     private func onDeepLinkTriggered() {
         guard
             let surveyContent,
-            let surveyTheme,
             let thankYouContent = surveyContent.modules.last,
             thankYouContent.type == .completed,
             thankYouContent.metadata?.buttonAction == .deepLink,
@@ -201,7 +200,6 @@ internal class SurveyViewModel {
     private func onSurveyModuleSubmitted(_ answersPayload: Payload) {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
 
-        guard let surveyStep = getCurrentStepSurveyContent() else { return }
         let eventStepSubmitted = ExperienceSurveyStepSubmittedEvent(
             surveyID: surveyContent.id,
             moduleID: surveyStep.id,
@@ -244,7 +242,7 @@ internal class SurveyViewModel {
         }
 
         // Submit the answer payload in all cases while we are not on the thank you view
-        if let answer = answer {
+        if answer != nil {
             onSurveyModuleSubmitted(answerPayload)
         } else {
             onSurveyModuleSkipped()

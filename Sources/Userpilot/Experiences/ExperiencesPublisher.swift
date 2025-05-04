@@ -566,8 +566,7 @@ extension ExperiencesPublisher {
         performOn(.main) { [weak self] in
             guard
                 let self,
-                let topViewController = UIApplication.shared.fetchTopViewController(),
-                let surveyStep = surveyContent.modules.last
+                let topViewController = UIApplication.shared.fetchTopViewController()
             else {
                 self?.isTriggeringThankYouMessage = false
                 return
