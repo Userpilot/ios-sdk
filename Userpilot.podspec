@@ -2,7 +2,7 @@ Pod::Spec.new do |spec|
 
   spec.name          = "Userpilot"
   spec.module_name   = "Userpilot"
-  spec.version       = "0.0.1-beta.8"
+  spec.version       = "0.0.1-beta.9"
   spec.summary       = "Userpilot iOS SDK allows you to integrate Userpilot experiences into your native iOS apps"
 
   spec.description   = <<-DESC
@@ -24,7 +24,8 @@ Pod::Spec.new do |spec|
   spec.resource_bundles = {
       'Userpilot' => [
           'Sources/Userpilot/*.xcassets',
-          'Sources/Userpilot/**/*.xib'
+          'Sources/Userpilot/**/*.xib',
+          'Sources/Userpilot/Resources/countries.json'
       ]
   }
 

@@ -71,10 +71,18 @@ internal class NPSContainerView: UIView {
         return progressView
     }()
     
+    private lazy var spaceView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        view.heightAnchor.constraint(equalToConstant: ThemeHandler.DefaultValues.smallDistanceBetweenSections).isActive = true
+        return view
+    }()
+    
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
+            buttonDismissContainerView, spaceView, scrollView, footerButtonsContianer, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear

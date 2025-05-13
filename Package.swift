@@ -27,8 +27,12 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftPhoenixClient", package: "SwiftPhoenixClient")
             ],
+            path: "Sources/Userpilot",
             resources: [
-               .process("Resources")
+                .process("Resources/countries.json"),
+                .process("Assets.xcassets"),
+                .process("Experiences/Content/Flows/Carousel/CarouselExperienceViewController.xib"),
+                .process("Experiences/Content/Survey/ListView/SurveyListViewController.xib")
             ]
         ),
         .testTarget(

@@ -43,6 +43,9 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// cancel pending/processing experience
     func cancelPendingSurveyContent()
 
+    /// active one time flag
+    func activeOneTimeFlag()
+
     /// Show thank you message
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
 }
@@ -350,6 +353,7 @@ extension ExperiencesPublisher {
         analyticsPublisher.publishInternalSDKEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: self)
 
         if sdkEvent.isEventForCloseNPSExperience() {
+            oneSecondFlag.activate()
             resetExperienceContent()
             return
         }
@@ -678,6 +682,10 @@ extension ExperiencesPublisher {
         delayUtils.cancelDelay()
         endExperience(manualClose: false)
         resetExperienceContent()
+    }
+
+    func activeOneTimeFlag() {
+        oneSecondFlag.activate()
     }
 
     /// reset experience content
