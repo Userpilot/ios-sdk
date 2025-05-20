@@ -16,12 +16,21 @@ import UIKit
 internal enum PushNotificationAutoConfig {
     // A PushMonitoring to process push notifications actions
     private static weak var pushMonitor: PushMonitoring?
+    // In some case like in plugins(ReactNative and FLutter), didReceive called while pushMonitor is not set.
+    private static var response: UNNotificationResponse?
 
     /// Registers a `PushMonitoring` observer to handle push notifications.
     ///
     /// - Parameter observer: The `PushMonitoring` instance that will handle push notifications.
     static func register(observer: PushMonitoring) {
         pushMonitor = observer
+        // in case we have a pending notification, process it
+        if let response {
+            observer.didReceiveNotification(
+                response: response,
+                completionHandler: {})
+            self.response = nil
+        }
     }
 
     /// Configures the app to automatically handle push notifications by swizzling necessary methods.
@@ -60,7 +69,11 @@ internal enum PushNotificationAutoConfig {
             // `completionHandler` is executed if this returns true
             didHandleResponse = pushMonitor.didReceiveNotification(
                 response: response,
-                completionHandler: completionHandler)
+                completionHandler: completionHandler
+            )
+        } else {
+            // cache response to handle it when we have active pushMonitor
+            self.response = response
         }
 
         if !didHandleResponse {

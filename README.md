@@ -214,6 +214,24 @@ Receives callbacks whenever the SDK tracks an event, screen, or identifies a use
 
 ```swift
 @objc
+public enum UserpilotAnalytic: Int {
+    case identify = 0
+    case screen = 1
+    case event = 2
+
+    public var rawValueString: String {
+        switch self {
+        case .identify:
+            return "identify"
+        case .screen:
+            return "screen"
+        case .event:
+            return "event"
+        }
+    }
+}
+
+@objc
 public protocol UserpilotAnalyticsDelegate: AnyObject {
     func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?)
 }
@@ -243,13 +261,11 @@ public protocol UserpilotExperienceDelegate: AnyObject {
 
 ### Push Notification
 
-UserPilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, supported features, and integration details, please refer to the [Push Notifications Guide](https://github.com/Userpilot/ios-sdk/blob/main/Sources/Userpilot/Userpilot.docc/PushNotifications.md) or [Manually Configuring Push Notifications](https://github.com/Userpilot/ios-sdk/blob/main/Sources/Userpilot/Userpilot.docc/PushNotificationsManually.md).
-
-
+UserPilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app).
 
 ## 📝 Documentation
 
-Full documentation is available at https://docs.userpilot.com/
+Full documentation is available at [Userpilot Documentation](https://docs.userpilot.com/)
 
 ## 🎬 Samples
 

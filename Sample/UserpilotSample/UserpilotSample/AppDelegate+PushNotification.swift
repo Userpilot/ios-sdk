@@ -15,10 +15,8 @@ import UIKit
 extension AppDelegate: UNUserNotificationCenterDelegate {
     /// Call from `UIApplicationDelegate.application(_:didFinishLaunchingWithOptions:)`
     func setupPush(application: UIApplication) {
-        // requestPushNotificationPermission()
-        // 1: Register to get a device token
-        // application.registerForRemoteNotifications()
-
+        requestPushNotificationPermission()
+        application.registerForRemoteNotifications()
         UNUserNotificationCenter.current().delegate = self
     }
 
