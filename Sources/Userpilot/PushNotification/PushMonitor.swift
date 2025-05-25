@@ -198,6 +198,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     ///   - completionHandler: A closure that should be called after processing the notification.
     ///
     /// - Returns: A boolean indicating whether the notification was successfully handled.
+    @discardableResult
     func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool {
         return processNotification(response.notification.request.content.userInfo, completionHandler: completionHandler)
     }
