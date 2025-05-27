@@ -14,13 +14,6 @@ import Foundation
 /// dictionary typealias
 public typealias Payload = [String: Any]?
 
-/// is Debug Mode flag
-#if DEBUG
-let isDebugMode = true
-#else
-let isDebugMode = false
-#endif
-
 // swiftlint:disable identifier_name
 internal struct DispatchQueueConstants {
     static let EVENT_QUEUE = "userpilot-event-queue"
