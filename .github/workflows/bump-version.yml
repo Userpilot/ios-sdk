@@ -1,19 +1,22 @@
-# 🔖 GitHub Actions workflow to bump iOS SDK version (major, minor, patch, or beta)
+# 🔖 GitHub Actions workflow to bump iOS SDK version (major, minor, patch, beta, or rc)
 # Can be triggered on any push OR manually via the workflow_dispatch input.
 
 name: Bump iOS SDK Version
 
 on:
-  # push:
-  #   branches:
-  #     - '**'  # Trigger on push to any branch
-
   workflow_dispatch:
     inputs:
       bump:
-        description: 'Which part to bump (major, minor, patch, beta)'  # Manual bump input
+        description: 'Which part to bump (major, minor, patch, beta, or rc)'
         required: true
         default: 'beta'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - beta
+          - rc
 
 jobs:
   bump:
@@ -30,11 +33,11 @@ jobs:
           git config user.name "motasem-userpilot"
           git config user.email "motasem@userpilot.co"
 
-      # ✅ Validate the bump input (must be one of major, minor, patch, beta)
+      # ✅ Validate the bump input (must be one of major, minor, patch, beta, rc)
       - name: Validate bump input
         run: |
           bump="${{ github.event.inputs.bump }}"
-          if [[ ! "$bump" =~ ^(major|minor|patch|beta)$ ]]; then
+          if [[ ! "$bump" =~ ^(major|minor|patch|beta|rc)$ ]]; then
             echo "Invalid bump type: $bump"
             exit 1
           fi
@@ -49,10 +52,11 @@ jobs:
           major=$(grep 'private let versionMajor' "$file" | grep -oE '[0-9]+')
           minor=$(grep 'private let versionMinor' "$file" | grep -oE '[0-9]+')
           patch_line=$(grep 'private let versionPatch' "$file")
-          patch_with_beta=$(echo "$patch_line" | grep -oE '[0-9]+(-beta\.[0-9]+)?')
+          patch_with_suffix=$(echo "$patch_line" | grep -oE '[0-9]+(-(beta|rc)\.[0-9]+)?')
 
-          patch=$(echo "$patch_with_beta" | cut -d'-' -f1)
-          beta=$(echo "$patch_with_beta" | grep -oE 'beta\.[0-9]+' | cut -d'.' -f2)
+          patch=$(echo "$patch_with_suffix" | cut -d'-' -f1)
+          beta=$(echo "$patch_with_suffix" | grep -oE 'beta\.[0-9]+' | cut -d'.' -f2)
+          rc=$(echo "$patch_with_suffix" | grep -oE 'rc\.[0-9]+' | cut -d'.' -f2)
 
           # Determine bump type (default to beta if triggered by push)
           bump="${{ github.event.inputs.bump || 'beta' }}"
@@ -60,16 +64,21 @@ jobs:
           # Update version based on bump type
           case "$bump" in
             major)
-              ((major+=1)); minor=0; patch=0; beta=""
+              ((major+=1)); minor=0; patch=0; beta=""; rc=""
               ;;
             minor)
-              ((minor+=1)); patch=0; beta=""
+              ((minor+=1)); patch=0; beta=""; rc=""
               ;;
             patch)
-              ((patch+=1)); beta=""
+              ((patch+=1)); beta=""; rc=""
               ;;
             beta)
+              rc=""  # clear rc if switching to beta
               if [[ -z "$beta" ]]; then beta=1; else ((beta+=1)); fi
+              ;;
+            rc)
+              beta=""  # clear beta if switching to rc
+              if [[ -z "$rc" ]]; then rc=1; else ((rc+=1)); fi
               ;;
             *)
               echo "Invalid bump type: $bump"
@@ -77,10 +86,12 @@ jobs:
               ;;
           esac
 
-          # Construct the new patch (include -beta.X if needed)
+          # Construct the new patch (include -beta.X or -rc.X if needed)
           new_patch="$patch"
-          if [[ "$bump" == "beta" || -n "$beta" ]]; then
+          if [[ -n "$beta" ]]; then
             new_patch="$new_patch-beta.$beta"
+          elif [[ -n "$rc" ]]; then
+            new_patch="$new_patch-rc.$rc"
           fi
 
           # Full version string
