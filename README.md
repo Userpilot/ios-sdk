@@ -62,7 +62,7 @@ Once integrated, the Userpilot SDK is available throughout your application.
 
 To use Userpilot, initialize it once in your App Delegate or Scene Delegate during app launch. This ensures the SDK is ready as soon as your app starts. Replace `<APP_TOKEN>` with your Application Token, which can be fetched from your [Environments Page](https://run.userpilot.io/environment).
 
-##### &nbsp;&nbsp;&nbsp; Example (App Delegate):
+##### &nbsp;&nbsp;&nbsp; App Delegate:
 
 ```swift
 
@@ -175,11 +175,9 @@ Triggers a specific experience programmatically using its unique ID. This API al
 userpilot.triggerExperience(EXPERIENCE_ID)
 ```
 
-### Configurations (Optional)
+### **Configurations (Optional)**
 
 If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
-
-##### &nbsp;&nbsp;&nbsp; Example:
 
 ```swift
 userpilot = Userpilot(
