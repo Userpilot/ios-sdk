@@ -177,7 +177,6 @@ extension Userpilot {
             config.logger.error("Invalid user id - empty string")
             return
         }
-        logout()
         let event = Event(type: .identify(userID.trim()), properties: properties, company: company)
         analyticsPublisher.publish(event)
     }

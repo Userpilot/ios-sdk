@@ -17,7 +17,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/davidstump/SwiftPhoenixClient",
-            exact: "5.2.2")
+            exact: "5.3.5")
         ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
