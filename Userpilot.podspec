@@ -21,7 +21,7 @@ Pod::Spec.new do |spec|
   spec.ios.deployment_target = "13.0"
 
   spec.resource_bundles = {
-      'UserPilot' => ['Sources/UserPilot/*.xcassets']
+      'UserPilot' => ['Sources/Userpilot/*.xcassets']
   }
 
   spec.dependency "SwiftPhoenixClient", "~> 5.2.2"
