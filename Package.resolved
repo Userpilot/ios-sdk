@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/davidstump/SwiftPhoenixClient",
       "state" : {
-        "revision" : "e26e1bedd1e29d0c1f3be8dc3cdbae1af3e9a81e",
-        "version" : "5.2.2"
+        "revision" : "25a4d8a3fa754ef3fb587a34addd08c7e568abc4",
+        "version" : "5.3.5"
       }
     }
   ],
