@@ -1,0 +1,9 @@
+excluded:
+  - .build
+  - .package
+  - Packages
+  - SwiftPhoenixClient
+  - Carthage
+  - Pods
+  - Package.resolved
+  - Package.swift
