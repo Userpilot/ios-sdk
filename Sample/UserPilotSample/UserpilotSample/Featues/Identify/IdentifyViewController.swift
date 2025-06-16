@@ -109,6 +109,10 @@ extension IdentifyViewController {
         labelAuthorizedUser.attributedText = user.formattedJSONLabel()
     }
 
+    func onUserIdentified(_ user: [String: Any]) {
+        labelAuthorizedUser.attributedText = user.formattedJSONLabel()
+    }
+
 }
 
 // MARK: - Instance
