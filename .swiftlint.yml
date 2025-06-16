@@ -1,9 +1,11 @@
 included:
   - Sources/Userpilot
-  
+
 excluded:
   - .build
   - DerivedData
   - .swiftpm
   - checkouts
   - SourcePackages
+  - Dependencies
+  - Tests

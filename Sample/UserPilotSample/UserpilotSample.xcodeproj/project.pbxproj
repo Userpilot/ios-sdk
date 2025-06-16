@@ -502,7 +502,7 @@
 				C5C897B12C5CFFFA0083928E /* Sources */,
 				C5C897B22C5CFFFA0083928E /* Frameworks */,
 				C5C897B32C5CFFFA0083928E /* Resources */,
-				ABA40A512DA55C8300C68251 /* ShellScript */,
+				ABA40A512DA55C8300C68251 /* Swiftlint */,
 			);
 			buildRules = (
 			);
@@ -591,7 +591,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		ABA40A512DA55C8300C68251 /* ShellScript */ = {
+		ABA40A512DA55C8300C68251 /* Swiftlint */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 12;
@@ -601,6 +601,7 @@
 			);
 			inputPaths = (
 			);
+			name = Swiftlint;
 			outputFileListPaths = (
 			);
 			outputPaths = (
