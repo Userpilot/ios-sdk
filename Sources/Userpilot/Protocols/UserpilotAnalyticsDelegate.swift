@@ -44,12 +44,12 @@ public protocol UserpilotAnalyticsDelegate: AnyObject {
     /// - Parameters:
     ///   - analytic: The type of analytic being tracked. This can be one of:
     ///     - `.identify`: Represents an identify event.
-    ///     - `.event`: Represents a custom event.
     ///     - `.screen`: Represents a screen tracking event.
+    ///     - `.event`: Represents a custom event.
     ///   - value: The primary value associated with the analytic:
     ///     - For `.identify`: The user ID.
-    ///     - For `.event`: The event name.
     ///     - For `.screen`: The screen title.
+    ///     - For `.event`: The event name.
     ///   - properties: Optional dictionary containing additional context or metadata
     ///     about the analytic event.
     func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?)

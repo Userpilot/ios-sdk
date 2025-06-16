@@ -87,7 +87,15 @@ This method is used to identify unique users and companies (groups of users) and
 - **On app launch for authenticated users:** If the user has a valid authenticated session, call `identify` at app launch.
 - **Upon property updates:** Whenever user or company properties change.
 
-##### &nbsp;&nbsp;&nbsp; Method:
+```swift
+identify(
+    userId: "<USER_ID>",
+    properties: [String: Any]? = nil,
+    company: [String: Any]? = nil
+)
+```
+
+##### &nbsp;&nbsp;&nbsp; Example:
 
 ```swift
 userpilot.identify(
@@ -127,17 +135,13 @@ userpilot.identify(
 
 Calling screen is crucial for unlocking Userpilot’s core engagement and analytics capabilities. When a user navigates to a particular screen, invoking screen records that view and triggers any eligible in-app experiences. Subsequent events are also attributed to the most recently tracked screen, providing context for richer analytical insights. For these reasons, we strongly recommend tracking all of your app’s screen views.
 
-##### &nbsp;&nbsp;&nbsp; Method:
-
 ```swift
-userpilot.screen("Profile Screen")
+userpilot.screen("Profile")
 ```
 
 #### Tracking Events
 
 Log any meaningful action the user performs. Events can be button clicks, form submissions, or any custom activity you want to analyze. Optionally, pass metadata to provide context.
-
-##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot.track("Added to Cart", properties: ["itemId": "sku_456", "price": 29.99])
@@ -147,8 +151,6 @@ userpilot.track("Added to Cart", properties: ["itemId": "sku_456", "price": 29.9
 
 When a user logs out, call `logout` to clear the current user context. This ensures subsequent events are no longer associated with the previous user.
 
-##### &nbsp;&nbsp;&nbsp; Method:
-
 ```swift
 userpilot.logout()
 ```
@@ -156,8 +158,6 @@ userpilot.logout()
 #### Anonymous Users
 
 If a user is not authenticated, call `anonymous` to track events without a user ID. This is useful for pre-signup flows or guest sessions.
-
-##### &nbsp;&nbsp;&nbsp; Method:
 
 ```swift
 userpilot.anonymous()
@@ -172,7 +172,7 @@ userpilot.anonymous()
 Triggers a specific experience programmatically using its unique ID. This API allows you to manually initiate an experience within your application.
 
 ```swift
-userpilot.triggerExperience(EXPERIENCE_ID)
+userpilot.triggerExperience("<EXPERIENCE_ID>")
 ```
 
 ### **Configurations (Optional)**
@@ -193,12 +193,10 @@ userpilot.experienceDelegate = self
 
 Defines how your app handles deep link routes triggered by Userpilot experiences. Implement this to route users to the appropriate screens or external URLs.
 
-##### &nbsp;&nbsp;&nbsp; Delegate:
-
 ```swift
 @objc
 public protocol UserpilotNavigationDelegate: AnyObject {
-    func navigate(to url: URL, completion: @escaping (Bool) -> Void)
+    func navigate(to url: URL)
 }
 ```
 
@@ -207,8 +205,6 @@ The Userpilot SDK automatically handles navigation if you haven't implemented th
 #### Analytics Delegate
 
 Receives callbacks whenever the SDK tracks an event, screen, or identifies a user. Implement this if you need to integrate with another analytics tool or log events for debugging.
-
-##### &nbsp;&nbsp;&nbsp; Delegate:
 
 ```swift
 @objc
@@ -240,8 +236,6 @@ public protocol UserpilotAnalyticsDelegate: AnyObject {
 
 Receives callbacks when Userpilot experiences start, complete, or are dismissed, as well as changes in their step-by-step progression. Implement this if you want to pipe these data points to a destination or react to user actions.
 
-##### &nbsp;&nbsp;&nbsp; Delegate:
-
 ```swift
 @objc
 public enum UserpilotExperienceState: Int {
@@ -259,7 +253,7 @@ public protocol UserpilotExperienceDelegate: AnyObject {
 
 ### Push Notification
 
-UserPilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app).
+Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app).
 
 ## 📝 Documentation
 

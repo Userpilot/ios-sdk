@@ -10,8 +10,6 @@
 
 SLASH=/
 
-//#include "Pods/Target Support Files/Pods-Fruits/Pods-Fruits.release.xcconfig"
-
 // app
 APP_NAME = Userpilot
 APP_ICON = AppIcon

@@ -1,9 +1,9 @@
+included:
+  - Sources/Userpilot
+  
 excluded:
   - .build
-  - .package
-  - Packages
-  - SwiftPhoenixClient
-  - Carthage
-  - Pods
-  - Package.resolved
-  - Package.swift
+  - DerivedData
+  - .swiftpm
+  - checkouts
+  - SourcePackages

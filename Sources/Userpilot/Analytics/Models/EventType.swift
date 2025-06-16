@@ -91,9 +91,9 @@ internal enum EventType: Equatable {
      Returns the user ID if the event is an `identify` event. If the event type is not `identify`, it returns `nil`.
      This is useful when determining the user associated with an identity-related event.
      */
-    var userID: String? {
-        if case let .identify(userID) = self {
-            return userID
+    var userId: String? {
+        if case let .identify(userId) = self {
+            return userId
         } else {
             return nil
         }

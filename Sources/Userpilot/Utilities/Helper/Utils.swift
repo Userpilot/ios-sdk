@@ -224,5 +224,40 @@ internal func print(
     }
 }
 
+/// Sanitizes a payload by filtering out unsupported property types and applying key transformations.
+///
+/// - Parameters:
+///   - payload: The input dictionary (`Payload`) containing properties to be sanitized. Can be `nil`.
+///   - payloadName: A string used in logging to identify the origin or purpose of the payload (e.g., `"properties"`, `"company"`).
+///   - logger: An object conforming to the `Logging` protocol for emitting warnings about unsupported types.
+///
+/// - Returns: A sanitized `[String: Any]` dictionary:
+///   - Includes only values of supported types: `String`, `Bool`, `Int`, `Int64`, `Double`, `Float`.
+///   - Returns `nil` if the sanitized result is empty.
+internal func sanitizePayload(
+    _ payload: Payload,
+    payloadName: String,
+    logger: Logging
+) -> [String: Any]? {
+    guard let payload = payload else { return nil }
+
+    var sanitized: [String: Any] = [:]
+
+    for (key, value) in payload {
+
+        switch value {
+        case is String, is Bool, is Int, is Int64, is Double, is Float, is NSNumber:
+            sanitized[key] = value
+
+        default:
+            logger.error(
+                "Dropped unsupported property in %@: \"%@\" has unsupported type %@. Allowed types: String, Bool, Int, Double, Float, or list of these types.",
+                payloadName, key, String(describing: type(of: value))
+            )
+        }
+    }
+
+    return sanitized.isEmpty ? nil : sanitized
+}
 
 // swiftlint:enable all

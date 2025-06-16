@@ -63,8 +63,8 @@ internal struct Event {
         return type.screenTitle
     }
 
-    var userID: String? {
-        return type.userID
+    var userId: String? {
+        return type.userId
     }
 
     var userpilotAnalytic: UserpilotAnalytic {
@@ -119,7 +119,7 @@ internal extension Event {
 
 extension Event {
     func toUser() -> User {
-        return User(userID: userID ?? "",
+        return User(userId: userId ?? "",
                     properties: properties ?? [:],
                     company: company ?? [:])
     }

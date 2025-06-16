@@ -163,22 +163,30 @@ extension Userpilot {
     /**
      Identifies a user to the SDK, enabling personalized content and behavior tracking.
      
-     This method allows the SDK to associate analytics and content with a known user by passing their unique `userID`.
+     This method allows the SDK to associate analytics and content with a known user by passing their unique `userId`.
      Additional properties and company details can be provided for more context.
      
      - Parameters:
-       - userID: A unique identifier for the user, which is used to track their behavior across sessions.
+       - userId: A unique identifier for the user, which is used to track their behavior across sessions.
        - properties: An optional dictionary containing user-specific properties like email, role, or age.
        - company: An optional dictionary containing company-specific properties for users associated with company.
      */
     @objc
-    public func identify(userID: String, properties: Payload = nil, company: Payload = nil) {
-        guard userID.trim().isNotEmpty else {
+    public func identify(userId: String, properties: Payload = nil, company: Payload = nil) {
+        guard userId.trim().isNotEmpty else {
             config.logger.error("Invalid user id - empty string")
             return
         }
-        let event = Event(type: .identify(userID.trim()), properties: properties, company: company)
-        analyticsPublisher.publish(event)
+        let userProperties = sanitizePayload(properties, payloadName: "properties", logger: config.logger)
+        let companyProperties = sanitizePayload(company, payloadName: "company", logger: config.logger)
+
+        analyticsPublisher.publish(
+            Event(
+                type: .identify(userId.trim()),
+                properties: userProperties,
+                company: companyProperties
+            )
+        )
     }
 
     /**
@@ -190,7 +198,7 @@ extension Userpilot {
     @objc
     public func anonymous() {
         logout()
-        identify(userID: "\(config.token)_\(anonymousFactory())")
+        identify(userId: "\(config.token)_\(anonymousFactory())")
     }
 
     /**
@@ -227,7 +235,14 @@ extension Userpilot {
             config.logger.error("Invalid event name - empty string")
             return
         }
-        analyticsPublisher.publish(Event(type: .event(eventName), properties: properties))
+        let eventProperties = sanitizePayload(properties, payloadName: "properties", logger: config.logger)
+
+        analyticsPublisher.publish(
+            Event(
+                type: .event(eventName),
+                properties: eventProperties
+            )
+        )
     }
 
     /**
@@ -290,13 +305,13 @@ extension Userpilot {
     /**
      Clear user session data.
      
-     This method should be called when the user logs out or when identify called with new userID.
+     This method should be called when the user logs out or when identify called with new userId.
      It resets the session state, clears user-related data, and ensures no further tracking occurs for
      the logged-out user.
      */
     internal func clean() {
         storage.pushToken = nil
-        storage.userID = ""
+        storage.userId = ""
         storage.user = User().toJson() ?? ""
     }
 }
@@ -309,16 +324,16 @@ extension Userpilot {
      Manually starts an experience within the client application using the provided experience token.
      
      - Parameters:
-       - experienceToken: unique identifier for the experience to be launched, this ID should be provided
+       - experienceId: unique identifier for the experience to be launched, this ID should be provided
         by the backend or obtained during experience configuration.
      */
     @objc
-    public func triggerExperience(_ experienceID: String) {
-        guard experienceID.trim().isNotEmpty else {
+    public func triggerExperience(_ experienceId: String) {
+        guard experienceId.trim().isNotEmpty else {
             config.logger.error("Invalid experience id - empty string")
             return
         }
-        experiencesPublisher.triggerExperience(experienceID)
+        experiencesPublisher.triggerExperience(experienceId)
     }
 
     /**
