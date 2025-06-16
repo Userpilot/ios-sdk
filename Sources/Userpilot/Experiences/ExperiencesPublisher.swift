@@ -29,7 +29,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
-    func triggerExperience(_ experienceID: String)
+    func triggerExperience(_ experienceId: String)
 
     /// Manually end experience
     func endExperience(manualClose: Bool)
@@ -144,10 +144,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
 
      - Parameter experienceId: The ID of the experience to start.
      */
-    func triggerExperience(_ experienceID: String) {
+    func triggerExperience(_ experienceId: String) {
         readWriteLock.read { [weak self] in
             guard self?.experienceContent == nil else { return }
-            self?.publishInternalSDKEvent(ExperienceContentEvent(experienceID: experienceID))
+            self?.publishInternalSDKEvent(ExperienceContentEvent(experienceId: experienceId))
         }
     }
 
@@ -155,8 +155,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
      End experience manually
      */
     func endExperience(manualClose: Bool) {
-        guard let experience = UIApplication.shared.fetchTopViewController() else { return }
-        (experience as? UPExperience)?.triggerCloseExpereince(manualClose: manualClose)
+        performOn(.main) { [weak self] in
+            guard let experience = UIApplication.shared.fetchTopViewController() else { return }
+            (experience as? UPExperience)?.triggerCloseExpereince(manualClose: manualClose)
+        }
     }
 
     /*
@@ -187,7 +189,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     func triggerDeepLink(url: URL) {
         delay(ThemeHandler.DefaultValues.delayTimeForDeepLink) { [weak self] in
             if let navigationDelegate = self?.userpilot?.navigationDelegate {
-                navigationDelegate.navigate(to: url) { _ in }
+                navigationDelegate.navigate(to: url)
             } else {
                 if url.isHttpOrHttps,
                    UIApplication.shared.canOpenURL(url) {

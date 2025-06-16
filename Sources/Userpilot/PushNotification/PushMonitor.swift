@@ -118,7 +118,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
             analyticsPublisher.publishInternalSDKEvent(
                 PushNotificationTokenEvent(
                     appToken: config.token,
-                    userID: storage.userID,
+                    userId: storage.userId,
                     token: newToken),
                 isExpereinceEvent: false,
                 socketSubscription: self)
@@ -153,11 +153,20 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     ///
     /// - Parameter completion: An optional closure that is called with the updated authorization status.
     func refreshPushStatus(completion: ((UNAuthorizationStatus) -> Void)? = nil) {
+        #if targetEnvironment(simulator)
+        print("🔧 Running on Simulator - push notification settings are not available.")
+        // Optionally simulate a status (e.g., .notDetermined or .authorized)
+        DispatchQueue.main.async {
+            completion?(.notDetermined)  // You can customize this as needed
+        }
+        #else
+        print("📱 Running on Device - checking push notification settings...")
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
                 self.handlePushStatusUpdate(settings.authorizationStatus, completion: completion)
             }
         }
+        #endif
     }
 
     /// Handles the updated push status and executes any necessary logic.
@@ -230,7 +239,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
         }
 
         // If there’s an active session and a user ID mismatch, skip processing
-        guard parsedNotification.userID == storage.userID else {
+        guard parsedNotification.userId == storage.userId else {
             completionHandler?()
             return true
         }
@@ -252,7 +261,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
 
         defer { deferredNotification = nil }
 
-        guard parsedNotification.userID == storage.userID else {
+        guard parsedNotification.userId == storage.userId else {
             config.logger.info("Deferred notification response skipped")
             return false
         }
@@ -297,7 +306,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     ///   - userpilot: The Userpilot instance managing navigation.
     private func navigateToDeepLink(_ url: URL, userpilot: Userpilot) {
         if let navigationDelegate = userpilot.navigationDelegate {
-            navigationDelegate.navigate(to: url) { _ in }
+            navigationDelegate.navigate(to: url)
         } else {
             if url.isHttpOrHttps, UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)

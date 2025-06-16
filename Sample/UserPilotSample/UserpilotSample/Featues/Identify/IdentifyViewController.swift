@@ -89,7 +89,7 @@ extension IdentifyViewController {
 
     private func identifyUser() {
         guard
-            let userID = textFieldUserID.text, !userID.isEmpty
+            let userId = textFieldUserID.text, !userId.isEmpty
         else {
             FlowRoutingManager.shared.showAlertMessage("Please insert User ID!")
             return
@@ -102,7 +102,11 @@ extension IdentifyViewController {
         for (_, propertyView) in companyPropertiesViews {
             companyProperties[propertyView.getParams().0] = propertyView.getParams().1
         }
-        UserpilotManager.shared.identify(userID: userID, properties: userProperties, company: companyProperties)
+        UserpilotManager.shared.identify(userId: userId, properties: userProperties, company: companyProperties)
+    }
+
+    func onUserIdentified(_ user: [String: Any]) {
+        labelAuthorizedUser.attributedText = user.formattedJSONLabel()
     }
 
     func onUserIdentified(_ user: [String: Any]) {

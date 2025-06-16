@@ -57,8 +57,8 @@ class UserpilotManager {
     }
 
     /// Identify user
-    func identify(userID: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
-        userpilot?.identify(userID: userID, properties: properties, company: company)
+    func identify(userId: String, properties: [String: Any]? = nil, company: [String: Any]? = nil) {
+        userpilot?.identify(userId: userId, properties: properties, company: company)
     }
 
     /// login as Anonymous
@@ -81,8 +81,8 @@ class UserpilotManager {
         userpilot?.track(eventName: eventName, properties: properties)
     }
 
-    func triggerExperience(experienceID: String) {
-        userpilot?.triggerExperience(experienceID)
+    func triggerExperience(experienceId: String) {
+        userpilot?.triggerExperience(experienceId)
     }
 
     func endExperience() {
@@ -104,11 +104,10 @@ class UserpilotManager {
 
 extension UserpilotManager: UserpilotNavigationDelegate {
 
-    func navigate(to url: URL, completion: @escaping (Bool) -> Void) {
+    func navigate(to url: URL) {
         delay(1) {
             if url.scheme == "userpilot-example" {
                 guard let destination = url.host else {
-                    completion(false)
                     return
                 }
                 if destination == "demo" {
@@ -120,12 +119,8 @@ extension UserpilotManager: UserpilotNavigationDelegate {
                 } else if destination == "screen_two" {
                     FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
                 }
-                completion(true)
             } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                completion(true)
-            } else {
-                completion(false)
             }
         }
     }

@@ -19,17 +19,17 @@ import UIKit
  * It stores user-specific details such as the user ID, user properties, and company attributes.
  *
  * Properties:
- * - `userID`: The unique identifier of the user.
+ * - `userId`: The unique identifier of the user.
  * - `properties`: A dictionary that holds various user properties as key-value pairs.
  * - `company`: A dictionary that holds various company-related data as key-value pairs.
  */
 internal struct User {
-    var userID: String
+    var userId: String
     var properties: [String: Any]
     var company: [String: Any]
 
-    init(userID: String = "", properties: [String: Any] = [:], company: [String: Any] = [:]) {
-        self.userID = userID
+    init(userId: String = "", properties: [String: Any] = [:], company: [String: Any] = [:]) {
+        self.userId = userId
         self.properties = properties
         self.company = company
     }
@@ -39,7 +39,7 @@ internal struct User {
  * Extension of the `User` struct to conform to `CustomStringConvertible` for custom string representations.
  * This allows for a human-readable format when printing user details, such as in debugging or logging.
  *
- * The custom `description` property provides a formatted string that includes the userID, properties, and company data.
+ * The custom `description` property provides a formatted string that includes the userId, properties, and company data.
  */
 extension User: CustomStringConvertible {
     var description: String {
@@ -48,7 +48,7 @@ extension User: CustomStringConvertible {
 
         return """
         User:
-        - userID: \(userID)
+        - userId: \(userId)
         - properties: \(propertiesDescription)
         - company: \(companyDescription)
         """
@@ -61,7 +61,7 @@ extension User {
 
     func toJson() -> String? {
         var dict: [String: Any] = [:]
-        dict["userID"] = userID
+        dict["userId"] = userId
         dict["properties"] = properties
         dict["company"] = company
         if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: .withoutEscapingSlashes) {
@@ -75,10 +75,10 @@ extension User {
             return User()
         }
         if let jsonDict = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
-            if let userID = jsonDict["userID"] as? String,
+            if let userId = jsonDict["userId"] as? String,
                 let properties = jsonDict["properties"] as? [String: Any],
                 let company = jsonDict["company"] as? [String: Any] {
-                return User(userID: userID, properties: properties, company: company)
+                return User(userId: userId, properties: properties, company: company)
             }
         }
         return User()
@@ -89,16 +89,16 @@ extension User {
 
     /**
      * Updates the current `User` object with the data from the given `Event`.
-     * If the `userID` in the event differs from the current user's `userID`, the user data is reset.
+     * If the `userId` in the event differs from the current user's `userId`, the user data is reset.
      * It then merges the new properties and company information from the event into the current user.
      *
-     * @param event The event containing user-related data such as userID, properties, and company information.
+     * @param event The event containing user-related data such as userId, properties, and company information.
      * @return The updated `User` object with the new data.
      */
     mutating func updateUser(event: Event) -> User {
-        guard let eventUserID = event.userID else { return self }
+        guard let eventUserId = event.userId else { return self }
 
-        if userID != eventUserID {
+        if userId != eventUserId {
             self = User()
         }
 
@@ -113,19 +113,19 @@ extension User {
             company.merge(eventCompany) { (_, new) in new }
         }
 
-        userID = eventUserID
+        userId = eventUserId
         return self
     }
 
     /**
      * Compares the current `User` object to the data from an `Event` to determine if they represent the same user.
-     * The comparison checks the `userID`, user properties, and company data for equality.
+     * The comparison checks the `userId`, user properties, and company data for equality.
      *
      * @param event The event to compare against the current user.
      * @return `true` if the event data matches the current user, otherwise `false`.
      */
     func isSameIdentifyEvent(event: Event) -> Bool {
-        guard userID == event.type.userID else {
+        guard userId == event.type.userId else {
             return false
         }
         let isMetaDataMapSame = (properties).isEqual(to: event.properties ?? [:])
@@ -211,7 +211,7 @@ internal extension Dictionary where Key == String, Value == Any {
  */
 extension User: Encodable {
     enum CodingKeys: CodingKey {
-        case userID
+        case userId
         case properties
         case company
     }
@@ -226,7 +226,7 @@ extension User: Encodable {
      */
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(userID, forKey: .userID)
+        try container.encode(userId, forKey: .userId)
 
         var propertiesAttributesContainer = container.nestedContainer(keyedBy: DynamicCodingKeys.self,
                                                                       forKey: .properties)

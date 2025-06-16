@@ -17,7 +17,5 @@ public protocol UserpilotNavigationDelegate: AnyObject {
     /// Requests the delegate navigate to the given destination, and report completion.
     /// - Parameters:
     ///   - url: The URL of the destination to navigate.
-    ///   - completion: Closure to invoke when navigation is completed,
-    ///    passing `true` if successfully navigated, `false` if not.
-    func navigate(to url: URL, completion: @escaping (Bool) -> Void)
+    func navigate(to url: URL)
 }

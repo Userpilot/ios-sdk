@@ -200,7 +200,7 @@ extension SocketManager {
         guard
             storage.socketURL.isNotEmpty,
             config.token.isNotEmpty,
-            storage.userID.isNotEmpty,
+            storage.userId.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
         else { return }
@@ -209,7 +209,7 @@ extension SocketManager {
 
             let socketProperties: [String: Any] = [
                 SocketManager.tokenKey: Environment.getClientToken(config: config),
-                SocketManager.userIDKey: storage.userID,
+                SocketManager.userIdKey: storage.userId,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,
                 SocketManager.appPropertiesKey: appProperties
@@ -345,7 +345,7 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to open a WebSocket connection
     func connect() {
-        if config.token.isEmpty || storage.userID.isEmpty {
+        if config.token.isEmpty || storage.userId.isEmpty {
             updateSocketState(.closed)
             return
         }
@@ -410,7 +410,7 @@ internal extension SocketManager {
     private static let errorKey = "error"
 
     private static let tokenKey = "app_token"
-    private static let userIDKey = "user_id"
+    private static let userIdKey = "user_id"
     private static let autoPropertiesKey = "auto_properties"
     private static let appPropertiesKey = "app_properties"
     private static let sdkVersionKey = "sdk_version"

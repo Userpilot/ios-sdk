@@ -18,7 +18,7 @@ import Foundation
 
  - Parameters:
    - appToken: The application token identifying the app instance.
-   - userID: The user ID associated with the device.
+   - userId: The user ID associated with the device.
    - token: The push notification device token.
  */
 internal struct PushNotificationTokenEvent: SDKEvent {
@@ -29,7 +29,7 @@ internal struct PushNotificationTokenEvent: SDKEvent {
     let appToken: String
 
     /// The user ID associated with the device.
-    let userID: String
+    let userId: String
 
     /// The push notification device token.
     let token: String
@@ -47,6 +47,6 @@ internal struct PushNotificationTokenEvent: SDKEvent {
     ///
     /// Contains the application token, user ID, and device token.
     var eventPayload: [String: Any] {
-        return ["app_token": appToken, "user_id": userID, "token": token]
+        return ["app_token": appToken, "user_id": userId, "token": token]
     }
 }

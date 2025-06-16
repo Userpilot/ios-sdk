@@ -137,7 +137,7 @@ internal class AnalyticsPublisher {
         self.socketManager.registerCallback(self)
         if let temporaryUserString = storage.temporaryUser {
             let temporaryUser = User.fromJson(temporaryUserString)
-            cachedIdentifyEvent = Event(type: EventType.identify(temporaryUser.userID),
+            cachedIdentifyEvent = Event(type: EventType.identify(temporaryUser.userId),
                                 properties: temporaryUser.properties,
                                 company: temporaryUser.company)
         }
@@ -176,7 +176,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 publishInternalSDKEvent(
                     UserLogoutEvent(
                         appToken: config.token,
-                        userID: storage.userID,
+                        userId: storage.userId,
                         token: token),
                     isExpereinceEvent: false,
                     socketSubscription: nil
@@ -195,10 +195,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func resume() {
         updateSessionState()
-        if let userID = cachedIdentifyEvent?.userID {
-            storage.userID = userID
+        if let userId = cachedIdentifyEvent?.userId {
+            storage.userId = userId
         }
-        if storage.userID.isNotEmpty && !socketManager.isSocketOpened && !socketManager.isJoiningSocket {
+        if storage.userId.isNotEmpty && !socketManager.isSocketOpened && !socketManager.isJoiningSocket {
             socketManager.connect()
         }
     }
@@ -244,9 +244,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             if !socketManager.isSocketOpened {
                 cacheEvent(event)
-                if let userID = cachedIdentifyEvent?.userID { storage.userID = userID }
-                if let userID = event.userID { storage.userID = userID }
-                if storage.userID.isEmpty { return }
+                if let userId = cachedIdentifyEvent?.userId { storage.userId = userId }
+                if let userId = event.userId { storage.userId = userId }
+                if storage.userId.isEmpty { return }
                 openSocket()
                 return
             }
@@ -290,10 +290,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func identify(_ event: Event) {
         tryCatch {
-            guard let userID = event.userID else { return }
+            guard let userId = event.userId else { return }
 
             /// In-case new user ID
-            if storage.userID.isNotEmpty && userID != storage.userID {
+            if storage.userId.isNotEmpty && userId != storage.userId {
                 userpilot?.clean()
                 logout(socketState: .switchingUser)
             } else {
@@ -404,9 +404,9 @@ extension AnalyticsPublisher {
             /// Identify event
             if let cachedIdentifyEvent {
                 var payload: [String: Any] = [:]
-                guard let userID = cachedIdentifyEvent.userID else { return }
+                guard let userId = cachedIdentifyEvent.userId else { return }
                 // In-case identify event called again when joining socket channel
-                if storage.userID.isNotEmpty && userID != storage.userID {
+                if storage.userId.isNotEmpty && userId != storage.userId {
                     identify(cachedIdentifyEvent)
                     return
                 }
@@ -534,12 +534,12 @@ extension AnalyticsPublisher: SocketSubscription {
         tryCatch {
             if let cachedIdentifyEvent {
                 if eventName == EventType.identifyEvent &&
-                    cachedIdentifyEvent.userID == storage.userID {
+                    cachedIdentifyEvent.userId == storage.userId {
                     var newUser = User.fromJson(storage.user)
                     storage.user = newUser.updateUser(event: cachedIdentifyEvent).toJson() ?? ""
                     logger.info("👤 USER %{public}@", storage.user)
                     clearCachedIdentifyEvent()
-                    broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userID ?? "", properties: payload)
+                    broadcastEvent(cachedIdentifyEvent, cachedIdentifyEvent.userId ?? "", properties: payload)
                 }
             }
             flushQueue()

@@ -15,7 +15,7 @@ internal struct ExperienceContentEvent: SDKEvent {
 
     // MARK: - Properties
 
-    let experienceID: String
+    let experienceId: String
 
     // MARK: - SDKEvent Conformance
 
@@ -26,6 +26,6 @@ internal struct ExperienceContentEvent: SDKEvent {
 
     /// The payload of the event represented as a dictionary.
     var eventPayload: [String: Any] {
-        return ["mobile_content_token": experienceID]
+        return ["mobile_content_token": experienceId]
     }
 }
