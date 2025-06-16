@@ -8,8 +8,11 @@
 import Foundation
 import UIKit
 
-class DeepLinkViewController: UIViewController {
+class DeepLinkViewController: BaseViewController {
 
+    @IBAction func onBackButtonClicked(_ sender: UIButton) {
+        close()
+    }
 }
 
 // MARK: - Instance

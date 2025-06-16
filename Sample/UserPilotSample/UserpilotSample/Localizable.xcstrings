@@ -40,7 +40,7 @@
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "تتبع الأحداث"
           }
         },
@@ -57,7 +57,7 @@
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "المستخدم والمجهول"
           }
         },
@@ -65,6 +65,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "User & anonymous"
+          }
+        }
+      }
+    },
+    "identifying" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جاري التعريف ..."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifying ..."
           }
         }
       }

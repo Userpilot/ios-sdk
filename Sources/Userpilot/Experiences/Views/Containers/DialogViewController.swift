@@ -29,7 +29,7 @@ internal class DialogViewController: UIViewController {
     }()
 
     /// View to hold dynamic content within the dialog
-    private lazy var contentView: UIView = {
+    lazy var contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -41,10 +41,14 @@ internal class DialogViewController: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
         view.alpha = 0
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
         return view
     }()
 
     private var mainContainerWidthConstraint: NSLayoutConstraint?
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - View Lifecycle
 
@@ -55,17 +59,14 @@ internal class DialogViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(
+           for: self.view.semanticContentAttribute)
         animatePresent()
     }
 
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-        super.viewWillTransition(to: size, with: coordinator)
-        coordinator.animate(alongsideTransition: { [weak self] _ in
-            guard let self else { return }
-            let widthRatio = self.calculateDialogWidthRatio()
-            self.mainContainerWidthConstraint?.constant = size.width * widthRatio
-            self.view.layoutIfNeeded()
-        }, completion: nil)
+    deinit {
+        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+        ? .forceLeftToRight : .forceRightToLeft
     }
 
     /// Calculates the dialog width ratio based on the given size.
@@ -164,12 +165,12 @@ extension DialogViewController {
 
     /// Sets the content of the dialog.
     /// - Parameter content: A UIView to be displayed in the dialog.
-    func setContent(content: UIView) {
+    func setContent(content: UIView, withMargin: CGFloat = 0) {
         contentView.addSubview(content)
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: withMargin),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
@@ -183,6 +184,26 @@ extension DialogViewController {
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
+    }
+
+    /// Customize the background color of the bottom sheet for `SurveyTheme`
+    func setBackgroundColor(_ theme: SurveyTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        mainContainerView.layer.cornerRadius = theme.borderRadius
+        dimmedView.isHidden = !theme.backdropEnabled
+        if theme.backdropEnabled {
+            dimmedView.backgroundColor = theme.backdropBackground
+        }
+    }
+}
+
+// MARK: - Update constraints on screen rotation
+
+internal extension DialogViewController {
+    func resetWidth(_ size: CGSize) {
+        let widthRatio = self.calculateDialogWidthRatio()
+        self.mainContainerWidthConstraint?.constant = size.width * widthRatio
+        self.view.layoutIfNeeded()
     }
 }
 

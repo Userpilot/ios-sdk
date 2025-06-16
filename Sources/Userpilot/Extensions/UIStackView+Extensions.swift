@@ -14,6 +14,8 @@ import UIKit
 
 internal extension UIStackView {
 
+    /// Adds a view to the stack view with a fade-in animation.
+    /// - Parameter view: The view to add as an arranged subview.
     func addView(_ view: UIView) {
         addArrangedSubview(view)
         view.alpha = 0
@@ -22,10 +24,19 @@ internal extension UIStackView {
         }
     }
 
+    /// Removes all arranged subviews from the stack view.
     func clearViews() {
         self.arrangedSubviews.forEach { view in
             self.removeArrangedSubview(view)
             view.removeFromSuperview()
+        }
+    }
+
+    /// Adds multiple views to the stack view without animation.
+    /// - Parameter views: An array of views to add as arranged subviews.
+    func addArrangedSubviews(_ views: [UIView]) {
+        for view in views {
+            addArrangedSubview(view)
         }
     }
 }

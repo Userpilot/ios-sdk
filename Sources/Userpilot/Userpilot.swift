@@ -13,7 +13,7 @@
 
 import UIKit
 
-/// `Userpilot` manages the lifecycle of the Userpilot SDK and tracks user activity, enabling 
+/// `Userpilot` manages the lifecycle of the Userpilot SDK and tracks user activity, enabling
 /// personalized content delivery.
 @objc(Userpilot)
 public class Userpilot: NSObject {
@@ -45,8 +45,25 @@ public class Userpilot: NSObject {
     /// Lazy loading AutoPropertyDecoratoring
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
 
+    /// Lazy loading pushMonitoring
+    private lazy var pushMonitor = container.resolve(PushMonitoring.self)
+
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
+
+    // MARK: - Delegates
+
+    /// The delegate object that handles application screen navigation during experience presentation.
+    @objc public weak var navigationDelegate: UserpilotNavigationDelegate?
+
+    /// The delegate object that broadcast analytics events.
+    @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
+
+    /// The delegate object that manages and observes experience presentations.
+    @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
+
+    /// the bootup manager for boots inuse managers
+    private lazy var bootManager = BootManager(components: [sessionMonitor, experiencesPublisher, pushMonitor])
 
     // MARK: - Initialization
 
@@ -56,9 +73,10 @@ public class Userpilot: NSObject {
      This method sets up the required services such as analytics, storage, and networking, and prepares
      the SDK for tracking and rendering.
      
-     - Parameter config: A `Config` object that contains various initialization settings like logging, 
+     - Parameter config: A `Config` object that contains various initialization settings like logging,
      API keys, and anonymous user tracking settings.
      */
+
     @objc
     public init(config: Config) {
         self.config = config
@@ -67,11 +85,11 @@ public class Userpilot: NSObject {
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // start session monitoring
-        sessionMonitor.start()
+        // start boots up managers
+        bootManager.initialize()
 
-        // start experience listener
-        experiencesPublisher.start()
+        // register pushMonitoring for push notification auto config
+        PushNotificationAutoConfig.register(observer: pushMonitor)
 
         // reset session Date
         storage.sessionDate = nil
@@ -79,7 +97,6 @@ public class Userpilot: NSObject {
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
     }
-
 }
 
 // MARK: - Public Methods
@@ -119,7 +136,7 @@ extension Userpilot {
     /**
      Initializes the DI (Dependency Injection) container and registers required services.
      
-     This method sets up lazy initialization for essential SDK services like `DataStoring`, 
+     This method sets up lazy initialization for essential SDK services like `DataStoring`,
      `Networking`, `SocketEvents`, and more.
      By using lazy registration, the services are only created when they are first used, improving performance.
      */
@@ -135,6 +152,7 @@ extension Userpilot {
         container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
+        container.registerLazy(PushMonitoring.self, initializer: PushMonitor.init)
     }
 }
 
@@ -155,7 +173,10 @@ extension Userpilot {
      */
     @objc
     public func identify(userID: String, properties: Payload = nil, company: Payload = nil) {
-        if userID.trim().isEmpty { return }
+        guard userID.trim().isNotEmpty else {
+            config.logger.error("Invalid user id - empty string")
+            return
+        }
         let event = Event(type: .identify(userID.trim()), properties: properties, company: company)
         analyticsPublisher.publish(event)
     }
@@ -168,8 +189,8 @@ extension Userpilot {
      */
     @objc
     public func anonymous() {
-        let userID = "\(config.token)_\(anonymousFactory())"
-        identify(userID: userID)
+        logout()
+        identify(userID: "\(config.token)_\(anonymousFactory())")
     }
 
     /**
@@ -182,6 +203,10 @@ extension Userpilot {
      */
     @objc
     public func screen(_ title: String) {
+        guard title.trim().isNotEmpty else {
+            config.logger.error("Invalid screen title - empty string")
+            return
+        }
         analyticsPublisher.publish(Event(type: .screen(title)))
     }
 
@@ -198,6 +223,10 @@ extension Userpilot {
      */
     @objc
     public func track(eventName: String, properties: Payload = nil) {
+        guard eventName.trim().isNotEmpty else {
+            config.logger.error("Invalid event name - empty string")
+            return
+        }
         analyticsPublisher.publish(Event(type: .event(eventName), properties: properties))
     }
 
@@ -209,8 +238,8 @@ extension Userpilot {
      */
     @objc
     public func logout() {
-        clean()
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
+        clean()
     }
 
     /**
@@ -266,6 +295,7 @@ extension Userpilot {
      the logged-out user.
      */
     internal func clean() {
+        storage.pushToken = nil
         storage.userID = ""
         storage.user = User().toJson() ?? ""
     }
@@ -284,6 +314,10 @@ extension Userpilot {
      */
     @objc
     public func triggerExperience(_ experienceID: String) {
+        guard experienceID.trim().isNotEmpty else {
+            config.logger.error("Invalid experience id - empty string")
+            return
+        }
         experiencesPublisher.triggerExperience(experienceID)
     }
 
@@ -292,6 +326,46 @@ extension Userpilot {
      */
     @objc
     public func endExperience() {
-        experiencesPublisher.endExperience()
+        experiencesPublisher.endExperience(manualClose: true)
     }
+}
+
+// MARK: - Push notifications
+
+extension Userpilot {
+
+    /// Enables automatic configuration of push notifications for Userpilot.
+    /// This method sets up the push notification settings automatically.
+    @objc
+    public static func enableAutomaticPushConfig() {
+        PushNotificationAutoConfig.configureAutomatically()
+    }
+
+    /// Provides the APNs device token to Userpilot for push notification tracking.
+    ///
+    /// - Parameter deviceToken: The device token received from Apple's Push Notification Service (APNs).
+    ///   This token is used for registering the device with Userpilot to receive push notifications.
+    @objc
+    public func setPushToken(_ deviceToken: Data?) {
+        pushMonitor.setPushToken(deviceToken)
+    }
+
+    /// Called when the client app receives a push notification.
+    ///
+    /// - Parameters:
+    ///   - response: The `UNNotificationResponse` object containing information about the
+    ///   notification that was received.
+    ///   - completionHandler: A closure to be executed after processing the notification. This block
+    ///   must be called when the app finishes processing the notification.
+    ///
+    /// - Returns: A `Bool` indicating whether Userpilot should automatically handle the
+    /// completion block. If `true` is returned, Userpilot will call the `completionHandler` automatically.
+    ///  If `false` is returned, you should call `completionHandler` after processing the user's response.
+    public func didReceiveNotification(response: UNNotificationResponse,
+                                       completionHandler: @escaping () -> Void) -> Bool {
+        return pushMonitor.didReceiveNotification(
+            response: response,
+            completionHandler: completionHandler)
+    }
+
 }

@@ -7,8 +7,6 @@
 //
 //  [Brief Description]
 //  `Dictionary+Extension` contains extensions with helper methods for the `Dictionary` class.
-//  These methods provide additional functionality for merging dictionaries and converting
-//  dictionaries to JSON strings.
 //
 
 import Foundation

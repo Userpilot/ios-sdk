@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
-        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="IdentifyViewController" customModule="UserPilotSample" customModuleProvider="target">
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="IdentifyViewController" customModule="UserpilotSample" customModuleProvider="target">
             <connections>
                 <outlet property="anonymousButton" destination="Dew-rY-RoJ" id="U0J-ni-vji"/>
                 <outlet property="companyPropertiesStackView" destination="L7Z-TY-pZW" id="Bki-yc-1cy"/>
+                <outlet property="labelAuthorizedUser" destination="3U7-SQ-g1x" id="Wei-7m-uyM"/>
                 <outlet property="textFieldUserID" destination="DZc-hu-a3a" id="1uF-C6-SF7"/>
                 <outlet property="userPropertiesStackView" destination="pV0-fK-eN7" id="yoD-G1-Nom"/>
                 <outlet property="view" destination="iN0-l3-epB" id="aOX-U4-Rf4"/>
@@ -25,9 +26,8 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1JW-us-yJb">
-                    <rect key="frame" x="16" y="72" width="40" height="40"/>
+                    <rect key="frame" x="16.000000000000004" y="72" width="49.333333333333343" height="40"/>
                     <constraints>
-                        <constraint firstAttribute="width" constant="40" id="PRR-Zf-iY3"/>
                         <constraint firstAttribute="height" constant="40" id="mn4-b6-bay"/>
                     </constraints>
                     <color key="tintColor" white="0.33333333333333331" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -155,6 +155,13 @@
                                         <constraint firstAttribute="height" constant="200" placeholder="YES" id="qnz-Z0-ghV"/>
                                     </constraints>
                                 </stackView>
+                                <label hidden="YES" opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Identifing ..." lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="3U7-SQ-g1x" customClass="PaddedLabel" customModule="UserpilotSample" customModuleProvider="target">
+                                    <rect key="frame" x="0.0" y="505" width="393" height="0.0"/>
+                                    <color key="backgroundColor" systemColor="systemGray6Color"/>
+                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                    <nil key="textColor"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
                             </subviews>
                             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         </stackView>
@@ -215,6 +222,7 @@
                 <constraint firstItem="DMR-Yt-jkv" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="Ynf-8M-gk4"/>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="Dew-rY-RoJ" secondAttribute="bottom" constant="16" id="ZPO-H0-m4a"/>
                 <constraint firstItem="ZdB-mZ-qEQ" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="cYs-mP-9Qr"/>
+                <constraint firstItem="DMR-Yt-jkv" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="1JW-us-yJb" secondAttribute="trailing" constant="8" symbolic="YES" id="caH-lP-i45"/>
                 <constraint firstItem="xOX-pA-Rln" firstAttribute="top" secondItem="1JW-us-yJb" secondAttribute="bottom" constant="8" id="dpV-bb-I6t"/>
                 <constraint firstItem="ZdB-mZ-qEQ" firstAttribute="top" secondItem="xOX-pA-Rln" secondAttribute="bottom" constant="16" id="eIa-M8-gvO"/>
                 <constraint firstItem="Dmf-Y6-2UJ" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="DMR-Yt-jkv" secondAttribute="trailing" constant="8" symbolic="YES" id="frG-l8-5Tv"/>
@@ -240,6 +248,9 @@
         </namedColor>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+        <systemColor name="systemGray6Color">
+            <color red="0.94901960780000005" green="0.94901960780000005" blue="0.96862745100000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>
         <systemColor name="systemRedColor">
             <color red="1" green="0.23137254900000001" blue="0.18823529410000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

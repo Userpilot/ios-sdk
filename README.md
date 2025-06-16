@@ -1,5 +1,7 @@
 # Userpilot iOS SDK
 
+![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
+
 ## Introduction
 
 Userpilot iOS SDK enables you to capture user insights and deliver personalized in-app experiences in real time. With just a one-time setup, you can immediately begin leveraging Userpilot’s analytics and engagement features to understand user behaviors and guide their journeys in-app.
@@ -17,6 +19,10 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
+    - [Push Notification](#push-notification)
+ - [📝 Documentation](#-documentation)
+ - [🎬 Samples](#-samples)
+ - [📄 License](#-license)
 
 ## 🚀 Getting Started
 
@@ -56,7 +62,7 @@ Once integrated, the Userpilot SDK is available throughout your application.
 
 To use Userpilot, initialize it once in your App Delegate or Scene Delegate during app launch. This ensures the SDK is ready as soon as your app starts. Replace `<APP_TOKEN>` with your Application Token, which can be fetched from your [Environments Page](https://run.userpilot.io/environment).
 
-##### &nbsp;&nbsp;&nbsp; Example (App Delegate):
+##### &nbsp;&nbsp;&nbsp; App Delegate:
 
 ```swift
 
@@ -166,22 +172,21 @@ userpilot.anonymous()
 Triggers a specific experience programmatically using its unique ID. This API allows you to manually initiate an experience within your application.
 
 ```swift
-userpilot.trigger(EXPERIENCE_ID)
+userpilot.triggerExperience(EXPERIENCE_ID)
 ```
 
-### Configurations (Optional)
+### **Configurations (Optional)**
 
 If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
-
-##### &nbsp;&nbsp;&nbsp; Example:
 
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
         .logging(true) // Enable or disable logging
-        .setNavigationHandler(navigationDelegate: self)
-        .setExperienceDelegate(experienceDelegate: self)
 )
+userpilot.navigationDelegate = self
+userpilot.analyticsDelegate = self
+userpilot.experienceDelegate = self
 ```
 
 #### Navigation Handler
@@ -206,6 +211,24 @@ Receives callbacks whenever the SDK tracks an event, screen, or identifies a use
 ##### &nbsp;&nbsp;&nbsp; Delegate:
 
 ```swift
+@objc
+public enum UserpilotAnalytic: Int {
+    case identify = 0
+    case screen = 1
+    case event = 2
+
+    public var rawValueString: String {
+        switch self {
+        case .identify:
+            return "identify"
+        case .screen:
+            return "screen"
+        case .event:
+            return "event"
+        }
+    }
+}
+
 @objc
 public protocol UserpilotAnalyticsDelegate: AnyObject {
     func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?)
@@ -233,3 +256,19 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
 }
 ```
+
+### Push Notification
+
+UserPilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app).
+
+## 📝 Documentation
+
+Full documentation is available at [Userpilot Documentation](https://docs.userpilot.com/)
+
+## 🎬 Samples
+
+The `Sample` directory in repository contains a full example swift app providing references for usage of the Userpilot API.
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE) for more information.

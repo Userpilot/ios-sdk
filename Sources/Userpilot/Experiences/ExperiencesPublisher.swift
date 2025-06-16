@@ -11,6 +11,7 @@
 //  manages the lifecycle of the experiences displayed within the application.
 //
 
+// swiftlint:disable file_length
 import Foundation
 import UIKit
 import SwiftPhoenixClient
@@ -19,31 +20,37 @@ import SwiftPhoenixClient
  The `ExperiencesPublishing` protocol defines the required methods for managing experiences,
  such as starting the service, retrieving active carousel content, and sending socket requests.
  */
-// swiftlint:disable file_length
 internal protocol ExperiencesPublishing: AnyObject {
-    /// Start new experience
-    func start()
 
     /// Get current experience
-    func getActiveMobileContent() -> MobileContent?
-
-    /// check active experience
-    func fetchAndResetCarouselContentState() -> Bool
+    func getActiveMobileContent() -> ExperienceContent?
 
     /// Send experience event to backend
-    func publishExperienceEvent(_ sdkEvent: SDKEvent)
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceID: String)
 
     /// Manually end experience
-    func endExperience()
+    func endExperience(manualClose: Bool)
+
+    /// Determine if can requst screen event
+    func canRequestScreenEvent() -> Bool
 
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL)
+
+    /// cancel pending/processing experience
+    func cancelPendingSurveyContent()
+
+    /// active one time flag
+    func activeOneTimeFlag()
+
+    /// Show thank you message
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
 }
 
-internal class ExperiencesPublisher: ExperiencesPublishing {
+internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
 
     // MARK: - Properties
 
@@ -71,17 +78,31 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Logger used for internal logging of operations and errors.
     private let logger: Logging
 
+    /// ---- Logic Variables ---- ///
+
     /// The current screen name in the application, used to track active screens.
     private var currentScreen: String = ""
 
+    /// Debouncer to request fake reload in safe time
+    private lazy var debounce = Debouncer(delay: 0.2)
+
     /// Holds the active carousel content, if any, that is being displayed.
-    private var mobileContent: MobileContent?
+    private var experienceContent: ExperienceContent?
 
-    /// Holds last experience triggered by SDK
-    private var carouselContent = false
+    /// To manage thread safety for experienceContent.
+    private lazy var readWriteLock = ReadWriteLockSerial(label: DispatchQueueConstants.EXPERIENCE_QUEUE)
 
-    /// Manual experience not check screen
+    /// To manage delay for show experience or delay logic for survey & NPS.
+    private lazy var delayUtils = DelayUtils()
+
+    /// A special flag to prevent screen event after manual triggering content.
+    private lazy var oneSecondFlag = OneSecondFlag()
+
+    /// Manual experience not check screen.
     private var isTriggerManualExperience = false
+
+    /// A flag to indicate triggering thank you message for survey list view.
+    private var isTriggeringThankYouMessage = false
 
     // MARK: - Initializer
 
@@ -112,6 +133,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     // MARK: - SDK APIs
 
+    /// Determine if can requst screen event
+    func canRequestScreenEvent() -> Bool {
+        return !oneSecondFlag.isActive && !hasActiveExperience() && !isTriggeringThankYouMessage
+    }
+
     /**
      Starts the experience for a given experience ID. This method can be used to
      initiate a specific experience based on the provided ID.
@@ -119,46 +145,54 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      - Parameter experienceId: The ID of the experience to start.
      */
     func triggerExperience(_ experienceID: String) {
-        if mobileContent != nil { return }
-        publishExperienceEvent(ExperienceContentEvent(experienceID: experienceID))
+        readWriteLock.read { [weak self] in
+            guard self?.experienceContent == nil else { return }
+            self?.publishInternalSDKEvent(ExperienceContentEvent(experienceID: experienceID))
+        }
     }
 
     /*
      End experience manually
      */
-    func endExperience() {
+    func endExperience(manualClose: Bool) {
         guard let experience = UIApplication.shared.fetchTopViewController() else { return }
-        (experience as? CarouselExperienceViewController)?.closeExperience()
-        (experience as? SlideOutBottomSheetViewController)?.dismissBottomSheet()
-        (experience as? SlideOutDialogViewController)?.dismissDialog()
+        (experience as? UPExperience)?.triggerCloseExpereince(manualClose: manualClose)
+    }
+
+    /*
+     Show Thank you module
+     */
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+        triggerThankYouMessageView(surveyContent, surveyTheme)
     }
 
     // MARK: - helper methods
 
     /// Return the current active carousel content.
-    func getActiveMobileContent() -> MobileContent? {
-        let currentContent = mobileContent
-        mobileContent = nil
-        return currentContent
-    }
+    /// Returns the current active carousel content and clears it safely.
+    func getActiveMobileContent() -> ExperienceContent? {
+        var content: ExperienceContent?
 
-    // Check experiences state
-    func fetchAndResetCarouselContentState() -> Bool {
-        if carouselContent {
-            carouselContent = false
-            return true
+        // Safely read the experience content
+        readWriteLock.read { [weak self] in
+            content = self?.experienceContent
         }
-        return false
+
+        // Safely clear the experience content
+        resetExperienceContent()
+        return content
     }
 
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL) {
-        if let navigationDelegate = config.navigationDelegate {
-            navigationDelegate.navigate(to: url) { _ in }
-        } else {
-            if url.scheme == "http" || url.scheme == "https",
-                UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        delay(ThemeHandler.DefaultValues.delayTimeForDeepLink) { [weak self] in
+            if let navigationDelegate = self?.userpilot?.navigationDelegate {
+                navigationDelegate.navigate(to: url) { _ in }
+            } else {
+                if url.isHttpOrHttps,
+                   UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
             }
         }
     }
@@ -169,7 +203,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
 extension ExperiencesPublisher: SocketSubscription {
 
-    /**
+    /*
      Handles the socket event when a message is sent.
      
      - Parameters:
@@ -178,37 +212,47 @@ extension ExperiencesPublisher: SocketSubscription {
      - message: The message object containing additional data.
      - eventSent: Indicates whether the event was successfully sent.
      */
-    func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
-        if eventName == EventType.screenEvent {
-            currentScreen = payload?[AnalyticsPublisher.screenTitleProperty] as? String ?? ""
-        }
+    // swiftlint:disable:next cyclomatic_complexity, superfluous_disable_command
+    func onSocketEventSent(_ eventName: String,
+                           _ payload: Payload,
+                           _ message: Message,
+                           _ eventSent: Bool) {
+        readWriteLock.write { [weak self] in
+            guard let self, !hasActiveExperience(), !message.payload.isEmpty,
+                  let response = message.payload.toJSONString() else { return }
 
-        guard
-            !hasActiveExperience(),
-            !message.payload.isEmpty,
-            let response = message.payload.toJSONString()
-        else { return }
+            // Update current screen if it's a screen event
+            if eventName == EventType.screenEvent {
+                currentScreen = payload?[AnalyticsPublisher.screenTitleProperty] as? String ?? ""
+            }
 
-        // Process experience content or screen events
-        if eventName == EventType.screenEvent || eventName == SDKEventsName.fetchExperienceContent.rawValue {
-            guard
-                mobileContent == nil,
-                let contentPayload = message.payload["mobile_contents"] as? [String: Any],
-                !contentPayload.isEmpty,
-                let mobileContentData = response.toMobileContent()
-            else { return }
-            isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
-            mobileContent = mobileContentData.mobileContent
-        }
-
-        if eventName == SDKEventsName.fetchExperienceTheme.rawValue {
-            if let themeData = response.toMobileTheme(), themeData.id != nil {
+            // Handle theme fetching separately
+            if eventName == SDKEventsName.fetchExperienceTheme.rawValue,
+               let themeData = response.toMobileTheme(), themeData.id != nil {
                 themeHandler.saveTheme(themeData)
             }
-        }
 
-        if let mobileContent = mobileContent {
-            checkCachedThemes(mobileContent.baseThemeID)
+            // Process experience content
+            if eventName == EventType.screenEvent || eventName == SDKEventsName.fetchExperienceContent.rawValue {
+                isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
+
+                if let flowContent = response.toFlowContent()?.flowContent {
+                    experienceContent = ExperienceContent.flow(content: flowContent)
+                } else if let surveyContent = response.toSurveyContent()?.surveyContent {
+                    experienceContent = ExperienceContent.survey(content: surveyContent)
+                } else if let npsContent = response.toNPSContent()?.npsContent {
+                    experienceContent = ExperienceContent.nps(content: npsContent)
+                }
+            }
+
+            // Handle experience content
+            if let experienceContent = experienceContent {
+                if experienceContent.asNPSContent() != nil {
+                    openExperienceFlow()
+                } else {
+                    checkCachedThemes(experienceContent.experienceThemeId())
+                }
+            }
         }
     }
 
@@ -218,22 +262,49 @@ extension ExperiencesPublisher: SocketSubscription {
      */
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
-            guard
-                mobileContent == nil,
-                !hasActiveExperience(),
-                payload.keys.contains("request_id"),
-                payload["request_id"] as? Int == nil,
-                let mobileContents = payload["mobile_contents"] as? [String: Any],
-                !mobileContents.isEmpty,
-                let mobileContentData = payload.toJSONString()?.toMobileContent()
-            else {
-                return
+            readWriteLock.write { [weak self] in
+                // Ensure experienceContent is nil and there is no active experience before processing
+                guard
+                    let self,
+                    experienceContent == nil,
+                    !hasActiveExperience(),
+                    payload.keys.contains("request_id"),
+                    payload["request_id"] as? Int == nil
+                else { return }
+
+                // Determine the new content based on payload
+                let newExperienceContent: ExperienceContent? = {
+                    if let mobileContents = payload["mobile_contents"] as? [String: Any],
+                       !mobileContents.isEmpty,
+                       let flowContentData = payload.toJSONString()?.toFlowContent() {
+                        return ExperienceContent.flow(content: flowContentData.flowContent)
+                    } else if let mobileContents = payload["surveys"] as? [String: Any],
+                              !mobileContents.isEmpty,
+                              let surveyContentData = payload.toJSONString()?.toSurveyContent() {
+                        return ExperienceContent.survey(content: surveyContentData.surveyContent)
+                    } else if let mobileContents = payload["nps"] as? [String: Any],
+                              !mobileContents.isEmpty,
+                              let npsContentData = payload.toJSONString()?.toNPSContent() {
+                        return ExperienceContent.nps(content: npsContentData.npsContent)
+                    }
+                    return nil
+                }()
+
+                // Only set the experienceContent if it is still nil (double-check within the lock)
+                if experienceContent == nil, let newExperienceContent {
+                    experienceContent = newExperienceContent
+                    isTriggerManualExperience = true
+
+                    if newExperienceContent.asNPSContent() != nil {
+                        openExperienceFlow()
+                    } else {
+                        checkCachedThemes(newExperienceContent.experienceThemeId())
+                    }
+                }
             }
-            isTriggerManualExperience = true
-            mobileContent = mobileContentData.mobileContent
-            checkCachedThemes(mobileContentData.mobileContent.baseThemeID)
         }
     }
+
 }
 
 // MARK: - Theme
@@ -259,13 +330,12 @@ extension ExperiencesPublisher {
      - Parameter themeID: A theme ID for which data needs to be fetched.
      */
     private func fetchThemeData(_ themeID: Int) {
-        guard
-            analyticsPublisher.canRequestExperienceEvent
-        else {
-            mobileContent = nil
+        guard analyticsPublisher.canRequestEvent else {
+            resetExperienceContent()
             return
         }
-        publishExperienceEvent(ThemeContentEvent(themeID: themeID, token: config.token))
+
+        publishInternalSDKEvent(ThemeContentEvent(themeID: themeID, token: config.token))
     }
 
 }
@@ -279,31 +349,41 @@ extension ExperiencesPublisher {
      
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
-    func publishExperienceEvent(_ sdkEvent: SDKEvent) {
-        analyticsPublisher.publishExperienceEvent(sdkEvent, socketSubscription: self)
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+        analyticsPublisher.publishInternalSDKEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: self)
 
-        if sdkEvent.eventName == SDKEventsName.experienceDismissed.rawValue ||
-            sdkEvent.eventName == SDKEventsName.experienceCompleted.rawValue {
+        if sdkEvent.isEventForCloseNPSExperience() {
+            oneSecondFlag.activate()
+            resetExperienceContent()
+            return
+        }
+
+        if sdkEvent.isEventForCloseExperience() {
 
             if sdkEvent.hasDeepLink {
-                mobileContent = nil
+                resetExperienceContent()
                 return
             }
 
-            if let mobileContent {
-                checkCachedThemes(mobileContent.baseThemeID)
+            if let experienceContent {
+                checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                carouselContent = wasCarouselExperience()
-                analyticsPublisher.publishFakeReloadScreenEvent()
+                if isTriggerManualExperience {
+                    oneSecondFlag.activate()
+                } else {
+                    debounce.debounce { [weak self] in
+                        guard let self else { return }
+                        if self.analyticsPublisher.screenEntity?.event.screenTitle == self.currentScreen {
+                            self.analyticsPublisher.publishFakeReloadScreenEvent()
+                        }
+                    }
+                }
             }
         }
     }
 
     /**
-     Opens the carousel screen to display carousel content.
-
-     Presents the `CarouselExperienceViewController` with the active carousel content
-     if the conditions for displaying the carousel are met.
+     Opens the triggered flow.
      */
     private func openExperienceFlow() {
         performOn(.main) { [weak self] in
@@ -313,29 +393,112 @@ extension ExperiencesPublisher {
                 self.canShowExperience()
             else {
                 self?.isTriggerManualExperience = false
-                self?.mobileContent = nil
+                self?.resetExperienceContent()
                 return
             }
-            self.isTriggerManualExperience = false
-            if let mobileContent {
-                let experienceViewModel = ExperienceViewModel(container: self.container)
-                self.analyticsPublisher.experiencePublished(mobileContent.id)
-                switch mobileContent.type {
-                case .carousel:
-                    self.openCarouselExperience(topViewController, experienceViewModel)
-                case .slideout:
-                    if self.isBottomSheetContent(mobileContent) {
-                        self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
-                    } else {
-                        self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+
+            if let experienceContent {
+                switch experienceContent {
+                case .flow(let content):
+                    let experienceViewModel = ExperienceViewModel(container: self.container)
+                    self.analyticsPublisher.experiencePublished(.flow, content.id)
+                    switch content.type {
+                    case .carousel:
+                        self.openCarouselExperience(topViewController, experienceViewModel)
+                    case .slideout:
+                        if self.isBottomSheetContent(content) {
+                            self.openSlideOutBottomSheetExperience(topViewController, experienceViewModel)
+                        } else {
+                            self.openSlideOutDialogExperience(topViewController, experienceViewModel)
+                        }
                     }
+
+                case .survey(let content):
+                    self.checkSurveyDelayConfiguration(content)
+
+                case .nps(let content):
+                    self.checkNPSDelayConfiguration(content)
+                }
+            }
+        }
+    }
+
+    /**
+     Check nps delay, in case we have a delay, so start a delay timer
+     */
+    private func checkNPSDelayConfiguration(_ content: NPSContent) {
+        if content.timeDelay != 0 {
+            delayUtils.delayAction(delayTime: Double(content.timeDelay)) { [weak self] in
+                self?.handleNPSExperience()
+            }
+        } else {
+            handleNPSExperience()
+        }
+    }
+
+    /**
+    Publish survey experience
+    */
+    private func handleNPSExperience() {
+        performOn(.main) { [weak self] in
+            guard
+                let self,
+                let topViewController = UIApplication.shared.fetchTopViewController(),
+                self.canShowExperience()
+            else {
+                self?.isTriggerManualExperience = false
+                self?.resetExperienceContent()
+                return
+            }
+            let npsViewModel = NPSViewModel(container: self.container)
+            self.openNPSBottomSheetExperience(topViewController, npsViewModel)
+        }
+    }
+
+    /**
+     Check survey delay, in case we have a delay, so start a delay timer
+     */
+    private func checkSurveyDelayConfiguration(_ content: SurveyContent) {
+        if content.timeDelay != 0 {
+            delayUtils.delayAction(delayTime: Double(content.timeDelay)) { [weak self] in
+                self?.handleSurveyExperience(content)
+            }
+        } else {
+            handleSurveyExperience(content)
+        }
+    }
+
+    /**
+     Recheck top view controller and expereince state to show the survey expereince again
+     */
+    private func handleSurveyExperience(_ content: SurveyContent) {
+        performOn(.main) { [weak self] in
+            guard
+                let self,
+                let topViewController = UIApplication.shared.fetchTopViewController(),
+                self.canShowExperience()
+            else {
+                self?.isTriggerManualExperience = false
+                self?.resetExperienceContent()
+                return
+            }
+            self.analyticsPublisher.experiencePublished(.survey, content.id)
+            let surveyViewModel = SurveyViewModel(container: self.container)
+            switch content.type {
+            case .list:
+                self.openSurveyListExperience(topViewController, surveyViewModel)
+            case .step:
+                if self.isBottomSheetSurveyContent(content) {
+                    self.openSurveyBottomSheetExperience(topViewController, surveyViewModel)
+                } else {
+                    self.openSurveyDialogExperience(topViewController, surveyViewModel)
                 }
             }
         }
     }
 
     /// Fetch content type based on custom mobile content theme, then from base theme
-    private func isBottomSheetContent(_ mobileContent: MobileContent) -> Bool {
+    private func isBottomSheetContent(_ mobileContent: FlowContent) -> Bool {
         if let themeData = mobileContent.mobileTheme.themeData {
             return themeData.general?.contentAlignment == ContentAlignmentType.bottom
         } else {
@@ -343,62 +506,194 @@ extension ExperiencesPublisher {
         }
     }
 
-    /// Validates whether the experience can be shown based on the current application state.
-    private func canShowExperience() -> Bool {
-        guard
-            !hasActiveExperience(),
-            let mobileContent
-        else { return false }
-
-        return isTriggerManualExperience ||
-                analyticsPublisher.isStartSession ||
-                mobileContent.isForAllScreens ||
-                mobileContent.screens.contains(currentScreen)
+    private func isBottomSheetSurveyContent(_ surveyContent: SurveyContent) -> Bool {
+        if let themeData = surveyContent.surveyTheme.themeData, let position = themeData.general?.position {
+            return position == .bottom
+        } else {
+            return themeHandler.getThemeById(surveyContent.surveyTheme.id)?.isDialogSurvey == false
+        }
     }
+
+}
+
+// MARK: - Launch experiences Screens
+
+extension ExperiencesPublisher {
 
     /// Open carousel
     private func openCarouselExperience(_ viewController: UIViewController,
                                         _ experienceViewModel: ExperienceViewModel) {
-        let carouselExperienceViewController = CarouselExperienceViewController(
-            experienceViewModel: experienceViewModel)
-        carouselExperienceViewController.modalPresentationStyle = .fullScreen
-        delay(0.5) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let carouselExperienceViewController = CarouselExperienceViewController(
+                experienceViewModel: experienceViewModel)
+            carouselExperienceViewController.modalPresentationStyle = .fullScreen
             viewController.present(carouselExperienceViewController, animated: true)
         }
     }
 
-    /// Open dialog
+    /// Open slide out dialog
     private func openSlideOutDialogExperience(_ viewController: UIViewController,
                                               _ experienceViewModel: ExperienceViewModel) {
-        let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
-        delay(0.5) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
             viewController.presentDialog(viewController: slideOutDialogViewController)
         }
     }
 
-    /// Open bottom sheet
+    /// Open slide out bottom sheet
     private func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
                                                    _ experienceViewModel: ExperienceViewModel) {
-        let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
-            experienceViewModel: experienceViewModel)
-        delay(0.5) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
+                experienceViewModel: experienceViewModel)
             viewController.presentBottomSheet(viewController: slideOutBottomSheetViewController)
         }
     }
 
+    /// Open survey list view
+    private func openSurveyListExperience(_ viewController: UIViewController,
+                                          _ surveyViewModel: SurveyViewModel) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let surveyListViewController = SurveyListViewController(surveyViewModel: surveyViewModel)
+            surveyListViewController.modalPresentationStyle = .fullScreen
+            viewController.present(surveyListViewController, animated: true)
+        }
+    }
+
+    /// Open thank you view as a bottom sheet
+    private func triggerThankYouMessageView(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+        isTriggeringThankYouMessage = true
+        performOn(.main) { [weak self] in
+            guard
+                let self,
+                let topViewController = UIApplication.shared.fetchTopViewController()
+            else {
+                self?.isTriggeringThankYouMessage = false
+                return
+            }
+            delayUtils.delayAction { [weak self] in
+                let thankYouBottomSheetViewController = ThankYouBottomSheetViewController(
+                    surveyContent: surveyContent, surveyTheme: surveyTheme)
+                thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
+                    let eventExperienceSeen = ExperienceSurveyCompletedEvent(
+                        surveyID: surveyContent.id,
+                        hasDeepLinkContent: deepLink != nil
+                    )
+                    self?.publishInternalSDKEvent(eventExperienceSeen)
+
+                    delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
+                        if let deepLink, let url = URL(string: deepLink) {
+                            self?.triggerDeepLink(url: url)
+                        }
+                    }
+                    self?.isTriggeringThankYouMessage = false
+                }
+                topViewController.presentBottomSheet(viewController: thankYouBottomSheetViewController)
+            }
+        }
+    }
+
+    /// Open survey dialog
+    private func openSurveyDialogExperience(_ viewController: UIViewController,
+                                            _ surveyViewModel: SurveyViewModel) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let surveyDialogViewController = SurveyDialogViewController(surveyViewModel: surveyViewModel)
+            viewController.presentDialog(viewController: surveyDialogViewController)
+        }
+    }
+
+    /// Open survey bottom sheet
+    private func openSurveyBottomSheetExperience(_ viewController: UIViewController,
+                                                 _ surveyViewModel: SurveyViewModel) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let surveyBottomSheetViewController = SurveyBottomSheetViewController(
+                surveyViewModel: surveyViewModel)
+            viewController.presentBottomSheet(viewController: surveyBottomSheetViewController)
+        }
+    }
+
+    /// Open NPS bottom sheet
+    private func openNPSBottomSheetExperience(_ viewController: UIViewController,
+                                              _ npsViewModel: NPSViewModel) {
+        delayUtils.delayAction { [weak self] in
+            guard let self, self.canShowExperience() else { return }
+            let npsBottomSheetViewController = NPSBottomSheetViewController(
+                npsViewModel: npsViewModel)
+            viewController.presentBottomSheet(viewController: npsBottomSheetViewController)
+        }
+    }
+
+}
+
+// MARK: - Experience content helper methods
+
+extension ExperiencesPublisher {
+
+    /// Validates whether the experience can be shown based on the current application state.
+    private func canShowExperience() -> Bool {
+        readWriteLock.read { [weak self] in
+            guard
+                let self,
+                let experienceContent,
+                !hasActiveExperience()
+            else { return false }
+
+            let isForAllScreens: Bool
+            let screens: [String]
+
+            // Extract properties based on the enum case
+            switch experienceContent {
+            case .flow(let content):
+                isForAllScreens = content.isForAllScreens
+                screens = content.screens
+            case .survey(let content):
+                isForAllScreens = content.isForAllScreens
+                screens = content.screens
+            case .nps(let content):
+                isForAllScreens = content.isForAllScreens
+                screens = content.screens
+            }
+            return isTriggerManualExperience ||
+                analyticsPublisher.isStartSession ||
+                isForAllScreens ||
+                screens.contains(currentScreen)
+        }
+    }
+
+    /// Check top view controller if its one of Experiences view controller
     private func hasActiveExperience() -> Bool {
         guard let topViewController = UIApplication.shared.fetchTopViewController() else {
             return false
         }
         return topViewController.isKind(of: CarouselExperienceViewController.self) ||
-        topViewController.isKind(of: SlideOutDialogViewController.self) ||
-        topViewController.isKind(of: BottomSheetViewController.self)
+        topViewController.isKind(of: DialogViewController.self) ||
+        topViewController.isKind(of: BottomSheetViewController.self) ||
+        topViewController.isKind(of: SurveyListViewController.self)
     }
 
-    private func wasCarouselExperience() -> Bool {
-        guard let topViewController = UIApplication.shared.fetchTopViewController() else {
-            return false
-        }
-        return topViewController.isKind(of: CarouselExperienceViewController.self)
+    /// A delegate method, on new screen opened cancel pending/processing content
+    func cancelPendingSurveyContent() {
+        delayUtils.cancelDelay()
+        endExperience(manualClose: false)
+        resetExperienceContent()
     }
+
+    func activeOneTimeFlag() {
+        oneSecondFlag.activate()
+    }
+
+    /// reset experience content
+    private func resetExperienceContent() {
+        readWriteLock.write { [weak self] in
+            self?.experienceContent = nil
+        }
+    }
+
 }
+// swiftlint:enable file_length

@@ -6,7 +6,7 @@
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  The `Storage` class provides a mechanism for storing and caching runtime data, including 
+//  The `Storage` class provides a mechanism for storing and caching runtime data, including
 //  settings like the socket URL, device ID, and user ID. It uses `UserDefaults` to persist data across app sessions.
 //
 
@@ -41,6 +41,9 @@ internal protocol DataStoring: AnyObject {
 
     /// The date for configuration to update it.
     var configurationDate: Date? { get set }
+
+    /// Push token for APNs
+    var pushToken: String? { get set }
 }
 
 /**
@@ -66,6 +69,7 @@ internal class Storage: DataStoring {
         case temporaryUser
         case sessionDate
         case configurationDate
+        case pushToken
     }
 
     // MARK: - Properties
@@ -136,6 +140,15 @@ internal class Storage: DataStoring {
         }
         set {
             write(.configurationDate, newValue: newValue)
+        }
+    }
+
+    internal var pushToken: String? {
+        get {
+            return read(.pushToken, defaultValue: nil)
+        }
+        set {
+            write(.pushToken, newValue: newValue)
         }
     }
 

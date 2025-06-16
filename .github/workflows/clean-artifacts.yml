@@ -1,0 +1,22 @@
+# 🧹 GitHub Actions workflow to remove old artifacts
+
+name: Remove old artifacts
+
+on:
+  # 🕐 Schedule the workflow to run daily at 1:00 AM UTC
+  schedule:
+    - cron: '0 1 * * *'
+
+jobs:
+  remove-old-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10  # ⏱️ Timeout after 10 minutes to avoid long hangs
+
+    steps:
+        # Step 1: 🧼 Remove old artifacts from GitHub
+      - name: Remove old artifacts
+        uses: c-hive/gha-remove-artifacts@v1
+        with:
+          age: '1 month'       # 🗓️ Keep artifacts from the last month only
+          skip-recent: 2       # 🛡️ Preserve the two most recent artifacts
+          # skip-tags: true    # 🏷️ Uncomment to skip artifacts linked to tags

@@ -67,28 +67,30 @@ extension OSLog: Logging {
     }
 
     private func log(_ message: StaticString, type: OSLogType, _ args: [CVarArg]) {
-        /*
-         Swift doesn't support splatting so unfortunately `args` needs to be manually enumerated.
-         Limiting it to 5 since that seems reasonable.
-         */
-        guard args.count <= 5 else {
-            error("Too many log args. 5 are supported, %{public}d passed.", args.count)
-            return
-        }
+        tryCatch {
+            /*
+             Swift doesn't support splatting so unfortunately `args` needs to be manually enumerated.
+             Limiting it to 5 since that seems reasonable.
+             */
+            guard args.count <= 5 else {
+                error("Too many log args. 5 are supported, %{public}d passed.", args.count)
+                return
+            }
 
-        switch args.count {
-        case 1:
-            os_log(message, log: self, type: type, args[0])
-        case 2:
-            os_log(message, log: self, type: type, args[0], args[1])
-        case 3:
-            os_log(message, log: self, type: type, args[0], args[1], args[2])
-        case 4:
-            os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
-        case 5:
-            os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
-        default:
-            os_log(message, log: self, type: type)
+            switch args.count {
+            case 1:
+                os_log(message, log: self, type: type, args[0])
+            case 2:
+                os_log(message, log: self, type: type, args[0], args[1])
+            case 3:
+                os_log(message, log: self, type: type, args[0], args[1], args[2])
+            case 4:
+                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
+            case 5:
+                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
+            default:
+                os_log(message, log: self, type: type)
+            }
         }
     }
 }

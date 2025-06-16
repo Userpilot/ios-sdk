@@ -6,8 +6,9 @@
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  UIDevice+Extension file contains an extension for the `UIDevice` class, providing helper methods
-//  to retrieve device-specific information such as a formatted identifier and device type.
+//  UIDevice+Extension file contains an extension for the `UIDevice` class, providing helper
+//  methods to retrieve device-specific information such as a formatted identifier
+//  and device type.
 //
 
 import Foundation

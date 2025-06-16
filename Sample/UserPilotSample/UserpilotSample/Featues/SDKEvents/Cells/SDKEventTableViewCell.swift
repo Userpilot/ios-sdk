@@ -19,14 +19,12 @@ class SDKEventTableViewCell: UITableViewCell, ReusableTableCellView, TableViewCe
         if sdkEvent.analytic == .identify {
             let settings = UserpilotManager.shared.settings()
             if let jsonData = try? JSONSerialization.data(withJSONObject: settings, options: .withoutEscapingSlashes) {
-                // swiftlint:disable:next non_optional_string_data_conversion
                 eventProperties.text = String(data: jsonData, encoding: .utf8)
             }
         } else {
             if let properties = sdkEvent.properties,
                let jsonData = try? JSONSerialization.data(
                 withJSONObject: properties, options: .withoutEscapingSlashes) {
-                // swiftlint:disable:next non_optional_string_data_conversion
                 eventProperties.text = String(data: jsonData, encoding: .utf8)
             }
         }
