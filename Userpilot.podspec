@@ -29,6 +29,6 @@ Pod::Spec.new do |spec|
       ]
   }
 
-  spec.dependency "SwiftPhoenixClient", "5.2.2"
+  spec.dependency "SwiftPhoenixClient", "5.3.5"
 
 end
