@@ -10,7 +10,7 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
-        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="ScreenTwoViewController" customModule="UserPilotSample" customModuleProvider="target">
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="ScreenTwoViewController" customModule="UserpilotSample" customModuleProvider="target">
             <connections>
                 <outlet property="view" destination="3bd-BQ-YJR" id="cg2-fL-mtP"/>
             </connections>
@@ -38,22 +38,8 @@
                     <color key="textColor" name="MineShaft"/>
                     <nil key="highlightedColor"/>
                 </label>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="6UZ-QK-BHy">
-                    <rect key="frame" x="24" y="768" width="345" height="40"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="40" id="Fvq-MI-ATa"/>
-                    </constraints>
-                    <color key="tintColor" name="AccentColor"/>
-                    <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="filled" title="Show experience">
-                        <fontDescription key="titleFontDescription" type="system" weight="medium" pointSize="16"/>
-                    </buttonConfiguration>
-                    <connections>
-                        <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="WX2-Fg-qQF"/>
-                    </connections>
-                </button>
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="24" translatesAutoresizingMaskIntoConstraints="NO" id="0Q2-Ri-IqK">
-                    <rect key="frame" x="24" y="149" width="345" height="595"/>
+                    <rect key="frame" x="24" y="149" width="345" height="472"/>
                     <subviews>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="tso-Y8-xau">
                             <rect key="frame" x="0.0" y="0.0" width="345" height="100"/>
@@ -89,11 +75,28 @@
                             </subviews>
                         </stackView>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="pzm-VZ-t5c">
-                            <rect key="frame" x="0.0" y="372" width="345" height="223"/>
+                            <rect key="frame" x="0.0" y="372" width="345" height="100"/>
                             <color key="backgroundColor" systemColor="systemGray5Color"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="100" id="8MX-xU-m86"/>
+                            </constraints>
                         </view>
                     </subviews>
                 </stackView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="6UZ-QK-BHy">
+                    <rect key="frame" x="24" y="768" width="345" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="Fvq-MI-ATa"/>
+                    </constraints>
+                    <color key="tintColor" name="AccentColor"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="filled" title="Show experience">
+                        <fontDescription key="titleFontDescription" type="system" weight="medium" pointSize="16"/>
+                    </buttonConfiguration>
+                    <connections>
+                        <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="WX2-Fg-qQF"/>
+                    </connections>
+                </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="yuX-s0-pil"/>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -108,7 +111,6 @@
                 <constraint firstItem="eft-v9-sQR" firstAttribute="centerY" secondItem="1IC-NC-MKC" secondAttribute="centerY" id="lyn-D6-SuB"/>
                 <constraint firstItem="eft-v9-sQR" firstAttribute="centerX" secondItem="3bd-BQ-YJR" secondAttribute="centerX" id="mYZ-54-e2A"/>
                 <constraint firstItem="1IC-NC-MKC" firstAttribute="top" secondItem="yuX-s0-pil" secondAttribute="top" constant="16" id="riy-8H-Qkg"/>
-                <constraint firstItem="6UZ-QK-BHy" firstAttribute="top" secondItem="0Q2-Ri-IqK" secondAttribute="bottom" constant="24" id="sAm-2P-A9i"/>
                 <constraint firstItem="yuX-s0-pil" firstAttribute="trailing" secondItem="0Q2-Ri-IqK" secondAttribute="trailing" constant="24" id="w1V-6G-sxQ"/>
             </constraints>
             <point key="canvasLocation" x="109.16030534351144" y="-11.267605633802818"/>

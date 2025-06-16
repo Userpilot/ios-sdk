@@ -55,12 +55,4 @@ internal extension UICollectionViewCell {
             return 0
         }
     }
-
-    func leftRightMargin() -> CGFloat {
-        if isLandscape {
-            return CGFloat(70)
-        } else {
-            return 0
-        }
-    }
 }

@@ -37,16 +37,22 @@ internal protocol AnalyticsPublishing: AnyObject {
                 shouldClearCachedIdentifyEvent: Bool)
 
     /// check socket state
-    var canRequestExperienceEvent: Bool { get }
+    var canRequestEvent: Bool { get }
 
     /// publish experience event
-    func publishExperienceEvent(_ sdkEvent: SDKEvent, socketSubscription: SocketSubscription)
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?)
 
     /// publish fake reload event
     func publishFakeReloadScreenEvent()
 
     /// update seen experiences
-    func experiencePublished(_ experienceId: Int)
+    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int)
+
+    /// For experience which are come from start session
+    var isStartSession: Bool { get }
+
+    /// To return current screen entity
+    var screenEntity: ScreenViewEntity? { get }
 }
 
 /**
@@ -66,6 +72,9 @@ internal class AnalyticsPublisher {
 
     /// Weak reference to the owning `Userpilot` instance.
     private weak var userpilot: Userpilot?
+
+    /// The configuration settings for the `Userpilot` SDK.
+    private let config: Userpilot.Config
 
     /// SDK logger.
     private let logger: Logging
@@ -100,7 +109,7 @@ internal class AnalyticsPublisher {
     private var cachedIdentifyEvent: Event?
 
     /// Tracks the last screen viewed, bool for fake reload state.
-    private var screenViewEntity: ScreenViewEntity?
+    private(set) var screenViewEntity: ScreenViewEntity?
 
     /// Tracks the first event to open the socket.
     private var cachedEvent: Event?
@@ -118,6 +127,7 @@ internal class AnalyticsPublisher {
     init(container: DIContainer) {
         self.container = container
         self.userpilot = container.owner
+        self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.socketManager = container.resolve(SocketEvents.self)
@@ -161,6 +171,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      Clear all cached data and close the socket.
      */
     func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool = false) {
+        if shouldClearCachedIdentifyEvent && canRequestEvent {
+            if let token = storage.pushToken {
+                publishInternalSDKEvent(
+                    UserLogoutEvent(
+                        appToken: config.token,
+                        userID: storage.userID,
+                        token: token),
+                    isExpereinceEvent: false,
+                    socketSubscription: nil
+                )
+            }
+        }
         startSession = true
         screenViewEntity?.resetState()
         socketManager.updateSocketState(socketState, forceUpdateState: true)
@@ -290,13 +312,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func screen(_ event: Event) {
         tryCatch {
-            if experiencesPublisher?.fetchAndResetCarouselContentState() == true {
-                return
-            }
-            if eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
-                return
-            }
             setupScreenEvent(event)
+            if experiencesPublisher?.canRequestScreenEvent() == false ||
+                eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
+                return
+            }
             flushPriorityEvents()
         }
     }
@@ -346,12 +366,20 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
             if isScreenTitleChanged {
+                // Once that trigger screen event is met, cancel current pending experience directly.
+                experiencesPublisher?.cancelPendingSurveyContent()
+
                 // New screen: start with an empty set of seen experiences
-                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set())
+                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set(), seenSurveys: Set())
             } else {
                 // Same screen: retain the existing seen experiences
                 let seenExperiences = screenViewEntity?.seenExperiences ?? Set()
-                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: seenExperiences)
+                let seenSurveys = screenViewEntity?.seenSurveys ?? Set()
+                screenViewEntity = ScreenViewEntity(
+                    event: event,
+                    seenExperiences: seenExperiences,
+                    seenSurveys: seenSurveys
+                )
             }
         }
     }
@@ -396,7 +424,8 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.metaDataProperty] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: false,
-                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
+                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
+                    AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
                 broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
@@ -558,17 +587,30 @@ private extension AnalyticsPublisher {
 extension AnalyticsPublisher {
 
     /// check socket state
-    var canRequestExperienceEvent: Bool {
+    var canRequestEvent: Bool {
         socketManager.isSocketOpened
     }
 
+    /// For experience which are come from start session
+    var isStartSession: Bool {
+        startSession
+    }
+
+    /// For experience which are come from start session
+    var screenEntity: ScreenViewEntity? {
+        screenViewEntity
+    }
+
     /// publish experience event
-    func publishExperienceEvent(
+    func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
-        socketSubscription: SocketSubscription
+        isExpereinceEvent: Bool,
+        socketSubscription: SocketSubscription?
     ) {
         tryCatch {
-            guard canRequestExperienceEvent else { return }
+            if isExpereinceEvent {
+                guard canRequestEvent else { return }
+            }
             socketManager.publish(
                 sdkEvent.eventName,
                 payload: sdkEvent.eventPayload,
@@ -580,14 +622,18 @@ extension AnalyticsPublisher {
     /// publish fake reload event
     func publishFakeReloadScreenEvent() {
         tryCatch {
-            guard canRequestExperienceEvent else { return }
+            guard canRequestEvent else { return }
             if let screenViewEntity {
+                if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
+                    return
+                }
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
                 payload[AnalyticsPublisher.metaDataProperty] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: true,
-                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences)
+                    AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
+                    AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
             }
@@ -595,8 +641,12 @@ extension AnalyticsPublisher {
     }
 
     /// update seen experiences
-    func experiencePublished(_ experienceId: Int) {
-        screenViewEntity?.updateSeenExperiences(experienceId)
+    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int) {
+        if experienceType == .flow {
+            screenViewEntity?.updateSeenFlowExperiences(experienceId)
+        } else {
+            screenViewEntity?.updateSeenSurveyExperiences(experienceId)
+        }
     }
 
 }
@@ -607,7 +657,7 @@ internal extension AnalyticsPublisher {
 
     func broadcastEvent(_ event: Event, _ value: String, properties: [String: Any]?) {
         performOn(.main) { [weak self] in
-            self?.userpilot?.config.analyticsDelegate?.didTrack(
+            self?.userpilot?.analyticsDelegate?.didTrack(
                 analytic: event.userpilotAnalytic,
                 value: value,
                 properties: properties)
@@ -628,5 +678,7 @@ internal extension AnalyticsPublisher {
     static let isSessionStartedProperty = "is_session_start"
     static let fakeReload = "fake_reload"
     static let seenContents = "seen_contents"
+    static let seenSurveys = "seen_surveys"
     private static let eventNameProperty = "event_name"
 }
+// swiftlint:enable file_length

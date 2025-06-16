@@ -20,6 +20,7 @@ internal class ScreenViewEntity {
 
     /// A set of IDs representing the experiences seen during this screen view.
     var seenExperiences: Set<Int>
+    var seenSurveys: Set<Int>
 
     /// Initializes a new `ScreenViewEntity` instance.
     ///
@@ -29,18 +30,25 @@ internal class ScreenViewEntity {
     ///   - seenExperiences: A set of IDs representing seen experiences. Defaults to an empty set.
     ///   - didTriggerEvent: A flag indicating whether an event was triggered during the screen view.
     ///    Defaults to `false`.
-    init(event: Event, seenExperiences: Set<Int> = []) {
+    init(event: Event, seenExperiences: Set<Int> = [], seenSurveys: Set<Int> = []) {
         self.event = event
         self.seenExperiences = seenExperiences
+        self.seenSurveys = seenSurveys
     }
 
     /// Resets the state of the screen view entity.
     func resetState() {
         seenExperiences.removeAll()
+        seenSurveys.removeAll()
     }
 
     /// Adds an experience ID to the set of seen experiences.
-    func updateSeenExperiences(_ experienceId: Int) {
+    func updateSeenFlowExperiences(_ experienceId: Int) {
         seenExperiences.insert(experienceId)
+    }
+
+    /// Adds an experience ID to the set of seen experiences.
+    func updateSeenSurveyExperiences(_ experienceId: Int) {
+        seenSurveys.insert(experienceId)
     }
 }

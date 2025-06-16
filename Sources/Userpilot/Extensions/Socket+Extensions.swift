@@ -12,7 +12,7 @@
 import Foundation
 import SwiftPhoenixClient
 
-extension Message {
+internal extension Message {
 
     var isInvalidMessage: Bool {
         self.payload.isEmpty || self.event == "phx_close" || self.topic == "phoenix"

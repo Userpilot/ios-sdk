@@ -80,13 +80,14 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
             callback()
             return
         }
-
-        let request = URLRequest(url: url)
-
+        let request = getURLRequest(for: url)
         performOn(.highPriority) {
-            // Perform the network request asynchronously on a background thread
             let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-                guard let self else { return }
+                guard let self = self else {
+                    callback()
+                    return
+                }
+
                 if let error {
                     self.logger.error("Request failed: %{public}@", error.localizedDescription)
                     callback()
@@ -95,15 +96,14 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
 
                 guard let httpResponse = response as? HTTPURLResponse, httpResponse.isSuccessStatusCode else {
                     if let httpResponse = response as? HTTPURLResponse {
-                        self.logger.error("Request failed with code: %{public}@", httpResponse.statusCode)
+                        self.logger.error("Request failed with code: %{public}@", String(httpResponse.statusCode))
                     }
                     callback()
                     return
                 }
 
-                // swiftlint:disable:next non_optional_string_data_conversion
                 if let data, let responseBody = String(data: data, encoding: .utf8) {
-                    self.logger.info("RSDK Settings response: %{public}@", responseBody)
+                    self.logger.info("SDK Settings response: %{public}@", responseBody)
                     do {
                         if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                            let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
@@ -118,5 +118,12 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
             }
             task.resume()
         }
+    }
+
+    /// Prepare URL request
+    private func getURLRequest(for url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue(getUserAgent(), forHTTPHeaderField: "User-Agent")
+        return request
     }
 }

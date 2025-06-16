@@ -40,11 +40,15 @@ internal class ImageLoader: ImageLoading {
 
     private var blurCache = [String: UIImage]()
     private var imageCache = [String: UIImage]()
+    private var userAgent: String?
 
     // Private initializer to prevent instantiation from outside
     init(container: DIContainer) { }
 
     func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
+        if userAgent == nil {
+            userAgent = getUserAgent()
+        }
         performOn(.background) { [weak self] in
             guard
                 let self,
@@ -92,7 +96,9 @@ internal class ImageLoader: ImageLoading {
     ///   - url: The URL of the image to load.
     ///   - completion: A completion handler with the loaded `UIImage` (optional).
     private func loadImage(from url: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        var imageRequest = URLRequest(url: url)
+        imageRequest.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        URLSession.shared.dataTask(with: imageRequest) { [weak self] data, _, error in
             guard let self, let data = data, error == nil else {
                 completion(nil)
                 return

@@ -15,6 +15,7 @@ import UIKit
 
 internal extension Optional where Wrapped == String {
 
+    // Function to return empty state
     var isNotEmpty: Bool {
         return !(self?.isEmpty ?? true)
     }
@@ -23,14 +24,17 @@ internal extension Optional where Wrapped == String {
 
 internal extension String {
 
+    // Function to return empty state
     var isNotEmpty: Bool {
         return !isEmpty
     }
 
+    // Function to trim space in string
     func trim() -> String {
         return self.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    // Function to return base url from full domain
     func baseURL() -> String? {
         guard
             let urlComponents = URLComponents(string: self),
@@ -40,6 +44,7 @@ internal extension String {
         return "\(scheme)://\(host)"
     }
 
+    // Function to return font size
     var toFontSize: CGFloat {
         if self.contains("px"), let value = Int(self.dropLast(2)) {
             return CGFloat(value)
@@ -50,11 +55,7 @@ internal extension String {
         }
     }
 
-    var isRTL: Bool {
-        let rtlLanguages = ["ar", "arc", "dv", "fa", "ha", "he", "khw", "ks", "ku", "ps", "ur", "yi", "iw", "ji"]
-        return rtlLanguages.contains(self)
-    }
-
+    // Function to return size
     var toSize: CGFloat? {
         if self.contains("px"), let value = Int(self.dropLast(2)) {
             return CGFloat(value)
@@ -65,6 +66,13 @@ internal extension String {
         }
     }
 
+    // Function to return RTL language
+    var isRTL: Bool {
+        let rtlLanguages = ["ar", "arc", "dv", "fa", "ha", "he", "khw", "ks", "ku", "ps", "ur", "yi", "iw", "ji"]
+        return rtlLanguages.contains(self)
+    }
+
+    // Function to return label height
     func height(withFont font: UIFont, width: CGFloat) -> CGFloat {
         let maxSize = CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
         let attributes: [NSAttributedString.Key: Any] = [.font: font]
@@ -79,10 +87,37 @@ internal extension String {
         return ceil(boundingBox.height)
     }
 
+    // Function to return image name
     func getImageNameWithoutExtension() -> String? {
         guard let url = URL(string: self) else { return nil }
         return url.deletingPathExtension().lastPathComponent
     }
+
+    // Function to return valid email address
+    func isValidEmail() -> Bool {
+        guard let regex = try? NSRegularExpression(
+            pattern: "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+            options: .caseInsensitive) else {
+            return false
+        }
+        let range = NSRange(location: 0, length: self.count)
+        return regex.firstMatch(in: self, options: [], range: range) != nil
+    }
+
+    // Function to return valid phone number
+    func isValidPhone() -> Bool {
+        // Example phone validation (simple version)
+        let phoneRegex = "^[0-9]{10}$"
+        let regex = try? NSRegularExpression(pattern: phoneRegex, options: [])
+        let range = NSRange(location: 0, length: self.count)
+        return regex?.firstMatch(in: self, options: [], range: range) != nil
+    }
+
+    // Function to check if the string is numaric
+    func isNumeric() -> Bool {
+        return Double(self) != nil
+    }
+
 }
 
 // MARK: - Colors

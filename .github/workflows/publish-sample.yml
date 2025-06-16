@@ -1,0 +1,180 @@
+# 📦 GitHub Actions workflow to build an iOS ipa and upload it to Firebase App Distribution
+# This workflow allows manual triggers via GitHub UI and lets you choose between two schemes: 'UserpilotSample' or 'UserpilotSample Dev'
+
+name: "Publish iOS Sample App"
+
+on:
+  # 🎛️ Allows manual triggering of the workflow through the GitHub UI with scheme selection
+  workflow_dispatch:
+    inputs:
+      scheme:
+        description: 'Select the scheme to build'
+        required: true
+        default: "UserpilotSample"
+        type: choice
+        options:
+          - UserpilotSample
+          - UserpilotSample Dev
+
+# 🛡️ Set default permissions needed for canceling workflows and reading repository contents
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  # 🔴 Cancel any previously running workflow runs (for this workflow) on the same branch  
+  cancel_previous:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.NPM_TOKEN }}
+
+  # 🛠️ Build the selected iOS scheme into an .ipa file
+  build_sample_app:
+    needs: cancel_previous
+    runs-on: macos-latest
+
+    steps:
+      # 🔧 Print the Xcode version used by the runner
+      - name: Check Xcode version
+        run: /usr/bin/xcodebuild -version
+
+      # 📥 Checkout the source code from the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 🔐 Setup signing credentials (certificate & provisioning profile)
+      - name: Setup Secrets
+        id: secrets
+        run: |
+          if [[ "${{ github.event.inputs.scheme }}" == "UserpilotSample" ]]; then
+            echo "BUILD_CERTIFICATE_BASE64=${{ secrets.BUILD_CERTIFICATE_BASE64 }}" >> $GITHUB_ENV
+            echo "P12_PASSWORD=${{ secrets.P12_PASSWORD }}" >> $GITHUB_ENV
+            echo "BUILD_PROVISION_PROFILE_BASE64=${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}" >> $GITHUB_ENV
+            echo "KEYCHAIN_PASSWORD=${{ secrets.KEYCHAIN_PASSWORD }}" >> $GITHUB_ENV
+            echo "EXPORT_OPTIONS_PLIST=${{ secrets.EXPORT_OPTIONS_PLIST }}" >> $GITHUB_ENV
+          else
+            echo "BUILD_CERTIFICATE_BASE64=${{ secrets.DEV_BUILD_CERTIFICATE_BASE64 }}" >> $GITHUB_ENV
+            echo "P12_PASSWORD=${{ secrets.DEV_P12_PASSWORD }}" >> $GITHUB_ENV
+            echo "BUILD_PROVISION_PROFILE_BASE64=${{ secrets.DEV_BUILD_PROVISION_PROFILE_BASE64 }}" >> $GITHUB_ENV
+            echo "KEYCHAIN_PASSWORD=${{ secrets.DEV_KEYCHAIN_PASSWORD }}" >> $GITHUB_ENV
+            echo "EXPORT_OPTIONS_PLIST=${{ secrets.DEV_EXPORT_OPTIONS_PLIST }}" >> $GITHUB_ENV
+          fi
+
+      # Step 4: Install the Apple certificate and provisioning profile
+      - name: Install Apple certificate and provisioning profile
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      # ✅ Install SwiftLint for static code analysis (optional)
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      # 🏗️ Build the selected scheme into an .xcarchive
+      - name: Build selected scheme archive
+        run: |
+          ARCHIVE_PATH="$RUNNER_TEMP/${{ github.event.inputs.scheme }}.xcarchive"
+
+          xcodebuild -project ./Sample/UserpilotSample/UserpilotSample.xcodeproj \
+          -scheme "${{ github.event.inputs.scheme }}" \
+          -archivePath "$ARCHIVE_PATH" \
+          -sdk iphoneos \
+          -configuration Debug \
+          -destination generic/platform=iOS \
+          clean archive
+
+      # 📦 Export the .ipa file using ExportOptions.plist
+      - name: Export .ipa file
+        run: |
+          EXPORT_OPTS_PATH=$RUNNER_TEMP/ExportOptions.plist
+          ARCHIVE_PATH="$RUNNER_TEMP/${{ github.event.inputs.scheme }}.xcarchive"
+          echo -n "$EXPORT_OPTIONS_PLIST" | base64 --decode -o $EXPORT_OPTS_PATH
+
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportOptionsPlist "$EXPORT_OPTS_PATH" \
+            -exportPath $RUNNER_TEMP/build
+
+      # ☁️ Upload the generated .ipa file as a GitHub Actions artifact (available for 3 days)
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.scheme }}.ipa
+          path: ${{ runner.temp }}/build/UserpilotSample.ipa
+          retention-days: 3
+
+  # ☁️ Upload the built .ipa file to Firebase App Distribution
+  upload_to_firebase:
+    needs: [cancel_previous, build_sample_app]
+    runs-on: ubuntu-latest
+
+    steps:
+      # 📥 Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # 📥 Download the appropriate .ipa artifact
+      - name: Download the artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.inputs.scheme }}.ipa
+          path: ./build
+
+      # 🧳 Fetch base and head branches (only needed for PRs)
+      - name: Fetch base and head branches
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git fetch origin ${{ github.event.pull_request.head.ref }}
+
+      # 📝 Generate dynamic release notes
+      - name: Generate release notes
+        run: |
+          echo "📱 Firebase Release Notes" > release-notes.txt
+          echo "" >> release-notes.txt
+          
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "📦 PR Title: ${{ github.event.pull_request.title }}" >> release-notes.txt
+            echo "🔗 PR Link: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}" >> release-notes.txt
+            echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
+            echo "" >> release-notes.txt
+            echo "📋 Commits in this PR:" >> release-notes.txt
+            git log origin/${{ github.event.pull_request.base.ref }}..origin/${{ github.event.pull_request.head.ref }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
+          else
+            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" >> release-notes.txt
+            echo "🔗 Commit Link: https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> release-notes.txt
+            echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
+            echo "" >> release-notes.txt
+            echo "📋 Commits in this Push:" >> release-notes.txt
+            git log ${{ github.event.before }}..${{ github.event.after }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
+          fi
+
+      # 🚀 Upload the .ipa to Firebase App Distribution
+      - name: Upload .ipa to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.CREDENTIAL_FILE_CONTENT }}
+          groups: productteam
+          file: ./build/UserpilotSample.ipa
+          releaseNotesFile: release-notes.txt

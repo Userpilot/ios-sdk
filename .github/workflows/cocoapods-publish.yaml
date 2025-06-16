@@ -1,0 +1,246 @@
+# 📦 GitHub Actions workflow to deploy and iOS SDK release.
+
+name: Release and Publish to CocoaPods
+
+on:
+  # 🔄 Trigger workflow on push to 'release/release-*' paths
+  push:
+    branches:
+      - 'release/release-*'
+
+jobs:
+  # 🔖 First job: Trigger the bump version workflow and wait for completion
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      # 🧩 Trigger the bump version workflow
+      - name: Trigger bump version workflow
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.NPM_TOKEN }}
+          script: |
+            const result = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'bump-version.yml',
+              ref: context.ref
+              // No inputs needed - will use default from bump-version.yml
+            });
+            console.log('Bump version workflow triggered');
+
+      # 🕐 Wait for the bump version workflow to complete
+      - name: Wait for bump version workflow completion
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.NPM_TOKEN }}
+          script: |
+            const maxAttempts = 30; // Wait up to 15 minutes (30 * 30 seconds)
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'bump-version.yml',
+                per_page: 1,
+                status: 'completed'
+              });
+              
+              if (runs.data.workflow_runs.length > 0) {
+                const latestRun = runs.data.workflow_runs[0];
+                console.log(`Latest bump workflow status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
+                
+                if (latestRun.conclusion === 'success') {
+                  console.log('Bump version workflow completed successfully');
+                  break;
+                } else if (latestRun.conclusion === 'failure' || latestRun.conclusion === 'cancelled') {
+                  throw new Error(`Bump version workflow failed with conclusion: ${latestRun.conclusion}`);
+                }
+              }
+              
+              attempts++;
+              if (attempts >= maxAttempts) {
+                throw new Error('Timeout waiting for bump version workflow to complete');
+              }
+              
+              console.log(`Waiting for bump version workflow... (attempt ${attempts}/${maxAttempts})`);
+              await new Promise(resolve => setTimeout(resolve, 30000)); // Wait 30 seconds
+            }
+
+      # 📥 Checkout the updated code after version bump
+      - name: Checkout updated code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+          token: ${{ secrets.NPM_TOKEN }}
+
+      # 📥 Extract the new version after bump
+      - name: Extract bumped version
+        id: get-version
+        run: |
+          # Ensure we have the latest changes
+          git pull origin ${{ github.ref_name }}
+          
+          file="./Sources/Userpilot/Version.swift"
+          major=$(grep 'private let versionMajor' "$file" | grep -oE '[0-9]+')
+          minor=$(grep 'private let versionMinor' "$file" | grep -oE '[0-9]+')
+          patch_line=$(grep 'private let versionPatch' "$file")
+          patch_with_suffix=$(echo "$patch_line" | grep -oE '[0-9]+(-(beta|rc)\.[0-9]+)?')
+          version="$major.$minor.$patch_with_suffix"
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "Bumped version: $version"
+
+  # ✅ Second job: Validate branch
+  validate-branch:
+    needs: bump-version
+    runs-on: macOS-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Validate branch
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "$BRANCH" != "main" && "$BRANCH" != release/* ]]; then
+            echo "Error: Must be on 'main' or 'release/*' branch. Current: $BRANCH"
+            exit 1
+          fi
+          echo "Branch validation passed: $BRANCH"
+
+  # 📝 Third job: Create GitHub Release
+  create-release:
+    needs: [bump-version, validate-branch]
+    runs-on: macOS-latest
+    steps:
+      # 📥 Checkout code with the latest changes including version bump
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+          token: ${{ secrets.NPM_TOKEN }}
+
+      # 📥 Pull latest changes to ensure we have the version bump
+      - name: Pull latest changes
+        run: |
+          git pull origin ${{ github.ref_name }}
+
+      # 📝 Generate changelog from git commits between latest tags
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.bump-version.outputs.version }}"
+          TAG_NAME="$VERSION"
+          PREV_TAG=$(git describe --tags --abbrev=0 "$TAG_NAME"^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- [%as] %s (%h)" --abbrev=7 | sed '/[🔧🎬⬆📸✅💡📝]/d')
+          else
+            CHANGELOG=$(git log --pretty=format:"- [%as] %s (%h)" "$PREV_TAG..$TAG_NAME" --abbrev=7 | sed '/[🔧🎬⬆📸✅💡📝]/d')
+          fi
+          echo "$CHANGELOG" > changelog.txt
+          echo "Generated changelog between $PREV_TAG and $TAG_NAME"
+
+      # 📝 Create GitHub Release using the bumped version
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.bump-version.outputs.version }}
+          name: ${{ needs.bump-version.outputs.version }}
+          body_path: changelog.txt
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # 🚀 Fourth job: Publish to CocoaPods
+  publish-cocoapods:
+    needs: [bump-version, validate-branch, create-release]
+    runs-on: macOS-latest
+    steps:
+      # 📥 Checkout code with the latest changes including version bump
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+          token: ${{ secrets.NPM_TOKEN }}
+
+      # 📥 Pull latest changes to ensure we have the version bump and tags
+      - name: Pull latest changes and tags
+        run: |
+          git pull origin ${{ github.ref_name }}
+          git fetch --tags
+
+      # ⚙️ Install CocoaPods
+      - name: Install CocoaPods
+        run: gem install cocoapods
+
+      # ✅ Validate podspec before publishing
+      - name: Validate podspec
+        run: |
+          # Find the podspec file (assuming it's in the root directory)
+          PODSPEC=$(find . -name "*.podspec" -maxdepth 1 | head -n 1)
+          if [ -z "$PODSPEC" ]; then
+            echo "Error: No .podspec file found in root directory"
+            exit 1
+          fi
+          echo "Found podspec: $PODSPEC"
+          
+          # Validate the podspec
+          pod spec lint "$PODSPEC" --allow-warnings
+          echo "Podspec validation passed"
+
+      # 🔧 Update podspec version (if needed)
+      - name: Update podspec version
+        run: |
+          VERSION="${{ needs.bump-version.outputs.version }}"
+          PODSPEC=$(find . -name "*.podspec" -maxdepth 1 | head -n 1)
+          
+          if [ -n "$PODSPEC" ]; then
+            # Update version in podspec file
+            sed -i '' "s/s\.version[[:space:]]*=[[:space:]]*['\"][^'\"]*['\"]/s.version = '$VERSION'/" "$PODSPEC"
+            echo "Updated podspec version to $VERSION"
+            
+            # Show the updated line for verification
+            grep "s\.version" "$PODSPEC" || echo "Version line not found in podspec"
+          fi
+
+      # 📄 Commit podspec changes if any
+      - name: Commit podspec changes
+        run: |
+          git config user.name "motasem-userpilot"
+          git config user.email "motasem@userpilot.co"
+          
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add *.podspec
+            git commit -m "📦 update podspec version to ${{ needs.bump-version.outputs.version }}"
+            git push
+          fi
+
+      # 🚀 Deploy to CocoaPods using the action
+      - name: Deploy to CocoaPods
+        uses: michaelhenry/deploy-to-cocoapods-github-action@1.0.10
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+
+      # 🎉 Verify deployment
+      - name: Verify CocoaPods deployment
+        run: |
+          VERSION="${{ needs.bump-version.outputs.version }}"
+          PODNAME=$(find . -name "*.podspec" -maxdepth 1 | head -n 1 | xargs basename -s .podspec)
+          
+          echo "Waiting for CocoaPods to process the new version..."
+          sleep 30
+          
+          # Try to search for the pod (this might take a few minutes to be available)
+          pod search "$PODNAME" || echo "Pod might not be immediately searchable, but deployment completed"
+          echo "CocoaPods deployment completed for $PODNAME version $VERSION"

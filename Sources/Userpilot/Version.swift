@@ -12,8 +12,7 @@
 import Foundation
 
 /// The current version of the Userpilot SDK.
-///
-/// This constant represents the version number of the SDK in use. It is useful for
-/// tracking updates, managing compatibility, and ensuring that users are working with
-/// the expected version of the SDK.
-let userpilotVersion = "0.0.1-beta.1"
+private let versionMajor = "0"
+private let versionMinor = "0"
+private let versionPatch = "1-rc.2"
+let userpilotVersion = "\(versionMajor).\(versionMinor).\(versionPatch)"

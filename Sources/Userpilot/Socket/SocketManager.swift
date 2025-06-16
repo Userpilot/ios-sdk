@@ -198,6 +198,7 @@ extension SocketManager {
     // swiftlint:disable:next function_body_length
     private func openSocket() {
         guard
+            storage.socketURL.isNotEmpty,
             config.token.isNotEmpty,
             storage.userID.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
@@ -207,14 +208,16 @@ extension SocketManager {
             socketState = .connecting
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: "NX-1716ba67",
+                SocketManager.tokenKey: Environment.getClientToken(config: config),
                 SocketManager.userIDKey: storage.userID,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,
                 SocketManager.appPropertiesKey: appProperties
             ]
-            let socketURL = "wss://analytex-dev-nxtapp-8755.userpilot.io/mobile/v1/events/websocket"
-            phoenixSocket = Socket(socketURL, params: socketProperties)
+            phoenixSocket = Socket(
+                Environment.getSocketURL(storage: storage),
+                params: socketProperties
+            )
 
             guard let phoenixSocket else { return }
 
@@ -285,13 +288,13 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        tryCatch {
-            if let phoenixChannel, !phoenixChannel.isClosed {
-                phoenixChannel.leave(timeout: 0.0)
-                phoenixSocket?.remove(phoenixChannel)
-            }
-            if let phoenixSocket {
-                phoenixSocket.disconnect()
+        performOn(.main) { [weak self] in
+            tryCatch {
+                if let channel = self?.phoenixChannel, !channel.isClosed {
+                    channel.leave(timeout: 0.0)
+                    self?.phoenixSocket?.remove(channel)
+                }
+                self?.phoenixSocket?.disconnect()
             }
         }
     }

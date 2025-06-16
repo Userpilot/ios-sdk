@@ -22,7 +22,7 @@ internal class BottomSheetViewController: UIViewController {
     private lazy var mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
+        view.backgroundColor = .white
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
         view.clipsToBounds = true
         return view
@@ -49,6 +49,9 @@ internal class BottomSheetViewController: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
         view.alpha = 0
+        view.addTapGesture { [weak self] in
+            self?.view.endEditing(true)
+        }
         return view
     }()
 
@@ -58,11 +61,13 @@ internal class BottomSheetViewController: UIViewController {
     private let minDismissiblePanHeight: CGFloat = 20
     /// Minimum spacing between the top edge of the view and the bottom sheet
     private var minTopSpacing: CGFloat = 100
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - View Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
         setupViews()
         // setupGestures()
     }
@@ -71,6 +76,12 @@ internal class BottomSheetViewController: UIViewController {
         super.viewDidAppear(animated)
         animatePresent()
     }
+
+    deinit {
+        UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+        ? .forceLeftToRight : .forceRightToLeft
+    }
+
 }
 
 // MARK: - Setup Views
@@ -100,13 +111,13 @@ private extension BottomSheetViewController {
         ])
 
         // Add top draggable bar view
-        mainContainerView.addSubview(topBarView)
-        NSLayoutConstraint.activate([
-            topBarView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
-            topBarView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
-            topBarView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor),
-            topBarView.heightAnchor.constraint(equalToConstant: 20)
-        ])
+//        mainContainerView.addSubview(topBarView)
+//        NSLayoutConstraint.activate([
+//            topBarView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
+//            topBarView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
+//            topBarView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor),
+//            topBarView.heightAnchor.constraint(equalToConstant: 20)
+//        ])
 
         // Add content view
         mainContainerView.addSubview(contentView)
@@ -117,7 +128,7 @@ private extension BottomSheetViewController {
             contentView.trailingAnchor.constraint(
                 equalTo: mainContainerView.trailingAnchor,
                 constant: ThemeHandler.DefaultValues.contentMargin.negative),
-            contentView.topAnchor.constraint(equalTo: topBarView.bottomAnchor),
+            contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
             contentView.bottomAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
@@ -204,24 +215,42 @@ internal extension BottomSheetViewController {
 internal extension BottomSheetViewController {
 
     /// Set the dynamic content for the bottom sheet
-    func setContent(_ content: UIView) {
+    func setContent(content: UIView, withoutMargin: Bool = false) {
         contentView.addSubview(content)
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: withoutMargin ? -20 : 0),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
     }
 
-    /// Customize the background color of the bottom sheet
+    /// Customize the background color of the bottom sheet for `ExperienceTheme`
     func setBackgroundColor(_ theme: ExperienceTheme) {
         mainContainerView.backgroundColor = theme.backgroundColor
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
+    }
+
+    /// Customize the background color of the bottom sheet for `SurveyTheme`
+    func setBackgroundColor(_ theme: SurveyTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        mainContainerView.setTopCornerRadius(theme.borderRadius)
+        dimmedView.isHidden = !theme.backdropEnabled
+        if theme.backdropEnabled {
+            dimmedView.backgroundColor = theme.backdropBackground
+        }
+    }
+
+    /// Customize the background color of the bottom sheet for `SurveyTheme`
+    func setBackgroundColor(_ theme: NPSTheme) {
+        mainContainerView.backgroundColor = theme.backgroundColor
+        mainContainerView.setTopCornerRadius(theme.borderRadius)
+        dimmedView.isHidden = false
+        dimmedView.backgroundColor = .black.withOpacity(0.4)
     }
 }
 

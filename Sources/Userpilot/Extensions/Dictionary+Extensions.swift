@@ -7,8 +7,6 @@
 //
 //  [Brief Description]
 //  `Dictionary+Extension` contains extensions with helper methods for the `Dictionary` class.
-//  These methods provide additional functionality for merging dictionaries and converting
-//  dictionaries to JSON strings.
 //
 
 import Foundation
@@ -23,7 +21,6 @@ internal extension Dictionary {
     func toJSONString() -> String? {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: self, options: .withoutEscapingSlashes)
-            // swiftlint:disable:next non_optional_string_data_conversion
             let jsonString = String(data: jsonData, encoding: .utf8)
             return jsonString
         } catch {

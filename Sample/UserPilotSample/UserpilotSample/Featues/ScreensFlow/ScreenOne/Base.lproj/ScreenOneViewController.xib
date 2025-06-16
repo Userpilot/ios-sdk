@@ -10,7 +10,7 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
-        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="ScreenOneViewController" customModule="UserPilotSample" customModuleProvider="target">
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="ScreenOneViewController" customModule="UserpilotSample" customModuleProvider="target">
             <connections>
                 <outlet property="view" destination="iN0-l3-epB" id="PHM-ac-a01"/>
             </connections>
@@ -38,22 +38,8 @@
                     <color key="textColor" name="MineShaft"/>
                     <nil key="highlightedColor"/>
                 </label>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="aoH-Rs-PCb">
-                    <rect key="frame" x="24" y="768" width="345" height="40"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="40" id="XeF-30-Oid"/>
-                    </constraints>
-                    <color key="tintColor" name="AccentColor"/>
-                    <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="filled" title="Next">
-                        <fontDescription key="titleFontDescription" type="system" weight="medium" pointSize="16"/>
-                    </buttonConfiguration>
-                    <connections>
-                        <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="bLS-RX-3ar"/>
-                    </connections>
-                </button>
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="24" translatesAutoresizingMaskIntoConstraints="NO" id="eDF-Ei-gKU">
-                    <rect key="frame" x="24" y="141" width="345" height="603"/>
+                    <rect key="frame" x="24" y="141" width="345" height="472"/>
                     <subviews>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="YeB-FL-23H">
                             <rect key="frame" x="0.0" y="0.0" width="345" height="100"/>
@@ -89,11 +75,28 @@
                             </constraints>
                         </view>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="WdX-C2-I0D">
-                            <rect key="frame" x="0.0" y="372" width="345" height="231"/>
+                            <rect key="frame" x="0.0" y="372" width="345" height="100"/>
                             <color key="backgroundColor" systemColor="systemGray5Color"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="100" id="dVI-aP-Y0T"/>
+                            </constraints>
                         </view>
                     </subviews>
                 </stackView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="aoH-Rs-PCb">
+                    <rect key="frame" x="24" y="768" width="345" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="XeF-30-Oid"/>
+                    </constraints>
+                    <color key="tintColor" name="AccentColor"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="filled" title="Next">
+                        <fontDescription key="titleFontDescription" type="system" weight="medium" pointSize="16"/>
+                    </buttonConfiguration>
+                    <connections>
+                        <action selector="onNextButtonClicked:" destination="-1" eventType="touchUpInside" id="bLS-RX-3ar"/>
+                    </connections>
+                </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -101,7 +104,6 @@
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="eDF-Ei-gKU" secondAttribute="trailing" constant="24" id="1ls-LH-DhE"/>
                 <constraint firstItem="tK4-GA-TJE" firstAttribute="centerY" secondItem="ss9-HL-T6u" secondAttribute="centerY" id="5Me-6c-kL1"/>
                 <constraint firstItem="eDF-Ei-gKU" firstAttribute="top" secondItem="tK4-GA-TJE" secondAttribute="bottom" constant="34" id="SqM-jI-fgK"/>
-                <constraint firstItem="aoH-Rs-PCb" firstAttribute="top" secondItem="eDF-Ei-gKU" secondAttribute="bottom" constant="24" id="SrX-l6-US4"/>
                 <constraint firstItem="ss9-HL-T6u" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="YJM-2G-hYI"/>
                 <constraint firstItem="eDF-Ei-gKU" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="24" id="ngx-ey-2fK"/>
                 <constraint firstItem="aoH-Rs-PCb" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="24" id="pBU-dx-QtQ"/>
