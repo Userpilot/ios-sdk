@@ -27,11 +27,11 @@ public enum UserpilotAnalytic: Int {
     public var rawValueString: String {
         switch self {
         case .identify:
-            return "identify"
+            return "Identify"
         case .screen:
-            return "screen"
+            return "Screen"
         case .event:
-            return "event"
+            return "Event"
         }
     }
 }
