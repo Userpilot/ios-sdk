@@ -1,6 +1,9 @@
 # Userpilot iOS SDK
 
 ![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
+[![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE)
+[![Swift](https://img.shields.io/badge/Swift-5.6-orange.svg)](https://swift.org)
 
 ## Introduction
 
