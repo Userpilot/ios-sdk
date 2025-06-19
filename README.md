@@ -9,7 +9,7 @@
 
 Userpilot iOS SDK enables you to capture user insights and deliver personalized in-app experiences in real time. With just a one-time setup, you can immediately begin leveraging Userpilot’s analytics and engagement features to understand user behaviors and guide their journeys in-app.
 
-This document provides a step-by-step walkthrough of the installation and initialization process, as well as instructions on using the SDK’s public methods.
+This document provides a step-by-step walkthrough of the installation and initialization process, as well as instructions on using the SDK’s public APIs.
 
 ## Table of contents
 
@@ -78,11 +78,11 @@ func application(_ application: UIApplication,
 
 ### Using the SDK
 
-Once initialized, the SDK provides straightforward methods for identifying users, tracking events, and screen views.
+Once initialized, the SDK provides straightforward APIs for identifying users, tracking events, and screen views.
 
 #### Identifying Users (Required)
 
-This method is used to identify unique users and companies (groups of users) and set their properties. Once identified, all subsequent tracked events and screens will be attributed to that user.
+This API is used to identify unique users and companies (groups of users) and set their properties. Once identified, all subsequent tracked events and screens will be attributed to that user.
 
 **Recommended Usage:**
 
@@ -168,7 +168,7 @@ userpilot.anonymous()
 
 **Notes:**
 
-- Anonymous users count towards your Monthly Active Users usage. Consider your MAU limits before using this method.
+- Anonymous users count towards your Monthly Active Users usage. Consider your MAU limits before using this API.
 
 #### Trigger Experiences
 
