@@ -157,7 +157,8 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
         print("🔧 Running on Simulator - push notification settings are not available.")
         // Optionally simulate a status (e.g., .notDetermined or .authorized)
         DispatchQueue.main.async {
-            completion?(.notDetermined)  // You can customize this as needed
+            UIApplication.shared.registerForRemoteNotifications()
+            completion?(.authorized)
         }
         #else
         print("📱 Running on Device - checking push notification settings...")
