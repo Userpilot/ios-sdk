@@ -177,14 +177,11 @@ extension Userpilot {
             config.logger.error("Invalid user id - empty string")
             return
         }
-        let userProperties = sanitizePayload(properties, payloadName: "properties", logger: config.logger)
-        let companyProperties = sanitizePayload(company, payloadName: "company", logger: config.logger)
-
         analyticsPublisher.publish(
             Event(
                 type: .identify(userId.trim()),
-                properties: userProperties,
-                company: companyProperties
+                properties: properties,
+                company: company
             )
         )
     }
@@ -235,12 +232,10 @@ extension Userpilot {
             config.logger.error("Invalid event name - empty string")
             return
         }
-        let eventProperties = sanitizePayload(properties, payloadName: "properties", logger: config.logger)
-
         analyticsPublisher.publish(
             Event(
                 type: .event(eventName),
-                properties: eventProperties
+                properties: properties
             )
         )
     }
