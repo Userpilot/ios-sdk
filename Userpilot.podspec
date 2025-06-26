@@ -2,7 +2,7 @@ Pod::Spec.new do |spec|
 
   spec.name          = "Userpilot"
   spec.module_name   = "Userpilot"
-  spec.version       = "1.0.1"
+  spec.version       = "1.0.2"
   spec.summary       = "Userpilot iOS SDK allows you to integrate Userpilot experiences into your native iOS apps"
 
   spec.description   = <<-DESC
