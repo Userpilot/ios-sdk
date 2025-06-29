@@ -139,31 +139,49 @@ internal class UPTextView: UILabel {
     @objc private func handleLabelTap(_ gesture: LinkTapGestureRecognizer) {
         guard
             gesture.state == .ended,
-            let text = attributedText,
+            let attributedText = attributedText,
             let range = gesture.modifiedRange,
             let link = gesture.link
         else { return }
 
+        // Create text system objects
         let layoutManager = NSLayoutManager()
         let textContainer = NSTextContainer(size: bounds.size)
-        let textStorage = NSTextStorage(attributedString: text)
+        let textStorage = NSTextStorage(attributedString: attributedText)
 
         textStorage.addLayoutManager(layoutManager)
         layoutManager.addTextContainer(textContainer)
 
-        let location = gesture.location(in: self)
         textContainer.lineFragmentPadding = 0
         textContainer.maximumNumberOfLines = numberOfLines
         textContainer.lineBreakMode = lineBreakMode
 
-        let characterIndex = layoutManager.characterIndex(for: location,
-                                                 in: textContainer,
-                                                 fractionOfDistanceBetweenInsertionPoints: nil)
+        // Calculate the bounding rect of the rendered text
+        let textBoundingRect = layoutManager.usedRect(for: textContainer)
 
-        // Check if the character index is within bounds
-        if characterIndex < text.length &&
-            characterIndex >= range.location &&
-            characterIndex <=  range.location + range.length {
+        // Get the location of the tap
+        var location = gesture.location(in: self)
+
+        // Adjust x-origin based on alignment
+        switch textAlignment {
+        case .center:
+            location.x -= (bounds.width - textBoundingRect.width) / 2
+        case .right, .natural where UIView.userInterfaceLayoutDirection(for: semanticContentAttribute) == .rightToLeft:
+            location.x -= (bounds.width - textBoundingRect.width)
+        default:
+            break // left aligned or default
+        }
+
+        // Get tapped character index
+        let characterIndex = layoutManager.characterIndex(
+            for: location,
+            in: textContainer,
+            fractionOfDistanceBetweenInsertionPoints: nil
+        )
+
+        // Validate index in range
+        if characterIndex >= range.location,
+           characterIndex <= range.location + range.length {
             UIApplication.shared.open(link)
         }
     }
@@ -175,7 +193,11 @@ private class LinkTapGestureRecognizer: UITapGestureRecognizer {
     var range: NSRange?
     var link: URL?
 
+    var safeLength: Int {
+        return range?.length ?? 0
+    }
+
     var modifiedRange: NSRange? {
-        return NSRange(location: (range?.location ?? 3) - 3, length: (range?.length ?? 0) + 3)
+        return NSRange(location: range?.location ?? 0, length: safeLength)
     }
 }
