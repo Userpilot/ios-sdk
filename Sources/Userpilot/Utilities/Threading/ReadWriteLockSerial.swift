@@ -28,9 +28,11 @@ internal class ReadWriteLockSerial {
     ///
     /// - Parameter label: A string used to identify the dispatch queue. Useful for debugging and profiling.
     init(label: String) {
-        serialQueue = DispatchQueue(label: label,
-                                    qos: .utility,
-                                    autoreleaseFrequency: .workItem)
+        serialQueue = DispatchQueue(
+            label: label,
+            qos: .utility,
+            autoreleaseFrequency: .workItem
+        )
     }
 
     // MARK: - Methods

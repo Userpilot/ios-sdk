@@ -116,7 +116,11 @@ class UPStepsBarProgressView: UIView {
     ///   - stepsCount: The total number of steps in the progress view.
     ///   - theme: The theme (either `SurveyTheme` or `NPSTheme`) that defines the colors for the steps.
     ///   - isRTL: A boolean value indicating whether the layout should be mirrored for Right-To-Left languages.
-    func setupView(stepsCount: Int, theme: Any, isRTL: Bool) {
+    func setupView(
+        stepsCount: Int,
+        theme: Any,
+        isRTL: Bool
+    ) {
         numberOfSteps = stepsCount
         activeColor = getActiveColor(from: theme)
 

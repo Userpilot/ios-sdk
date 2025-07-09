@@ -97,6 +97,30 @@ public class Userpilot: NSObject {
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
     }
+
+    // MARK: - Setup Methods
+
+    /**
+     Initializes the DI (Dependency Injection) container and registers required services.
+     
+     This method sets up lazy initialization for essential SDK services like `DataStoring`,
+     `Networking`, `SocketEvents`, and more.
+     By using lazy registration, the services are only created when they are first used, improving performance.
+     */
+    internal func initializeContainer() {
+        container.owner = self
+        container.register(Config.self, value: config)
+        container.registerLazy(DataStoring.self, initializer: Storage.init)
+        container.registerLazy(AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
+        container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
+        container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
+        container.registerLazy(SessionMonitoring.self, initializer: SessionMonitor.init)
+        container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
+        container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
+        container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
+        container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
+        container.registerLazy(PushMonitoring.self, initializer: PushMonitor.init)
+    }
 }
 
 // MARK: - Public Methods
@@ -129,33 +153,6 @@ extension Userpilot {
     }
 }
 
-// MARK: - Setup Methods
-
-extension Userpilot {
-
-    /**
-     Initializes the DI (Dependency Injection) container and registers required services.
-     
-     This method sets up lazy initialization for essential SDK services like `DataStoring`,
-     `Networking`, `SocketEvents`, and more.
-     By using lazy registration, the services are only created when they are first used, improving performance.
-     */
-    private func initializeContainer() {
-        container.owner = self
-        container.register(Config.self, value: config)
-        container.registerLazy(DataStoring.self, initializer: Storage.init)
-        container.registerLazy(AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
-        container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
-        container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
-        container.registerLazy(SessionMonitoring.self, initializer: SessionMonitor.init)
-        container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
-        container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
-        container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
-        container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
-        container.registerLazy(PushMonitoring.self, initializer: PushMonitor.init)
-    }
-}
-
 // MARK: - Tracking APIs
 
 extension Userpilot {
@@ -172,7 +169,11 @@ extension Userpilot {
        - company: An optional dictionary containing company-specific properties for users associated with company.
      */
     @objc
-    public func identify(userId: String, properties: Payload = nil, company: Payload = nil) {
+    public func identify(
+        userId: String,
+        properties: Payload = nil,
+        company: Payload = nil
+    ) {
         guard userId.trim().isNotEmpty else {
             config.logger.error("Invalid user id - empty string")
             return
@@ -194,7 +195,6 @@ extension Userpilot {
      */
     @objc
     public func anonymous() {
-        logout()
         identify(userId: "\(config.token)_\(anonymousFactory())")
     }
 
@@ -227,7 +227,10 @@ extension Userpilot {
        - properties: An optional dictionary containing additional context or metadata related to the event.
      */
     @objc
-    public func track(eventName: String, properties: Payload = nil) {
+    public func track(
+        eventName: String,
+        properties: Payload = nil
+    ) {
         guard eventName.trim().isNotEmpty else {
             config.logger.error("Invalid event name - empty string")
             return
@@ -307,7 +310,7 @@ extension Userpilot {
     internal func clean() {
         storage.pushToken = nil
         storage.userId = ""
-        storage.user = User().toJson() ?? ""
+        storage.user = ""
     }
 }
 
@@ -371,11 +374,14 @@ extension Userpilot {
     /// - Returns: A `Bool` indicating whether Userpilot should automatically handle the
     /// completion block. If `true` is returned, Userpilot will call the `completionHandler` automatically.
     ///  If `false` is returned, you should call `completionHandler` after processing the user's response.
-    public func didReceiveNotification(response: UNNotificationResponse,
-                                       completionHandler: @escaping () -> Void) -> Bool {
+    public func didReceiveNotification(
+        response: UNNotificationResponse,
+        completionHandler: @escaping () -> Void
+    ) -> Bool {
         return pushMonitor.didReceiveNotification(
             response: response,
-            completionHandler: completionHandler)
+            completionHandler: completionHandler
+        )
     }
 
 }

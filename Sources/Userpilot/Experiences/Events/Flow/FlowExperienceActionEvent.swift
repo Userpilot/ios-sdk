@@ -16,12 +16,12 @@ import Foundation
  Base class representing various types of experience action events for mobile content.
 
  - Parameters:
-   - flowContentID: The ID of the mobile content associated with the event.
+   - flowContentId: The Id of the mobile content associated with the event.
    - hasDeepLinkContent: To allow fetch next experience or open deep link screen.
  */
 internal class FlowExperienceActionEvent: SDKEvent {
-    /// Experience ID
-    let flowID: Int
+    /// Experience Id
+    let flowId: Int
     /// Has deeplink to open it
     let hasDeepLinkContent: Bool
 
@@ -46,15 +46,18 @@ internal class FlowExperienceActionEvent: SDKEvent {
 
     /// Creates a dictionary representation of the event data.
     ///
-    /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
+    /// - Returns: A dictionary containing the action type, mobile content Id, application token, and user Id.
     func toMap() -> [String: Any] {
         return [
-            "mobile_content_id": flowID
+            "mobile_content_id": flowId
         ]
     }
 
-    init(flowID: Int, hasDeepLinkContent: Bool = false) {
-        self.flowID = flowID
+    init(
+        flowId: Int,
+        hasDeepLinkContent: Bool = false
+    ) {
+        self.flowId = flowId
         self.hasDeepLinkContent = hasDeepLinkContent
     }
 }
@@ -77,9 +80,12 @@ internal class ExperienceFlowDismissedEvent: FlowExperienceActionEvent {
     // Custom parameters for the dismissed event
     let stepId: Int
 
-    init(flowID: Int, stepId: Int) {
+    init(
+        flowId: Int,
+        stepId: Int
+    ) {
         self.stepId = stepId
-        super.init(flowID: flowID)
+        super.init(flowId: flowId)
     }
 
     override var name: String {

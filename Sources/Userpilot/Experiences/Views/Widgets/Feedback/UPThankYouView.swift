@@ -56,7 +56,11 @@ internal class UPThankYouView: UIView {
     /// - Parameters:
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool) {
+    func setupView(
+        surveyStep: SurveyStep,
+        surveyTheme: SurveyTheme,
+        isRTL: Bool
+    ) {
         titleDescriptionView.setupView(
             surveyStep: surveyStep,
             surveyTheme: surveyTheme,
@@ -70,7 +74,11 @@ internal class UPThankYouView: UIView {
     ///   - completedData: The data containing the header and subheader text.
     ///   - npsTheme: The theme containing style properties such as text color and font.
     ///   - isRTL: A Boolean indicating whether the layout should be right-to-left.
-    func setupView(completedData: CompletedData?, npsTheme: NPSTheme, isRTL: Bool) {
+    func setupView(
+        completedData: CompletedData?,
+        npsTheme: NPSTheme,
+        isRTL: Bool
+    ) {
         guard let completedData else { return }
         titleDescriptionView.setupView(
             title: completedData.header,

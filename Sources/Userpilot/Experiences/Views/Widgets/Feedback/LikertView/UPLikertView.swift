@@ -88,12 +88,14 @@ internal class UPLikertView: UIView {
 
     // Set up the view with the survey step, survey theme, and view state protocol.
     // swiftlint:disable:next function_parameter_count
-    func setupView(surveyStep: SurveyStep,
-                   surveyTheme: SurveyTheme,
-                   isListView: Bool,
-                   isDialog: Bool,
-                   isRTL: Bool,
-                   viewStateProtocol: ViewStateDelegate) {
+    func setupView(
+        surveyStep: SurveyStep,
+        surveyTheme: SurveyTheme,
+        isListView: Bool,
+        isDialog: Bool,
+        isRTL: Bool,
+        viewStateProtocol: ViewStateDelegate
+    ) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme
         self.isRTL = isRTL
@@ -130,11 +132,13 @@ internal class UPLikertView: UIView {
     }
 
     /// Set up the view with the survey step, survey theme, and view state protocol.
-    func setupView(npsStep: NPSStep,
-                   npsTheme: NPSTheme,
-                   isRTL: Bool,
-                   answer: Int,
-                   viewStateProtocol: ViewStateDelegate) {
+    func setupView(
+        npsStep: NPSStep,
+        npsTheme: NPSTheme,
+        isRTL: Bool,
+        answer: Int,
+        viewStateProtocol: ViewStateDelegate
+    ) {
         self.npsTheme = npsTheme
         self.isRTL = isRTL
         self.viewStateProtocol = viewStateProtocol

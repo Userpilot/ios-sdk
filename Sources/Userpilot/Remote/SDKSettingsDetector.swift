@@ -40,7 +40,9 @@ internal class SDKSettingsDetector {
     private let logger: Logging
 
     /// Storage used to store user-related data.
-    private var storage: DataStoring
+    private let storage: DataStoring
+
+    private let session: URLSession
 
     // MARK: - Initialization
 
@@ -52,8 +54,20 @@ internal class SDKSettingsDetector {
     init(container: DIContainer) {
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
-        self.logger = container.resolve(Userpilot.Config.self).logger
+        self.logger = config.logger
+        self.session = URLSession.shared
     }
+
+    // Custom (test) initializer
+    #if DEBUG
+    init(container: DIContainer, session: URLSession) {
+        self.config = container.resolve(Userpilot.Config.self)
+        self.storage = container.resolve(DataStoring.self)
+        self.logger = config.logger
+        self.session = session
+    }
+    #endif
+
 }
 
 // MARK: - SDKSettingsDetectoring
@@ -81,8 +95,8 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
             return
         }
         let request = getURLRequest(for: url)
-        performOn(.highPriority) {
-            let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+        performOn(.highPriority) { [weak self] in
+            let task = self?.session.dataTask(with: request) { [weak self] data, response, error in
                 guard let self = self else {
                     callback()
                     return
@@ -116,7 +130,7 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
                 }
                 callback()
             }
-            task.resume()
+            task?.resume()
         }
     }
 

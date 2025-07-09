@@ -44,7 +44,10 @@ internal class DIContainer {
      - Parameter type: The type of the component to register.
      - Parameter initializer: A closure that initializes the component when resolved.
      */
-    func registerLazy<Component>(_ type: Component.Type, initializer: @escaping (DIContainer) -> Component) {
+    func registerLazy<Component>(
+        _ type: Component.Type,
+        initializer: @escaping (DIContainer) -> Component
+    ) {
         initializers[String(describing: Component.self)] = initializer
     }
 
@@ -54,7 +57,10 @@ internal class DIContainer {
      - Parameter type: The type of the component to register.
      - Parameter initializer: A closure that initializes the component when resolved.
      */
-    func registerLazy<Component>(_ type: Component.Type, initializer: @escaping () -> Component) {
+    func registerLazy<Component>(
+        _ type: Component.Type,
+        initializer: @escaping () -> Component
+    ) {
         initializers[String(describing: Component.self)] = { _ in initializer() }
     }
 
@@ -64,7 +70,10 @@ internal class DIContainer {
      - Parameter type: The type of the component to register.
      - Parameter value: The instance of the component to register.
      */
-    func register<Component>(_ type: Component.Type, value: Component) {
+    func register<Component>(
+        _ type: Component.Type,
+        value: Component
+    ) {
         tryCatch {
             // Use a barrier to ensure exclusive access during writes.
             componentQueue.async(flags: .barrier) {

@@ -129,7 +129,10 @@ extension SurveyDialogViewController: SurveyContainerViewDelegate {
         dismissDialog()
     }
 
-    func onAction(_ answer: Any?, _ answerPayload: Payload) {
+    func onAction(
+        _ answer: Any?,
+        _ answerPayload: Payload
+    ) {
         surveyViewModel.moveToNextSurveyStep(answer, answerPayload)
     }
 

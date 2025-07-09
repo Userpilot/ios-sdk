@@ -112,7 +112,10 @@ internal class UPStepsProgressView: UIView {
        - center: The center point of the circle.
        - color: The color to fill the circle.
      */
-    private func drawCircle(at center: CGPoint, color: UIColor) {
+    private func drawCircle(
+        at center: CGPoint,
+        color: UIColor
+    ) {
         let path = UIBezierPath(arcCenter: center,
                                 radius: defaultStepRadius,
                                 startAngle: 0,
@@ -131,7 +134,11 @@ internal class UPStepsProgressView: UIView {
        - theme: The experience theme used for styling the circles.
        - isRTL: A boolean indicating whether the layout should be right-to-left.
      */
-    func setupView(stepsCount: Int, theme: ExperienceTheme, isRTL: Bool = false) {
+    func setupView(
+        stepsCount: Int,
+        theme: ExperienceTheme,
+        isRTL: Bool = false
+    ) {
         configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
     }
 
@@ -143,7 +150,11 @@ internal class UPStepsProgressView: UIView {
        - theme: The survey theme used for styling the circles.
        - isRTL: A boolean indicating whether the layout should be right-to-left.
      */
-    func setupView(stepsCount: Int, theme: SurveyTheme, isRTL: Bool = false) {
+    func setupView(
+        stepsCount: Int,
+        theme: SurveyTheme,
+        isRTL: Bool = false
+    ) {
         configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
     }
 
@@ -155,7 +166,11 @@ internal class UPStepsProgressView: UIView {
        - theme: The NPS theme used for styling the circles.
        - isRTL: A boolean indicating whether the layout should be right-to-left.
      */
-    func setupView(stepsCount: Int, theme: NPSTheme, isRTL: Bool) {
+    func setupView(
+        stepsCount: Int,
+        theme: NPSTheme,
+        isRTL: Bool
+    ) {
         configureView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
     }
 
@@ -164,7 +179,11 @@ internal class UPStepsProgressView: UIView {
     ///   - stepsCount: The total number of steps to display.
     ///   - theme: The theme used for styling the circles.
     ///   - isRTL: A boolean indicating whether the layout should be right-to-left.
-    private func configureView(stepsCount: Int, theme: Any, isRTL: Bool) {
+    private func configureView(
+        stepsCount: Int,
+        theme: Any,
+        isRTL: Bool
+    ) {
         numberOfSteps = stepsCount
         updateColors(from: theme)
         setCurrentStep(0)
@@ -212,7 +231,10 @@ internal class UPStepsProgressView: UIView {
     /// - Parameters:
     ///   - newStep: The new step index to set as current.
     ///   - withAnimation: A Boolean value indicating whether to animate the transition.
-    func setCurrentStep(_ newStep: Int, withAnimation: Bool = false) {
+    func setCurrentStep(
+        _ newStep: Int,
+        withAnimation: Bool = false
+    ) {
         guard (0..<numberOfSteps).contains(newStep) else { return }
 
         if withAnimation {

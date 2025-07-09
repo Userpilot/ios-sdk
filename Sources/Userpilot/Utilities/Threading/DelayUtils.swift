@@ -30,8 +30,10 @@ internal class DelayUtils {
      *   - delayTime: The delay duration in seconds before executing the action. Defaults to `0.5` seconds.
      *   - action: The closure to execute after the delay.
      */
-    func delayAction(delayTime: TimeInterval = ThemeHandler.DefaultValues.delayTimeForExperience,
-                     action: @escaping () -> Void) {
+    func delayAction(
+        delayTime: TimeInterval = ThemeHandler.DefaultValues.delayTimeForExperience,
+        action: @escaping () -> Void
+    ) {
         // Cancel any previously scheduled delay task before setting a new one.
         cancelDelay()
 

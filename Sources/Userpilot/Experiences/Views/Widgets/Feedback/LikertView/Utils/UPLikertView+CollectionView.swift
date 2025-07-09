@@ -31,8 +31,10 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
     /// - Parameter collectionView: The collection view requesting the cell.
     /// - Parameter indexPath: The index path specifying the location of the cell.
     /// - Returns: The configured UICollectionViewCell.
-    func collectionView(_ collectionView: UICollectionView,
-                        cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        cellForItemAt indexPath: IndexPath
+    ) -> UICollectionViewCell {
         // Attempt to dequeue a reusable cell
         guard
             let likertCollectionViewCell: LikertCollectionViewCell = collectionView.dequeueReusableCell(for: indexPath)
@@ -56,7 +58,10 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
     /// Also triggers the view state change.
     /// - Parameter collectionView: The collection view where the selection occurred.
     /// - Parameter indexPath: The index path of the selected cell.
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        didSelectItemAt indexPath: IndexPath
+    ) {
         // Mark rating items as selected up to the selected index
         for index in ratingItems.indices {
             ratingItems[index].isSelected = index <= indexPath.row
@@ -74,9 +79,11 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
     /// - Parameter collectionViewLayout: The layout used to arrange the items.
     /// - Parameter indexPath: The index path of the item whose size is being requested.
     /// - Returns: The size of the item at the given index path.
-    func collectionView(_ collectionView: UICollectionView,
-                        layout collectionViewLayout: UICollectionViewLayout,
-                        sizeForItemAt indexPath: IndexPath) -> CGSize {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        sizeForItemAt indexPath: IndexPath
+    ) -> CGSize {
         // The height is fixed at 40, and the width is calculated dynamically based on the `itemWidth`
         return CGSize(width: itemWidth, height: 40)
     }

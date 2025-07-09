@@ -32,7 +32,10 @@ internal class Debouncer {
     /// - Parameters:
     ///   - delay: The time interval (in seconds) to wait before executing the action.
     ///   - queue: The `DispatchQueue` on which the action should be executed. Defaults to the main queue.
-    init(delay: TimeInterval, queue: DispatchQueue = .main) {
+    init(
+        delay: TimeInterval,
+        queue: DispatchQueue = .main
+    ) {
         self.delay = delay
         self.queue = queue
     }

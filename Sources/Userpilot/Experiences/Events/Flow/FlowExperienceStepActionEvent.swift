@@ -16,24 +16,27 @@ import Foundation
  Base class representing various types of experience step action events for mobile content.
 
  - Parameters:
-   - mobileContentId: The ID of the mobile content associated with the event.
-   - stepID: The ID of the step associated with the event.
+   - mobileContentId: The Id of the mobile content associated with the event.
+   - stepId: The Id of the step associated with the event.
  */
 internal class FlowExperienceStepActionEvent: FlowExperienceActionEvent {
-    let stepID: Int
+    let stepId: Int
 
     /// Creates a dictionary representation of the event data, including the step ID.
     ///
-    /// - Returns: A dictionary containing the action type, mobile content ID, application token, user ID, and step ID.
+    /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
     override func toMap() -> [String: Any] {
         var map = super.toMap()
-        map["step_id"] = stepID
+        map["step_id"] = stepId
         return map
     }
 
-    init(flowID: Int, stepID: Int) {
-        self.stepID = stepID
-        super.init(flowID: flowID)
+    init(
+        flowId: Int,
+        stepId: Int
+    ) {
+        self.stepId = stepId
+        super.init(flowId: flowId)
     }
 }
 

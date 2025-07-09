@@ -39,7 +39,10 @@ internal func anonymousFactory() -> Int64 {
  - delay: The time to delay the execution, in seconds.
  - closure: The closure to be executed after the delay.
  */
-internal func delay(_ delay: Double, closure: @escaping () -> Void) {
+internal func delay(
+    _ delay: Double,
+    closure: @escaping () -> Void
+) {
     DispatchQueue.main.asyncAfter(
         deadline: DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC),
         execute: closure)
@@ -159,7 +162,10 @@ internal func tryCatch(code: () throws -> Void) {
 ///   - defaultValue: An optional default value to return if an error is encountered. The default is `nil`.
 /// - Returns: The result of executing `code` if successful, otherwise `defaultValue` or `nil` if no
 /// default value is provided.
-internal func tryCatch<T>(code: () throws -> T, defaultValue: T? = nil) -> T? {
+internal func tryCatch<T>(
+    code: () throws -> T,
+    defaultValue: T? = nil
+) -> T? {
     do {
         return try code()
     } catch {
@@ -188,7 +194,10 @@ internal func getUserAgent() -> String {
 ///   - type: The `Decodable` type to which the JSON content will be deserialized.
 /// - Returns: An optional instance of the specified `Decodable` type `T`. Returns `nil`
 /// if the file is not found or decoding fails.
-internal func loadJSONFile<T: Decodable>(named fileName: String, as type: T.Type) -> T? {
+internal func loadJSONFile<T: Decodable>(
+    named fileName: String,
+    as type: T.Type
+) -> T? {
     guard let url = Userpilot.resourceBundle.url(forResource: fileName, withExtension: "json") else {
         return nil
     }
@@ -213,16 +222,16 @@ internal func getWindow() -> UIWindow? {
         .filter({ $0.isKeyWindow }).first
 }
 
-internal func print(
-    _ items: Any...,
-    separator: String = " ",
-    terminator: String = "\n"
-) {
-    if Environment.environmentType == .DEVELOPMENT {
-        let output = items.map { "\($0)" }.joined(separator: separator)
-        Swift.print(output, terminator: terminator)
-    }
-}
+//internal func print(
+//    _ items: Any...,
+//    separator: String = " ",
+//    terminator: String = "\n"
+//) {
+//    if Environment.environmentType == .DEVELOPMENT {
+//        let output = items.map { "\($0)" }.joined(separator: separator)
+//        Swift.print(output, terminator: terminator)
+//    }
+//}
 
 /// Sanitizes a payload by filtering out unsupported property types and applying key transformations.
 ///

@@ -57,7 +57,10 @@ internal class UPImageView: UIView {
         - line: The `Line` object containing attributes and configuration for the image or icon.
         - imageLoader: An object conforming to `ImageLoading` for handling image loading.
      */
-    func setupView(line: Line, imageLoader: ImageLoading) {
+    func setupView(
+        line: Line,
+        imageLoader: ImageLoading
+    ) {
         guard let attributes = line.attrs else { return }
 
         setupAccessibility(for: line)
@@ -76,7 +79,10 @@ internal class UPImageView: UIView {
     }
 
     /// load image by URL
-    func setupView(url: String, imageLoader: ImageLoading) {
+    func setupView(
+        url: String,
+        imageLoader: ImageLoading
+    ) {
         imageView.contentMode = .scaleAspectFit
         imageLoader.loadImage(target: imageView, url: url, blurHash: nil, size: CGSize(width: 100, height: 100))
     }
@@ -92,7 +98,10 @@ internal class UPImageView: UIView {
 
     /// Configures the layout constraints for the image views based on the line type.
     /// - Parameter line: The `Line` object specifying the layout.
-    private func configureLayout(for line: Line, imageSize: CGSize) {
+    private func configureLayout(
+        for line: Line,
+        imageSize: CGSize
+    ) {
         NSLayoutConstraint.activate([
             imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
             imageView.centerYAnchor.constraint(equalTo: centerYAnchor),

@@ -23,9 +23,11 @@ extension UPSingleInputView: UITextFieldDelegate {
     ///   - range: The range of characters to be replaced.
     ///   - string: The replacement string.
     /// - Returns: A `Bool` value indicating whether the text should change.
-    func textField(_ textField: UITextField,
-                   shouldChangeCharactersIn range: NSRange,
-                   replacementString string: String) -> Bool {
+    func textField(
+        _ textField: UITextField,
+        shouldChangeCharactersIn range: NSRange,
+        replacementString string: String
+    ) -> Bool {
 
         var result = true
         // Check the input type and apply specific behavior
@@ -81,7 +83,11 @@ extension UPSingleInputView: UITextFieldDelegate {
     ///   - range: The range of characters being replaced.
     ///   - text: The replacement text being pasted.
     /// - Returns: A `Bool` value indicating whether the pasted text is valid.
-    func textField(_ textField: UITextField, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+    func textField(
+        _ textField: UITextField,
+        shouldChangeTextIn range: NSRange,
+        replacementText text: String
+    ) -> Bool {
         if surveyStep?.metadata?.inputType == .phone {
             // Validate numeric input for phone numbers
             let allowedCharacters = CharacterSet.decimalDigits
@@ -101,7 +107,11 @@ extension UPSingleInputView: UITextFieldDelegate {
     ///   - string: The replacement string.
     ///   - length: The maximum allowed length.
     /// - Returns: A `Bool` indicating whether the updated text length is within the limit.
-    private func isStringLengthValid(_ range: NSRange, _ string: String, _ length: Int) -> Bool {
+    private func isStringLengthValid(
+        _ range: NSRange,
+        _ string: String,
+        _ length: Int
+    ) -> Bool {
         let currentText = textField.text ?? ""
         guard let stringRange = Range(range, in: currentText) else { return false }
         let updatedText = currentText.replacingCharacters(in: stringRange, with: string)

@@ -66,7 +66,12 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
     /// Binds data from the provided `ratingItem` and `surveyTheme` to the cell's UI elements.
     /// - Parameter ratingItem: The item representing the individual rating choice in the Likert scale.
     /// - Parameter surveyTheme: The theme that defines the visual appearance of the cell.
-    func bindCell(ratingItem: RatingItem, surveyTheme: SurveyTheme?, npsTheme: NPSTheme?, isRTL: Bool) {
+    func bindCell(
+        ratingItem: RatingItem,
+        surveyTheme: SurveyTheme?,
+        npsTheme: NPSTheme?,
+        isRTL: Bool
+    ) {
         if isRTL {
             self.contentView.transform = CGAffineTransform(scaleX: -1, y: 1)
         }
@@ -94,24 +99,39 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
             contentUnselectedColor(surveyTheme, npsTheme)
     }
 
-    private func fontFamily(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> String? {
+    private func fontFamily(
+        _ surveyTheme: SurveyTheme?,
+        _ npsTheme: NPSTheme?
+    ) -> String? {
         surveyTheme?.fontFamily ?? npsTheme?.fontFamily
     }
 
-    private func primaryColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+    private func primaryColor(
+        _ surveyTheme: SurveyTheme?,
+        _ npsTheme: NPSTheme?
+    ) -> UIColor? {
         surveyTheme?.primaryColor ?? npsTheme?.primaryColor ?? .black
     }
 
-    private func secondaryColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+    private func secondaryColor(
+        _ surveyTheme: SurveyTheme?,
+        _ npsTheme: NPSTheme?
+    ) -> UIColor? {
         surveyTheme?.secondaryColor ?? npsTheme?.secondaryColor ?? .black.withAlphaComponent(0.2)
     }
 
-    private func contentSelectedColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+    private func contentSelectedColor(
+        _ surveyTheme: SurveyTheme?,
+        _ npsTheme: NPSTheme?
+    ) -> UIColor? {
         surveyTheme?.primaryColorAsString.invertColor().color ??
         npsTheme?.primaryColorAsString.invertColor().color ?? .black
     }
 
-    private func contentUnselectedColor(_ surveyTheme: SurveyTheme?, _ npsTheme: NPSTheme?) -> UIColor? {
+    private func contentUnselectedColor(
+        _ surveyTheme: SurveyTheme?,
+        _ npsTheme: NPSTheme?
+    ) -> UIColor? {
         surveyTheme?.textColor ?? npsTheme?.textColor ?? .black
     }
 }

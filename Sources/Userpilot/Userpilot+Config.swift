@@ -27,7 +27,7 @@ public extension Userpilot {
         var logger: Logging = OSLog.disabled
 
         /// Create an Userpilot SDK configuration
-        /// - Parameter accountID: Userpilot Account Token,
+        /// - Parameter token: Userpilot Account Token,
         ///  copied from the Environments settings page.
         @objc
         public init(token: String) {

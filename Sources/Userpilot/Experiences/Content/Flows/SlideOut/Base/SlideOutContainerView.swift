@@ -192,11 +192,13 @@ internal class SlideOutContainerView: UIView {
        - slideOutContainerViewDelegate: Delegate for handling actions within the view.
        - imageLoader: Object responsible for loading images.
      */
-    func bindStep(_ step: Step,
-                  withTheme theme: ExperienceTheme,
-                  andSlideOutContainerViewDelegate slideOutContainerViewDelegate: SlideOutContainerViewDelegate,
-                  andImageLoader imageLoader: ImageLoading,
-                  withLocal isRTL: Bool) {
+    func bindStep(
+        _ step: Step,
+        withTheme theme: ExperienceTheme,
+        andSlideOutContainerViewDelegate slideOutContainerViewDelegate: SlideOutContainerViewDelegate,
+        andImageLoader imageLoader: ImageLoading,
+        withLocal isRTL: Bool
+    ) {
         self.slideOutContainerViewDelegate = slideOutContainerViewDelegate
 
         setupDismissButton(theme)
@@ -243,7 +245,10 @@ internal class SlideOutContainerView: UIView {
        - step: The `Step` object containing step data.
        - theme: The `ExperienceTheme` used to style the action button.
      */
-    private func setupActionButton(_ step: Step, _ theme: ExperienceTheme) {
+    private func setupActionButton(
+        _ step: Step,
+        _ theme: ExperienceTheme
+    ) {
         guard let lastSection = step.sections.last,
               let button = lastSection.lines.last, button.type == .button else { return }
 
@@ -263,10 +268,12 @@ internal class SlideOutContainerView: UIView {
        - theme: The `ExperienceTheme` containing styling attributes.
        - imageLoader: The `ImageLoading` instance to handle image loading.
      */
-    private func bindSections(_ step: Step,
-                              withTheme theme: ExperienceTheme,
-                              andImageLoader imageLoader: ImageLoading,
-                              withLocale isRTL: Bool) {
+    private func bindSections(
+        _ step: Step,
+        withTheme theme: ExperienceTheme,
+        andImageLoader imageLoader: ImageLoading,
+        withLocale isRTL: Bool
+    ) {
         step.sections.forEach { section in
             guard let firstLine = section.lines.first else { return }
 

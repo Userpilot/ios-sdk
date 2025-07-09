@@ -14,13 +14,17 @@
 
 import Foundation
 
+// swiftlint:disable all
+
 internal class SurveyViewModel {
 
     // MARK: - Properties
 
     /// Weak reference to the owning `Userpilot` instance.
+    private weak var userpilot: Userpilot?
     private let experiencesPublisher: ExperiencesPublishing
     private let themeHandler: ThemeHandling
+    private let logger: Logging
 
     /// The merged theme data for the survey.
     private(set) var surveyTheme: SurveyTheme?
@@ -41,8 +45,10 @@ internal class SurveyViewModel {
     /// Initializes the view model with a dependency injection container.
     /// - Parameter container: Dependency injection container providing required services.
     init(container: DIContainer) {
+        self.userpilot = container.owner
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
+        self.logger = container.resolve(Userpilot.Config.self).logger
     }
 
     // MARK: - View Lifecycle
@@ -127,7 +133,14 @@ internal class SurveyViewModel {
      */
     private func onSurveyOpened() {
         guard let surveyContent else { return }
-        let eventExperienceSeen = ExperienceSurveySeenEvent(surveyID: surveyContent.id)
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .survey,
+            experienceId: NSNumber(value: surveyContent.id),
+            experienceState: .started
+        )
+        logExperience(state: "Started", experienceId: surveyContent.id)
+
+        let eventExperienceSeen = ExperienceSurveySeenEvent(surveyId: surveyContent.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
 
         if surveyContent.type == .step {
@@ -145,8 +158,15 @@ internal class SurveyViewModel {
             && surveyContent.modules.last?.metadata?.buttonAction == .deepLink
         ) ? surveyContent.modules.last?.metadata?.iosDeepLink : nil
 
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .survey,
+            experienceId: NSNumber(value: surveyContent.id),
+            experienceState: .completed
+        )
+        logExperience(state: "Completed", experienceId: surveyContent.id)
+
         let eventExperienceSeen = ExperienceSurveyCompletedEvent(
-            surveyID: surveyContent.id,
+            surveyId: surveyContent.id,
             hasDeepLinkContent: deeplink != nil
         )
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
@@ -161,25 +181,54 @@ internal class SurveyViewModel {
             let surveyStep = getCurrentStepSurveyContent()
         else { return }
         if surveyStep.type == .completed {
+            userpilot?.experienceDelegate?.onExperienceStateChanged(
+                experienceType: .survey,
+                experienceId: NSNumber(value: surveyContent.id),
+                experienceState: .completed
+            )
+            logExperience(state: "Completed", experienceId: surveyContent.id)
+
             let eventExperienceSeen = ExperienceSurveyCompletedEvent(
-                surveyID: surveyContent.id,
+                surveyId: surveyContent.id,
                 hasDeepLinkContent: false
             )
             experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
         } else {
+            userpilot?.experienceDelegate?.onExperienceStateChanged(
+                experienceType: .survey,
+                experienceId: NSNumber(value: surveyContent.id),
+                experienceState: .dismissed
+            )
+            logExperience(state: "Dismissed", experienceId: surveyContent.id)
+
             let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
-                surveyID: surveyContent.id,
-                moduleID: surveyContent.type == .list ? nil : surveyStep.id,
+                surveyId: surveyContent.id,
+                moduleId: surveyContent.type == .list ? nil : surveyStep.id,
                 type: surveyContent.type == .list ? nil : surveyStep.type.rawValue)
             experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
         }
     }
 
     private func onSurveyStepSeen() {
-        guard let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
+            experienceType: .survey,
+            experienceId: NSNumber(value: surveyContent.id),
+            stepId: NSNumber(value: surveyStep.id),
+            stepState: .started,
+            step: nil,
+            totalSteps: nil
+        )
+        logStep(
+            state: "Started",
+            experienceId: surveyContent.id,
+            stepId: surveyStep.id
+        )
+
         let eventStepSeen = ExperienceSurveyStepSeenEvent(
-            surveyID: surveyStep.id,
-            moduleID: surveyStep.id,
+            surveyId: surveyStep.id,
+            moduleId: surveyStep.id,
             type: surveyStep.type.rawValue
         )
         experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
@@ -190,8 +239,15 @@ internal class SurveyViewModel {
      */
     func onSurveyListSubmitted(answersPayload: [Payload]) {
         guard let surveyContent  else { return }
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .survey,
+            experienceId: NSNumber(value: surveyContent.id),
+            experienceState: .submitted
+        )
+        logExperience(state: "Submitted", experienceId: surveyContent.id)
+
         let eventContentSubmitted = ExperienceSurveySubmittedEvent(
-            surveyID: surveyContent.id,
+            surveyId: surveyContent.id,
             feedback: answersPayload
         )
         experiencesPublisher.publishInternalSDKEvent(eventContentSubmitted)
@@ -200,9 +256,23 @@ internal class SurveyViewModel {
     private func onSurveyModuleSubmitted(_ answersPayload: Payload) {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
 
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
+            experienceType: .survey,
+            experienceId: NSNumber(value: surveyContent.id),
+            stepId: NSNumber(value: surveyStep.id),
+            stepState: .submitted,
+            step: nil,
+            totalSteps: nil
+        )
+        logStep(
+            state: "Submitted",
+            experienceId: surveyContent.id,
+            stepId: surveyStep.id
+        )
+
         let eventStepSubmitted = ExperienceSurveyStepSubmittedEvent(
-            surveyID: surveyContent.id,
-            moduleID: surveyStep.id,
+            surveyId: surveyContent.id,
+            moduleId: surveyStep.id,
             type: surveyStep.type.rawValue,
             feedback: answersPayload?["value"]
         )
@@ -211,9 +281,24 @@ internal class SurveyViewModel {
 
     private func onSurveyModuleSkipped() {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
+            experienceType: .survey,
+            experienceId: NSNumber(value: surveyContent.id),
+            stepId: NSNumber(value: surveyStep.id),
+            stepState: .skipped,
+            step: nil,
+            totalSteps: nil
+        )
+        logStep(
+            state: "Skipped",
+            experienceId: surveyContent.id,
+            stepId: surveyStep.id
+        )
+
         let eventStepSkipped = ExperienceSurveyStepSkippedEvent(
-            surveyID: surveyContent.id,
-            moduleID: surveyStep.id,
+            surveyId: surveyContent.id,
+            moduleId: surveyStep.id,
             type: surveyStep.type.rawValue
         )
         experiencesPublisher.publishInternalSDKEvent(eventStepSkipped)
@@ -231,7 +316,10 @@ internal class SurveyViewModel {
         return surveyContent.modules[currentStep]
     }
 
-    func moveToNextSurveyStep(_ answer: Any?, _ answerPayload: Payload) {
+    func moveToNextSurveyStep(
+        _ answer: Any?,
+        _ answerPayload: Payload
+    ) {
         guard  let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
         // We are on the last step, close the survey
         if isLastStep(), surveyStep.type == .completed {
@@ -281,4 +369,31 @@ internal class SurveyViewModel {
         bindNextSurveyStep?()
     }
 
+    // MARK: - Logging
+
+    private func logExperience(
+        state: String,
+        experienceId: Int
+    ) {
+        logger.info(
+            "Userpilot experience -> type: Survey, experienceId: %{public}@, state: %{public}@",
+            String(experienceId),
+            state
+        )
+    }
+
+    private func logStep(
+        state: String,
+        experienceId: Int,
+        stepId: Int
+    ) {
+        logger.info(
+            "Userpilot experience step -> type: Survey, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
+            String(experienceId),
+            state,
+            String(stepId)
+        )
+    }
 }
+
+// swiftlint:enable all

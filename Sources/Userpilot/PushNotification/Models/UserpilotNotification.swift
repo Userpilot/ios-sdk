@@ -21,8 +21,8 @@ import Foundation
    - title: The title of the notification.
    - body: The body text of the notification.
    - notificationType: Type of the notification.
-   - notificationID: The unique identifier of the notification.
-   - userId: The ID of the user associated with the notification.
+   - notificationId: The unique identifier of the notification.
+   - userId: The Id of the user associated with the notification.
    - deeplink: An optional deep link URL, if provided.
  */
 internal struct UserpilotNotification {
@@ -33,9 +33,9 @@ internal struct UserpilotNotification {
     let notificationType: String
 
     /// The unique identifier of the notification.
-    let notificationID: String
+    let notificationId: String
 
-    /// The user ID associated with the notification.
+    /// The user Id associated with the notification.
     let userId: String
 
     /// An optional deep link URL contained in the notification.
@@ -53,12 +53,12 @@ internal struct UserpilotNotification {
         guard
             let data = userInfo["data"] as? [String: Any],
             let notificationType = data["notification_type"] as? String,
-            let notificationID = data["notification_id"] as? String,
+            let notificationId = data["notification_id"] as? String,
             let userId = data["user_id"] as? String
         else { return nil }
 
         self.notificationType = notificationType
-        self.notificationID = notificationID
+        self.notificationId = notificationId
         self.userId = userId
 
         self.deeplink = (data["deep_link"] as? String).flatMap { URL(string: $0) }

@@ -75,7 +75,7 @@ extension KeyedEncodingContainer where K == DynamicCodingKeys {
     // helper to determine if an NSNumber is actually containing a Boolean value
     // swiftlint:disable:next legacy_objc_type
     private func isBoolNumber(_ num: NSNumber) -> Bool {
-        let boolID = CFBooleanGetTypeID() // the type ID of CFBoolean
+        let boolID = CFBooleanGetTypeID() // the type Id of CFBoolean
         let numID = CFGetTypeID(num) // the type ID of num
         return numID == boolID
     }

@@ -67,7 +67,10 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     /// Initializes the `SlideOutBottomSheetViewController` with a given view model.
     ///
     /// - Parameter experienceViewModel: The view model that controls the experience data and behavior.
-    init(surveyContent: SurveyContent, surveyTheme: SurveyTheme) {
+    init(
+        surveyContent: SurveyContent,
+        surveyTheme: SurveyTheme
+    ) {
         self.surveyContent = surveyContent
         self.surveyTheme = surveyTheme
         super.init(nibName: nil, bundle: nil)

@@ -23,7 +23,10 @@ internal class CountryTableViewCell: UITableViewCell {
     // MARK: - Initializers
 
     /// Initializes the cell with the specified style and reuse identifier.
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+    override init(
+        style: UITableViewCell.CellStyle,
+        reuseIdentifier: String?
+    ) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupUI()
     }

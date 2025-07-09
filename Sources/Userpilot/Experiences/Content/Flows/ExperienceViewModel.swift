@@ -14,6 +14,8 @@
 
 import Foundation
 
+// swiftlint:disable line_length
+
 internal class ExperienceViewModel {
 
     // MARK: - Properties
@@ -23,6 +25,7 @@ internal class ExperienceViewModel {
     private let experiencesPublisher: ExperiencesPublishing
     private let themeHandler: ThemeHandling
     private let storage: DataStoring
+    private let logger: Logging
     let imageLoader: ImageLoading
 
     /// A mutable list of merged theme data for the carousel.
@@ -58,6 +61,7 @@ internal class ExperienceViewModel {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
         self.storage = container.resolve(DataStoring.self)
+        self.logger = container.resolve(Userpilot.Config.self).logger
         self.imageLoader = container.resolve(ImageLoading.self)
     }
 
@@ -69,22 +73,22 @@ internal class ExperienceViewModel {
      */
     func onStart() {
         guard
-            let mobileContent = experiencesPublisher.getActiveMobileContent()?.asFlowContent()
+            let flowContent = experiencesPublisher.getActiveMobileContent()?.asFlowContent()
         else {
             bindData?(false)
             return
         }
 
         // Setup content
-        self.flowContent = mobileContent
+        self.flowContent = flowContent
 
         // Setup theme
-        let baseTheme = themeHandler.getThemeById(mobileContent.baseThemeID)
-        mobileContent.steps.forEach { step in
+        let baseTheme = themeHandler.getThemeById(flowContent.baseThemeID)
+        flowContent.steps.forEach { step in
             mergedTheme.append(
                 themeHandler.mergeExperienceThemes(
                     baseTheme,
-                    mobileContent.mobileTheme.themeData,
+                    flowContent.mobileTheme.themeData,
                     step.mobileTheme
                 )
             )
@@ -92,9 +96,9 @@ internal class ExperienceViewModel {
 
         // Handle safe area region in case there is an issue with the data
         var shouldBindCarousel = true
-        if mobileContent.steps.isEmpty ||
-            (mobileContent.type == .carousel && carouselTheme.isEmpty) ||
-            (mobileContent.type == .slideout &&
+        if flowContent.steps.isEmpty ||
+            (flowContent.type == .carousel && carouselTheme.isEmpty) ||
+            (flowContent.type == .slideout &&
              (mergedTheme.isEmpty || mergedTheme.first?.slideOut == nil)) {
             shouldBindCarousel = false
         }
@@ -123,29 +127,39 @@ internal class ExperienceViewModel {
      */
     private func onExperienceOpened() {
         guard
-            let mobileContent = flowContent,
-            let step = mobileContent.steps.first
+            let flowContent,
+            let step = flowContent.steps.first
         else { return }
 
         userpilot?.experienceDelegate?.onExperienceStateChanged(
-            id: mobileContent.id,
-            state: .started
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            experienceState: .started
         )
+        logExperience(state: "Started", experienceId: flowContent.id)
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            id: step.id,
-            state: .started,
-            experienceId: mobileContent.id,
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            stepId: NSNumber(value: step.id),
+            stepState: .started,
             step: 1,
-            totalSteps: mobileContent.steps.count
+            totalSteps: NSNumber(value: flowContent.steps.count)
+        )
+        logStep(
+            state: "Started",
+            experienceId: flowContent.id,
+            stepId: step.id,
+            step: 1,
+            totalSteps: flowContent.steps.count
         )
 
-        let eventExperienceSeen = ExperienceFlowSeenEvent(flowID: mobileContent.id)
+        let eventExperienceSeen = ExperienceFlowSeenEvent(flowId: flowContent.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
 
         let eventStepSeen = ExperienceFlowStepSeenEvent(
-            flowID: mobileContent.id,
-            stepID: step.id)
+            flowId: flowContent.id,
+            stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
     }
 
@@ -154,32 +168,42 @@ internal class ExperienceViewModel {
      */
     func onExperienceCompleted() {
         guard
-            let mobileContent = flowContent,
-            let step = mobileContent.steps.last
+            let flowContent,
+            let step = flowContent.steps.last
         else { return }
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            id: step.id,
-            state: .completed,
-            experienceId: mobileContent.id,
-            step: mobileContent.steps.count,
-            totalSteps: mobileContent.steps.count
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            stepId: NSNumber(value: step.id),
+            stepState: .completed,
+            step: NSNumber(value: flowContent.steps.count),
+            totalSteps: NSNumber(value: flowContent.steps.count)
+        )
+        logStep(
+            state: "Completed",
+            experienceId: flowContent.id,
+            stepId: step.id,
+            step: flowContent.steps.count,
+            totalSteps: flowContent.steps.count
         )
 
         userpilot?.experienceDelegate?.onExperienceStateChanged(
-            id: mobileContent.id,
-            state: .completed
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            experienceState: .completed
         )
+        logExperience(state: "Completed", experienceId: flowContent.id)
 
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
         let eventStepCompleted = ExperienceFlowStepCompletedEvent(
-            flowID: mobileContent.id,
-            stepID: step.id)
+            flowId: flowContent.id,
+            stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepCompleted)
 
         let eventContentCompleted = ExperienceFlowCompletedEvent(
-            flowID: mobileContent.id,
+            flowId: flowContent.id,
             hasDeepLinkContent: hasDeepLink)
         experiencesPublisher.publishInternalSDKEvent(eventContentCompleted)
     }
@@ -201,29 +225,45 @@ internal class ExperienceViewModel {
         else { return }
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            id: currentStep.id,
-            state: .completed,
-            experienceId: flowContent.id,
-            step: step - 1,
-            totalSteps: flowContent.steps.count
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            stepId: NSNumber(value: currentStep.id),
+            stepState: .completed,
+            step: NSNumber(value: step),
+            totalSteps: NSNumber(value: flowContent.steps.count)
         )
-
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            id: currentStep.id,
-            state: .started,
+        logStep(
+            state: "Completed",
             experienceId: flowContent.id,
+            stepId: currentStep.id,
             step: step,
             totalSteps: flowContent.steps.count
         )
 
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            stepId: NSNumber(value: currentStep.id),
+            stepState: .started,
+            step: NSNumber(value: step + 1),
+            totalSteps: NSNumber(value: flowContent.steps.count)
+        )
+        logStep(
+            state: "Started",
+            experienceId: flowContent.id,
+            stepId: currentStep.id,
+            step: step + 1,
+            totalSteps: flowContent.steps.count
+        )
+
         let eventStepCompleted = ExperienceFlowStepCompletedEvent(
-            flowID: flowContent.id,
-            stepID: oldStep.id)
+            flowId: flowContent.id,
+            stepId: oldStep.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepCompleted)
 
         let eventStepSeen = ExperienceFlowStepSeenEvent(
-            flowID: flowContent.id,
-            stepID: currentStep.id)
+            flowId: flowContent.id,
+            stepId: currentStep.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
     }
 
@@ -239,20 +279,30 @@ internal class ExperienceViewModel {
         else { return }
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            id: step.id,
-            state: .dismissed,
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            stepId: NSNumber(value: step.id),
+            stepState: .dismissed,
+            step: NSNumber(value: lastStep),
+            totalSteps: NSNumber(value: flowContent.steps.count)
+        )
+        logStep(
+            state: "Dismissed",
             experienceId: flowContent.id,
+            stepId: step.id,
             step: lastStep,
             totalSteps: flowContent.steps.count
         )
 
         userpilot?.experienceDelegate?.onExperienceStateChanged(
-            id: flowContent.id,
-            state: .dismissed
+            experienceType: .flow,
+            experienceId: NSNumber(value: flowContent.id),
+            experienceState: .dismissed
         )
+        logExperience(state: "Dismissed", experienceId: flowContent.id)
 
         let eventExperienceDismissed = ExperienceFlowDismissedEvent(
-            flowID: flowContent.id,
+            flowId: flowContent.id,
             stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
     }
@@ -270,4 +320,36 @@ internal class ExperienceViewModel {
         else { return }
         experiencesPublisher.triggerDeepLink(url: url)
     }
+
+    // MARK: - Logging
+
+    private func logExperience(
+        state: String,
+        experienceId: Int
+    ) {
+        logger.info(
+            "Userpilot experience -> type: Flow, experienceId: %{public}@, state: %{public}@",
+            String(experienceId),
+            state
+        )
+    }
+
+    private func logStep(
+        state: String,
+        experienceId: Int,
+        stepId: Int,
+        step: Int,
+        totalSteps: Int
+    ) {
+        logger.info(
+            "Userpilot experience step -> type: Flow, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
+            String(experienceId),
+            state,
+            String(stepId),
+            String(step),
+            String(totalSteps)
+        )
+    }
 }
+
+// swiftlint:enable line_length

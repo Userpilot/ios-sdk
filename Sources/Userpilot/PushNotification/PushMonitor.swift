@@ -63,6 +63,8 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     // MARK: - Push Token Management
 
     private(set) var pushAuthorizationStatus: UNAuthorizationStatus = .notDetermined
+
+    // cached token when it comes from OS, and keep it cached so if user is switched, then send it to new user
     private var cachedToken: Data?
 
     /// A computed property indicating whether push notifications are enabled.
@@ -89,14 +91,6 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     /// Starts the `PushMonitor` and registers for socket events.
     func start() {
         socketManager.registerCallback(self)
-    }
-
-    /// Refreshes the push notification status when the app enters the foreground.
-    ///
-    /// - Parameter notification: The notification indicating the app is entering the foreground.
-    @objc
-    private func applicationWillEnterForeground(notification: Notification) {
-        refreshPushStatus()
     }
 
     // MARK: - Push Token Management
@@ -132,10 +126,14 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     ///   - payload: The payload of the event.
     ///   - message: The message associated with the event.
     ///   - status: A boolean indicating the event's success or failure.
-    func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ status: Bool) {
+    func onSocketEventSent(
+        _ eventName: String,
+        _ payload: Payload,
+        _ message: Message,
+        _ status: Bool
+    ) {
         if eventName == SDKEventsName.pushNotificationToken.rawValue {
             storage.pushToken = payload?["token"] as? String
-            // cachedToken = nil
         }
     }
 
@@ -175,8 +173,10 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     /// - Parameters:
     ///   - newStatus: The new push authorization status.
     ///   - completion: An optional closure that is called with the updated status.
-    private func handlePushStatusUpdate(_ newStatus: UNAuthorizationStatus,
-                                        completion: ((UNAuthorizationStatus) -> Void)?) {
+    private func handlePushStatusUpdate(
+        _ newStatus: UNAuthorizationStatus,
+        completion: ((UNAuthorizationStatus) -> Void)?
+    ) {
         let shouldPublish = self.pushAuthorizationStatus != newStatus
         self.pushAuthorizationStatus = newStatus
 
@@ -209,7 +209,10 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     ///
     /// - Returns: A boolean indicating whether the notification was successfully handled.
     @discardableResult
-    func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool {
+    func didReceiveNotification(
+        response: UNNotificationResponse,
+        completionHandler: @escaping () -> Void
+    ) -> Bool {
         return processNotification(response.notification.request.content.userInfo, completionHandler: completionHandler)
     }
 
@@ -220,13 +223,16 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     ///   - completionHandler: An optional closure to be executed after processing.
     ///
     /// - Returns: A boolean indicating whether the notification was successfully handled.
-    private func processNotification(_ userInfo: [AnyHashable: Any], completionHandler: (() -> Void)?) -> Bool {
+    private func processNotification(
+        _ userInfo: [AnyHashable: Any],
+        completionHandler: (() -> Void)?
+    ) -> Bool {
         config.logger.info("Push response received:\n%{private}@", userInfo.description)
 
-        guard let parsedNotification = UserpilotNotification(userInfo: userInfo),
-              parsedNotification.notificationType == "userpilot-notification" else {
-            return false  // Not a Userpilot push notification
-        }
+        guard
+            let parsedNotification = UserpilotNotification(userInfo: userInfo),
+            parsedNotification.notificationType == "userpilot-notification"
+        else { return false } // Not a Userpilot push notification
 
         guard let userpilot = userpilot else {
             return false  // Early exit if userpilot is nil
@@ -239,26 +245,31 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
             return true
         }
 
-        // If there’s an active session and a user ID mismatch, skip processing
+        // If there’s an active session and a user Id mismatch, skip processing
         guard parsedNotification.userId == storage.userId else {
             completionHandler?()
             return true
         }
 
         // Process the notification and respond accordingly
-        executeNotificationResponse(userpilot: userpilot,
-                                    parsedNotification: parsedNotification,
-                                    completionHandler: completionHandler)
+        executeNotificationResponse(
+            userpilot: userpilot,
+            parsedNotification: parsedNotification,
+            completionHandler: completionHandler
+        )
 
         return true
     }
 
-    @discardableResult
     /// Attempts to process a deferred notification response if it was previously deferred.
     ///
     /// - Returns: A boolean indicating whether the deferred response was successfully processed.
+    @discardableResult
     func attemptDeferredNotificationResponse() -> Bool {
-        guard let parsedNotification = deferredNotification, let userpilot = userpilot else { return false }
+        guard
+            let parsedNotification = deferredNotification,
+            let userpilot = userpilot
+        else { return false }
 
         defer { deferredNotification = nil }
 
@@ -267,9 +278,11 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
             return false
         }
 
-        executeNotificationResponse(userpilot: userpilot,
-                                    parsedNotification: parsedNotification,
-                                    completionHandler: nil)
+        executeNotificationResponse(
+            userpilot: userpilot,
+            parsedNotification: parsedNotification,
+            completionHandler: nil
+        )
 
         return true
     }
@@ -286,12 +299,14 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
         completionHandler: (() -> Void)? = nil
     ) {
         let properties: [String: Any] = [
-            "notification_id": Int(parsedNotification.notificationID) ?? 0
+            "notification_id": Int(parsedNotification.notificationId) ?? 0
         ]
 
-        analyticsPublisher.publishInternalSDKEvent(PushNotificationOpenedEvent(payload: properties),
-                                                  isExpereinceEvent: false,
-                                                  socketSubscription: self)
+        analyticsPublisher.publishInternalSDKEvent(
+            PushNotificationOpenedEvent(payload: properties),
+            isExpereinceEvent: false,
+            socketSubscription: self
+        )
 
         if let url = parsedNotification.deeplink {
             navigateToDeepLink(url, userpilot: userpilot)
@@ -305,7 +320,10 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     /// - Parameters:
     ///   - url: The URL to navigate to.
     ///   - userpilot: The Userpilot instance managing navigation.
-    private func navigateToDeepLink(_ url: URL, userpilot: Userpilot) {
+    private func navigateToDeepLink(
+        _ url: URL,
+        userpilot: Userpilot
+    ) {
         if let navigationDelegate = userpilot.navigationDelegate {
             navigationDelegate.navigate(to: url)
         } else {
@@ -314,4 +332,14 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
             }
         }
     }
+
+    #if DEBUG
+    func mockPushStatus(_ status: UNAuthorizationStatus) {
+        pushAuthorizationStatus = status
+    }
+
+    func setCachedToken(token: Data?) {
+        cachedToken = token
+    }
+    #endif
 }

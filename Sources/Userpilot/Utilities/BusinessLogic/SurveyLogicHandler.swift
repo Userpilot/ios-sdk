@@ -75,7 +75,11 @@ internal struct SurveyLogicHandler {
     }
 
     /// Process the action when the logic operand/condition is met
-    private static func resolveAction(logic: SurveyLogic, currentStep: Int, surveySteps: [SurveyStep]) -> (Int, Bool) {
+    private static func resolveAction(
+        logic: SurveyLogic,
+        currentStep: Int,
+        surveySteps: [SurveyStep]
+    ) -> (Int, Bool) {
         switch logic.action {
         case .endSurvey:
             return (surveySteps.count - 1, true)

@@ -45,10 +45,12 @@ internal class UPIconTextContainerView: UIStackView {
         - theme: The `ExperienceTheme` used to style each `UPIconTextView` child in the container.
         - experienceContentListener: An event listener to handle interactions with each `UPIconTextView`.
      */
-    func setupView(lines: [Line],
-                   theme: ExperienceTheme,
-                   imageLoader: ImageLoading,
-                   isRTL: Bool) {
+    func setupView(
+        lines: [Line],
+        theme: ExperienceTheme,
+        imageLoader: ImageLoading,
+        isRTL: Bool
+    ) {
         // Remove existing views before adding new ones.
         clearViews()
 

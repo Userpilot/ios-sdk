@@ -48,7 +48,10 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
         removeKeyboardNotifications()
     }
 
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+    override func viewWillTransition(
+        to size: CGSize,
+        with coordinator: UIViewControllerTransitionCoordinator
+    ) {
         super.viewWillTransition(to: size, with: coordinator)
         coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self else { return }
@@ -110,7 +113,11 @@ extension NPSBottomSheetViewController: NPSContainerViewDelegate {
         dismissBottomSheet()
     }
 
-    func onNPSSubmitted(_ userAnswer: Int, _ userFollowUpKey: String, _ userFollowUp: String) {
+    func onNPSSubmitted(
+        _ userAnswer: Int,
+        _ userFollowUpKey: String,
+        _ userFollowUp: String
+    ) {
         npsViewModel.onNPSSubmitted(userAnswer, userFollowUpKey, userFollowUp)
     }
 

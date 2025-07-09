@@ -165,7 +165,10 @@ extension DialogViewController {
 
     /// Sets the content of the dialog.
     /// - Parameter content: A UIView to be displayed in the dialog.
-    func setContent(content: UIView, withMargin: CGFloat = 0) {
+    func setContent(
+        content: UIView,
+        withMargin: CGFloat = 0
+    ) {
         contentView.addSubview(content)
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),

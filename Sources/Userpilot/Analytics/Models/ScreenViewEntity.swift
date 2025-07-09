@@ -42,12 +42,12 @@ internal class ScreenViewEntity {
         seenSurveys.removeAll()
     }
 
-    /// Adds an experience ID to the set of seen experiences.
+    /// Adds an experience Id to the set of seen experiences.
     func updateSeenFlowExperiences(_ experienceId: Int) {
         seenExperiences.insert(experienceId)
     }
 
-    /// Adds an experience ID to the set of seen experiences.
+    /// Adds an experience Id to the set of seen experiences.
     func updateSeenSurveyExperiences(_ experienceId: Int) {
         seenSurveys.insert(experienceId)
     }

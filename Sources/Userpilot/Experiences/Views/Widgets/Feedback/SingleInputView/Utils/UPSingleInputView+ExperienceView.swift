@@ -38,7 +38,7 @@ extension UPSingleInputView: UPExperienceView {
     /// Retrieves the answer provided by the user, formatted as a dictionary payload.
     ///
     /// The payload contains:
-    /// - `"id"`: The ID of the survey step.
+    /// - `"id"`: The Id of the survey step.
     /// - `"type"`: The type of the survey step.
     /// - `"value"`: The answer given by the user (formatted based on text field input).
     ///

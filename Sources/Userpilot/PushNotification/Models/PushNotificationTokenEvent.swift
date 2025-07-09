@@ -18,7 +18,7 @@ import Foundation
 
  - Parameters:
    - appToken: The application token identifying the app instance.
-   - userId: The user ID associated with the device.
+   - userId: The user Id associated with the device.
    - token: The push notification device token.
  */
 internal struct PushNotificationTokenEvent: SDKEvent {

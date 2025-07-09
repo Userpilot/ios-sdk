@@ -52,7 +52,7 @@ internal struct FlowContent: Decodable {
     }
 
     // General
-    var baseThemeID: Int {
+    var baseThemeId: Int {
         mobileTheme.id
     }
     // General

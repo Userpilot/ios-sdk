@@ -18,7 +18,7 @@ import Foundation
 
  - Parameters:
    - appToken: The application token identifying the app instance.
-   - userId: The user ID associated with the device.
+   - userId: The user Id associated with the device.
    - token: The push notification device token.
  */
 internal struct UserLogoutEvent: SDKEvent {
@@ -28,7 +28,7 @@ internal struct UserLogoutEvent: SDKEvent {
     /// The application token identifying the app instance.
     let appToken: String
 
-    /// The user ID associated with the device.
+    /// The user Id associated with the device.
     let userId: String
 
     /// The push notification device token.

@@ -52,5 +52,9 @@ public protocol UserpilotAnalyticsDelegate: AnyObject {
     ///     - For `.event`: The event name.
     ///   - properties: Optional dictionary containing additional context or metadata
     ///     about the analytic event.
-    func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?)
+    func didTrack(
+        analytic: UserpilotAnalytic,
+        value: String,
+        properties: [String: Any]?
+    )
 }

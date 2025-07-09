@@ -88,7 +88,7 @@ internal enum EventType: Equatable {
     // MARK: - Associated Values
 
     /**
-     Returns the user ID if the event is an `identify` event. If the event type is not `identify`, it returns `nil`.
+     Returns the user Id if the event is an `identify` event. If the event type is not `identify`, it returns `nil`.
      This is useful when determining the user associated with an identity-related event.
      */
     var userId: String? {

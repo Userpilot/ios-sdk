@@ -105,11 +105,17 @@ internal class CountryPickerPopupMenu: UIView {
 
 extension CountryPickerPopupMenu: UITableViewDelegate, UITableViewDataSource {
 
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(
+        _ tableView: UITableView,
+        numberOfRowsInSection section: Int
+    ) -> Int {
         return countriesList.count
     }
 
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    func tableView(
+        _ tableView: UITableView,
+        cellForRowAt indexPath: IndexPath
+    ) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(
             withIdentifier: CountryTableViewCell.identifier, for: indexPath) as? CountryTableViewCell
         else { return UITableViewCell() }
@@ -117,13 +123,19 @@ extension CountryPickerPopupMenu: UITableViewDelegate, UITableViewDataSource {
         return cell
     }
 
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+    func tableView(
+        _ tableView: UITableView,
+        heightForRowAt indexPath: IndexPath
+    ) -> CGFloat {
         return 40
     }
 
     /// Handles the selection of a row in the table view.
     /// - Removes the popup menu and passes the selected country's dial code to the `onSelectCountry` closure.
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    func tableView(
+        _ tableView: UITableView,
+        didSelectRowAt indexPath: IndexPath
+    ) {
         tableView.deselectRow(at: indexPath, animated: true)
         removeChildViewsFromParentView()
         onSelectCountry?(countriesList[indexPath.row].dialCode)

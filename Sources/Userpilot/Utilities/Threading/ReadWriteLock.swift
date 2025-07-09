@@ -28,10 +28,12 @@ internal class ReadWriteLock {
     ///
     /// - Parameter label: A string used to identify the dispatch queue. Helps in debugging and profiling.
     init(label: String) {
-        concurrentQueue = DispatchQueue(label: label,
-                                        qos: .utility,
-                                        attributes: .concurrent,
-                                        autoreleaseFrequency: .workItem)
+        concurrentQueue = DispatchQueue(
+            label: label,
+            qos: .utility,
+            attributes: .concurrent,
+            autoreleaseFrequency: .workItem
+        )
     }
 
     // MARK: - Methods

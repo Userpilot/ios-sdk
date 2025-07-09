@@ -42,31 +42,50 @@ extension OSLog: Logging {
      Use this level to capture information that may be useful during
      development or while troubleshooting a specific problem.
      */
-    func debug(_ message: StaticString, _ args: CVarArg...) {
+    func debug(
+        _ message: StaticString,
+        _ args: CVarArg...
+    ) {
         log(message, type: .debug, args)
     }
 
     /// Use this level to capture information that may be helpful, but not essential, for troubleshooting errors.
-    func info(_ message: StaticString, _ args: CVarArg...) {
+    func info(
+        _ message: StaticString,
+        _ args: CVarArg...
+    ) {
         log(message, type: .info, args)
     }
 
     /// Use this level to capture information about things that might result in a failure.
-    func log(_ message: StaticString, _ args: CVarArg...) {
+    func log(
+        _ message: StaticString,
+        _ args: CVarArg...
+    ) {
         log(message, type: .default, args)
     }
 
     /// Use this log level to report process-level errors.
-    func error(_ message: StaticString, _ args: CVarArg...) {
+    func error(
+        _ message: StaticString,
+        _ args: CVarArg...
+    ) {
         log(message, type: .error, args)
     }
 
     /// Use this level only to capture system-level or multiprocess information when reporting system errors.
-    func fault(_ message: StaticString, _ args: CVarArg...) {
+    func fault(
+        _ message: StaticString,
+        _ args: CVarArg...
+    ) {
         log(message, type: .fault, args)
     }
 
-    private func log(_ message: StaticString, type: OSLogType, _ args: [CVarArg]) {
+    private func log(
+        _ message: StaticString,
+        type: OSLogType,
+        _ args: [CVarArg]
+    ) {
         tryCatch {
             /*
              Swift doesn't support splatting so unfortunately `args` needs to be manually enumerated.
