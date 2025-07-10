@@ -84,10 +84,12 @@ internal class UPButtonView: UIButton {
      - theme: The `ExperienceTheme` that provides styling attributes such as colors and border properties.
      - callback: Optional callback function to handle button actions.
      */
-    func setupViews(line: Line?,
-                    action: ButtonAction?,
-                    theme: ExperienceTheme,
-                    callback: ((ButtonAction?) -> Void)?) {
+    func setupViews(
+        line: Line?,
+        action: ButtonAction?,
+        theme: ExperienceTheme,
+        callback: ((ButtonAction?
+                   ) -> Void)?) {
         self.action = action
         self.callback = callback
 
@@ -102,9 +104,11 @@ internal class UPButtonView: UIButton {
      - theme: The `SurveyTheme` that provides styling attributes such as colors and border properties.
      - callback: Optional callback function to handle button actions.
      */
-    func setupViews(title: String,
-                    theme: SurveyTheme,
-                    callback: ((ButtonAction?) -> Void)?) {
+    func setupViews(
+        title: String,
+        theme: SurveyTheme,
+        callback: ((ButtonAction?) -> Void)?
+    ) {
         surveyTheme = theme
         self.callback = callback
 
@@ -125,8 +129,8 @@ internal class UPButtonView: UIButton {
         npsTheme: NPSTheme,
         isSecondaryButton: Bool,
         isDismissButton: Bool,
-        callback: ((ButtonAction?) -> Void)?) {
-
+        callback: ((ButtonAction?) -> Void)?
+    ) {
             // Apply theme-based styling properties to the button
             titleLabel?.font = UIFont.matching(
                 fontName: npsTheme.fontFamily,
@@ -155,7 +159,10 @@ internal class UPButtonView: UIButton {
     }
 
     /// Applies font.
-    func setFont(with line: Line?, and theme: ExperienceTheme) {
+    func setFont(
+        with line: Line?,
+        and theme: ExperienceTheme
+    ) {
         let textStyleMark = line?.content?.first?.marks?.first(
             where: { $0.type == ThemeHandler.StyleName.textStyle })
         let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize
@@ -176,7 +183,10 @@ internal class UPButtonView: UIButton {
     }
 
     /// Applies text and styling.
-    private func applyStyle(with line: Line?, and theme: ExperienceTheme) {
+    private func applyStyle(
+        with line: Line?,
+        and theme: ExperienceTheme
+    ) {
         guard let line else { return }
         setTitle(line.buttonTitle, for: .normal)
         contentHorizontalAlignment = line.buttonAlignment

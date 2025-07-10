@@ -27,17 +27,22 @@ internal protocol SocketEvents: AnyObject {
     var isSocketConnectedWithUnknownChannel: Bool { get }
 
     /// Update socket state
-    func updateSocketState(_ socketState: SocketManager.SocketState, forceUpdateState: Bool)
+    func updateSocketState(
+        _ socketState: SocketManager.SocketState,
+        forceUpdateState: Bool
+    )
 
     /// Handle socket open & close
     func connect()
     func close()
 
     /// Publish socket events
-    func publish(_ eventName: String,
-                 payload: Payload,
-                 shouldCloseSocket: Bool,
-                 socketSubscription: SocketSubscription?)
+    func publish(
+        _ eventName: String,
+        payload: Payload,
+        shouldCloseSocket: Bool,
+        socketSubscription: SocketSubscription?
+    )
 
     /// Register socket subscription
     func registerCallback(_ socketSubscription: SocketSubscription)
@@ -45,16 +50,28 @@ internal protocol SocketEvents: AnyObject {
 
 internal extension SocketEvents {
 
-    func publish(_ eventName: String,
-                 payload: Payload,
-                 shouldCloseSocket: Bool = false,
-                 socketSubscription: SocketSubscription? = nil) {
-        publish(eventName, payload: payload, shouldCloseSocket: shouldCloseSocket,
-                socketSubscription: socketSubscription)
+    func publish(
+        _ eventName: String,
+        payload: Payload,
+        shouldCloseSocket: Bool = false,
+        socketSubscription: SocketSubscription? = nil
+    ) {
+        publish(
+            eventName,
+            payload: payload,
+            shouldCloseSocket: shouldCloseSocket,
+            socketSubscription: socketSubscription
+        )
     }
 
-    func updateSocketState(_ socketState: SocketManager.SocketState, forceUpdateState: Bool = false) {
-        updateSocketState(socketState, forceUpdateState: forceUpdateState)
+    func updateSocketState(
+        _ socketState: SocketManager.SocketState,
+        forceUpdateState: Bool = false
+    ) {
+        updateSocketState(
+            socketState,
+            forceUpdateState: forceUpdateState
+        )
     }
 }
 
@@ -65,10 +82,12 @@ internal protocol SocketSubscription: AnyObject {
     /// Listen to socket state
     func onSocketClosed()
     func onSocketOpened()
-    func onSocketEventSent(_ event: String,
-                           _ payload: Payload,
-                           _ message: Message,
-                           _ status: Bool)
+    func onSocketEventSent(
+        _ event: String,
+        _ payload: Payload,
+        _ message: Message,
+        _ status: Bool
+    )
 
     /// Receive new socket message
     func onNewMessage(_ message: Message)
@@ -83,10 +102,12 @@ extension SocketSubscription {
         // Default implementation (optional)
     }
 
-    func onSocketEventSent(_ event: String,
-                           _ payload: Payload,
-                           _ message: Message,
-                           _ status: Bool) {
+    func onSocketEventSent(
+        _ event: String,
+        _ payload: Payload,
+        _ message: Message,
+        _ status: Bool
+    ) {
         // Default implementation (optional)
     }
 
@@ -159,7 +180,7 @@ internal class SocketManager {
     /// SDK logger
     private let logger: Logging
 
-    /// SDK storage.
+    /// SDK settings detector.
     private let sdkSettingsDetector: SDKSettingsDetectoring
 
     /// socket susbcriber
@@ -326,8 +347,10 @@ extension SocketManager: SocketEvents {
     }
 
     /// Update socket state
-    func updateSocketState(_ newSocketState: SocketManager.SocketState,
-                           forceUpdateState: Bool = false) {
+    func updateSocketState(
+        _ newSocketState: SocketManager.SocketState,
+        forceUpdateState: Bool = false
+    ) {
         tryCatch {
             if forceUpdateState || newSocketState == .error {
                 socketState = newSocketState
@@ -362,10 +385,12 @@ extension SocketManager: SocketEvents {
     }
 
     /// Implementation to publish an event over the WebSocket
-    func publish(_ eventName: String,
-                 payload: Payload,
-                 shouldCloseSocket: Bool,
-                 socketSubscription: SocketSubscription?) {
+    func publish(
+        _ eventName: String,
+        payload: Payload,
+        shouldCloseSocket: Bool,
+        socketSubscription: SocketSubscription?
+    ) {
         _ = tryCatch {
             phoenixChannel?
                 .push(eventName, payload: payload ?? [:])

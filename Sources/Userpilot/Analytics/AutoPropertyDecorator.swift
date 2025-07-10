@@ -88,31 +88,17 @@ extension AutoPropertyDecorator: AutoPropertyDecoratoring {
 internal extension AutoPropertyDecorator {
 
     // Static constants
-    private static let autoPropertiesKey = "autoProperties"
-    private static let fontsKey = "fontsProperties"
-    private static let appPropertiesKey = "appProperties"
+    static let autoPropertiesKey = "autoProperties"
+    static let fontsKey = "fontsProperties"
+    static let appPropertiesKey = "appProperties"
 
-    private static let osKey = "operating_system"
-    private static let osVersionKey = "operating_system_version"
-    private static let appVersionKey = "app_version"
-    private static let deviceTypeKey = "device_type"
-    private static let screenWidthKey = "screen_width"
-    private static let screenHeightKey = "screen_height"
+    static let osKey = "operating_system"
+    static let osVersionKey = "operating_system_version"
+    static let appVersionKey = "app_version"
+    static let deviceTypeKey = "device_type"
+    static let screenWidthKey = "screen_width"
+    static let screenHeightKey = "screen_height"
 
-    private static let appNameKey = "app_name"
-    private static let appIdentifierKey = "app_identifier"
-}
-
-internal extension UIUserInterfaceIdiom {
-    /**
-     Provides a string representation of the user interface idiom for analytics purposes.
-     
-     - Returns: A string representing the user interface idiom.
-     */
-    var analyticsName: String {
-        if self == .pad {
-            return "tablet"
-        }
-        return "phone"
-    }
+    static let appNameKey = "app_name"
+    static let appIdentifierKey = "app_identifier"
 }

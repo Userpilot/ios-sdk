@@ -66,10 +66,11 @@ internal class UPIconTextView: UIStackView {
         - theme: The `ExperienceTheme` instance that defines the style attributes for the text and icon.
         - experienceContentListener: The listener to handle interactions and events with this content.
      */
-    func setupView(line: Line,
-                   theme: ExperienceTheme,
-                   imageLoader: ImageLoading,
-                   isRTL: Bool) {
+    func setupView(
+        line: Line,
+        theme: ExperienceTheme,
+        imageLoader: ImageLoading,
+        isRTL: Bool) {
         // Add the subviews to the stack view
         if isRTL {
             addArrangedSubview(textView)

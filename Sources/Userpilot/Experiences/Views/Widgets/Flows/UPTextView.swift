@@ -48,7 +48,10 @@ internal class UPTextView: UILabel {
        - theme: The `ExperienceTheme` that provides styling attributes for the text.
        - experienceContentProtocol: A listener for handling link clicks.
      */
-    func setupView(line: Line, theme: ExperienceTheme) {
+    func setupView(
+        line: Line,
+        theme: ExperienceTheme
+    ) {
         let attributedString = NSMutableAttributedString()
 
         // Process each content item in the line
@@ -80,10 +83,12 @@ internal class UPTextView: UILabel {
     // MARK: - Private Helper Methods
 
     /// Function to apply text style (e.g., font size, color) from a Mark to an attributed string.
-    private func applyTextStyle(to attributedString: NSMutableAttributedString,
-                                marks: [Mark],
-                                theme: ExperienceTheme,
-                                range: NSRange) {
+    private func applyTextStyle(
+        to attributedString: NSMutableAttributedString,
+        marks: [Mark],
+        theme: ExperienceTheme,
+        range: NSRange
+    ) {
         // Retrieve text style mark or use a default one
         let textStyleMark = marks.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
         let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
@@ -103,10 +108,12 @@ internal class UPTextView: UILabel {
     }
 
     /// Function to apply header styles (e.g., larger font size) for heading lines.
-    private func applyHeaderStyles(to attributedString: NSMutableAttributedString,
-                                   line: Line,
-                                   theme: ExperienceTheme,
-                                   range: NSRange) {
+    private func applyHeaderStyles(
+        to attributedString: NSMutableAttributedString,
+        line: Line,
+        theme: ExperienceTheme,
+        range: NSRange
+    ) {
         let textColor = theme.titleTextColor
         let headerFont = line.attrs?.level?.fontSize() ?? ThemeHandler.DefaultValues.headerTextSize
         let font = UIFont.matching(fontName: theme.fontFamily, fontWeight: [.traitBold], fontSize: CGFloat(headerFont))
@@ -116,7 +123,11 @@ internal class UPTextView: UILabel {
     }
 
     /// Function to apply link style.
-    private func applyLinkStyle(to attributedString: NSMutableAttributedString, mark: Mark, range: NSRange) {
+    private func applyLinkStyle(
+        to attributedString: NSMutableAttributedString,
+        mark: Mark,
+        range: NSRange
+    ) {
         if let link = mark.attrs?.href, let url = URL(string: link) {
             attributedString.addAttribute(.link, value: url, range: range)
             attributedString.addAttribute(.underlineStyle,
@@ -166,7 +177,8 @@ internal class UPTextView: UILabel {
         switch textAlignment {
         case .center:
             location.x -= (bounds.width - textBoundingRect.width) / 2
-        case .right, .natural where UIView.userInterfaceLayoutDirection(for: semanticContentAttribute) == .rightToLeft:
+        case .right where UIView.userInterfaceLayoutDirection(for: semanticContentAttribute) == .rightToLeft,
+             .natural where UIView.userInterfaceLayoutDirection(for: semanticContentAttribute) == .rightToLeft:
             location.x -= (bounds.width - textBoundingRect.width)
         default:
             break // left aligned or default

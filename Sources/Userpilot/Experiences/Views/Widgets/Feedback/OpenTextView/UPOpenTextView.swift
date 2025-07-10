@@ -59,11 +59,13 @@ internal class UPOpenTextView: UIView {
     ///   - surveyTheme: The theme to be applied to the view, including font family.
     ///   - isRTL: Boolean indicating if the layout should be right-to-left.
     ///   - viewStateProtocol: A delegate for managing the view's state.
-    func setupView(surveyStep: SurveyStep,
-                   surveyTheme: SurveyTheme,
-                   isListView: Bool,
-                   isRTL: Bool,
-                   viewStateProtocol: ViewStateDelegate) {
+    func setupView(
+        surveyStep: SurveyStep,
+        surveyTheme: SurveyTheme,
+        isListView: Bool,
+        isRTL: Bool,
+        viewStateProtocol: ViewStateDelegate
+    ) {
         self.surveyStep = surveyStep
         self.viewStateProtocol = viewStateProtocol
 
@@ -88,11 +90,13 @@ internal class UPOpenTextView: UIView {
     ///   - npsTheme: The theme settings for the view.
     ///   - isRTL: Boolean indicating if the layout should be right-to-left.
     ///   - viewStateProtocol: A delegate for managing the view's state.
-    func setupView(followUpQuestion: FollowUpQuestion?,
-                   placeholder: String?,
-                   npsTheme: NPSTheme,
-                   isRTL: Bool,
-                   viewStateProtocol: ViewStateDelegate) {
+    func setupView(
+        followUpQuestion: FollowUpQuestion?,
+        placeholder: String?,
+        npsTheme: NPSTheme,
+        isRTL: Bool,
+        viewStateProtocol: ViewStateDelegate
+    ) {
         guard let followUpQuestion else { return }
         self.viewStateProtocol = viewStateProtocol
 
@@ -117,11 +121,13 @@ internal class UPOpenTextView: UIView {
     ///   - secondaryTextColor: The secondary text color for the counter label.
     ///   - fontFamily: The font family to be applied.
     ///   - isRTL: Boolean indicating if the layout should be right-to-left.
-    private func configureViews(placeholder: String?,
-                                textColor: UIColor,
-                                secondaryTextColor: UIColor,
-                                fontFamily: String?,
-                                isRTL: Bool) {
+    private func configureViews(
+        placeholder: String?,
+        textColor: UIColor,
+        secondaryTextColor: UIColor,
+        fontFamily: String?,
+        isRTL: Bool
+    ) {
         placeholderLabel.text = placeholder
         placeholderLabel.textColor = secondaryTextColor
         placeholderLabel.font = UIFont.matching(

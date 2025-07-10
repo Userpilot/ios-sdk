@@ -12,27 +12,31 @@ import Foundation
  Base class representing various types of experience step action events for mobile content.
 
  - Parameters:
-   - mobileContentId: The ID of the mobile content associated with the event.
-   - stepID: The ID of the step associated with the event.
+   - mobileContentId: The Id of the mobile content associated with the event.
+   - stepId: The Id of the step associated with the event.
  */
 internal class SurveyExperienceStepActionEvent: SurveyExperienceActionEvent {
-    let moduleID: Int
+    let moduleId: Int
     let type: String
 
-    /// Creates a dictionary representation of the event data, including the step ID.
+    /// Creates a dictionary representation of the event data, including the step Id.
     ///
-    /// - Returns: A dictionary containing the action type, mobile content ID, application token, user ID, and step ID.
+    /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
     override func toMap() -> [String: Any] {
         var map = super.toMap()
-        map["module_id"] = moduleID
+        map["module_id"] = moduleId
         map["type"] = type
         return map
     }
 
-    init(surveyID: Int, moduleID: Int, type: String) {
-        self.moduleID = moduleID
+    init(
+        surveyId: Int,
+        moduleId: Int,
+        type: String
+    ) {
+        self.moduleId = moduleId
         self.type = type
-        super.init(surveyID: surveyID)
+        super.init(surveyId: surveyId)
     }
 }
 
@@ -63,9 +67,14 @@ internal class ExperienceSurveyStepSubmittedEvent: SurveyExperienceStepActionEve
     // Custom parameters for the Submitted event
     let feedback: Any?
 
-    init(surveyID: Int, moduleID: Int, type: String, feedback: Any? = nil) {
+    init(
+        surveyId: Int,
+        moduleId: Int,
+        type: String,
+        feedback: Any? = nil
+    ) {
         self.feedback = feedback
-        super.init(surveyID: surveyID, moduleID: moduleID, type: type)
+        super.init(surveyId: surveyId, moduleId: moduleId, type: type)
     }
 
     override var name: String {

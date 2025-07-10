@@ -1,0 +1,335 @@
+//
+//  MockUserpilot.swift
+//  Userpilot SDK
+//
+//  Created by Motasem Hamed on 02/07/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+
+import UIKit
+import Foundation
+import UserNotifications
+@testable import Userpilot
+
+class MockUserpilot: Userpilot {
+    init() {
+        super.init(config: Userpilot.Config(token: "NX-00000"))
+    }
+
+    override init(config: Config) {
+        super.init(config: config)
+    }
+
+    override func initializeContainer() {
+        container.owner = self
+        container.register(Userpilot.Config.self, value: config)
+        container.register(AnalyticsPublishing.self, value: analyticsPublisher)
+        container.register(DataStoring.self, value: storage)
+        container.register(SessionMonitoring.self, value: sessionMonitor)
+        container.register(PushMonitoring.self, value: pushMonitor)
+        container.register(SocketEvents.self, value: socketManager)
+        container.register(ExperiencesPublishing.self, value: experiencesPublisher)
+        container.register(AutoPropertyDecoratoring.self, value: autoPropertyDecorator)
+        container.register(SDKSettingsDetectoring.self, value: sdkSettingsDetectorer)
+        container.register(ThemeHandling.self, value: themeHandler)
+        container.register(ImageLoading.self, value: imageLoader)
+    }
+
+    var onIdentify: ((String, Payload, Payload) -> Void)?
+    override func identify(userId: String, properties: Payload = nil, company: Payload = nil) {
+        onIdentify?(userId, properties, company)
+        super.identify(userId: userId, properties: properties, company: company)
+    }
+    
+    var analyticsPublisher = MockAnalyticsPublisher()
+    var storage = MockStorage()
+    var sessionMonitor = MockSessionMonitor()
+    var pushMonitor = MockPushMonitor()
+    var socketManager = MockSocketManager()
+    var experiencesPublisher = MockExperiencesPublisher()
+    var autoPropertyDecorator = MockAutoPropertyDecoratorer()
+    var sdkSettingsDetectorer = MockSDKSettingsDetectorer()
+    var themeHandler = MockThemeHandler()
+    var imageLoader = MockImageLoader()
+    var mockLogger = MockLogger()
+}
+
+class MockImageLoader: ImageLoading {
+    var onLoadImage: ((UIImageView, String, String?, CGSize) -> Void)?
+    func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
+        onLoadImage?(target, url, blurHash, size)
+    }
+}
+
+class MockThemeHandler: ThemeHandling {
+    var onSaveTheme: ((ThemeContent) -> Void)?
+    func saveTheme(_ themeResponse: ThemeContent) {
+        onSaveTheme?(themeResponse)
+    }
+    
+    var onGetThemeById: ((Int) -> ThemeData?)?
+    func getThemeById(_ themeId: Int) -> ThemeData? {
+        return onGetThemeById?(themeId) ?? nil
+    }
+    
+    var onMergeExperienceThemes: ((ThemeData?, ExperienceTheme?, ExperienceTheme?) -> ThemeData?)?
+    func mergeExperienceThemes(_ baseTheme: ThemeData?, _ globalTheme: ExperienceTheme?, _ stepTheme: ExperienceTheme?) -> ThemeData {
+        return onMergeExperienceThemes?(baseTheme, globalTheme, stepTheme) ?? ThemeData(carousel: nil, slideOut: nil, survey: nil)
+    }
+    
+    var onMergeSurveyThemes: ((ThemeData?, SurveyTheme?) -> SurveyTheme?)?
+    func mergeSurveyThemes(_ baseTheme: ThemeData?, _ surveyTheme: SurveyTheme?) -> SurveyTheme {
+        return onMergeSurveyThemes?(baseTheme, surveyTheme) ?? SurveyTheme(general: nil, font: nil, progress: nil, backdrop: nil)
+    }
+    
+}
+
+class MockSDKSettingsDetectorer: SDKSettingsDetectoring {
+
+    var onFetchSettings: (() -> Void)?
+    func fetchSettings(callback: @escaping () -> Void) {
+        onFetchSettings?()
+        callback()
+    }
+}
+
+class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
+    var autoProperties: [String : Any] = [
+        AutoPropertyDecorator.osKey: "iOS",
+        AutoPropertyDecorator.osVersionKey: UIDevice.current.systemVersion,
+        AutoPropertyDecorator.appVersionKey: Bundle.main.version,
+        AutoPropertyDecorator.deviceTypeKey: UIDevice.current.modelName,
+        AutoPropertyDecorator.screenWidthKey: Int(UIScreen.main.bounds.size.width),
+        AutoPropertyDecorator.screenHeightKey: Int(UIScreen.main.bounds.size.height)
+    ]
+    
+    var appProperties: [String : Any] = [
+        AutoPropertyDecorator.appNameKey: Bundle.main.displayName,
+        AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier
+    ]
+}
+
+class MockExperiencesPublisher: ExperiencesPublishing {
+    var onGetActiveMobileContent: (() -> ExperienceContent)?
+    func getActiveMobileContent() -> ExperienceContent? {
+        return onGetActiveMobileContent?() ?? nil
+    }
+    
+    var onPublishInternalSDKEvent: ((SDKEvent) -> Void)?
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+        onPublishInternalSDKEvent?(sdkEvent)
+    }
+    
+    var onTriggerExperience: ((String) -> Void)?
+    func triggerExperience(_ experienceId: String) {
+        onTriggerExperience?(experienceId)
+    }
+    
+    var onEndExperience: ((Bool) -> Void)?
+    func endExperience(manualClose: Bool) {
+        onEndExperience?(manualClose)
+    }
+    
+    var onCanRequestScreenEvent: (() -> Bool)?
+    func canRequestScreenEvent() -> Bool {
+        return onCanRequestScreenEvent?() ?? false
+    }
+    
+    var onTriggerDeepLink: ((URL) -> Void)?
+    func triggerDeepLink(url: URL) {
+        onTriggerDeepLink?(url)
+    }
+    
+    var onCancelPendingSurveyContent: (() -> Void)?
+    func cancelPendingSurveyContent() {
+        onCancelPendingSurveyContent?()
+    }
+    
+    var onActiveOneTimeFlag: (() -> Void)?
+    func activeOneTimeFlag() {
+        onActiveOneTimeFlag?()
+    }
+    
+    var onShowThankYouMessage: ((SurveyContent, SurveyTheme) -> Void)?
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+        onShowThankYouMessage?(surveyContent, surveyTheme)
+    }
+
+}
+
+class MockSocketManager: SocketEvents {
+    
+    var isSocketOpened: Bool = false
+    
+    var isJoiningSocket: Bool = false
+    
+    var didErrorOccurred: Bool = false
+    
+    var isShutdownState: Bool = false
+    
+    var isSocketConnectedWithUnknownChannel: Bool = false
+    
+    var onConnect: (() -> Void)?
+    func connect() {
+        onConnect?()
+    }
+    
+    var onClose: (() -> Void)?
+    func close() {
+        onClose?()
+    }
+    
+    var onRegisterCallbackh: ((SocketSubscription) -> Void)?
+    func registerCallback(_ socketSubscription: SocketSubscription) {
+        onRegisterCallbackh?(socketSubscription)
+    }
+    
+}
+
+class MockAnalyticsPublisher: AnalyticsPublishing {
+    var onPublish: ((Event) -> Void)?
+    func publish(_ event: Event) {
+        onPublish?(event)
+    }
+
+    var onFlush: (() -> Void)?
+    func flush() {
+        onFlush?()
+    }
+    
+    var onResume: (() -> Void)?
+    func resume() {
+        onResume?()
+    }
+    
+    var onReset: (() -> Void)?
+    func reset() {
+        onReset?()
+    }
+    
+    var onLogout: ((SocketManager.SocketState, Bool) -> Void)?
+    func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool) {
+        onLogout?(socketState, shouldClearCachedIdentifyEvent)
+    }
+    
+    var canRequestEvent: Bool = true
+    
+    var onPublishInternalSDKEvent: ((SDKEvent, Bool, SocketSubscription?) -> Void)?
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?) {
+        onPublishInternalSDKEvent?(sdkEvent, isExpereinceEvent, socketSubscription)
+    }
+    
+    var onPublishFakeReloadScreenEvent: (() -> Void)?
+    func publishFakeReloadScreenEvent() {
+        onPublishFakeReloadScreenEvent?()
+    }
+    
+    var onExperiencePublished: ((ExperienceType, Int) -> Void)?
+    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int) {
+        onExperiencePublished?(experienceType, experienceId)
+    }
+    
+    var isStartSession: Bool = false
+    
+    var screenEntity: ScreenViewEntity? = nil
+}
+
+class MockStorage: DataStoring {
+    var socketURL: String = ""
+    var pushToken: String? = ""
+    var userId: String = "user-id"
+    var user: String = ""
+    var temporaryUser: String? = ""
+    var sessionDate: Date? = Date()
+    var configurationDate: Date? = Date()
+}
+
+class MockSessionMonitor: SessionMonitoring {
+    
+    var onReset: (() -> Void)?
+    func reset() {
+        onReset?()
+    }
+ 
+}
+
+class MockPushMonitor: PushMonitoring {
+    
+    var pushEnabled: Bool = false
+    var pushAuthorizationStatus: UNAuthorizationStatus = .notDetermined
+    
+    var onConfigureAutomatically: (() -> Void)?
+    func configureAutomatically() {
+        onConfigureAutomatically?()
+    }
+
+    var onSetPushToken: ((Data?) -> Void)?
+    func setPushToken(_ deviceToken: Data?) {
+        onSetPushToken?(deviceToken)
+    }
+
+    var onRefreshPushStatus: (() -> Void)?
+    func refreshPushStatus(completion: ((UNAuthorizationStatus) -> Void)?) {
+        onRefreshPushStatus?()
+        completion?(pushAuthorizationStatus)
+    }
+    
+    var onDidReceiveNotification: ((UNNotificationResponse) -> Bool)?
+    func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool {
+        let result = onDidReceiveNotification?(response) ?? false
+        if result {
+            completionHandler()
+        }
+        return result
+    }
+    
+    var onAttemptDeferredNotificationResponse: (() -> Void)?
+    func attemptDeferredNotificationResponse() -> Bool {
+        onAttemptDeferredNotificationResponse?()
+        return false
+    }
+}
+
+class MockLogger: Logging {
+    var loggedDebugs: [String] = []
+    var loggedInfos: [String] = []
+    var loggedLogs: [String] = []
+    var loggedErrors: [String] = []
+    var loggedFaults: [String] = []
+    
+    var onDebug: ((StaticString, any CVarArg) -> Void)?
+    func debug(_ message: StaticString, _ args: any CVarArg...) {
+        let formatted = String(format: String(describing: message), arguments: args)
+        loggedDebugs.append(formatted)
+        onDebug?(message, args)
+    }
+    
+    var onInfo: ((StaticString, any CVarArg) -> Void)?
+    func info(_ message: StaticString, _ args: any CVarArg...) {
+        let formatted = String(format: String(describing: message), arguments: args)
+        loggedInfos.append(formatted)
+        onInfo?(message, args)
+    }
+    
+    var onLog: ((StaticString, any CVarArg) -> Void)?
+    func log(_ message: StaticString, _ args: any CVarArg...) {
+        let formatted = String(format: String(describing: message), arguments: args)
+        loggedLogs.append(formatted)
+        onLog?(message, args)
+    }
+    
+    var onError: ((StaticString, any CVarArg) -> Void)?
+    func error(_ message: StaticString, _ args: any CVarArg...) {
+        let formatted = String(format: String(describing: message), arguments: args)
+        loggedErrors.append(formatted)
+        onError?(message, args)
+    }
+    
+    var onFault: ((StaticString, any CVarArg) -> Void)?
+    func fault(_ message: StaticString, _ args: any CVarArg...) {
+        let formatted = String(format: String(describing: message), arguments: args)
+        loggedFaults.append(formatted)
+        onFault?(message, args)
+    }
+    
+}

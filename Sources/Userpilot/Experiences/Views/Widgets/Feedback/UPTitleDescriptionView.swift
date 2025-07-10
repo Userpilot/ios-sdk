@@ -68,7 +68,12 @@ internal class UPTitleDescriptionView: UIView {
     /// - Parameters:
     ///   - surveyStep: The survey step containing question and subheader data.
     ///   - surveyTheme: The theme containing style properties for the text.
-    func setupView(surveyStep: SurveyStep, surveyTheme: SurveyTheme, isListView: Bool, isRTL: Bool) {
+    func setupView(
+        surveyStep: SurveyStep,
+        surveyTheme: SurveyTheme,
+        isListView: Bool,
+        isRTL: Bool
+    ) {
         configureLabels(
             title: surveyStep.question,
             showRequiredDot: isListView && surveyStep.isRequired == true,
@@ -85,7 +90,12 @@ internal class UPTitleDescriptionView: UIView {
     ///   - subHeader: The optional subheader text.
     ///   - npsTheme: The theme containing style properties for the text.
     ///   - isRTL: A Boolean indicating whether the layout should be right-to-left.
-    func setupView(title: String?, subHeader: String?, npsTheme: NPSTheme, isRTL: Bool) {
+    func setupView(
+        title: String?,
+        subHeader: String?,
+        npsTheme: NPSTheme,
+        isRTL: Bool
+    ) {
         configureLabels(
             title: title,
             showRequiredDot: false,
@@ -104,13 +114,14 @@ internal class UPTitleDescriptionView: UIView {
     //   - fontFamily: The font family to be used.
     //   - isRTL: A Boolean indicating whether the layout should be right-to-left.
     // swiftlint:disable:next function_parameter_count
-    private func configureLabels(title: String?,
-                                 showRequiredDot: Bool,
-                                 subHeader: String?,
-                                 textColor: UIColor,
-                                 fontFamily: String?,
-                                 isRTL: Bool) {
-
+    private func configureLabels(
+        title: String?,
+        showRequiredDot: Bool,
+        subHeader: String?,
+        textColor: UIColor,
+        fontFamily: String?,
+        isRTL: Bool
+    ) {
         if let title, !title.isEmpty {
             let attributedTitle = NSMutableAttributedString(
                 string: title,

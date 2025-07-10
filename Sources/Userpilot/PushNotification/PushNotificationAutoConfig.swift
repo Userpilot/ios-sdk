@@ -26,7 +26,7 @@ internal enum PushNotificationAutoConfig {
         pushMonitor = observer
         // in case we have a pending notification, process it
         if let response {
-            observer.didReceiveNotification(
+            _ = observer.didReceiveNotification(
                 response: response,
                 completionHandler: {})
             self.response = nil

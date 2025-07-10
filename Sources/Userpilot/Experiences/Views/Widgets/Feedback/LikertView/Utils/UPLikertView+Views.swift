@@ -67,10 +67,12 @@ internal extension UPLikertView {
     // MARK: - Bind Low and High Score Texts
 
     /// Binds the low and high score texts to their respective labels based on the survey step and theme.
-    func bindLowHeightTexts(lowScore: String?,
-                            highScore: String?,
-                            textColor: UIColor,
-                            fontFamily: String?) {
+    func bindLowHeightTexts(
+        lowScore: String?,
+        highScore: String?,
+        textColor: UIColor,
+        fontFamily: String?
+    ) {
         // Set low score text and properties
         lowScoreTextLabel.text = lowScore
         lowScoreTextLabel.textColor = textColor

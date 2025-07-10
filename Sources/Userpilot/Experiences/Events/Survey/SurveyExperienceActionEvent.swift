@@ -16,11 +16,11 @@ import Foundation
  Base class representing various types of experience action events for mobile content.
 
  - Parameters:
-   - mobileContentId: The ID of the mobile content associated with the event.
+   - mobileContentId: The Id of the mobile content associated with the event.
  */
 internal class SurveyExperienceActionEvent: SDKEvent {
-    /// Experience ID
-    let surveyID: Int
+    /// Experience Id
+    let surveyId: Int
     /// Has deeplink to open it
     let hasDeepLinkContent: Bool
 
@@ -45,16 +45,19 @@ internal class SurveyExperienceActionEvent: SDKEvent {
 
     /// Creates a dictionary representation of the event data.
     ///
-    /// - Returns: A dictionary containing the action type, mobile content ID, application token, and user ID.
+    /// - Returns: A dictionary containing the action type, mobile content Id, application token, and user Id.
     func toMap() -> [String: Any] {
         let params: [String: Any] = [
-            "survey_id": surveyID
+            "survey_id": surveyId
         ]
         return params
     }
 
-    init(surveyID: Int, hasDeepLinkContent: Bool = false) {
-        self.surveyID = surveyID
+    init(
+        surveyId: Int,
+        hasDeepLinkContent: Bool = false
+    ) {
+        self.surveyId = surveyId
         self.hasDeepLinkContent = hasDeepLinkContent
     }
 }
@@ -74,13 +77,17 @@ internal class ExperienceSurveySeenEvent: SurveyExperienceActionEvent {
  */
 internal class ExperienceSurveyDismissedEvent: SurveyExperienceActionEvent {
     // Custom parameters for the Submitted event
-    let moduleID: Int?
+    let moduleId: Int?
     let type: String?
 
-    init(surveyID: Int, moduleID: Int?, type: String?) {
-        self.moduleID = moduleID
+    init(
+        surveyId: Int,
+        moduleId: Int?,
+        type: String?
+    ) {
+        self.moduleId = moduleId
         self.type = type
-        super.init(surveyID: surveyID)
+        super.init(surveyId: surveyId)
     }
 
     override var name: String {
@@ -90,8 +97,8 @@ internal class ExperienceSurveyDismissedEvent: SurveyExperienceActionEvent {
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
-        if moduleID != nil {
-            basePayload["module_id"] = moduleID
+        if moduleId != nil {
+            basePayload["module_id"] = moduleId
         }
         if type != nil {
             basePayload["type"] = type
@@ -117,9 +124,12 @@ internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
     // Custom parameters for the Submitted event
     let feedback: Any?
 
-    init(surveyID: Int, feedback: Any? = nil) {
+    init(
+        surveyId: Int,
+        feedback: Any? = nil
+    ) {
         self.feedback = feedback
-        super.init(surveyID: surveyID)
+        super.init(surveyId: surveyId)
     }
 
     override var name: String {

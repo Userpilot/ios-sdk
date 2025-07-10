@@ -59,7 +59,10 @@ internal struct RatingItem {
     /// - Parameter metadata: The metadata that provides the type of Likert scale (numbers, stars, hearts, etc.).
     /// - Parameter index: The index of the item in the Likert scale.
     /// - Returns: A `UIImage` representing the icon for the given index and metadata type.
-    private static func getIcon(metadata: Metadata?, index: Int) -> UIImage? {
+    private static func getIcon(
+        metadata: Metadata?,
+        index: Int
+    ) -> UIImage? {
         guard let metadataType = metadata?.type else { return UIImage() }
 
         if metadataType == .numbers {
@@ -90,7 +93,10 @@ internal struct RatingItem {
     /// - Parameter index: The index of the item in the Likert scale.
     /// - Parameter availableRange: The total number of items in the scale (e.g., 3, 5, 7, 10).
     /// - Returns: A `UIImage` representing the smiley icon for the given index.
-    private static func getSmileIcon(for index: Int, availableRange: Int) -> UIImage? {
+    private static func getSmileIcon(
+        for index: Int,
+        availableRange: Int
+    ) -> UIImage? {
         switch availableRange {
         case 3:
             switch index {

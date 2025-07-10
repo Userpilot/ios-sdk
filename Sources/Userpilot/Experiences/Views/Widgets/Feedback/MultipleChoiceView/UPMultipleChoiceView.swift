@@ -59,11 +59,13 @@ internal class UPMultipleChoiceView: UIView {
     ///   - surveyStep: The survey step containing question metadata and configurations.
     ///   - surveyTheme: The theme to apply to the survey, including fonts and colors.
     ///   - viewStateProtocol: A delegate for managing the state of the view.
-    func setupView(surveyStep: SurveyStep,
-                   surveyTheme: SurveyTheme,
-                   isListView: Bool,
-                   isRTL: Bool,
-                   viewStateProtocol: ViewStateDelegate) {
+    func setupView(
+        surveyStep: SurveyStep,
+        surveyTheme: SurveyTheme,
+        isListView: Bool,
+        isRTL: Bool,
+        viewStateProtocol: ViewStateDelegate
+    ) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme
         self.isRTL = isRTL

@@ -18,7 +18,9 @@ internal class NPSViewModel {
     // MARK: - Properties
 
     /// Weak reference to the owning `Userpilot` instance.
+    private weak var userpilot: Userpilot?
     private let experiencesPublisher: ExperiencesPublishing
+    private let logger: Logging
     let imageLoader: ImageLoading
 
     /// The merged theme data for the survey.
@@ -35,8 +37,10 @@ internal class NPSViewModel {
     /// Initializes the view model with a dependency injection container.
     /// - Parameter container: Dependency injection container providing required services.
     init(container: DIContainer) {
+        self.userpilot = container.owner
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.imageLoader = container.resolve(ImageLoading.self)
+        self.logger = container.resolve(Userpilot.Config.self).logger
     }
 
     // MARK: - View Lifecycle
@@ -73,6 +77,13 @@ internal class NPSViewModel {
      */
     private func onNPSOpened() {
         guard npsContent != nil else { return }
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .nps,
+            experienceId: nil,
+            experienceState: .started
+        )
+        logExperience(state: "Started")
+
         let eventExperienceSeen = ExperienceNPSSeenEvent()
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
     }
@@ -82,12 +93,26 @@ internal class NPSViewModel {
     */
     func onNPSDismissed() {
         guard npsContent != nil else { return }
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .nps,
+            experienceId: nil,
+            experienceState: .dismissed
+        )
+        logExperience(state: "Dismissed")
+
         let eventExperienceDismissed = ExperienceNPSDismissedEvent()
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
     }
 
     func onNPSSubmitted(_ userAnswer: Int, _ userFollowUpKey: String, _ userFollowUp: String) {
         guard let npsContent else { return }
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .nps,
+            experienceId: nil,
+            experienceState: .submitted
+        )
+        logExperience(state: "Submitted")
+
         let eventExperienceSubmitted = ExperienceNPSSubmittedEvent(
             score: userAnswer - 1,
             npsKey: npsContent.content.survey.key ?? "",
@@ -106,4 +131,12 @@ internal class NPSViewModel {
         }
     }
 
+    // MARK: - Logging
+
+    private func logExperience(state: String) {
+        logger.info(
+            "Userpilot experience -> type: NPS, state: %{public}@",
+            state
+        )
+    }
 }

@@ -19,7 +19,10 @@ internal extension UITextField {
     /// - Parameters:
     ///   - start: The padding size (in points) to be added to the start (left side in LTR layouts).
     ///   - end: The padding size (in points) to be added to the end (right side in LTR layouts).
-    func setPadding(start: CGFloat, end: CGFloat) {
+    func setPadding(
+        start: CGFloat,
+        end: CGFloat
+    ) {
         let paddingViewStart = UIView(frame: CGRect(x: 0, y: 0, width: start, height: self.frame.height))
         let paddingViewEnd = UIView(frame: CGRect(x: 0, y: 0, width: end, height: self.frame.height))
 
@@ -55,7 +58,10 @@ internal extension UITextField {
     /// - Parameters:
     ///   - text: The placeholder text.
     ///   - color: The color of the placeholder text.
-    func setPlaceholder(text: String, color: UIColor) {
+    func setPlaceholder(
+        text: String,
+        color: UIColor
+    ) {
         self.attributedPlaceholder = NSAttributedString(
             string: text,
             attributes: [NSAttributedString.Key.foregroundColor: color]

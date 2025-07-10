@@ -16,11 +16,17 @@ import UIKit
 
 extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
 
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(
+        _ tableView: UITableView,
+        numberOfRowsInSection section: Int
+    ) -> Int {
         return choices.count
     }
 
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    func tableView(
+        _ tableView: UITableView,
+        cellForRowAt indexPath: IndexPath
+    ) -> UITableViewCell {
         guard
             let choiceTableViewCell = tableView.dequeueReusableCell(
                 withIdentifier: "ChoiceTableViewCell", for: indexPath) as? ChoiceTableViewCell,
@@ -38,7 +44,10 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
         return choiceTableViewCell
     }
 
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    func tableView(
+        _ tableView: UITableView,
+        didSelectRowAt indexPath: IndexPath
+    ) {
         // Handle the "Other" choice input if present.
         if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice {
             if let cell = tableView.cellForRow(
@@ -74,7 +83,10 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
         }
     }
 
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+    func tableView(
+        _ tableView: UITableView,
+        heightForRowAt indexPath: IndexPath
+    ) -> CGFloat {
         return UITableView.automaticDimension
     }
 }

@@ -9,6 +9,8 @@ import Foundation
 import Userpilot
 import UIKit
 
+// swiftlint:disable all
+
 class UserpilotManager {
 
     // MARK: - Public Properties
@@ -163,15 +165,13 @@ extension UserpilotManager: UserpilotAnalyticsDelegate {
 
 extension UserpilotManager: UserpilotExperienceDelegate {
 
-    func onExperienceStateChanged(id: Int, state: UserpilotExperienceState) {
-        print("Experience state -> \(state.rawValue), experienceId -> \(id)")
+    func onExperienceStateChanged(experienceType: UserpilotExperienceType, experienceId: NSNumber?, experienceState: UserpilotExperienceState) {
+
     }
 
-    func onExperienceStepStateChanged(id: Int, state: UserpilotExperienceState,
-                                      experienceId: Int, step: Int, totalSteps: Int) {
-        print("Experience state -> step -> \(step), total steps -> \(totalSteps)")
-    }
+    func onExperienceStepStateChanged(experienceType: UserpilotExperienceType, experienceId: NSNumber, stepId: NSNumber, stepState: UserpilotExperienceState, step: NSNumber?, totalSteps: NSNumber?) {
 
+    }
 }
 
 // MARK: - Hold SDK events
@@ -181,3 +181,5 @@ struct UserpilotSDKEvents {
     let value: String
     let properties: [String: Any]?
 }
+
+// swiftlint:enable all

@@ -23,14 +23,18 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
                                             UIScrollViewDelegate {
 
     /// Returns the number of items in the specified section of the collection view.
-    func collectionView(_ collectionView: UICollectionView,
-                        numberOfItemsInSection section: Int) -> Int {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        numberOfItemsInSection section: Int
+    ) -> Int {
         return experienceViewModel.carouselStepsCount
     }
 
     /// Returns a cell configured for the item at the specified index path.
-    func collectionView(_ collectionView: UICollectionView,
-                        cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        cellForItemAt indexPath: IndexPath
+    ) -> UICollectionViewCell {
         // Attempt to dequeue a reusable cell
         guard
             let stepCollectionViewCell: StepCollectionViewCell = collectionView.dequeueReusableCell(for: indexPath),
@@ -53,9 +57,10 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
     }
 
     /// Returns the size for each item in the collection view.
-    func collectionView(_ collectionView: UICollectionView,
-                        layout collectionViewLayout: UICollectionViewLayout,
-                        sizeForItemAt indexPath: IndexPath) -> CGSize {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        sizeForItemAt indexPath: IndexPath) -> CGSize {
         // Return the full width of the screen with the height of the collection view
         return CGSize(width: UIScreen.main.bounds.width, height: collectionView.frame.size.height)
     }

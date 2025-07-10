@@ -60,14 +60,14 @@ extension ExperienceContent {
         }
     }
 
-    /// Retrieves the theme ID for the content.
-    /// - Returns: An integer representing the base theme ID of the content.
+    /// Retrieves the theme Id for the content.
+    /// - Returns: An integer representing the base theme Id of the content.
     func experienceThemeId() -> Int {
         switch self {
         case .flow(let content):
-            return content.baseThemeID
+            return content.baseThemeId
         case .survey(let content):
-            return content.baseThemeID
+            return content.baseThemeId
         case .nps:
             return 0
         }

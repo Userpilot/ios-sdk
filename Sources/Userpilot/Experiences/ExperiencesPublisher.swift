@@ -55,7 +55,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     // MARK: - Properties
 
     /// The dependency injection container used for resolving services and configurations.
-    private let container: DIContainer
+    private weak var container: DIContainer?
 
     /// Reference to the `Userpilot` instance that owns this manager.
     private weak var userpilot: Userpilot?
@@ -70,7 +70,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     private let themeHandler: ThemeHandling
 
     /// Handles local data storage operations.
-    private var storage: DataStoring
+    private let storage: DataStoring
 
     /// The configuration settings for the `Userpilot` SDK.
     private let config: Userpilot.Config
@@ -81,7 +81,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     /// ---- Logic Variables ---- ///
 
     /// The current screen name in the application, used to track active screens.
-    private var currentScreen: String = ""
+    private lazy var currentScreen: String = ""
 
     /// Debouncer to request fake reload in safe time
     private lazy var debounce = Debouncer(delay: 0.2)
@@ -142,7 +142,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
      Starts the experience for a given experience ID. This method can be used to
      initiate a specific experience based on the provided ID.
 
-     - Parameter experienceId: The ID of the experience to start.
+     - Parameter experienceId: The Id of the experience to start.
      */
     func triggerExperience(_ experienceId: String) {
         readWriteLock.read { [weak self] in
@@ -156,6 +156,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
      */
     func endExperience(manualClose: Bool) {
         performOn(.main) { [weak self] in
+            guard self != nil else { return }
             guard let experience = UIApplication.shared.fetchTopViewController() else { return }
             (experience as? UPExperience)?.triggerCloseExpereince(manualClose: manualClose)
         }
@@ -164,7 +165,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     /*
      Show Thank you module
      */
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+    func showThankYouMessage(
+        _ surveyContent: SurveyContent,
+        _ surveyTheme: SurveyTheme
+    ) {
         triggerThankYouMessageView(surveyContent, surveyTheme)
     }
 
@@ -215,10 +219,12 @@ extension ExperiencesPublisher: SocketSubscription {
      - eventSent: Indicates whether the event was successfully sent.
      */
     // swiftlint:disable:next cyclomatic_complexity, superfluous_disable_command
-    func onSocketEventSent(_ eventName: String,
-                           _ payload: Payload,
-                           _ message: Message,
-                           _ eventSent: Bool) {
+    func onSocketEventSent(
+        _ eventName: String,
+        _ payload: Payload,
+        _ message: Message,
+        _ eventSent: Bool
+    ) {
         readWriteLock.write { [weak self] in
             guard let self, !hasActiveExperience(), !message.payload.isEmpty,
                   let response = message.payload.toJSONString() else { return }
@@ -316,28 +322,28 @@ extension ExperiencesPublisher {
     /**
      Checks for cached themes to determine if the theme is available locally.
 
-     - Parameter themeID: A theme ID to check against the cached themes.
+     - Parameter themeId: A theme Id to check against the cached themes.
      */
-    private func checkCachedThemes(_ themeID: Int) {
-        if themeHandler.getThemeById(themeID) != nil {
+    private func checkCachedThemes(_ themeId: Int) {
+        if themeHandler.getThemeById(themeId) != nil {
             openExperienceFlow()
         } else {
-            fetchThemeData(themeID)
+            fetchThemeData(themeId)
         }
     }
 
     /**
      Fetches theme data for themes that are not cached.
 
-     - Parameter themeID: A theme ID for which data needs to be fetched.
+     - Parameter themeId: A theme Id for which data needs to be fetched.
      */
-    private func fetchThemeData(_ themeID: Int) {
+    private func fetchThemeData(_ themeId: Int) {
         guard analyticsPublisher.canRequestEvent else {
             resetExperienceContent()
             return
         }
 
-        publishInternalSDKEvent(ThemeContentEvent(themeID: themeID, token: config.token))
+        publishInternalSDKEvent(ThemeContentEvent(themeId: themeId, token: config.token))
     }
 
 }
@@ -370,9 +376,8 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 checkCachedThemes(experienceContent.experienceThemeId())
             } else {
-                if isTriggerManualExperience {
-                    oneSecondFlag.activate()
-                } else {
+                oneSecondFlag.activate()
+                if !isTriggerManualExperience {
                     debounce.debounce { [weak self] in
                         guard let self else { return }
                         if self.analyticsPublisher.screenEntity?.event.screenTitle == self.currentScreen {
@@ -392,7 +397,8 @@ extension ExperiencesPublisher {
             guard
                 let self,
                 let topViewController = UIApplication.shared.fetchTopViewController(),
-                self.canShowExperience()
+                self.canShowExperience(),
+                let container = self.container
             else {
                 self?.isTriggerManualExperience = false
                 self?.resetExperienceContent()
@@ -402,7 +408,7 @@ extension ExperiencesPublisher {
             if let experienceContent {
                 switch experienceContent {
                 case .flow(let content):
-                    let experienceViewModel = ExperienceViewModel(container: self.container)
+                    let experienceViewModel = ExperienceViewModel(container: container)
                     self.analyticsPublisher.experiencePublished(.flow, content.id)
                     switch content.type {
                     case .carousel:
@@ -446,13 +452,14 @@ extension ExperiencesPublisher {
             guard
                 let self,
                 let topViewController = UIApplication.shared.fetchTopViewController(),
-                self.canShowExperience()
+                self.canShowExperience(),
+                let container = self.container
             else {
                 self?.isTriggerManualExperience = false
                 self?.resetExperienceContent()
                 return
             }
-            let npsViewModel = NPSViewModel(container: self.container)
+            let npsViewModel = NPSViewModel(container: container)
             self.openNPSBottomSheetExperience(topViewController, npsViewModel)
         }
     }
@@ -478,14 +485,15 @@ extension ExperiencesPublisher {
             guard
                 let self,
                 let topViewController = UIApplication.shared.fetchTopViewController(),
-                self.canShowExperience()
+                self.canShowExperience(),
+                let container = self.container
             else {
                 self?.isTriggerManualExperience = false
                 self?.resetExperienceContent()
                 return
             }
             self.analyticsPublisher.experiencePublished(.survey, content.id)
-            let surveyViewModel = SurveyViewModel(container: self.container)
+            let surveyViewModel = SurveyViewModel(container: container)
             switch content.type {
             case .list:
                 self.openSurveyListExperience(topViewController, surveyViewModel)
@@ -523,8 +531,10 @@ extension ExperiencesPublisher {
 extension ExperiencesPublisher {
 
     /// Open carousel
-    private func openCarouselExperience(_ viewController: UIViewController,
-                                        _ experienceViewModel: ExperienceViewModel) {
+    private func openCarouselExperience(
+        _ viewController: UIViewController,
+        _ experienceViewModel: ExperienceViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let carouselExperienceViewController = CarouselExperienceViewController(
@@ -535,8 +545,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open slide out dialog
-    private func openSlideOutDialogExperience(_ viewController: UIViewController,
-                                              _ experienceViewModel: ExperienceViewModel) {
+    private func openSlideOutDialogExperience(
+        _ viewController: UIViewController,
+        _ experienceViewModel: ExperienceViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let slideOutDialogViewController = SlideOutDialogViewController(experienceViewModel: experienceViewModel)
@@ -545,8 +557,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open slide out bottom sheet
-    private func openSlideOutBottomSheetExperience(_ viewController: UIViewController,
-                                                   _ experienceViewModel: ExperienceViewModel) {
+    private func openSlideOutBottomSheetExperience(
+        _ viewController: UIViewController,
+        _ experienceViewModel: ExperienceViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let slideOutBottomSheetViewController = SlideOutBottomSheetViewController(
@@ -556,8 +570,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open survey list view
-    private func openSurveyListExperience(_ viewController: UIViewController,
-                                          _ surveyViewModel: SurveyViewModel) {
+    private func openSurveyListExperience(
+        _ viewController: UIViewController,
+        _ surveyViewModel: SurveyViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let surveyListViewController = SurveyListViewController(surveyViewModel: surveyViewModel)
@@ -567,7 +583,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open thank you view as a bottom sheet
-    private func triggerThankYouMessageView(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
+    private func triggerThankYouMessageView(
+        _ surveyContent: SurveyContent,
+        _ surveyTheme: SurveyTheme
+    ) {
         isTriggeringThankYouMessage = true
         performOn(.main) { [weak self] in
             guard
@@ -582,7 +601,7 @@ extension ExperiencesPublisher {
                     surveyContent: surveyContent, surveyTheme: surveyTheme)
                 thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
                     let eventExperienceSeen = ExperienceSurveyCompletedEvent(
-                        surveyID: surveyContent.id,
+                        surveyId: surveyContent.id,
                         hasDeepLinkContent: deepLink != nil
                     )
                     self?.publishInternalSDKEvent(eventExperienceSeen)
@@ -600,8 +619,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open survey dialog
-    private func openSurveyDialogExperience(_ viewController: UIViewController,
-                                            _ surveyViewModel: SurveyViewModel) {
+    private func openSurveyDialogExperience(
+        _ viewController: UIViewController,
+        _ surveyViewModel: SurveyViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let surveyDialogViewController = SurveyDialogViewController(surveyViewModel: surveyViewModel)
@@ -610,8 +631,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open survey bottom sheet
-    private func openSurveyBottomSheetExperience(_ viewController: UIViewController,
-                                                 _ surveyViewModel: SurveyViewModel) {
+    private func openSurveyBottomSheetExperience(
+        _ viewController: UIViewController,
+        _ surveyViewModel: SurveyViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let surveyBottomSheetViewController = SurveyBottomSheetViewController(
@@ -621,8 +644,10 @@ extension ExperiencesPublisher {
     }
 
     /// Open NPS bottom sheet
-    private func openNPSBottomSheetExperience(_ viewController: UIViewController,
-                                              _ npsViewModel: NPSViewModel) {
+    private func openNPSBottomSheetExperience(
+        _ viewController: UIViewController,
+        _ npsViewModel: NPSViewModel
+    ) {
         delayUtils.delayAction { [weak self] in
             guard let self, self.canShowExperience() else { return }
             let npsBottomSheetViewController = NPSBottomSheetViewController(

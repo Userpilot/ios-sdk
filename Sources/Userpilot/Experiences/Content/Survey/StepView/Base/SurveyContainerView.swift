@@ -227,12 +227,14 @@ internal class SurveyContainerView: UIView {
        - slideOutContainerViewDelegate: Delegate for handling actions within the view.
        - imageLoader: Object responsible for loading images.
      */
-    func bindStep(withTheme theme: SurveyTheme,
-                  andContent surveyContent: SurveyContent,
-                  withLocal isRTL: Bool,
-                  isDialogContent isDialog: Bool,
-                  andParentViewController parentViewController: UIViewController,
-                  withSurveyContainerViewDelegate surveyContainerViewDelegate: SurveyContainerViewDelegate) {
+    func bindStep(
+        withTheme theme: SurveyTheme,
+        andContent surveyContent: SurveyContent,
+        withLocal isRTL: Bool,
+        isDialogContent isDialog: Bool,
+        andParentViewController parentViewController: UIViewController,
+        withSurveyContainerViewDelegate surveyContainerViewDelegate: SurveyContainerViewDelegate
+    ) {
         self.theme = theme
         self.surveyContent = surveyContent
         self.isRTL = isRTL
@@ -399,7 +401,10 @@ internal class SurveyContainerView: UIView {
         }
     }
 
-    func updateContent(with newView: UIView, animationSubViews: Bool) {
+    func updateContent(
+        with newView: UIView,
+        animationSubViews: Bool
+    ) {
         newView.alpha = 0
         if !animationSubViews {
             actionButton.alpha = 0

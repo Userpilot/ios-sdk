@@ -40,7 +40,7 @@ internal struct SurveyContent: Decodable {
         case timeDelay = "time_delay"
     }
 
-    var baseThemeID: Int {
+    var baseThemeId: Int {
         return surveyTheme.id
     }
 

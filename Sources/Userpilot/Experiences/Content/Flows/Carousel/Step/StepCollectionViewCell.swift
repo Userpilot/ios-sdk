@@ -65,10 +65,12 @@ internal class StepCollectionViewCell: UICollectionViewCell {
        - experienceContentProtocol: A listener for handling interactions related to experience content.
        - imageLoader: An object responsible for loading images.
      */
-    func bindStep(_ step: Step,
-                  withTheme theme: ExperienceTheme,
-                  andImageLoader imageLoader: ImageLoading,
-                  withLocale isRTL: Bool) {
+    func bindStep(
+        _ step: Step,
+        withTheme theme: ExperienceTheme,
+        andImageLoader imageLoader: ImageLoading,
+        withLocale isRTL: Bool
+    ) {
         // Setup UI and bind sections to the stack view
         setupUI(withTheme: theme)
         bindSections(step,
@@ -89,10 +91,12 @@ internal class StepCollectionViewCell: UICollectionViewCell {
        - experienceContentProtocol: A listener for handling interactions related to experience content.
        - imageLoader: An object responsible for loading images.
      */
-    private func bindSections(_ step: Step,
-                              withTheme theme: ExperienceTheme,
-                              andImageLoader imageLoader: ImageLoading,
-                              withLocale isRTL: Bool) {
+    private func bindSections(
+        _ step: Step,
+        withTheme theme: ExperienceTheme,
+        andImageLoader imageLoader: ImageLoading,
+        withLocale isRTL: Bool
+    ) {
         // Iterate over each section of the step
         guard
             let lastSection = step.sections.last,

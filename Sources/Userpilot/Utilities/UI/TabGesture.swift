@@ -32,7 +32,10 @@ internal final class BindableGestureRecognizer: UITapGestureRecognizer, UIGestur
         }
     }
 
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
         return true
     }
 
@@ -47,7 +50,10 @@ internal extension UIView {
     /// - Parameters:
     ///   - tapNumber: The number of taps required to recognize the gesture. Defaults to 1.
     ///   - closure: A closure to be executed when the gesture is recognized.
-    func addTapGesture(tapNumber: Int = 1, _ closure: (() -> Void)?) {
+    func addTapGesture(
+        tapNumber: Int = 1,
+        _ closure: (() -> Void)?
+    ) {
         guard let closure = closure else { return }
 
         // Create a bindable tap gesture recognizer with the provided closure

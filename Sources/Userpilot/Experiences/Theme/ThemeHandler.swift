@@ -139,7 +139,7 @@ internal class ThemeHandler: ThemeHandling {
     // MARK: - ThemeHandling Implementation
 
     /**
-     Saves the given theme data into the `themes` map using the theme ID as the key.
+     Saves the given theme data into the `themes` map using the theme Id as the key.
 
      - Parameter themeResponse: The response containing the theme data to be saved.
      */
@@ -152,8 +152,8 @@ internal class ThemeHandler: ThemeHandling {
     /**
      Retrieves the theme data associated with the specified theme ID.
 
-     - Parameter themeId: The ID of the theme to retrieve.
-     - Returns: The theme data if found, or `nil` if no theme with the given ID is cached.
+     - Parameter themeId: The Id of the theme to retrieve.
+     - Returns: The theme data if found, or `nil` if no theme with the given Id is cached.
      */
     func getThemeById(_ themeId: Int) -> ThemeData? {
         return themes[themeId]

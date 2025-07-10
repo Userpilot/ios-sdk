@@ -33,20 +33,29 @@ internal protocol AnalyticsPublishing: AnyObject {
     func reset()
 
     /// Logout user from socket
-    func logout(socketState: SocketManager.SocketState,
-                shouldClearCachedIdentifyEvent: Bool)
+    func logout(
+        socketState: SocketManager.SocketState,
+        shouldClearCachedIdentifyEvent: Bool
+    )
 
     /// check socket state
     var canRequestEvent: Bool { get }
 
     /// publish experience event
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?)
+    func publishInternalSDKEvent(
+        _ sdkEvent: SDKEvent,
+        isExpereinceEvent: Bool,
+        socketSubscription: SocketSubscription?
+    )
 
     /// publish fake reload event
     func publishFakeReloadScreenEvent()
 
     /// update seen experiences
-    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int)
+    func experiencePublished(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int
+    )
 
     /// For experience which are come from start session
     var isStartSession: Bool { get }
@@ -80,12 +89,12 @@ internal class AnalyticsPublisher {
     private let logger: Logging
 
     /// The storage used to store user-related data.
-    private var storage: DataStoring
+    private let storage: DataStoring
 
     /// The experience publisher.
-    private lazy var experiencesPublisher: ExperiencesPublishing? = {
-        container?.resolve(ExperiencesPublishing.self)
-    }()
+    weak var experiencesPublisher: ExperiencesPublishing? {
+        return container?.resolve(ExperiencesPublishing.self)
+    }
 
     /// Decorator used to modify event properties before sending.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
@@ -97,10 +106,10 @@ internal class AnalyticsPublisher {
     private lazy var eventsToFlush = [Event]()
 
     /// Set of event names sent during the current screen view.
-    private var eventsName = Set<String>()
+    private lazy var eventsName = Set<String>()
 
     /// EventThrottle to throttle events
-    private let eventThrottle = EventThrottle(throttleDuration: 1.0)
+    private lazy var eventThrottle = EventThrottle(throttleDuration: 1.0)
 
     /// Read-write lock for thread-safe event queue operations.
     private lazy var readWriteLock = ReadWriteLock(label: DispatchQueueConstants.EVENT_QUEUE)
@@ -170,7 +179,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /**
      Clear all cached data and close the socket.
      */
-    func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool = false) {
+    func logout(
+        socketState: SocketManager.SocketState,
+        shouldClearCachedIdentifyEvent: Bool = false
+    ) {
         if shouldClearCachedIdentifyEvent && canRequestEvent {
             if let token = storage.pushToken {
                 publishInternalSDKEvent(
@@ -283,7 +295,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /**
      Identifies the user and handles the `identify` event.
      
-     - If the user ID has changed, it resets the socket connection and caches the new event.
+     - If the user Id has changed, it resets the socket connection and caches the new event.
      - If the socket is open, the event is sent immediately; otherwise, it waits for the socket to connect.
      
      - Parameter event: The `identify` event to process.
@@ -312,7 +324,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func screen(_ event: Event) {
         tryCatch {
-            setupScreenEvent(event)
+            if setupScreenEvent(event) {
+                eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "")
+                flushPriorityEvents()
+                return
+            }
             if experiencesPublisher?.canRequestScreenEvent() == false ||
                 eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
@@ -354,7 +370,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
      - Parameter event: The new screen event to process.
      */
-    private func setupScreenEvent(_ event: Event) {
+    private func setupScreenEvent(_ event: Event) -> Bool {
+        var isNewScreen = false
         tryCatch {
             // Check if the screen title has changed
             let isScreenTitleChanged = screenViewEntity?.event.screenTitle != event.screenTitle
@@ -366,22 +383,27 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
             if isScreenTitleChanged {
+                isNewScreen = true
+
                 // Once that trigger screen event is met, cancel current pending experience directly.
                 experiencesPublisher?.cancelPendingSurveyContent()
 
                 // New screen: start with an empty set of seen experiences
-                screenViewEntity = ScreenViewEntity(event: event, seenExperiences: Set(), seenSurveys: Set())
-            } else {
-                // Same screen: retain the existing seen experiences
-                let seenExperiences = screenViewEntity?.seenExperiences ?? Set()
-                let seenSurveys = screenViewEntity?.seenSurveys ?? Set()
                 screenViewEntity = ScreenViewEntity(
                     event: event,
-                    seenExperiences: seenExperiences,
-                    seenSurveys: seenSurveys
+                    seenExperiences: Set(),
+                    seenSurveys: Set()
+                )
+            } else {
+                // Same screen: retain the existing seen experiences
+                screenViewEntity = ScreenViewEntity(
+                    event: event,
+                    seenExperiences: screenViewEntity?.seenExperiences ?? Set(),
+                    seenSurveys: screenViewEntity?.seenSurveys ?? Set()
                 )
             }
         }
+        return isNewScreen
     }
 
 }
@@ -394,7 +416,7 @@ extension AnalyticsPublisher {
      Flushes high-priority events, such as identify or screen events, through the socket, or events that
      opens the socket.
      */
-    private func flushPriorityEvents() {
+    private func flushPriorityEvents(_ canRequestScreenEvent: Bool = true) {
         tryCatch {
             if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
                 checkFallbackState()
@@ -418,7 +440,7 @@ extension AnalyticsPublisher {
             }
 
             /// Screen event
-            if let screenViewEntity {
+            if let screenViewEntity, canRequestScreenEvent {
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
                 payload[AnalyticsPublisher.metaDataProperty] = [
@@ -441,7 +463,10 @@ extension AnalyticsPublisher {
     /**
      Flush the queue directly, for example when application moves to background
      */
-    private func flushQueue(shouldCloseSocket: Bool = false, flushImmediately: Bool = false) {
+    private func flushQueue(
+        shouldCloseSocket: Bool = false,
+        flushImmediately: Bool = false
+    ) {
         tryCatch {
             readWriteLock.write { [weak self] in
                 guard let self else { return }
@@ -499,7 +524,7 @@ extension AnalyticsPublisher: SocketSubscription {
     /// Socket opened callback.
     func onSocketOpened() {
         clearCachedEvents()
-        flushPriorityEvents()
+        flushPriorityEvents(experiencesPublisher?.canRequestScreenEvent() == true)
     }
 
     // Fallback state to close socket if channel not opened
@@ -530,7 +555,12 @@ extension AnalyticsPublisher: SocketSubscription {
        - eventName: The name of the event sent.
        - eventSent: Whether the event was successfully sent.
      */
-    func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
+    func onSocketEventSent(
+        _ eventName: String,
+        _ payload: Payload,
+        _ message: Message,
+        _ eventSent: Bool
+    ) {
         tryCatch {
             if let cachedIdentifyEvent {
                 if eventName == EventType.identifyEvent &&
@@ -641,7 +671,10 @@ extension AnalyticsPublisher {
     }
 
     /// update seen experiences
-    func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int) {
+    func experiencePublished(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int
+    ) {
         if experienceType == .flow {
             screenViewEntity?.updateSeenFlowExperiences(experienceId)
         } else {
@@ -655,7 +688,11 @@ extension AnalyticsPublisher {
 
 internal extension AnalyticsPublisher {
 
-    func broadcastEvent(_ event: Event, _ value: String, properties: [String: Any]?) {
+    func broadcastEvent(
+        _ event: Event,
+        _ value: String,
+        properties: [String: Any]?
+    ) {
         performOn(.main) { [weak self] in
             self?.userpilot?.analyticsDelegate?.didTrack(
                 analytic: event.userpilotAnalytic,

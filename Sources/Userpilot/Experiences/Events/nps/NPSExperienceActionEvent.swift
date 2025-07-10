@@ -66,7 +66,12 @@ internal class ExperienceNPSSubmittedEvent: NPSExperienceActionEvent {
     var feedback: Any?
     var feedbackKey: String
 
-    init(score: Int, npsKey: String, feedback: Any?, feedbackKey: String) {
+    init(
+        score: Int,
+        npsKey: String,
+        feedback: Any?,
+        feedbackKey: String
+    ) {
         self.score = score
         self.npsKey = npsKey
         self.feedback = feedback

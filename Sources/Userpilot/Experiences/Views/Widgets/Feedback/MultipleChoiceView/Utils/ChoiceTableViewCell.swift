@@ -23,7 +23,10 @@ internal class ChoiceTableViewCell: UITableViewCell {
     private let textField = UITextField()
 
     // MARK: - Initialization
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+    override init(
+        style: UITableViewCell.CellStyle,
+        reuseIdentifier: String?
+    ) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupCell()
     }
@@ -96,8 +99,13 @@ internal class ChoiceTableViewCell: UITableViewCell {
     }
 
     // MARK: - Binding Data
-    func bindCell(choice: Choice, surveyStep: SurveyStep, surveyTheme: SurveyTheme, isRTL: Bool,
-                  indexPath: IndexPath) {
+    func bindCell(
+        choice: Choice,
+        surveyStep: SurveyStep,
+        surveyTheme: SurveyTheme,
+        isRTL: Bool,
+        indexPath: IndexPath
+    ) {
         textField.textColor = surveyTheme.textColor
         textField.setPlaceholder(text: choice.value ?? "", color: surveyTheme.textColor)
         textField.font = UIFont.matching(
@@ -158,7 +166,10 @@ internal class ChoiceTableViewCell: UITableViewCell {
         textField.becomeFirstResponder()
     }
 
-    private func getIcon(for choice: Choice, with surveyStep: SurveyStep) -> UIImage? {
+    private func getIcon(
+        for choice: Choice,
+        with surveyStep: SurveyStep
+    ) -> UIImage? {
         if surveyStep.metadata?.isMultiSelect == true {
             return UIImage(
                 named: choice.isSelected == true ?

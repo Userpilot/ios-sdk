@@ -15,7 +15,7 @@ internal struct ThemeContentEvent: SDKEvent {
 
     // MARK: - Properties
 
-    let themeID: Int
+    let themeId: Int
     let token: String
 
     // MARK: - SDKEvent Conformance
@@ -29,7 +29,7 @@ internal struct ThemeContentEvent: SDKEvent {
     var eventPayload: [String: Any] {
         return [
             "app_token": token,
-            "theme_id": themeID
+            "theme_id": themeId
         ]
     }
 }
