@@ -75,7 +75,7 @@ internal class SurveyViewModel {
         }
 
         // Setup theme
-        let baseTheme = themeHandler.getThemeById(surveyContent.baseThemeID)
+        let baseTheme = themeHandler.getThemeById(surveyContent.baseThemeId)
         surveyTheme = themeHandler.mergeSurveyThemes(
             baseTheme, surveyContent.surveyTheme.themeData
         )

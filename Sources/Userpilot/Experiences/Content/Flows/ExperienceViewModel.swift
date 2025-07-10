@@ -83,7 +83,7 @@ internal class ExperienceViewModel {
         self.flowContent = flowContent
 
         // Setup theme
-        let baseTheme = themeHandler.getThemeById(flowContent.baseThemeID)
+        let baseTheme = themeHandler.getThemeById(flowContent.baseThemeId)
         flowContent.steps.forEach { step in
             mergedTheme.append(
                 themeHandler.mergeExperienceThemes(
