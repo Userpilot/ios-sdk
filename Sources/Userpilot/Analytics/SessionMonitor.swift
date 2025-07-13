@@ -30,6 +30,9 @@ internal class SessionMonitor: SessionMonitoring, BootUp {
     /// The storage used to store user-related data.
     private let storage: DataStoring
 
+    // A flag to prevent calling didEnterForeground twice
+    private var hasInitializedForeground = false
+
     /// Initializes the `SessionMonitor` with a dependency container that resolves an `AnalyticsPublishing` instance.
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
     init(container: DIContainer) {
@@ -59,6 +62,18 @@ internal class SessionMonitor: SessionMonitoring, BootUp {
             name: UIApplication.willEnterForegroundNotification,
             object: nil
         )
+
+        // Handle initial state only if app is currently active
+        // This is a common issue when using native iOS SDKs within Flutter or ReactNative plugins.
+        // The problem occurs due to the different lifecycle management between
+        // these plugins and native iOS apps.
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if UIApplication.shared.applicationState == .active && !self.hasInitializedForeground {
+                self.hasInitializedForeground = true
+                self.analyticsPublisher.resume()
+            }
+        }
     }
 
     func reset() {
@@ -86,6 +101,7 @@ internal class SessionMonitor: SessionMonitoring, BootUp {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterForeground(notification: Notification) {
+        hasInitializedForeground = true
         analyticsPublisher.resume()
     }
 }
