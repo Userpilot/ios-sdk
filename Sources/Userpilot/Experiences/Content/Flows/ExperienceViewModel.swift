@@ -283,14 +283,14 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             stepId: NSNumber(value: step.id),
             stepState: .dismissed,
-            step: NSNumber(value: lastStep),
+            step: NSNumber(value: lastStep + 1),
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
             state: "Dismissed",
             experienceId: flowContent.id,
             stepId: step.id,
-            step: lastStep,
+            step: lastStep + 1,
             totalSteps: flowContent.steps.count
         )
 

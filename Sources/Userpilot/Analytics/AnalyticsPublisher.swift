@@ -284,7 +284,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         case .identify:
             cachedIdentifyEvent = event
         case .screen:
-            setupScreenEvent(event)
+            _ = setupScreenEvent(event)
         case .event:
             cachedEvent = event
         }
@@ -325,7 +325,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     private func screen(_ event: Event) {
         tryCatch {
             if setupScreenEvent(event) {
-                eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "")
+                _ = eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "")
                 flushPriorityEvents()
                 return
             }
