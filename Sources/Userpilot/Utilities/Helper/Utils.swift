@@ -222,16 +222,16 @@ internal func getWindow() -> UIWindow? {
         .filter({ $0.isKeyWindow }).first
 }
 
-//internal func print(
-//    _ items: Any...,
-//    separator: String = " ",
-//    terminator: String = "\n"
-//) {
-//    if Environment.environmentType == .DEVELOPMENT {
-//        let output = items.map { "\($0)" }.joined(separator: separator)
-//        Swift.print(output, terminator: terminator)
-//    }
-//}
+internal func print(
+    _ items: Any...,
+    separator: String = " ",
+    terminator: String = "\n"
+) {
+    if Environment.environmentType == .DEVELOPMENT {
+        let output = items.map { "\($0)" }.joined(separator: separator)
+        Swift.print(output, terminator: terminator)
+    }
+}
 
 /// Sanitizes a payload by filtering out unsupported property types and applying key transformations.
 ///
