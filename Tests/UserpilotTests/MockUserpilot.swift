@@ -184,6 +184,16 @@ class MockSocketManager: SocketEvents {
         onRegisterCallbackh?(socketSubscription)
     }
     
+    var onUpdateSocketState: ((SocketManager.SocketState, Bool) -> Void)?
+    func updateSocketState(_ socketState: SocketManager.SocketState, forceUpdateState: Bool) {
+        onUpdateSocketState?(socketState, forceUpdateState)
+    }
+    
+    var onPublish: ((String, Payload, Bool, SocketSubscription?) -> Void)?
+    func publish(_ eventName: String, payload: Payload, shouldCloseSocket: Bool, socketSubscription: SocketSubscription?) {
+        onPublish?(eventName, payload, shouldCloseSocket, socketSubscription)
+    }
+    
 }
 
 class MockAnalyticsPublisher: AnalyticsPublishing {

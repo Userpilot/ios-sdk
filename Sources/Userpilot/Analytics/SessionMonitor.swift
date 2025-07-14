@@ -77,6 +77,7 @@ internal class SessionMonitor: SessionMonitoring, BootUp {
     }
 
     func reset() {
+        hasInitializedForeground = false
         NotificationCenter.default.removeObserver(
             self,
             name: UIApplication.didEnterBackgroundNotification,

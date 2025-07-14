@@ -159,16 +159,6 @@ internal class AnalyticsPublisher {
 extension AnalyticsPublisher: AnalyticsPublishing {
 
     /**
-     Logs the event details once it has been sent through the socket.
-     
-     - Parameter event: The event to log.
-     */
-    func logEvent(_ event: Event) {
-        guard let logger = userpilot?.config.logger else { return }
-        event.logData(logger: logger)
-    }
-
-    /**
      Flush the event once the app enter background.
      */
     func flush() {
@@ -207,7 +197,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func resume() {
         updateSessionState()
-        if let userId = cachedIdentifyEvent?.userId {
+        if let userId = cachedIdentifyEvent?.userId, !userId.isEmpty {
             storage.userId = userId
         }
         if storage.userId.isNotEmpty && !socketManager.isSocketOpened && !socketManager.isJoiningSocket {
@@ -256,7 +246,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             if !socketManager.isSocketOpened {
                 cacheEvent(event)
-                if let userId = cachedIdentifyEvent?.userId { storage.userId = userId }
+                if let userId = cachedIdentifyEvent?.userId, !userId.isEmpty { storage.userId = userId }
                 if let userId = event.userId { storage.userId = userId }
                 if storage.userId.isEmpty { return }
                 openSocket()

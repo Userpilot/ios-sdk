@@ -42,6 +42,7 @@ internal class SDKSettingsDetector {
     /// Storage used to store user-related data.
     private let storage: DataStoring
 
+    /// URLSession to request API
     private let session: URLSession
 
     // MARK: - Initialization
