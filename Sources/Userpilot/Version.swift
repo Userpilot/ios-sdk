@@ -14,5 +14,5 @@ import Foundation
 /// The current version of the Userpilot SDK.
 private let versionMajor = "1"
 private let versionMinor = "0"
-private let versionPatch = "4"
+private let versionPatch = "5"
 let userpilotVersion = "\(versionMajor).\(versionMinor).\(versionPatch)"
