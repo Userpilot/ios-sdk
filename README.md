@@ -211,26 +211,54 @@ Receives callbacks whenever the SDK tracks an event, screen, or identifies a use
 
 ```swift
 @objc
-public enum UserpilotAnalytic: Int {
-    case identify = 0
-    case screen = 1
-    case event = 2
-
-    public var rawValueString: String {
-        switch self {
-        case .identify:
-            return "identify"
-        case .screen:
-            return "screen"
-        case .event:
-            return "event"
-        }
-    }
+public enum UserpilotExperienceType: Int {
+    case flow
+    case survey
+    case nps
 }
 
 @objc
-public protocol UserpilotAnalyticsDelegate: AnyObject {
-    func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?)
+public enum UserpilotExperienceState: Int {
+    case started
+    case completed
+    case dismissed
+    case skipped
+    case submitted
+}
+
+/// A protocol to observe and respond to state changes in Userpilot experiences.
+@objc
+public protocol UserpilotExperienceDelegate: AnyObject {
+
+    /// Called when the state of a Userpilot experience changes.
+    ///
+    /// - Parameters:
+    ///   - experienceType: The current experience type.
+    ///   - experienceId: A unique identifier for the experience.
+    ///   - experienceState: The current state of the experience.
+    func onExperienceStateChanged(
+        experienceType: UserpilotExperienceType,
+        experienceId: NSNumber?, // Optional Int
+        experienceState: UserpilotExperienceState
+    )
+
+    /// Called when the state of a specific step within a Userpilot experience changes.
+    ///
+    /// - Parameters:
+    ///   - experienceType: The current experience type.
+    ///   - experienceId: A unique identifier for the experience.
+    ///   - stepId: A unique identifier for the step.
+    ///   - stepState: The current state of the step.
+    ///   - step: The current step number in the experience.
+    ///   - totalSteps: The total number of steps in the experience.
+    func onExperienceStepStateChanged(
+        experienceType: UserpilotExperienceType,
+        experienceId: NSNumber,
+        stepId: NSNumber,
+        stepState: UserpilotExperienceState,
+        step: NSNumber?,
+        totalSteps: NSNumber?
+    )
 }
 
 ```
