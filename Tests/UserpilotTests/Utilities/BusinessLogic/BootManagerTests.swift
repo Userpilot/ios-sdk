@@ -22,24 +22,24 @@ final class BootManagerTests: XCTestCase {
     private class NonBootComponent {}
 
     func testInitializeCallsStartOnBootComponents() {
-        let c1 = MockBootComponent()
-        let c2 = MockBootComponent()
+        let component1 = MockBootComponent()
+        let component2 = MockBootComponent()
 
-        let bootManager = BootManager(components: [c1, c2])
+        let bootManager = BootManager(components: [component1, component2])
         bootManager.initialize()
 
-        XCTAssertTrue(c1.started)
-        XCTAssertTrue(c2.started)
+        XCTAssertTrue(component1.started)
+        XCTAssertTrue(component2.started)
     }
 
     func testInitializeSkipsNonBootComponents() {
-        let c1 = MockBootComponent()
-        let c2 = NonBootComponent() // Does NOT conform to BootUp
+        let component1 = MockBootComponent()
+        let component2 = NonBootComponent() // Does NOT conform to BootUp
 
-        let bootManager = BootManager(components: [c1, c2])
+        let bootManager = BootManager(components: [component1, component2])
         bootManager.initialize()
 
-        XCTAssertTrue(c1.started) // ✅ should be called
+        XCTAssertTrue(component1.started) // ✅ should be called
         // 🚫 No crash or misbehavior from NonBootComponent
     }
 

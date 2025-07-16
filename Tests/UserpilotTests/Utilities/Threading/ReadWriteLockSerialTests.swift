@@ -29,7 +29,7 @@ final class ReadWriteLockSerialTests: XCTestCase {
         let result = lock.read {
             return expected
         }
-        
+
         // Assert
         XCTAssertEqual(result, expected)
     }
@@ -40,7 +40,7 @@ final class ReadWriteLockSerialTests: XCTestCase {
         let result = lock.write {
             return expected
         }
-        
+
         // Assert
         XCTAssertEqual(result, expected)
     }

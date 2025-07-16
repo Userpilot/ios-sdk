@@ -18,7 +18,7 @@ final class SessionMonitorTests: XCTestCase {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
         userpilot = MockUserpilot(config: config)
-                
+
         monitor = SessionMonitor(container: userpilot.container)
     }
 
@@ -31,7 +31,7 @@ final class SessionMonitorTests: XCTestCase {
         // Arrange
         var trackedFlushEvent = 0
         userpilot.analyticsPublisher.onFlush = { trackedFlushEvent += 1 }
-        
+
         let expectation = XCTestExpectation(description: "Wait for background notification to be handled")
 
         // Act
@@ -53,7 +53,7 @@ final class SessionMonitorTests: XCTestCase {
         // Arrange
         var trackedResumeEvent = 0
         userpilot.analyticsPublisher.onResume = { trackedResumeEvent += 1 }
-        
+
         let expectation = XCTestExpectation(description: "Wait for foreground notification to be handled")
 
         // Act
@@ -62,7 +62,7 @@ final class SessionMonitorTests: XCTestCase {
         // Wait for the initial state handling to complete before posting the notification
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
-            
+
             // Assert
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // The resume should be called at least once (could be 2 if initial state was active)
@@ -78,23 +78,22 @@ final class SessionMonitorTests: XCTestCase {
         // Arrange
         var didTrackedFlushEvent = false
         userpilot.analyticsPublisher.onFlush = { didTrackedFlushEvent = true }
-        
         var didTrackedResumeEvent = false
         userpilot.analyticsPublisher.onResume = { didTrackedResumeEvent = true }
-        
+
         let expectation = XCTestExpectation(description: "Wait for reset to complete")
 
         // Act
         monitor.start()
-        
+
         // Wait for initial state handling to complete, then reset
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             self.monitor.reset()
-            
+
             // Reset the flags after reset
             didTrackedFlushEvent = false
             didTrackedResumeEvent = false
-            
+
             NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
             NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
 
@@ -106,7 +105,7 @@ final class SessionMonitorTests: XCTestCase {
                 expectation.fulfill()
             }
         }
-        
+
         wait(for: [expectation], timeout: 2.0)
     }
 }

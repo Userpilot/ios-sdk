@@ -14,16 +14,17 @@
 import UIKit
 
 internal enum PushNotificationAutoConfig {
-    // A PushMonitoring to process push notifications actions
-    private static weak var pushMonitor: PushMonitoring?
-    // In some case like in plugins(ReactNative and FLutter), didReceive called while pushMonitor is not set.
+    // A PushNotificationMonitoring to process push notifications actions
+    private static weak var pushNotificationMonitor: PushNotificationMonitoring?
+    // In some case like in plugins(ReactNative and FLutter), didReceive called
+    // while pushNotificationMonitor is not set.
     private static var response: UNNotificationResponse?
 
-    /// Registers a `PushMonitoring` observer to handle push notifications.
+    /// Registers a `PushNotificationMonitoring` observer to handle push notifications.
     ///
-    /// - Parameter observer: The `PushMonitoring` instance that will handle push notifications.
-    static func register(observer: PushMonitoring) {
-        pushMonitor = observer
+    /// - Parameter observer: The `PushNotificationMonitoring` instance that will handle push notifications.
+    static func register(observer: PushNotificationMonitoring) {
+        pushNotificationMonitor = observer
         // in case we have a pending notification, process it
         if let response {
             _ = observer.didReceiveNotification(
@@ -42,18 +43,19 @@ internal enum PushNotificationAutoConfig {
     }
 
     /// Called when the device successfully registers for push notifications and receives the device token.
-    /// This method passes the device token to the registered `PushMonitoring` observer.
+    /// This method passes the device token to the registered `PushNotificationMonitoring` observer.
     ///
     /// - Parameter deviceToken: The device token received from APNs (Apple Push Notification Service).
     static func didRegister(deviceToken: Data) {
-        // Pass device token to all observing PushMonitor instances
-        if let pushMonitor {
-            pushMonitor.setPushToken(deviceToken)
+        // Pass device token to all observing PushNotificationMonitor instances
+        if let pushNotificationMonitor {
+            pushNotificationMonitor.setPushToken(deviceToken)
         }
     }
 
     /// Called when a push notification is received and handled by the app.
-    /// If the first `PushMonitoring` observer handles the response, the `completionHandler` will be executed.
+    /// If the first `PushNotificationMonitoring` observer handles the response,
+    /// the `completionHandler` will be executed.
     /// Otherwise, the `completionHandler` is executed without any special handling.
     ///
     /// - Parameters:
@@ -64,15 +66,15 @@ internal enum PushNotificationAutoConfig {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         var didHandleResponse = false
-        // Stop at the first PushMonitor that successfully handles the notification
-        if let pushMonitor {
+        // Stop at the first PushNotificationMonitor that successfully handles the notification
+        if let pushNotificationMonitor {
             // `completionHandler` is executed if this returns true
-            didHandleResponse = pushMonitor.didReceiveNotification(
+            didHandleResponse = pushNotificationMonitor.didReceiveNotification(
                 response: response,
                 completionHandler: completionHandler
             )
         } else {
-            // cache response to handle it when we have active pushMonitor
+            // cache response to handle it when we have active pushNotificationMonitor
             self.response = response
         }
 

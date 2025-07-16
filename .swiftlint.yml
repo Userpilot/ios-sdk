@@ -1,5 +1,6 @@
 included:
   - Sources/Userpilot
+  - Tests/UserpilotTests
 
 excluded:
   - .build
@@ -8,4 +9,3 @@ excluded:
   - checkouts
   - SourcePackages
   - Dependencies
-  - Tests

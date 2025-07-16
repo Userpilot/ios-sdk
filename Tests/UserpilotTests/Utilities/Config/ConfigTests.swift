@@ -19,7 +19,7 @@ final class EnvironmentTests: XCTestCase {
         userpilot = MockUserpilot(config: config)
         userpilot.storage.socketURL = "wss://socket.prod.example.com"
     }
-    
+
     func test_getSocketURL_returnsFromStorageInProduction() {
         // Act
         let result = Environment.getSocketURL(storage: userpilot.storage)

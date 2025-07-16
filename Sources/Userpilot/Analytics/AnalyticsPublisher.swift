@@ -367,7 +367,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             let isScreenTitleChanged = screenViewEntity?.event.screenTitle != event.screenTitle
 
             // Update session state if the screen title has changed
-            if screenViewEntity != nil && isScreenTitleChanged {
+            if screenViewEntity != nil && socketManager.isSocketOpened && isScreenTitleChanged {
                 startSession = false
             }
 
@@ -599,8 +599,19 @@ private extension AnalyticsPublisher {
     private func clearCachedEvent() {
         cachedEvent = nil
     }
-
 }
+
+#if DEBUG
+internal extension AnalyticsPublisher {
+    func mockGetCachedEvent() -> Event? {
+        return cachedEvent
+    }
+
+    func mockGetEventsToFlush() -> [Event] {
+        return eventsToFlush
+    }
+}
+#endif
 
 // MARK: - Experiences events
 

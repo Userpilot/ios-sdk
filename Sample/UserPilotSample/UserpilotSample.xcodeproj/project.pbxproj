@@ -608,7 +608,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Add Homebrew to path\nif [[ $(arch) == 'arm64' ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nelse\n  export PATH=\"/usr/local/bin:$PATH\"\nfi\n\n# Run swiftlint on app and local package folder\nif which swiftlint >/dev/null; then\n  echo \"Running SwiftLint for app...\"\n  swiftlint --quiet\n\n  echo \"Running SwiftLint for SDK package...\"\n  cd ../../../ios-sdk\n  swiftlint --quiet --config .swiftlint.yml Sources/Userpilot\n  cd - > /dev/null  # Return to original directory\n\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+			shellScript = "# Add Homebrew to path\nif [[ $(arch) == 'arm64' ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nelse\n  export PATH=\"/usr/local/bin:$PATH\"\nfi\n\n# Run swiftlint on app and local package folder\nif which swiftlint >/dev/null; then\n  echo \"Running SwiftLint for app...\"\n  swiftlint --quiet\n  swiftlint --quiet --path Tests  # Include app unit tests (adjust path if different)\n\n  echo \"Running SwiftLint for SDK package...\"\n  cd ../../../ios-sdk\n\n  # Run on SDK sources and test files\n  swiftlint --quiet --config .swiftlint.yml Sources/Userpilot\n  swiftlint --quiet --config .swiftlint.yml Tests/UserpilotTests\n\n  cd - > /dev/null  # Return to original directory\n\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

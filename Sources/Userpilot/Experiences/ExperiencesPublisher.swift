@@ -154,11 +154,16 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     /*
      End experience manually
      */
+    internal var topViewControllerProvider: () -> UIViewController? = {
+        return UIApplication.shared.fetchTopViewController()
+    }
+
     func endExperience(manualClose: Bool) {
         performOn(.main) { [weak self] in
-            guard self != nil else { return }
-            guard let experience = UIApplication.shared.fetchTopViewController() else { return }
-            (experience as? UPExperience)?.triggerCloseExpereince(manualClose: manualClose)
+            if let topVC = self?.topViewControllerProvider(),
+               let experience = topVC as? UPExperience {
+                experience.triggerCloseExpereince(manualClose: manualClose)
+            }
         }
     }
 
@@ -325,10 +330,12 @@ extension ExperiencesPublisher {
      - Parameter themeId: A theme Id to check against the cached themes.
      */
     private func checkCachedThemes(_ themeId: Int) {
-        if themeHandler.getThemeById(themeId) != nil {
-            openExperienceFlow()
-        } else {
-            fetchThemeData(themeId)
+        tryCatch {
+            if themeHandler.getThemeById(themeId) != nil {
+                openExperienceFlow()
+            } else {
+                fetchThemeData(themeId)
+            }
         }
     }
 
@@ -396,7 +403,7 @@ extension ExperiencesPublisher {
         performOn(.main) { [weak self] in
             guard
                 let self,
-                let topViewController = UIApplication.shared.fetchTopViewController(),
+                let topViewController = self.topViewControllerProvider(),
                 self.canShowExperience(),
                 let container = self.container
             else {
@@ -451,7 +458,7 @@ extension ExperiencesPublisher {
         performOn(.main) { [weak self] in
             guard
                 let self,
-                let topViewController = UIApplication.shared.fetchTopViewController(),
+                let topViewController = self.topViewControllerProvider(),
                 self.canShowExperience(),
                 let container = self.container
             else {
@@ -484,7 +491,7 @@ extension ExperiencesPublisher {
         performOn(.main) { [weak self] in
             guard
                 let self,
-                let topViewController = UIApplication.shared.fetchTopViewController(),
+                let topViewController = self.topViewControllerProvider(),
                 self.canShowExperience(),
                 let container = self.container
             else {
@@ -591,7 +598,7 @@ extension ExperiencesPublisher {
         performOn(.main) { [weak self] in
             guard
                 let self,
-                let topViewController = UIApplication.shared.fetchTopViewController()
+                let topViewController = self.topViewControllerProvider()
             else {
                 self?.isTriggeringThankYouMessage = false
                 return
@@ -695,7 +702,7 @@ extension ExperiencesPublisher {
 
     /// Check top view controller if its one of Experiences view controller
     private func hasActiveExperience() -> Bool {
-        guard let topViewController = UIApplication.shared.fetchTopViewController() else {
+        guard let topViewController = topViewControllerProvider() else {
             return false
         }
         return topViewController.isKind(of: CarouselExperienceViewController.self) ||
@@ -723,4 +730,17 @@ extension ExperiencesPublisher {
     }
 
 }
+
+#if DEBUG
+internal extension ExperiencesPublisher {
+    func mockSetCurrentScreen(title: String) {
+        currentScreen = title
+    }
+
+    func mockGetCurrentScreen() -> String {
+        return currentScreen
+    }
+}
+#endif
+
 // swiftlint:enable file_length
