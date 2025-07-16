@@ -9,6 +9,8 @@
 import XCTest
 @testable import Userpilot
 
+// swiftlint:disable all
+
 class UserpilotTests: XCTestCase {
     var userpilot: MockUserpilot!
 
@@ -85,12 +87,12 @@ class UserpilotTests: XCTestCase {
 
         // Assert
         XCTAssertEqual(trackedUserId, "default-00000", "User Id should be 'default-00000'")
-                       
+
         guard let properties = trackedProperties ?? nil else {
             return XCTFail("Properties should not be nil")
         }
         XCTAssertEqual(properties["email"] as? String, "test@mail.com")
-        
+
         guard let company = trackedCompany ?? nil else {
             return XCTFail("Company should not be nil")
         }
@@ -314,12 +316,12 @@ class UserpilotTests: XCTestCase {
     // MARK: - Push
 
     /// Verifies that push token is passed to the push monitor
-    func testSetPushToken_passesTokenToPushMonitor() throws {
+    func testSetPushToken_passesTokenToPushNotificationMonitor() throws {
         // Arrange
-        let token = "some-token".data(using: .utf8)
+        let token = Data("some-token".utf8)
 
         let setExpectation = expectation(description: "Token set")
-        userpilot.pushMonitor.onSetPushToken = {
+        userpilot.pushNotificationMonitor.onSetPushToken = {
             XCTAssertEqual($0, token)
             setExpectation.fulfill()
         }
@@ -346,7 +348,7 @@ class UserpilotTests: XCTestCase {
         weak var weakSDKSettingsDetector: SDKSettingsDetectoring?
         weak var weakThemeHandler: ThemeHandling?
         weak var weakImageLoader: ImageLoading?
-        weak var weakPushMonitor: PushMonitoring?
+        weak var weakPushNotificationMonitor: PushNotificationMonitoring?
 
         // Act
         autoreleasepool {
@@ -362,7 +364,7 @@ class UserpilotTests: XCTestCase {
             weakSDKSettingsDetector = userpilot.container.resolve(SDKSettingsDetectoring.self)
             weakThemeHandler = userpilot.container.resolve(ThemeHandling.self)
             weakImageLoader = userpilot.container.resolve(ImageLoading.self)
-            weakPushMonitor = userpilot.container.resolve(PushMonitoring.self)
+            weakPushNotificationMonitor = userpilot.container.resolve(PushNotificationMonitoring.self)
 
             XCTAssertNotNil(weakUserpilot)
         }
@@ -383,7 +385,7 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(weakSDKSettingsDetector)
         XCTAssertNil(weakThemeHandler)
         XCTAssertNil(weakImageLoader)
-        XCTAssertNil(weakPushMonitor)
+        XCTAssertNil(weakPushNotificationMonitor)
         XCTAssertNil(weakConfig)
     }
 
@@ -412,3 +414,5 @@ class UserpilotTests: XCTestCase {
         waitForExpectations(timeout: 2)
     }
 }
+
+// swiftlint:enable all

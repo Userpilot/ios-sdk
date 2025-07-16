@@ -1,11 +1,11 @@
 //
-//  PushMonitor.swift
+//  PushNotificationMonitor.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 18/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  The `PushMonitor` is responsible for managing push notifications,
+//  The `PushNotificationMonitor` is responsible for managing push notifications,
 //  including push token management, push status monitoring, and handling notification responses. It also integrates
 //  with analytics events and socket communication for seamless push notification functionality.
 //
@@ -13,9 +13,9 @@
 import UIKit
 import SwiftPhoenixClient
 
-/// `PushMonitoring` protocol defines the methods required to handle push notifications, token
+/// `PushNotificationMonitoring` protocol defines the methods required to handle push notifications, token
 /// management, and status updates.
-internal protocol PushMonitoring: AnyObject {
+internal protocol PushNotificationMonitoring: AnyObject {
 
     /// The current push authorization status.
     var pushAuthorizationStatus: UNAuthorizationStatus { get }
@@ -49,10 +49,11 @@ internal protocol PushMonitoring: AnyObject {
     func attemptDeferredNotificationResponse() -> Bool
 }
 
-/// `PushMonitor` is responsible for managing push notifications, including token management, push status updates,
+/// `PushNotificationMonitor` is responsible for managing push notifications,
+/// including token management, push status updates,
 /// and handling received notifications. It interacts with the `PushNotificationAutoConfig` and
 /// publishes analytics events.
-internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
+internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscription, BootUp {
 
     private weak var userpilot: Userpilot?
     private let config: Userpilot.Config
@@ -74,7 +75,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
 
     private var deferredNotification: UserpilotNotification?
 
-    /// Initializes the `PushMonitor` with dependencies from the dependency injection container.
+    /// Initializes the `PushNotificationMonitor` with dependencies from the dependency injection container.
     ///
     /// - Parameter container: The dependency injection container.
     init(container: DIContainer) {
@@ -88,7 +89,7 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
         refreshPushStatus()
     }
 
-    /// Starts the `PushMonitor` and registers for socket events.
+    /// Starts the `PushNotificationMonitor` and registers for socket events.
     func start() {
         socketManager.registerCallback(self)
     }
@@ -332,8 +333,11 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
             }
         }
     }
+}
 
-    #if DEBUG
+#if DEBUG
+extension PushNotificationMonitor {
+
     func mockPushStatus(_ status: UNAuthorizationStatus) {
         pushAuthorizationStatus = status
     }
@@ -341,5 +345,6 @@ internal class PushMonitor: PushMonitoring, SocketSubscription, BootUp {
     func setCachedToken(token: Data?) {
         cachedToken = token
     }
-    #endif
+
 }
+#endif

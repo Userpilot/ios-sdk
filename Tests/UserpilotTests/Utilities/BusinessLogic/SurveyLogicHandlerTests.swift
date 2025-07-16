@@ -28,7 +28,7 @@ final class SurveyLogicHandlerTests: XCTestCase {
         // Arrange
         let currentStep = 0
         let surveySteps = [makeSurveyStep(id: 1), makeSurveyStep(id: 2)]
-        
+
         // Act
         let result = SurveyLogicHandler.getNextQuestionIndex(
             currentStep: currentStep,
@@ -36,7 +36,7 @@ final class SurveyLogicHandlerTests: XCTestCase {
             answer: nil,
             surveySteps: surveySteps
         )
-        
+
         // Assert
         XCTAssertEqual(result.0, currentStep + 1)
         XCTAssertFalse(result.1)
@@ -228,7 +228,7 @@ final class SurveyLogicHandlerTests: XCTestCase {
         XCTAssertEqual(result.0, currentStep + 1)
         XCTAssertFalse(result.1)
     }
-    
+
     func test_operandNotKnown_andKnown() {
         // Arrange
         let currentStep = 0
@@ -256,7 +256,7 @@ final class SurveyLogicHandlerTests: XCTestCase {
             answer: nil,
             surveySteps: surveySteps
         )
-        
+
         // Assert
         XCTAssertEqual(result.0, currentStep + 1)
         XCTAssertFalse(result.1)
@@ -269,7 +269,7 @@ final class SurveyLogicHandlerTests: XCTestCase {
             answer: "anything",
             surveySteps: surveySteps
         )
-        
+
         // Assert
         XCTAssertEqual(result.0, currentStep + 1)
         XCTAssertFalse(result.1)

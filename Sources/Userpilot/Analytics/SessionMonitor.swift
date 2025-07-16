@@ -77,6 +77,9 @@ internal class SessionMonitor: SessionMonitoring, BootUp {
     }
 
     func reset() {
+        hasInitializedForeground = false
+
+        // Stop listening for further lifecycle callbacks
         NotificationCenter.default.removeObserver(
             self,
             name: UIApplication.didEnterBackgroundNotification,
@@ -85,6 +88,9 @@ internal class SessionMonitor: SessionMonitoring, BootUp {
             self,
             name: UIApplication.willEnterForegroundNotification,
             object: nil)
+
+        // Clean up state we previously persisted
+        storage.sessionDate = nil
     }
 
     /// Called when the app enters the background.

@@ -10,6 +10,11 @@ import UIKit
 import Foundation
 import UserNotifications
 @testable import Userpilot
+@testable import SwiftPhoenixClient
+
+// swiftlint:disable all
+
+public typealias Payload = [String: Any]?
 
 class MockUserpilot: Userpilot {
     init() {
@@ -26,7 +31,7 @@ class MockUserpilot: Userpilot {
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
         container.register(SessionMonitoring.self, value: sessionMonitor)
-        container.register(PushMonitoring.self, value: pushMonitor)
+        container.register(PushNotificationMonitoring.self, value: pushNotificationMonitor)
         container.register(SocketEvents.self, value: socketManager)
         container.register(ExperiencesPublishing.self, value: experiencesPublisher)
         container.register(AutoPropertyDecoratoring.self, value: autoPropertyDecorator)
@@ -40,11 +45,11 @@ class MockUserpilot: Userpilot {
         onIdentify?(userId, properties, company)
         super.identify(userId: userId, properties: properties, company: company)
     }
-    
+
     var analyticsPublisher = MockAnalyticsPublisher()
     var storage = MockStorage()
     var sessionMonitor = MockSessionMonitor()
-    var pushMonitor = MockPushMonitor()
+    var pushNotificationMonitor = MockPushNotificationMonitor()
     var socketManager = MockSocketManager()
     var experiencesPublisher = MockExperiencesPublisher()
     var autoPropertyDecorator = MockAutoPropertyDecoratorer()
@@ -54,6 +59,8 @@ class MockUserpilot: Userpilot {
     var mockLogger = MockLogger()
 }
 
+// MARK: - Mock Image Loader
+
 class MockImageLoader: ImageLoading {
     var onLoadImage: ((UIImageView, String, String?, CGSize) -> Void)?
     func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
@@ -61,28 +68,46 @@ class MockImageLoader: ImageLoading {
     }
 }
 
+// MARK: - Mock Theme Handler
+
 class MockThemeHandler: ThemeHandling {
     var onSaveTheme: ((ThemeContent) -> Void)?
     func saveTheme(_ themeResponse: ThemeContent) {
         onSaveTheme?(themeResponse)
     }
-    
+
     var onGetThemeById: ((Int) -> ThemeData?)?
     func getThemeById(_ themeId: Int) -> ThemeData? {
         return onGetThemeById?(themeId) ?? nil
     }
-    
+
     var onMergeExperienceThemes: ((ThemeData?, ExperienceTheme?, ExperienceTheme?) -> ThemeData?)?
-    func mergeExperienceThemes(_ baseTheme: ThemeData?, _ globalTheme: ExperienceTheme?, _ stepTheme: ExperienceTheme?) -> ThemeData {
-        return onMergeExperienceThemes?(baseTheme, globalTheme, stepTheme) ?? ThemeData(carousel: nil, slideOut: nil, survey: nil)
+    func mergeExperienceThemes(
+        _ baseTheme: ThemeData?,
+        _ globalTheme: ExperienceTheme?,
+        _ stepTheme: ExperienceTheme?
+    ) -> ThemeData {
+        return onMergeExperienceThemes?(
+            baseTheme,
+            globalTheme,
+            stepTheme
+        ) ?? ThemeData(carousel: nil, slideOut: nil, survey: nil)
     }
-    
+
     var onMergeSurveyThemes: ((ThemeData?, SurveyTheme?) -> SurveyTheme?)?
-    func mergeSurveyThemes(_ baseTheme: ThemeData?, _ surveyTheme: SurveyTheme?) -> SurveyTheme {
-        return onMergeSurveyThemes?(baseTheme, surveyTheme) ?? SurveyTheme(general: nil, font: nil, progress: nil, backdrop: nil)
+    func mergeSurveyThemes(
+        _ baseTheme: ThemeData?,
+        _ surveyTheme: SurveyTheme?
+    ) -> SurveyTheme {
+        return onMergeSurveyThemes?(
+            baseTheme,
+            surveyTheme
+        ) ?? SurveyTheme(general: nil, font: nil, progress: nil, backdrop: nil)
     }
-    
+
 }
+
+// MARK: - Mock DKSettings Detectorer
 
 class MockSDKSettingsDetectorer: SDKSettingsDetectoring {
 
@@ -93,8 +118,10 @@ class MockSDKSettingsDetectorer: SDKSettingsDetectoring {
     }
 }
 
+// MARK: - Mock Auto Property Decoratorer
+
 class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
-    var autoProperties: [String : Any] = [
+    var autoProperties: [String: Any] = [
         AutoPropertyDecorator.osKey: "iOS",
         AutoPropertyDecorator.osVersionKey: UIDevice.current.systemVersion,
         AutoPropertyDecorator.appVersionKey: Bundle.main.version,
@@ -102,54 +129,56 @@ class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
         AutoPropertyDecorator.screenWidthKey: Int(UIScreen.main.bounds.size.width),
         AutoPropertyDecorator.screenHeightKey: Int(UIScreen.main.bounds.size.height)
     ]
-    
-    var appProperties: [String : Any] = [
+
+    var appProperties: [String: Any] = [
         AutoPropertyDecorator.appNameKey: Bundle.main.displayName,
         AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier
     ]
 }
+
+// MARK: - Mock Experiences Publisher
 
 class MockExperiencesPublisher: ExperiencesPublishing {
     var onGetActiveMobileContent: (() -> ExperienceContent)?
     func getActiveMobileContent() -> ExperienceContent? {
         return onGetActiveMobileContent?() ?? nil
     }
-    
+
     var onPublishInternalSDKEvent: ((SDKEvent) -> Void)?
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
         onPublishInternalSDKEvent?(sdkEvent)
     }
-    
+
     var onTriggerExperience: ((String) -> Void)?
     func triggerExperience(_ experienceId: String) {
         onTriggerExperience?(experienceId)
     }
-    
+
     var onEndExperience: ((Bool) -> Void)?
     func endExperience(manualClose: Bool) {
         onEndExperience?(manualClose)
     }
-    
+
     var onCanRequestScreenEvent: (() -> Bool)?
     func canRequestScreenEvent() -> Bool {
         return onCanRequestScreenEvent?() ?? false
     }
-    
+
     var onTriggerDeepLink: ((URL) -> Void)?
     func triggerDeepLink(url: URL) {
         onTriggerDeepLink?(url)
     }
-    
+
     var onCancelPendingSurveyContent: (() -> Void)?
     func cancelPendingSurveyContent() {
         onCancelPendingSurveyContent?()
     }
-    
+
     var onActiveOneTimeFlag: (() -> Void)?
     func activeOneTimeFlag() {
         onActiveOneTimeFlag?()
     }
-    
+
     var onShowThankYouMessage: ((SurveyContent, SurveyTheme) -> Void)?
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
         onShowThankYouMessage?(surveyContent, surveyTheme)
@@ -157,34 +186,53 @@ class MockExperiencesPublisher: ExperiencesPublishing {
 
 }
 
+// MARK: - Mock Socket Manager
+
 class MockSocketManager: SocketEvents {
-    
+
     var isSocketOpened: Bool = false
-    
+
     var isJoiningSocket: Bool = false
-    
+
     var didErrorOccurred: Bool = false
-    
+
     var isShutdownState: Bool = false
-    
+
     var isSocketConnectedWithUnknownChannel: Bool = false
-    
+
     var onConnect: (() -> Void)?
     func connect() {
         onConnect?()
     }
-    
+
     var onClose: (() -> Void)?
     func close() {
         onClose?()
     }
-    
-    var onRegisterCallbackh: ((SocketSubscription) -> Void)?
+
+    var onRegisterCallback: ((SocketSubscription) -> Void)?
     func registerCallback(_ socketSubscription: SocketSubscription) {
-        onRegisterCallbackh?(socketSubscription)
+        onRegisterCallback?(socketSubscription)
     }
-    
+
+    var onUpdateSocketState: ((SocketManager.SocketState, Bool) -> Void)?
+    func updateSocketState(_ socketState: SocketManager.SocketState, forceUpdateState: Bool) {
+        onUpdateSocketState?(socketState, forceUpdateState)
+    }
+
+    var onPublish: ((String, Payload, Bool, SocketSubscription?) -> Void)?
+    func publish(
+        _ eventName: String,
+        payload: Payload,
+        shouldCloseSocket: Bool,
+        socketSubscription: SocketSubscription?
+    ) {
+        onPublish?(eventName, payload, shouldCloseSocket, socketSubscription)
+    }
+
 }
+
+// MARK: - Mock Analytics Publisher
 
 class MockAnalyticsPublisher: AnalyticsPublishing {
     var onPublish: ((Event) -> Void)?
@@ -196,43 +244,49 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
     func flush() {
         onFlush?()
     }
-    
+
     var onResume: (() -> Void)?
     func resume() {
         onResume?()
     }
-    
+
     var onReset: (() -> Void)?
     func reset() {
         onReset?()
     }
-    
+
     var onLogout: ((SocketManager.SocketState, Bool) -> Void)?
     func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool) {
         onLogout?(socketState, shouldClearCachedIdentifyEvent)
     }
-    
+
     var canRequestEvent: Bool = true
-    
+
     var onPublishInternalSDKEvent: ((SDKEvent, Bool, SocketSubscription?) -> Void)?
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, isExpereinceEvent: Bool, socketSubscription: SocketSubscription?) {
+    func publishInternalSDKEvent(
+        _ sdkEvent: SDKEvent,
+        isExpereinceEvent: Bool,
+        socketSubscription: SocketSubscription?
+    ) {
         onPublishInternalSDKEvent?(sdkEvent, isExpereinceEvent, socketSubscription)
     }
-    
+
     var onPublishFakeReloadScreenEvent: (() -> Void)?
     func publishFakeReloadScreenEvent() {
         onPublishFakeReloadScreenEvent?()
     }
-    
+
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?
     func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int) {
         onExperiencePublished?(experienceType, experienceId)
     }
-    
+
     var isStartSession: Bool = false
-    
-    var screenEntity: ScreenViewEntity? = nil
+
+    var screenEntity: ScreenViewEntity?
 }
+
+// MARK: - Mock Storage
 
 class MockStorage: DataStoring {
     var socketURL: String = ""
@@ -244,20 +298,23 @@ class MockStorage: DataStoring {
     var configurationDate: Date? = Date()
 }
 
+// MARK: - Mock Session Monitor
+
 class MockSessionMonitor: SessionMonitoring {
-    
+
     var onReset: (() -> Void)?
     func reset() {
         onReset?()
     }
- 
 }
 
-class MockPushMonitor: PushMonitoring {
-    
+// MARK: - Mock Push Notification Monitor
+
+class MockPushNotificationMonitor: PushNotificationMonitoring {
+
     var pushEnabled: Bool = false
     var pushAuthorizationStatus: UNAuthorizationStatus = .notDetermined
-    
+
     var onConfigureAutomatically: (() -> Void)?
     func configureAutomatically() {
         onConfigureAutomatically?()
@@ -273,7 +330,7 @@ class MockPushMonitor: PushMonitoring {
         onRefreshPushStatus?()
         completion?(pushAuthorizationStatus)
     }
-    
+
     var onDidReceiveNotification: ((UNNotificationResponse) -> Bool)?
     func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool {
         let result = onDidReceiveNotification?(response) ?? false
@@ -282,7 +339,7 @@ class MockPushMonitor: PushMonitoring {
         }
         return result
     }
-    
+
     var onAttemptDeferredNotificationResponse: (() -> Void)?
     func attemptDeferredNotificationResponse() -> Bool {
         onAttemptDeferredNotificationResponse?()
@@ -290,46 +347,121 @@ class MockPushMonitor: PushMonitoring {
     }
 }
 
+// MARK: - Mock Logger
+
 class MockLogger: Logging {
     var loggedDebugs: [String] = []
     var loggedInfos: [String] = []
     var loggedLogs: [String] = []
     var loggedErrors: [String] = []
     var loggedFaults: [String] = []
-    
+
     var onDebug: ((StaticString, any CVarArg) -> Void)?
     func debug(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedDebugs.append(formatted)
         onDebug?(message, args)
     }
-    
+
     var onInfo: ((StaticString, any CVarArg) -> Void)?
     func info(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedInfos.append(formatted)
         onInfo?(message, args)
     }
-    
+
     var onLog: ((StaticString, any CVarArg) -> Void)?
     func log(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedLogs.append(formatted)
         onLog?(message, args)
     }
-    
+
     var onError: ((StaticString, any CVarArg) -> Void)?
     func error(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedErrors.append(formatted)
         onError?(message, args)
     }
-    
+
     var onFault: ((StaticString, any CVarArg) -> Void)?
     func fault(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedFaults.append(formatted)
         onFault?(message, args)
     }
-    
+
 }
+
+// MARK: - Mock Navigation Delegate
+
+class MockNavigationDelegate: UserpilotNavigationDelegate {
+    var onNavigate: ((URL) -> Void)?
+    func navigate(to url: URL) {
+        onNavigate?(url)
+    }
+}
+
+// MARK: - Mock SDKEvent
+
+class MockSDKEvent: SDKEvent {
+    var eventName: String
+    var eventPayload: [String: Any]
+    var hasDeepLink: Bool
+
+    var isCloseNPSEvent = false
+    var isCloseEvent = false
+
+    init(eventName: String = "test-event",
+         eventPayload: [String: Any] = [:],
+         hasDeepLink: Bool = false) {
+        self.eventName = eventName
+        self.eventPayload = eventPayload
+        self.hasDeepLink = hasDeepLink
+    }
+
+    func isEventForCloseNPSExperience() -> Bool {
+        return isCloseNPSEvent
+    }
+
+    func isEventForCloseExperience() -> Bool {
+        return isCloseEvent
+    }
+}
+
+// MARK: - Mock UPExperience
+
+class MockUPExperience: UIViewController, UPExperience {
+    var onTriggerClose: ((Bool) -> Void)?
+
+    func triggerCloseExpereince(manualClose: Bool) {
+        onTriggerClose?(manualClose)
+    }
+}
+
+// MARK: - Mock Socket Subscription
+
+class MockSocketSubscription: SocketSubscription {
+    var onSocketClosedCalled: (() -> Void)?
+    var onSocketOpenedCalled: (() -> Void)?
+    var onSocketEventSentCalled: ((String, [String: Any]?, Message, Bool) -> Void)?
+    var onNewMessageCalled: ((Message) -> Void)?
+
+    func onSocketClosed() {
+        onSocketClosedCalled?()
+    }
+
+    func onSocketOpened() {
+        onSocketOpenedCalled?()
+    }
+
+    func onSocketEventSent(_ event: String, _ payload: [String: Any]?, _ message: Message, _ status: Bool) {
+        onSocketEventSentCalled?(event, payload, message, status)
+    }
+
+    func onNewMessage(_ message: Message) {
+        onNewMessageCalled?(message)
+    }
+}
+
+// swiftlint:enable all

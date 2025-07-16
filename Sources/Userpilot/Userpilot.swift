@@ -45,8 +45,8 @@ public class Userpilot: NSObject {
     /// Lazy loading AutoPropertyDecoratoring
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
 
-    /// Lazy loading pushMonitoring
-    private lazy var pushMonitor = container.resolve(PushMonitoring.self)
+    /// Lazy loading pushNotificationMonitoring
+    private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
 
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
@@ -63,7 +63,14 @@ public class Userpilot: NSObject {
     @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
 
     /// the bootup manager for boots inuse managers
-    private lazy var bootManager = BootManager(components: [sessionMonitor, experiencesPublisher, pushMonitor])
+    private lazy var bootManager = BootManager(
+        components: [
+            sessionMonitor,
+            experiencesPublisher,
+            pushNotificationMonitor,
+            storage
+        ]
+    )
 
     // MARK: - Initialization
 
@@ -88,11 +95,8 @@ public class Userpilot: NSObject {
         // start boots up managers
         bootManager.initialize()
 
-        // register pushMonitoring for push notification auto config
-        PushNotificationAutoConfig.register(observer: pushMonitor)
-
-        // reset session Date
-        storage.sessionDate = nil
+        // register pushNotificationMonitoring for push notification auto config
+        PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
 
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
@@ -119,7 +123,7 @@ public class Userpilot: NSObject {
         container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
-        container.registerLazy(PushMonitoring.self, initializer: PushMonitor.init)
+        container.registerLazy(PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
     }
 }
 
@@ -251,6 +255,8 @@ extension Userpilot {
      */
     @objc
     public func logout() {
+        storage.temporaryUser = nil
+        storage.user = ""
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
         clean()
     }
@@ -360,7 +366,7 @@ extension Userpilot {
     ///   This token is used for registering the device with Userpilot to receive push notifications.
     @objc
     public func setPushToken(_ deviceToken: Data?) {
-        pushMonitor.setPushToken(deviceToken)
+        pushNotificationMonitor.setPushToken(deviceToken)
     }
 
     /// Called when the client app receives a push notification.
@@ -378,7 +384,7 @@ extension Userpilot {
         response: UNNotificationResponse,
         completionHandler: @escaping () -> Void
     ) -> Bool {
-        return pushMonitor.didReceiveNotification(
+        return pushNotificationMonitor.didReceiveNotification(
             response: response,
             completionHandler: completionHandler
         )

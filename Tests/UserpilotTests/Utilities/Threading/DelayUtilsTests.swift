@@ -57,7 +57,7 @@ final class DelayUtilsTests: XCTestCase {
         delayUtils.delayAction(delayTime: 0.2) {
             // no-op
         }
-        
+
         // Assert
         XCTAssertTrue(delayUtils.hasPendingContent())
     }

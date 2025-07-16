@@ -153,7 +153,7 @@ internal struct ExperienceTheme: Decodable {
     }
 
     var backdropOpacity: CGFloat {
-        CGFloat(CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimSlideOutDegree) / 100)
+        CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimSlideOutDegree) / 100
     }
 
     var backdropBackground: UIColor {
@@ -320,7 +320,7 @@ internal struct SurveyTheme: Decodable {
     }
 
     var backdropOpacity: CGFloat {
-        CGFloat(CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimSlideOutDegree) / 100)
+        CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimSlideOutDegree) / 100
     }
 
     var backdropBackground: UIColor {

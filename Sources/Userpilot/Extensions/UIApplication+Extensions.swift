@@ -47,7 +47,7 @@ internal extension UIApplication {
 
     /// Retrieves the top-most view controller, ensuring it is executed on the main thread.
     /// - Returns: The top-most `UIViewController`, or `nil` if none is found.
-    func fetchTopViewController() -> UIViewController? {
+    @objc func fetchTopViewController() -> UIViewController? {
         if Thread.isMainThread {
             return resolveTopViewController()
         } else {

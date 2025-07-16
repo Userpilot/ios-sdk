@@ -8,14 +8,17 @@
 
 import Foundation
 
-/// `URLProtocolStub` is a mock protocol that intercepts network requests
-/// and returns predefined responses. It is typically used in unit tests
-/// to simulate various network conditions without making real HTTP calls.
-///
-/// Usage:
-/// 1. Assign the stubbed `response` as a tuple of (data, response, error).
-/// 2. Inject this protocol into `URLSessionConfiguration.protocolClasses`.
-/// 3. Reset `response` between test cases to avoid cross-contamination.
+// `URLProtocolStub` is a mock protocol that intercepts network requests
+// and returns predefined responses. It is typically used in unit tests
+// to simulate various network conditions without making real HTTP calls.
+//
+// Usage:
+// 1. Assign the stubbed `response` as a tuple of (data, response, error).
+// 2. Inject this protocol into `URLSessionConfiguration.protocolClasses`.
+// 3. Reset `response` between test cases to avoid cross-contamination.
+
+// swiftlint:disable all
+
 final class URLProtocolStub: URLProtocol {
 
     /// The stubbed response to return when a request is intercepted.
@@ -66,3 +69,5 @@ final class URLProtocolStub: URLProtocol {
         response = nil
     }
 }
+
+// swiftlint:enable all

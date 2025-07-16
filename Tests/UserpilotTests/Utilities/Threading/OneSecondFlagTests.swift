@@ -25,7 +25,7 @@ final class OneSecondFlagTests: XCTestCase {
     func testActivateSetsIsActiveTrueImmediately() {
         // Act
         flag.activate()
-        
+
         // Assert
         XCTAssertTrue(flag.isActive)
     }
@@ -36,7 +36,7 @@ final class OneSecondFlagTests: XCTestCase {
 
         // Act
         flag.activate()
-        
+
         // Assert
         XCTAssertTrue(flag.isActive)
 
@@ -50,11 +50,13 @@ final class OneSecondFlagTests: XCTestCase {
 
     func testActivateMultipleTimesResetsTimer() {
         // Arrange
-        let expectation = XCTestExpectation(description: "isActive stays true and then becomes false 1 second after last activate")
+        let expectation = XCTestExpectation(description:
+           "isActive stays true and then becomes false 1 second after last activate"
+        )
 
         // Act
         flag.activate()
-        
+
         // Assert
         XCTAssertTrue(flag.isActive)
 

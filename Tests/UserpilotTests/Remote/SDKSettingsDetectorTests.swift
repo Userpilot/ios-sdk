@@ -10,7 +10,7 @@ import XCTest
 @testable import Userpilot
 
 final class SDKSettingsDetectorTests: XCTestCase {
-    
+
     var userpilot: MockUserpilot!
     var logger: MockLogger!
     var detector: SDKSettingsDetector!
@@ -21,14 +21,14 @@ final class SDKSettingsDetectorTests: XCTestCase {
         logger = MockLogger()
         config.logger = logger
         userpilot = MockUserpilot(config: config)
-        
+
         let sessionConfig = URLSessionConfiguration.ephemeral
         sessionConfig.protocolClasses = [URLProtocolStub.self]
         let testSession = URLSession(configuration: sessionConfig)
-        
+
         detector = SDKSettingsDetector(container: userpilot.container, session: testSession)
     }
-    
+
     // Test 1: Should skip network when config is recent
     func testUsesCachedSettingsIfNotExpired() {
         // Arrange
@@ -36,7 +36,7 @@ final class SDKSettingsDetectorTests: XCTestCase {
         logger.onError = { _, _ in trackedErrorLog += 1 }
         var trackedInfoLog = 0
         logger.onInfo = { _, _ in trackedInfoLog += 1 }
-        
+
         userpilot.storage.configurationDate = Date()
         userpilot.storage.socketURL = "https://socket.userpilot.io/ws"
         var callbackCalled = false
@@ -57,9 +57,9 @@ final class SDKSettingsDetectorTests: XCTestCase {
         // Arrange
         let expectation = expectation(description: "callback called")
 
-        let json = """
+        let json = Data("""
         { "endpoint": "https://socket.userpilot.io" }
-        """.data(using: .utf8)!
+        """.utf8)
 
         URLProtocolStub.response = (
             json,
@@ -89,7 +89,7 @@ final class SDKSettingsDetectorTests: XCTestCase {
         let expectation = expectation(description: "callback called")
 
         URLProtocolStub.response = (
-            "invalid json".data(using: .utf8),
+            Data("invalid json".utf8),
             HTTPURLResponse(
                 url: URL(string: "https://find.userpilot.io")!,
                 statusCode: 200,

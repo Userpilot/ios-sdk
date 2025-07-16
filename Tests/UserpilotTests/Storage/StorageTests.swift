@@ -18,7 +18,7 @@ final class StorageTests: XCTestCase {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
         userpilot = MockUserpilot(config: config)
-                
+
         // Use test-specific UserDefaults suite
         UserDefaults().removePersistentDomain(forName: "\(Storage.userDefaultSuiteName)\(Bundle.main.identifier)")
         storage = Storage(container: userpilot.container)
@@ -61,7 +61,7 @@ final class StorageTests: XCTestCase {
     func testSessionDateStorage() {
         let now = Date()
         storage.sessionDate = now
-        
+
         guard let storedTime = storage.sessionDate?.timeIntervalSince1970 else {
             return XCTFail("Expected sessionDate to be non-nil")
         }

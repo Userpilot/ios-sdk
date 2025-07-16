@@ -49,7 +49,13 @@ final class ThemeHandlerTests: XCTestCase {
         // Arrange
         let base = ThemeData(
             carousel: ExperienceTheme(
-                button: ButtonStyle(backgroundColor: "#BASE", labelColor: nil, borderColor: nil, borderWidth: nil, borderRadius: nil),
+                button: ButtonStyle(
+                    backgroundColor: "#BASE",
+                    labelColor: nil,
+                    borderColor: nil,
+                    borderWidth: nil,
+                    borderRadius: nil
+                ),
                 colors: nil, dismissContent: nil, general: nil, progress: nil, backdrop: nil
             ),
             slideOut: nil,
@@ -57,12 +63,24 @@ final class ThemeHandlerTests: XCTestCase {
         )
 
         let global = ExperienceTheme(
-            button: ButtonStyle(backgroundColor: "#GLOBAL", labelColor: nil, borderColor: nil, borderWidth: nil, borderRadius: nil),
+            button: ButtonStyle(
+                backgroundColor: "#GLOBAL",
+                labelColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                borderRadius: nil
+            ),
             colors: nil, dismissContent: nil, general: nil, progress: nil, backdrop: nil
         )
 
         let step = ExperienceTheme(
-            button: ButtonStyle(backgroundColor: "#STEP", labelColor: nil, borderColor: nil, borderWidth: nil, borderRadius: nil),
+            button: ButtonStyle(
+                backgroundColor: "#STEP",
+                labelColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                borderRadius: nil
+            ),
             colors: nil, dismissContent: nil, general: nil, progress: nil, backdrop: nil
         )
 
@@ -79,15 +97,37 @@ final class ThemeHandlerTests: XCTestCase {
             carousel: nil,
             slideOut: nil,
             survey: SurveyTheme(
-                general: SurveyGeneral(position: .bottom, primaryColor: "#basePrimary", backgroundColor: "#baseBg", cornerRadius: 10),
-                font: SurveyFont(fontFamily: "BaseFont", fontColor: "#baseFont", colorType: .automatic),
-                progress: ProgressStyle(color: "#baseColor", colorType: .automatic, enabled: true, type: .bar),
-                backdrop: Backdrop(color: "#baseBackdrop", enabled: true, opacity: 90)
+                general: SurveyGeneral(
+                    position: .bottom,
+                    primaryColor: "#basePrimary",
+                    backgroundColor: "#baseBg",
+                    cornerRadius: 10
+                ),
+                font: SurveyFont(
+                    fontFamily: "BaseFont",
+                    fontColor: "#baseFont",
+                    colorType: .automatic
+                ),
+                progress: ProgressStyle(
+                    color: "#baseColor",
+                    colorType: .automatic,
+                    enabled: true,
+                    type: .bar),
+                backdrop: Backdrop(
+                    color: "#baseBackdrop",
+                    enabled: true,
+                    opacity: 90
+                )
             )
         )
 
         let surveyOverride = SurveyTheme(
-            general: SurveyGeneral(position: .center, primaryColor: "#overridePrimary", backgroundColor: nil, cornerRadius: nil),
+            general: SurveyGeneral(
+                position: .center,
+                primaryColor: "#overridePrimary",
+                backgroundColor: nil,
+                cornerRadius: nil
+            ),
             font: nil,
             progress: nil,
             backdrop: nil
