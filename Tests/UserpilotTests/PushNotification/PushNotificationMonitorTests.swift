@@ -64,7 +64,7 @@ class PushNotificationMonitorTests: XCTestCase {
         var didTrackedFlushEvent = false
         userpilot.analyticsPublisher.onPublish = { _ in didTrackedFlushEvent = true }
 
-        userpilot.storage.pushToken = Data("token-00000".utf8)?.map({ String(format: "%02x", $0) }).joined()
+        userpilot.storage.pushToken = Data("token-00000".utf8).map({ String(format: "%02x", $0) }).joined()
         let token = Data("token-00000".utf8)
 
         // Act

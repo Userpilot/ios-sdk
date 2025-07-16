@@ -10,8 +10,11 @@ import UIKit
 import Foundation
 import UserNotifications
 @testable import Userpilot
+@testable import SwiftPhoenixClient
 
 // swiftlint:disable all
+
+public typealias Payload = [String: Any]?
 
 class MockUserpilot: Userpilot {
     init() {
