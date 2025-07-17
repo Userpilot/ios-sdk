@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Userpilot",
+        "repositoryURL": "https://github.com/Userpilot/ios-sdk.git",
+        "state": {
+          "branch": null,
+          "revision": "e7cd6ffaf4f975d5307cbd13450cbcbe83ec1ed1",
+          "version": "1.0.5"
+        }
+      },
+      {
+        "package": "SwiftPhoenixClient",
+        "repositoryURL": "https://github.com/davidstump/SwiftPhoenixClient",
+        "state": {
+          "branch": null,
+          "revision": "25a4d8a3fa754ef3fb587a34addd08c7e568abc4",
+          "version": "5.3.5"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
