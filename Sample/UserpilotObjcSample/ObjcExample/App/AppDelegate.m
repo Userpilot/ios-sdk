@@ -19,26 +19,6 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
-//    Config *config = [[Config alloc] initWithToken:@"NX-2940f163"];
-//    [config loggingWithEnabled:YES];
-
-//    self.userpilot = [[Userpilot alloc] initWithConfig:config];
-//    [self.userpilot identifyWithUserId:@"TEST-123" properties:@{
-//        @"name": @"John Doe",
-//        @"email": @"user@example.com",
-//        @"created_at": @"2019-10-17",
-//        @"role": @"Admin"
-//    } company:@{
-//        @"id": @"<COMPANY_ID>",
-//        @"name": @"Acme Labs",
-//        @"created_at": @"2019-10-17",
-//        @"plan": @"Free"
-//    }];
-//    [self.userpilot screen:@"profile"];
-//    [self.userpilot screen:@"main"];
-//    self.userpilot.experienceDelegate = self;
-//    self.userpilot.navigationDelegate = self;
-//    self.userpilot.analyticsDelegate = self;
     
     return YES;
 }
@@ -76,7 +56,7 @@
                                             stepState:(UserpilotExperienceState)stepState
                                                  step:(NSNumber *)step
                                            totalSteps:(NSNumber *)totalSteps {
-    NSLog(@"Step [%@] of experience [%@] (type: %ld) changed state to: %ld - step %ld/%ld",
+    NSLog(@"Step [%@] of experience [%@] (type: %ld) changed state to: %ld - step %d/%d",
           stepId, experienceId, (long)experienceType, (long)stepState,
           step.intValue, totalSteps.intValue);
 }
