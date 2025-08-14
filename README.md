@@ -1,9 +1,13 @@
 # Userpilot iOS SDK
 
+
 ![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
 [![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app)
+[![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/apple/swift-package-manager)
+[![CocoaPods compatible](https://img.shields.io/badge/CocoaPods-compatible-red.svg)](https://cocoapods.org/pods/Userpilot)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE)
-[![Swift](https://img.shields.io/badge/Swift-5.6-orange.svg)](https://swift.org)
+[![Platform](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FUserpilot%2Fios-sdk%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/Userpilot/ios-sdk)
+[![Swift version](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FUserpilot%2Fios-sdk%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/Userpilot/ios-sdk)
 
 ## Introduction
 
