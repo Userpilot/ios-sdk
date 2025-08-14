@@ -27,8 +27,7 @@ public extension Userpilot {
         var logger: Logging = OSLog.disabled
 
         /// Create an Userpilot SDK configuration
-        /// - Parameter token: Userpilot Account Token,
-        ///  copied from the Environments settings page.
+        /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
         @objc
         public init(token: String) {
             self.token = token
@@ -38,8 +37,6 @@ public extension Userpilot {
         ///
         /// - Parameter enabled: A boolean indicating whether logging is enabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
-        ///
-        /// Refer to <doc:Logging> for more details about logging functionality.
         @discardableResult
         @objc
         public func logging(enabled isEnabled: Bool) -> Self {

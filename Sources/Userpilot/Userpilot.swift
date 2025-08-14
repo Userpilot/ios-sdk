@@ -192,14 +192,17 @@ extension Userpilot {
     }
 
     /**
-     Tracks an anonymous user session when a known user identity is unavailable.
+     Tracks an anonymous user session.
      
-     This method generates a unique anonymous ID, allowing the SDK to track behavior and trigger relevant content
-     even when the user has not explicitly signed in or identified themselves.
+     This method generates a unique anonymous ID - cache it, allowing the SDK to track behavior and trigger
+     relevant content even when the user has not explicitly signed in or identified themselves.
      */
     @objc
     public func anonymous() {
-        identify(userId: "\(config.token)_\(anonymousFactory())")
+        if storage.anonymousUserId.isEmpty {
+            storage.anonymousUserId = "\(config.token)_\(anonymousFactory())"
+        }
+        identify(userId: storage.anonymousUserId)
     }
 
     /**

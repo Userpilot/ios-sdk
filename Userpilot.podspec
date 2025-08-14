@@ -2,7 +2,7 @@ Pod::Spec.new do |spec|
 
   spec.name          = "Userpilot"
   spec.module_name   = "Userpilot"
-  spec.version       = "1.0.6"
+  spec.version       = "1.0.7"
   spec.summary       = "Userpilot iOS SDK allows you to integrate Userpilot experiences into your native iOS apps"
 
   spec.description   = <<-DESC
@@ -11,7 +11,7 @@ Pod::Spec.new do |spec|
 
   spec.homepage      = "https://github.com/Userpilot/ios-sdk"
   spec.license       = { :type => "MIT", :file => "LICENSE" }
-  spec.author        = { "Userpilot" => "dev@userpilot.co" }
+  spec.author        = { "Userpilot" => "dev@userpilot.com" }
 
   spec.source        = { :git => "https://github.com/Userpilot/ios-sdk.git", :tag => "#{spec.version}" }
   spec.source_files  = "Sources/Userpilot/**/*.swift"
