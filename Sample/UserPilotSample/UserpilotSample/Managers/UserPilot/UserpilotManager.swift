@@ -46,12 +46,6 @@ class UserpilotManager {
         userpilot?.experienceDelegate = self
     }
 
-    /// Destroy Userpilot instance
-    func destroy() {
-        userpilot?.destroy()
-        userpilot = nil
-    }
-
     /// Userpilot Settings
     @discardableResult
     func settings() -> [String: Any] {

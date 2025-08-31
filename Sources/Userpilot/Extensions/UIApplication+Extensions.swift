@@ -59,6 +59,20 @@ internal extension UIApplication {
         }
     }
 
+    func isAppInBackgroundOrInactive() -> Bool {
+        if Thread.isMainThread {
+            return UIApplication.shared.applicationState == .background ||
+                   UIApplication.shared.applicationState == .inactive
+        } else {
+            var result = false
+            DispatchQueue.main.sync {
+                result = UIApplication.shared.applicationState == .background ||
+                         UIApplication.shared.applicationState == .inactive
+            }
+            return result
+        }
+    }
+
     // MARK: - Private Helpers
 
     /// Resolves the top-most view controller starting from the root view controller.

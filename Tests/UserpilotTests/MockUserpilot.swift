@@ -10,7 +10,6 @@ import UIKit
 import Foundation
 import UserNotifications
 @testable import Userpilot
-@testable import SwiftPhoenixClient
 
 // swiftlint:disable all
 
@@ -271,9 +270,9 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onPublishInternalSDKEvent?(sdkEvent, isExpereinceEvent, socketSubscription)
     }
 
-    var onPublishFakeReloadScreenEvent: (() -> Void)?
-    func publishFakeReloadScreenEvent() {
-        onPublishFakeReloadScreenEvent?()
+    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?) -> Void)?
+    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
+        onPublishFakeReloadScreenEvent?(experienceType, experienceId)
     }
 
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?
@@ -292,6 +291,7 @@ class MockStorage: DataStoring {
     var socketURL: String = ""
     var pushToken: String? = ""
     var userId: String = "user-id"
+    var anonymousUserId: String = ""
     var user: String = ""
     var temporaryUser: String? = ""
     var sessionDate: Date? = Date()

@@ -41,6 +41,38 @@ internal extension SDKEvent {
 
 }
 
+/// Used to pass seen content for cached ScreenViewEntity
+internal extension SDKEvent {
+
+    func getContentType() -> ExperienceType {
+        if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
+            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue {
+            return .flow
+        } else {
+            return .survey
+        }
+    }
+
+    func getContentId() -> Int? {
+        if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
+            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue {
+            return self.eventPayload["mobile_content_id"] as? Int
+        } else {
+            return self.eventPayload["survey_id"] as? Int
+        }
+    }
+
+    func isSeenContentEvent() -> Bool {
+        if self.eventName == SDKEventsName.flowExperienceSeen.rawValue ||
+            self.eventName == SDKEventsName.surveyExperienceSeen.rawValue {
+            return true
+        } else {
+            return false
+        }
+    }
+
+}
+
 internal enum SDKEventsName: String {
     case fetchExperienceContent = "get_mobile_content"
     case fetchExperienceTheme = "fetch_theme"

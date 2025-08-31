@@ -29,9 +29,9 @@ class MainViewController: BaseViewController {
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        UserpilotManager.shared.screen("main")
-    }
+     super.viewWillAppear(animated)
+     UserpilotManager.shared.screen("main")
+ }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -44,8 +44,7 @@ class MainViewController: BaseViewController {
     internal func showConfigurationDialog() {
         DialogManager.shared().showConfigurationDialog { [weak self] in
             guard self != nil else { return }
-            UserpilotManager.shared.destroy()
-            UserpilotManager.shared.initialize()
+            exit(0)
         }
     }
 }

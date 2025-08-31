@@ -9,3 +9,6 @@ excluded:
   - checkouts
   - SourcePackages
   - Dependencies
+  - Sources/Userpilot/Vendor
+  - Tests/UserpilotTests/Vendor
+

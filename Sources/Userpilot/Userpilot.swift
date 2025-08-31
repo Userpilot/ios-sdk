@@ -149,12 +149,6 @@ extension Userpilot {
         return Userpilot.version()
     }
 
-    @objc
-    public func destroy() {
-        logout()
-        sessionMonitor.reset()
-        analyticsPublisher.reset()
-    }
 }
 
 // MARK: - Tracking APIs

@@ -13,7 +13,7 @@
 internal enum ExperienceContent {
     case flow(content: FlowContent)   // Represents a flow content.
     case survey(content: SurveyContent) // Represents a survey content.
-    case nps(content: NPSContent) // Represents a survey content.
+    case nps(content: NPSContent) // Represents a nps content.
 }
 
 // Extensions for ExperienceContent to provide access to content and other properties.

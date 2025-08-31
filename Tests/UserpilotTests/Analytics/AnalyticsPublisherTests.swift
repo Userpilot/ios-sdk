@@ -9,7 +9,6 @@
 import XCTest
 import Foundation
 @testable import Userpilot
-@testable import SwiftPhoenixClient
 
 // swiftlint:disable all
 
@@ -387,7 +386,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Act (add delay before publishing, cause of throttling logic)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            self.analyticsPublisher.publishFakeReloadScreenEvent()
+            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
         }
 
         // Assert (wait for the delayed call)
@@ -405,7 +404,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { _, _, _, _ in publishScreenEventCalled = true }
 
         // Act
-        analyticsPublisher.publishFakeReloadScreenEvent()
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
 
         // Assert
         // Would need to verify socket manager publish was called with fake reload flag

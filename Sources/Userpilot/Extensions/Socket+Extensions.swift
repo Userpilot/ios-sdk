@@ -10,7 +10,6 @@
 //
 
 import Foundation
-import SwiftPhoenixClient
 
 internal extension Message {
 

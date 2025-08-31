@@ -13,7 +13,7 @@
 
 // swiftlint:disable file_length
 import Foundation
-import SwiftPhoenixClient
+import UIKit
 
 /**
  The `AnalyticsPublishing` protocol defines the methods necessary
@@ -49,7 +49,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     )
 
     /// publish fake reload event
-    func publishFakeReloadScreenEvent()
+    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?)
 
     /// update seen experiences
     func experiencePublished(
@@ -92,7 +92,7 @@ internal class AnalyticsPublisher {
     private let storage: DataStoring
 
     /// The experience publisher.
-    weak var experiencesPublisher: ExperiencesPublishing? {
+    private weak var experiencesPublisher: ExperiencesPublishing? {
         return container?.resolve(ExperiencesPublishing.self)
     }
 
@@ -104,9 +104,6 @@ internal class AnalyticsPublisher {
 
     /// Queue to hold events waiting to be sent.
     private lazy var eventsToFlush = [Event]()
-
-    /// Set of event names sent during the current screen view.
-    private lazy var eventsName = Set<String>()
 
     /// EventThrottle to throttle events
     private lazy var eventThrottle = EventThrottle(throttleDuration: 1.0)
@@ -123,7 +120,7 @@ internal class AnalyticsPublisher {
     /// Tracks the first event to open the socket.
     private var cachedEvent: Event?
 
-    /// Hole session start state
+    /// Hold session start state
     private var startSession = true
 
     // MARK: - Initialization
@@ -146,9 +143,10 @@ internal class AnalyticsPublisher {
         self.socketManager.registerCallback(self)
         if let temporaryUserString = storage.temporaryUser {
             let temporaryUser = User.fromJson(temporaryUserString)
-            cachedIdentifyEvent = Event(type: EventType.identify(temporaryUser.userId),
-                                properties: temporaryUser.properties,
-                                company: temporaryUser.company)
+            cachedIdentifyEvent = Event(
+                type: EventType.identify(temporaryUser.userId),
+                properties: temporaryUser.properties,
+                company: temporaryUser.company)
         }
     }
 
@@ -223,58 +221,95 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         startSession = difference > GeneralConstants.SESSION_DURATION
     }
 
+    // MARK: - Publish Helper Methods
+
     /*
      Publishes an event to the backend based on its type (identify, screen, or custom event).
      
      - Parameter event: The event to publish.
      */
-    // swiftlint:disable:next cyclomatic_complexity
     func publish(_ event: Event) {
         tryCatch {
-            if event.isIdentifyEvent {
-                if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) { return }
-                screenViewEntity?.resetState()
-                storage.temporaryUser = event.toUser().toJson()
-                cachedIdentifyEvent = event
-                socketManager.updateSocketState(.closed, forceUpdateState: true)
-            }
-            if socketManager.isShutdownState { return }
-            if socketManager.isJoiningSocket {
+            // Handle App state
+            guard !UIApplication.shared.isAppInBackgroundOrInactive() else {
                 cacheEvent(event)
                 return
             }
 
-            if !socketManager.isSocketOpened {
+            // Handle identify events
+            guard !event.isIdentifyEvent || !handleIdentifyEvent(event) else { return }
+
+            // Check if system is in shutdown state
+            guard !socketManager.isShutdownState else { return }
+
+            // Handle socket joining state
+            guard !socketManager.isJoiningSocket else {
                 cacheEvent(event)
-                if let userId = cachedIdentifyEvent?.userId, !userId.isEmpty { storage.userId = userId }
-                if let userId = event.userId { storage.userId = userId }
-                if storage.userId.isEmpty { return }
-                openSocket()
                 return
             }
 
-            switch event.type {
-            case .identify:
-                identify(event)
-            case .screen:
-                screen(event)
-            case .event:
-                trackEvent(event)
-            }
+            // Handle closed socket state
+            guard socketManager.isSocketOpened || !handleClosedSocket(event) else { return }
+
+            // Process the event
+            processEvent(event)
         }
     }
 
-    /**
-     Cache Event when socket is not opened or is joining.
-     
-     - Parameter event: The event to publish.
-     */
+    private func handleIdentifyEvent(_ event: Event) -> Bool {
+        // Return true to stop publishing
+        if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) {
+            return true
+        }
+
+        // Reset screen view state and update user data
+        screenViewEntity?.resetState() // Due to new user
+        storage.temporaryUser = event.toUser().toJson()
+        cachedIdentifyEvent = event
+
+        return false
+    }
+
+    private func handleClosedSocket(_ event: Event) -> Bool {
+        cacheEvent(event)
+
+        // Update userId from cached identify event or current event
+        updateUserIdFromEvent(event)
+
+        // Only proceed if we have a valid userId
+        if storage.userId.isEmpty { return true }
+
+        openSocket()
+        return false
+    }
+
+    private func updateUserIdFromEvent(_ event: Event) {
+        // Priority: current event userId > cached identify event userId
+        if let userId = event.userId, !userId.isEmpty {
+            storage.userId = userId
+        } else if let cachedUserId = cachedIdentifyEvent?.userId, !cachedUserId.isEmpty {
+            storage.userId = cachedUserId
+        }
+    }
+
+    private func processEvent(_ event: Event) {
+        switch event.type {
+        case .identify:
+            identify(event)
+        case .screen:
+            screen(event)
+        case .event:
+            trackEvent(event)
+        }
+    }
+
+    /// Cache Event when socket is not opened or is joining.
     private func cacheEvent(_ event: Event) {
         switch event.type {
         case .identify:
             cachedIdentifyEvent = event
         case .screen:
-            _ = setupScreenEvent(event)
+            setupScreenEvent(event)
         case .event:
             cachedEvent = event
         }
@@ -339,7 +374,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             readWriteLock.write { [weak self] in
                 guard let self else { return }
                 if self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle) { return }
-                self.eventsName.insert(event.eventTitle)
                 self.eventsToFlush.append(event)
                 if self.eventsToFlush.count == 1 {
                     flushQueue()
@@ -360,6 +394,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
      - Parameter event: The new screen event to process.
      */
+    @discardableResult
     private func setupScreenEvent(_ event: Event) -> Bool {
         var isNewScreen = false
         tryCatch {
@@ -374,9 +409,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
             if isScreenTitleChanged {
                 isNewScreen = true
-
-                // Once that trigger screen event is met, cancel current pending experience directly.
-                experiencesPublisher?.cancelPendingSurveyContent()
 
                 // New screen: start with an empty set of seen experiences
                 screenViewEntity = ScreenViewEntity(
@@ -431,6 +463,9 @@ extension AnalyticsPublisher {
 
             /// Screen event
             if let screenViewEntity, canRequestScreenEvent {
+                if let screenTitle = screenViewEntity.event.screenTitle {
+                    experiencesPublisher?.updateSceen(screenTitle)
+                }
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
                 payload[AnalyticsPublisher.metaDataProperty] = [
@@ -525,12 +560,11 @@ extension AnalyticsPublisher: SocketSubscription {
     /// Socket closed callback.
     func onSocketClosed() {
         tryCatch {
-            if socketManager.didErrorOccurred {
+            if socketManager.isShutdownState || socketManager.didErrorOccurred {
                 clearAllCachedProperties()
                 return
             }
             if let eventToPublish = cachedIdentifyEvent {
-                userpilot?.clean()
                 publish(eventToPublish)
             } else {
                 clearAllCachedProperties()
@@ -651,10 +685,11 @@ extension AnalyticsPublisher {
     }
 
     /// publish fake reload event
-    func publishFakeReloadScreenEvent() {
+    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
         tryCatch {
-            guard canRequestEvent else { return }
+            guard experienceId != nil, canRequestEvent else { return }
             if let screenViewEntity {
+                experiencePublished(experienceType, experienceId!)
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return
                 }

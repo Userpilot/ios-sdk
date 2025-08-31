@@ -215,7 +215,7 @@ internal extension DialogViewController {
 internal extension UIViewController {
     /// Presents a dialog view controller modally.
     /// - Parameter viewController: The DialogViewController to present.
-    func presentDialog(viewController: DialogViewController) {
+    func presentDialog(viewController: UIViewController) {
         viewController.modalPresentationStyle = .overFullScreen
         present(viewController, animated: false, completion: nil)
     }

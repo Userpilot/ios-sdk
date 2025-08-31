@@ -8,7 +8,6 @@
 
 import XCTest
 @testable import Userpilot
-@testable import SwiftPhoenixClient
 
 final class SocketManagerTests: XCTestCase {
 

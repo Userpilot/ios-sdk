@@ -11,7 +11,6 @@
 //
 
 import UIKit
-import SwiftPhoenixClient
 
 /// `PushNotificationMonitoring` protocol defines the methods required to handle push notifications, token
 /// management, and status updates.

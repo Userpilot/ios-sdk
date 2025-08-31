@@ -58,7 +58,6 @@ extension User: CustomStringConvertible {
 // MARK: - JSON formater
 
 extension User {
-
     func toJson() -> String? {
         var dict: [String: Any] = [:]
         dict["userId"] = userId
@@ -76,8 +75,8 @@ extension User {
         }
         if let jsonDict = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
             if let userId = jsonDict["userId"] as? String,
-                let properties = jsonDict["properties"] as? [String: Any],
-                let company = jsonDict["company"] as? [String: Any] {
+               let properties = jsonDict["properties"] as? [String: Any],
+               let company = jsonDict["company"] as? [String: Any] {
                 return User(userId: userId, properties: properties, company: company)
             }
         }
@@ -117,21 +116,68 @@ extension User {
         return self
     }
 
-    /**
-     * Compares the current `User` object to the data from an `Event` to determine if they represent the same user.
-     * The comparison checks the `userId`, user properties, and company data for equality.
-     *
-     * @param event The event to compare against the current user.
-     * @return `true` if the event data matches the current user, otherwise `false`.
-     */
+    /// Compares this User with an Event to determine if they represent the same identify event
+    /// - Parameter event: The Event to compare against
+    /// - Returns: true if the user and event represent the same identify event
     func isSameIdentifyEvent(event: Event) -> Bool {
-        guard userId == event.type.userId else {
+        // Fix: Compare userId with event.userId, not event.type.userId
+        guard userId == event.userId else {
             return false
         }
-        let isMetaDataMapSame = (properties).isEqual(to: event.properties ?? [:])
-        let isCompanyDataMapSame = (company).isEqual(to: event.company ?? [:])
-        return isMetaDataMapSame && isCompanyDataMapSame
+
+        // For partial updates, check if the event is a subset of existing user data
+        let eventProperties = event.properties ?? [:]
+        let eventCompany = event.company ?? [:]
+
+        // If event has no properties/company data, consider it the same user (just userId match)
+        if eventProperties.isEmpty && eventCompany.isEmpty {
+            return true
+        }
+
+        // Check if event properties are a subset of user properties with same values
+        let propertiesMatch = properties.containsAll(from: eventProperties)
+        let companyDataMatch = company.containsAll(from: eventCompany)
+
+        return propertiesMatch && companyDataMatch
     }
+
+    /// Alternative method with different comparison strategies
+    func isSameIdentifyEvent(event: Event, strategy: ComparisonStrategy = .partialUpdate) -> Bool {
+        guard userId == event.userId else {
+            return false
+        }
+
+        let eventProperties = event.properties ?? [:]
+        let eventCompany = event.company ?? [:]
+
+        switch strategy {
+        case .exactMatch:
+            // Original behavior - exact match required
+            return properties.isEqual(to: eventProperties) &&
+            company.isEqual(to: eventCompany)
+
+        case .partialUpdate:
+            // New behavior - event can be subset of stored user
+            return properties.containsAll(from: eventProperties) &&
+            company.containsAll(from: eventCompany)
+
+        case .ignoreEmpty:
+            // Ignore empty properties in comparison
+            let filteredProperties = properties.filteringOutEmptyValues()
+            let filteredEventProperties = eventProperties.filteringOutEmptyValues()
+            let filteredCompany = company.filteringOutEmptyValues()
+            let filteredEventCompany = eventCompany.filteringOutEmptyValues()
+
+            return filteredProperties.containsAll(from: filteredEventProperties) &&
+            filteredCompany.containsAll(from: filteredEventCompany)
+        }
+    }
+}
+
+enum ComparisonStrategy {
+    case exactMatch      // Both objects must be identical
+    case partialUpdate   // Event can be a subset of stored user
+    case ignoreEmpty     // Ignore empty values in comparison
 }
 
 /**
@@ -140,13 +186,9 @@ extension User {
  */
 internal extension Dictionary where Key == String, Value == Any {
 
-    /**
-     * Compares the current dictionary to another dictionary.
-     * The comparison checks that all keys and values match, including performing deep comparison of nested structures.
-     *
-     * @param other The other dictionary to compare against.
-     * @return `true` if both dictionaries are identical in terms of keys and values, otherwise `false`.
-     */
+    /// Compares the current dictionary to another dictionary with deep comparison
+    /// - Parameter other: The other dictionary to compare against
+    /// - Returns: true if both dictionaries are identical in terms of keys and values
     func isEqual(to other: [String: Any]) -> Bool {
         // Check if both dictionaries have the same size
         guard self.count == other.count else {
@@ -159,7 +201,6 @@ internal extension Dictionary where Key == String, Value == Any {
                 return false
             }
 
-            // Compare values using a helper function for deep comparison
             if !compareValues(value, otherValue) {
                 return false
             }
@@ -168,40 +209,123 @@ internal extension Dictionary where Key == String, Value == Any {
         return true
     }
 
-    // Helper function to deeply compare Any type values
+    /// Filters out empty values (empty strings, empty arrays, empty dictionaries)
+    /// - Returns: A new dictionary with empty values removed
+    func filteringOutEmptyValues() -> [String: Any] {
+        return self.compactMapValues { value in
+            switch value {
+            case let string as String:
+                return string.isEmpty ? nil : value
+            case let array as [Any]:
+                return array.isEmpty ? nil : value
+            case let dict as [String: Any]:
+                return dict.isEmpty ? nil : value
+            default:
+                return value
+            }
+        }
+    }
+
+    /// Checks if this dictionary contains all key-value pairs from another dictionary
+    /// This enables partial update detection - the other dictionary can be a subset
+    /// - Parameter other: The dictionary to check against (can be partial)
+    /// - Returns: true if all key-value pairs in 'other' exist in this dictionary with same values
+    func containsAll(from other: [String: Any]) -> Bool {
+        // Empty dictionary is considered contained in any dictionary
+        guard !other.isEmpty else {
+            return true
+        }
+
+        // Check if all key-value pairs in 'other' exist in self with same values
+        for (key, otherValue) in other {
+            guard let selfValue = self[key] else {
+                return false // Key doesn't exist in self
+            }
+
+            if !compareValues(selfValue, otherValue) {
+                return false // Values don't match
+            }
+        }
+
+        return true
+    }
+
+    // MARK: - Private Helper Methods
+
+    // Deeply compares Any type values with improved type handling
+    // swiftlint:disable:next cyclomatic_complexity
     private func compareValues(_ lhs: Any, _ rhs: Any) -> Bool {
+        // Handle nil values
+        if isNil(lhs) && isNil(rhs) {
+            return true
+        }
+        if isNil(lhs) || isNil(rhs) {
+            return false
+        }
+
         switch (lhs, rhs) {
         case (let left as Int, let right as Int):
             return left == right
         case (let left as String, let right as String):
             return left == right
         case (let left as Double, let right as Double):
-            return left == right
+            return left.isEqual(to: right, tolerance: 0.0001) // Handle floating point precision
+        case (let left as Float, let right as Float):
+            return abs(left - right) < 0.0001
         case (let left as Bool, let right as Bool):
             return left == right
         case (let left as [String: Any], let right as [String: Any]):
-            return left.isEqual(to: right)  // Recursively compare dictionaries
+            return left.isEqual(to: right)
         case (let left as [Any], let right as [Any]):
-            return compareArrays(left, right)  // Compare arrays recursively
+            return compareArrays(left, right)
+            // Handle number type conversions
+        case (let left as Int, let right as Double):
+            return Double(left) == right
+        case (let left as Double, let right as Int):
+            return left == Double(right)
+        case (let left as NSNumber, let right as NSNumber):
+            return left.isEqual(to: right)
         default:
-            return false  // If types or values do not match, return false
+            // Fallback to NSObject comparison for other types
+            if let leftObj = lhs as? NSObject, let rightObj = rhs as? NSObject {
+                return leftObj.isEqual(rightObj)
+            }
+            return false
         }
     }
 
-    // Helper function to compare arrays of Any
+    /// Compares arrays of Any with deep comparison
     private func compareArrays(_ lhs: [Any], _ rhs: [Any]) -> Bool {
         guard lhs.count == rhs.count else {
             return false
         }
 
-        for (index, leftValue) in lhs.enumerated() {
-            let rightValue = rhs[index]
+        for (leftValue, rightValue) in zip(lhs, rhs) {
+            // swiftlint:disable:next for_where
             if !compareValues(leftValue, rightValue) {
                 return false
             }
         }
 
         return true
+    }
+
+    /// Helper to check if a value is nil (including NSNull)
+    private func isNil(_ value: Any) -> Bool {
+        if value is NSNull {
+            return true
+        }
+        // Use reflection to check for nil optionals
+        let mirror = Mirror(reflecting: value)
+        return mirror.displayStyle == .optional && mirror.children.count == 0
+    }
+}
+
+// MARK: - Double Extension for Floating Point Comparison
+
+private extension Double {
+    func isEqual(to other: Double, tolerance: Double) -> Bool {
+        return abs(self - other) <= tolerance
     }
 }
 
@@ -244,5 +368,4 @@ internal extension String {
     func toUser() -> User {
         return  User.fromJson(self)
     }
-
 }
