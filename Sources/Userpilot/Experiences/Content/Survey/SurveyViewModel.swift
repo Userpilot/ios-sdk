@@ -88,9 +88,7 @@ internal class SurveyViewModel {
 
         // Bind data
         bindData?(shouldBindSurvey)
-        if shouldBindSurvey {
-            onSurveyOpened()
-        }
+
     }
 
     /// Return wither the content is RTL
@@ -128,6 +126,12 @@ internal class SurveyViewModel {
 
     // MARK: - Experience Event Handling
 
+    func onExperienceSeen() {
+        delay(0.3) { [weak self] in
+            self?.onSurveyOpened()
+        }
+    }
+    
     /**
      Sends a socket event indicating that an experience has been opened.
      */
@@ -376,7 +380,7 @@ internal class SurveyViewModel {
         experienceId: Int
     ) {
         logger.info(
-            "Userpilot experience -> type: Survey, experienceId: %{public}@, state: %{public}@",
+            "🌠 Userpilot experience -> type: Survey, experienceId: %{public}@, state: %{public}@",
             String(experienceId),
             state
         )
@@ -388,7 +392,7 @@ internal class SurveyViewModel {
         stepId: Int
     ) {
         logger.info(
-            "Userpilot experience step -> type: Survey, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
+            "🌠 Userpilot experience step -> type: Survey, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
             String(experienceId),
             state,
             String(stepId)

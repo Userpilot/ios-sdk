@@ -1,5 +1,8 @@
-# Userpilot iOS SDK
+<p align="center">
+  <img src="https://shorturl.at/nfAcE" alt="Userpilot iOS Library" height="150"/>
+</p>
 
+# Userpilot iOS SDK
 
 ![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
 [![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app)

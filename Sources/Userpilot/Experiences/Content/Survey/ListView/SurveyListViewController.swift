@@ -37,6 +37,11 @@ internal class SurveyListViewController: UIViewController {
         super.init(nibName: "SurveyListViewController", bundle: Userpilot.resourceBundle)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        surveyViewModel.onExperienceSeen()
+    }
+
     /// Required initializer with a coder, not implemented for programmatic instantiation.
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")

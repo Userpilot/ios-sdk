@@ -194,7 +194,7 @@ class PushNotificationMonitorTests: XCTestCase {
         userpilot.storage.userId = "default-00000"
         userpilot.analyticsPublisher.canRequestEvent = false
 
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { sdkEvent, _, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { sdkEvent, _ in
             // Try casting to your specific event type
             guard let event = sdkEvent as? PushNotificationOpenedEvent else {
                 XCTFail("sdkEvent is not PushNotificationOpenedEvent")

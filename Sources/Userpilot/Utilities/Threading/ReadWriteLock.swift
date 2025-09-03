@@ -13,45 +13,47 @@
 
 import Foundation
 
-/// A thread-safe read-write lock implementation for managing concurrent access to shared resources.
-/// Allows multiple threads to read data simultaneously but ensures exclusive access for writing operations.
+/// A thread-safe read-write lock for managing concurrent access to shared resources.
+/// Supports multiple concurrent reads but ensures exclusive writes.
 internal class ReadWriteLock {
 
     // MARK: - Properties
 
-    /// A concurrent dispatch queue used to manage read and write operations.
-    private let concurrentQueue: DispatchQueue
+    /// A concurrent dispatch queue that manages read and write operations.
+    /// - Concurrent reads are allowed.
+    /// - Writes are executed exclusively using a barrier.
+    private let concurrentQueue = DispatchQueue(
+        label: DispatchQueueConstants.EVENT_QUEUE,
+        qos: .utility,
+        attributes: .concurrent,
+        autoreleaseFrequency: .workItem
+    )
 
-    // MARK: - Initialization
+    // MARK: - Public Methods
 
-    /// Initializes a new `ReadWriteLock` instance with a specified label for the dispatch queue.
-    ///
-    /// - Parameter label: A string used to identify the dispatch queue. Helps in debugging and profiling.
-    init(label: String) {
-        concurrentQueue = DispatchQueue(
-            label: label,
-            qos: .utility,
-            attributes: .concurrent,
-            autoreleaseFrequency: .workItem
-        )
-    }
-
-    // MARK: - Methods
-
-    /// Executes a closure in a read-only context. Multiple read operations can occur concurrently.
-    ///
-    /// - Parameter closure: A closure that performs read operations. It is executed synchronously on the queue.
+    /**
+     Executes a closure in a read-only context.
+     
+     Multiple read operations can occur concurrently. This is useful for cases where
+     reading shared resources does not modify them.
+     
+     - Parameter closure: The closure that performs read operations. Executed synchronously on the queue.
+     */
     func read(closure: () -> Void) {
         concurrentQueue.sync {
             closure()
         }
     }
 
-    /// Executes a closure in a write context. Write operations are performed exclusively, blocking
-    ///  other reads and writes.
-    ///
-    /// - Parameter closure: A closure that performs write operations. It is executed asynchronously 
-    /// with barrier flag on the queue.
+    /**
+     Executes a closure in a write context.
+     
+     Write operations are performed exclusively. While a write is in progress, all other
+     reads and writes are blocked. This ensures safe mutation of shared resources.
+     
+     - Parameter closure: The closure that performs write operations. Executed
+     asynchronously with a barrier on the queue.
+     */
     func write(closure: @escaping () -> Void) {
         concurrentQueue.async(flags: .barrier) {
             closure()

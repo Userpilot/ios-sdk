@@ -52,6 +52,11 @@ internal class SurveyDialogViewController: DialogViewController {
         setContent(content: surveyContainerView, withMargin: CGFloat(-40))
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        surveyViewModel.onExperienceSeen()
+    }
+
     /// Handle screen rotation
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)

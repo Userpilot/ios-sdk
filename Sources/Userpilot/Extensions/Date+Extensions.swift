@@ -22,4 +22,8 @@ internal extension Date {
         return dateFormatter.string(from: self)
     }
 
+    func isMoreThanOneSecond(from other: Date) -> Bool {
+        return abs(self.timeIntervalSince(other)) > 1.0
+    }
+
 }

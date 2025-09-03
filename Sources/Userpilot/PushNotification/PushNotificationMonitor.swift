@@ -114,7 +114,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
                     appToken: config.token,
                     userId: storage.userId,
                     token: newToken),
-                isExpereinceEvent: false,
                 socketSubscription: self)
         }
     }
@@ -304,7 +303,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
         analyticsPublisher.publishInternalSDKEvent(
             PushNotificationOpenedEvent(payload: properties),
-            isExpereinceEvent: false,
             socketSubscription: self
         )
 

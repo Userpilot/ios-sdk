@@ -12,6 +12,15 @@
 
 import Foundation
 
+/*
+QoS Priority Levels (highest to lowest):
+.userInteractive - User is actively waiting, UI updates, animations
+.userInitiated - User requested action, but can wait briefly
+.default - General work
+.utility - Long-running tasks, can take minutes
+.background - Not visible to user, can take hours
+*/
+
 internal enum QueueType {
     case main
     case background

@@ -39,7 +39,7 @@ internal struct NPSContent: Decodable {
     }
 
     var delayDuration: TimeInterval {
-        return TimeInterval(timeDelay) * 1000
+        return TimeInterval(timeDelay)
     }
 }
 

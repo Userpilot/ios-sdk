@@ -44,7 +44,6 @@ internal protocol AnalyticsPublishing: AnyObject {
     /// publish experience event
     func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
-        isExpereinceEvent: Bool,
         socketSubscription: SocketSubscription?
     )
 
@@ -109,7 +108,7 @@ internal class AnalyticsPublisher {
     private lazy var eventThrottle = EventThrottle(throttleDuration: 1.0)
 
     /// Read-write lock for thread-safe event queue operations.
-    private lazy var readWriteLock = ReadWriteLock(label: DispatchQueueConstants.EVENT_QUEUE)
+    private lazy var readWriteLock = ReadWriteLock()
 
     /// Cached identify event, to be sent when the socket is ready.
     private var cachedIdentifyEvent: Event?
@@ -178,7 +177,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                         appToken: config.token,
                         userId: storage.userId,
                         token: token),
-                    isExpereinceEvent: false,
                     socketSubscription: nil
                 )
             }
@@ -199,7 +197,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             storage.userId = userId
         }
         if storage.userId.isNotEmpty && !socketManager.isSocketOpened && !socketManager.isJoiningSocket {
-            socketManager.connect()
+            openSocket()
         }
     }
 
@@ -258,6 +256,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     private func handleIdentifyEvent(_ event: Event) -> Bool {
         // Return true to stop publishing
+        let ssss = User.fromJson(storage.user).isSameIdentifyEvent(event: event)
         if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) {
             return true
         }
@@ -669,13 +668,10 @@ extension AnalyticsPublisher {
     /// publish experience event
     func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
-        isExpereinceEvent: Bool,
         socketSubscription: SocketSubscription?
     ) {
         tryCatch {
-            if isExpereinceEvent {
-                guard canRequestEvent else { return }
-            }
+            guard canRequestEvent else { return }
             socketManager.publish(
                 sdkEvent.eventName,
                 payload: sdkEvent.eventPayload,
@@ -687,7 +683,10 @@ extension AnalyticsPublisher {
     /// publish fake reload event
     func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
         tryCatch {
-            guard experienceId != nil, canRequestEvent else { return }
+            guard
+                experienceId != nil,
+                canRequestEvent
+            else { return }
             if let screenViewEntity {
                 experiencePublished(experienceType, experienceId!)
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {

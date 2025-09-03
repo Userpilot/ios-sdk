@@ -82,20 +82,17 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     /// The current screen name in the application, used to track active screens.
     private lazy var currentScreen: String = ""
 
-    /// Debouncer to request fake reload in safe time
-    private lazy var debounce = Debouncer(delay: 0.2)
-
     /// Queue for pending experience content - thread-safe array-based approach
     private var pendingExperiences: [ExperienceContent] = []
 
     /// Serial queue for managing experience operations to ensure thread safety
-    private let experienceQueue = DispatchQueue(label: "com.userpilot.experience", qos: .userInteractive)
+    private let experienceQueue = DispatchQueue(
+        label: DispatchQueueConstants.EXPERIENCE_QUEUE,
+        qos: .userInteractive
+    )
 
     /// To manage delay for show experience or delay logic for survey & NPS.
     private lazy var delayUtils = DelayUtils()
-
-    /// A special flag to prevent screen event after manual triggering content.
-    private lazy var oneSecondFlag = OneSecondFlag()
 
     /// Manual experience not check screen.
     private var isTriggerManualExperience = false
@@ -103,6 +100,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     /// A flag to indicate triggering thank you message for survey list view.
     private var isTriggeringThankYouMessage = false
 
+    /// Date for fake reload that has been requested.
+    private var requestFakeScreenReloadEventDate: Date?
+
+    /// Expereinces presentation style.
     private enum PresentationStyle {
         case fullScreen
         case dialog
@@ -140,11 +141,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
 
     /// Determine if can requst screen event
     func canRequestScreenEvent() -> Bool {
-        let hasPendingExperience = !pendingExperiences.isEmpty
-        return !oneSecondFlag.isActive &&
+        return requestFakeScreenReloadEventDate?.isMoreThanOneSecond(from: Date()) ?? true &&
         !hasActiveExperience() &&
-        !isTriggeringThankYouMessage &&
-        !hasPendingExperience
+        !isTriggeringThankYouMessage
     }
 
     /**
@@ -158,6 +157,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
             guard let self else { return }
             if self.pendingExperiences.isEmpty {
                 self.publishInternalSDKEvent(ExperienceContentEvent(experienceId: experienceId))
+            } else {
+                logger.fault("‼️ There is current active experience has been processing")
             }
         }
     }
@@ -219,7 +220,11 @@ extension ExperiencesPublisher: SocketSubscription {
 
     // Update screen
     func updateSceen(_ screenName: String) {
-        self.currentScreen = screenName
+        tryCatch {
+            currentScreen = screenName
+            delayUtils.cancelDelay()
+            clearPendingExperiences()
+        }
     }
 
     /*
@@ -256,7 +261,8 @@ extension ExperiencesPublisher: SocketSubscription {
             // Process experience content
             if eventName == EventType.screenEvent ||
                 eventName == SDKEventsName.fetchExperienceContent.rawValue {
-                self.isTriggerManualExperience = (eventName == SDKEventsName.fetchExperienceContent.rawValue)
+
+                self.isTriggerManualExperience = eventName == SDKEventsName.fetchExperienceContent.rawValue
 
                 // Determine the new experience based on response
                 let experience: ExperienceContent? = {
@@ -275,8 +281,8 @@ extension ExperiencesPublisher: SocketSubscription {
                 }
             }
             if let experience = self.pendingExperiences.first {
-                if let npsContent = experience.asNPSContent() {
-                    self.checkNPSDelayConfiguration(npsContent)
+                if experience.asNPSContent() != nil {
+                    self.openNPSBottomSheetExperience()
                 } else {
                     self.checkCachedThemes(experience.experienceThemeId())
                 }
@@ -318,8 +324,8 @@ extension ExperiencesPublisher: SocketSubscription {
                     self.pendingExperiences.append(experience)
                     self.isTriggerManualExperience = true
 
-                    if let npsContent = experience.asNPSContent() {
-                        self.checkNPSDelayConfiguration(npsContent)
+                    if experience.asNPSContent() != nil {
+                        self.openNPSBottomSheetExperience()
                     } else {
                         self.checkCachedThemes(experience.experienceThemeId())
                     }
@@ -375,37 +381,25 @@ extension ExperiencesPublisher {
      - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
      */
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
-        if UIApplication.shared.isAppInBackgroundOrInactive() { return }
+        tryCatch {
+            analyticsPublisher.publishInternalSDKEvent(sdkEvent, socketSubscription: self)
 
-        analyticsPublisher.publishInternalSDKEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: self)
+            if sdkEvent.isSeenContentEvent() || sdkEvent.hasDeepLink, let contentId = sdkEvent.getContentId() {
+               analyticsPublisher.experiencePublished(sdkEvent.getContentType(), contentId)
+            }
 
-        if sdkEvent.isSeenContentEvent(), let contentId = sdkEvent.getContentId() {
-            analyticsPublisher.experiencePublished(sdkEvent.getContentType(), contentId)
-        }
+            if sdkEvent.isEventForCloseExperience() || sdkEvent.hasDeepLink {
+                requestFakeScreenReloadEventDate = Date()
+            }
 
-        if sdkEvent.isEventForCloseNPSExperience() {
-            oneSecondFlag.activate()
-            return
-        }
+            if sdkEvent.isEventForCloseNPSExperience() || sdkEvent.hasDeepLink {
+                return
+            }
 
-        if sdkEvent.isEventForCloseExperience() {
-
-            if sdkEvent.hasDeepLink { return }
-
-            experienceQueue.async { [weak self] in
-                guard let self else { return }
-
-                if let currentExperience = self.pendingExperiences.first {
-                    self.checkCachedThemes(currentExperience.experienceThemeId())
-                } else {
-                    self.oneSecondFlag.activate()
-                    if !self.isTriggerManualExperience {
-                        self.debounce.debounce { [weak self] in
-                            self?.analyticsPublisher.publishFakeReloadScreenEvent(
-                                sdkEvent.getContentType(), sdkEvent.getContentId())
-                        }
-                    }
-                }
+            if sdkEvent.isEventForCloseExperience() && !isTriggerManualExperience {
+                analyticsPublisher.publishFakeReloadScreenEvent(
+                    sdkEvent.getContentType(), sdkEvent.getContentId()
+                )
             }
         }
     }
@@ -429,52 +423,19 @@ extension ExperiencesPublisher {
                 }
 
             case .survey(let content):
-                checkSurveyDelayConfiguration(content)
+                switch content.type {
+                case .list:
+                    self.openSurveyListExperience()
+                case .step:
+                    if self.isBottomSheetSurveyContent(content) {
+                        self.openSurveyBottomSheetExperience()
+                    } else {
+                        self.openSurveyDialogExperience()
+                    }
+                }
 
-            case .nps(let content):
-                checkNPSDelayConfiguration(content)
-            }
-        }
-    }
-
-    /**
-     Check nps delay, in case we have a delay, so start a delay timer
-     */
-    private func checkNPSDelayConfiguration(_ content: NPSContent) {
-        if content.timeDelay != 0 {
-            delayUtils.delayAction(delayTime: Double(content.timeDelay)) { [weak self] in
-                self?.openNPSBottomSheetExperience()
-            }
-        } else {
-            openNPSBottomSheetExperience()
-        }
-    }
-
-    /**
-     Check survey delay, in case we have a delay, so start a delay timer
-     */
-    private func checkSurveyDelayConfiguration(_ content: SurveyContent) {
-        if content.timeDelay != 0 {
-            delayUtils.delayAction(delayTime: Double(content.timeDelay)) { [weak self] in
-                self?.handleSurveyExperience(content)
-            }
-        } else {
-            handleSurveyExperience(content)
-        }
-    }
-
-    /**
-     Recheck top view controller and expereince state to show the survey expereince again
-     */
-    private func handleSurveyExperience(_ content: SurveyContent) {
-        switch content.type {
-        case .list:
-            self.openSurveyListExperience()
-        case .step:
-            if self.isBottomSheetSurveyContent(content) {
-                self.openSurveyBottomSheetExperience()
-            } else {
-                self.openSurveyDialogExperience()
+            case .nps:
+                openNPSBottomSheetExperience()
             }
         }
     }
@@ -502,6 +463,7 @@ extension ExperiencesPublisher {
 
 extension ExperiencesPublisher {
 
+    /// Flow Experience
     private func openCarouselExperience() {
         showExperience(
             makeViewModel: ExperienceViewModel.init,
@@ -526,6 +488,7 @@ extension ExperiencesPublisher {
         )
     }
 
+    /// Survey Experience
     private func openSurveyListExperience() {
         showExperience(
             makeViewModel: SurveyViewModel.init,
@@ -550,6 +513,7 @@ extension ExperiencesPublisher {
         )
     }
 
+    /// NPS Experience
     private func openNPSBottomSheetExperience() {
         showExperience(
             makeViewModel: NPSViewModel.init,
@@ -598,12 +562,24 @@ extension ExperiencesPublisher {
 
 internal extension ExperiencesPublisher {
 
+    /// Resolves the correct delay for the current experience (Survey or NPS)
+    func resolvedDelay() -> TimeInterval {
+        if let surveyDelay = pendingExperiences.first?.asSurveyContent()?.delayDuration, surveyDelay > 0 {
+            return surveyDelay
+        }
+        if let npsDelay = pendingExperiences.first?.asNPSContent()?.delayDuration, npsDelay > 0 {
+            return npsDelay
+        }
+        return ThemeHandler.DefaultValues.delayTimeForExperience
+    }
+
+    /// Show Experience
     private func showExperience<VM, VC: UIViewController>(
         makeViewModel: @escaping (DIContainer) -> VM,
         makeViewController: @escaping (VM) -> VC,
         presentation: PresentationStyle
     ) {
-        delayUtils.delayAction { [weak self] in
+        delayUtils.delayAction(delayTime: resolvedDelay()) { [weak self] in
             guard
                 let self,
                 self.canShowExperience(),
@@ -615,14 +591,12 @@ internal extension ExperiencesPublisher {
                 return
             }
 
-            let viewModel = makeViewModel(container)
-            let viewController = makeViewController(viewModel)
-
-            if presentation == .fullScreen {
-                viewController.modalPresentationStyle = .fullScreen
-            }
-
             performOn(.main) {
+                let viewModel = makeViewModel(container)
+                let viewController = makeViewController(viewModel)
+                if presentation == .fullScreen {
+                    viewController.modalPresentationStyle = .fullScreen
+                }
                 switch presentation {
                 case .fullScreen, .normal:
                     topViewController.present(viewController, animated: true)
@@ -686,17 +660,19 @@ extension ExperiencesPublisher {
     }
 
     func activeOneTimeFlag() {
-        oneSecondFlag.activate()
+        requestFakeScreenReloadEventDate = Date()
     }
 
     /// Clear all pending experiences
     private func clearPendingExperiences() {
+        if pendingExperiences.isEmpty { return }
         experienceQueue.async { [weak self] in
             self?.pendingExperiences.removeAll()
         }
     }
 
     private func clearCurrentPendingExperiences() {
+        if pendingExperiences.isEmpty { return }
         experienceQueue.async { [weak self] in
             self?.pendingExperiences.removeFirst()
             self?.openExperienceFlow()

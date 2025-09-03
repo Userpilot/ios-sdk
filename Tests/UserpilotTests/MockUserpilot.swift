@@ -182,6 +182,11 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
         onShowThankYouMessage?(surveyContent, surveyTheme)
     }
+    
+    var onUpdateSceen: ((String) -> Void)?
+    func updateSceen(_ screenName: String) {
+        onUpdateSceen?(screenName)
+    }
 
 }
 
@@ -261,13 +266,12 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
 
     var canRequestEvent: Bool = true
 
-    var onPublishInternalSDKEvent: ((SDKEvent, Bool, SocketSubscription?) -> Void)?
+    var onPublishInternalSDKEvent: ((SDKEvent, SocketSubscription?) -> Void)?
     func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
-        isExpereinceEvent: Bool,
         socketSubscription: SocketSubscription?
     ) {
-        onPublishInternalSDKEvent?(sdkEvent, isExpereinceEvent, socketSubscription)
+        onPublishInternalSDKEvent?(sdkEvent, socketSubscription)
     }
 
     var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?) -> Void)?

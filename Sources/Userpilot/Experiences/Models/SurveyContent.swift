@@ -48,6 +48,10 @@ internal struct SurveyContent: Decodable {
         return screenType == .all
     }
 
+    var delayDuration: TimeInterval {
+        return TimeInterval(timeDelay)
+    }
+
 }
 
 internal struct SurveyMobileTheme: Decodable {

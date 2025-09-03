@@ -59,6 +59,11 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
         bindViewModel()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        experienceViewModel.onExperienceSeen()
+    }
+
     /// Handle screen rotation
     override func viewWillTransition(
         to size: CGSize,

@@ -346,7 +346,7 @@ class AnalyticsPublisherTests: XCTestCase {
         let sdkEvent = MockSDKEvent()
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(sdkEvent, isExpereinceEvent: false, socketSubscription: nil)
+        analyticsPublisher.publishInternalSDKEvent(sdkEvent, socketSubscription: nil)
 
         // Assert
         // Would need to verify socket manager publish was called
@@ -363,7 +363,7 @@ class AnalyticsPublisherTests: XCTestCase {
         let sdkEvent = MockSDKEvent()
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(sdkEvent, isExpereinceEvent: true, socketSubscription: nil)
+        analyticsPublisher.publishInternalSDKEvent(sdkEvent, socketSubscription: nil)
 
         // Assert
         // Should not publish experience event when socket is closed

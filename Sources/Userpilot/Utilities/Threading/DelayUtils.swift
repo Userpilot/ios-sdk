@@ -11,55 +11,82 @@
 
 import Foundation
 
-/// A utility class for managing delayed execution of tasks using `DispatchWorkItem`.
-/// Supports scheduling an action with a delay, canceling ongoing delays, and checking for pending tasks.
 internal class DelayUtils {
 
-    // MARK: - Properties
+    /// The current work item that can be cancelled
+    private var currentWorkItem: DispatchWorkItem?
 
-    /// Stores the currently scheduled delay task, if any.
-    private var delayTask: DispatchWorkItem?
-
-    // MARK: - Methods
+    /// Queue for thread-safe operations
+    private let queue = DispatchQueue(label: DispatchQueueConstants.DELAY_QUEUE, qos: .userInteractive)
 
     /**
-     * Schedules an action to be executed after a specified delay.
-     * If a previous task exists, it is canceled before scheduling a new one.
-     *
-     * - Parameters:
-     *   - delayTime: The delay duration in seconds before executing the action. Defaults to `0.5` seconds.
-     *   - action: The closure to execute after the delay.
+     Executes an action after a specified delay.
+     Any previously scheduled action will be automatically cancelled.
+     
+     - Parameters:
+        - delayTime: The delay time in seconds before executing the action
+        - action: The closure to execute after the delay
      */
-    func delayAction(
-        delayTime: TimeInterval = ThemeHandler.DefaultValues.delayTimeForExperience,
-        action: @escaping () -> Void
-    ) {
-        // Cancel any previously scheduled delay task before setting a new one.
-        cancelDelay()
+    func delayAction(delayTime: TimeInterval = 0.5, action: @escaping () -> Void) {
+        queue.async { [weak self] in
+            // Cancel any existing delayed action
+            self?.currentWorkItem?.cancel()
 
-        // Create a new delay task.
-        delayTask = DispatchWorkItem { action() }
+            // Create new work item
+            let workItem = DispatchWorkItem {
+                // Execute on main queue if it's UI-related work
+                DispatchQueue.main.async {
+                    action()
+                }
+            }
 
-        // Schedule the task after the specified delay.
-        if let delayTask {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delayTime, execute: delayTask)
+            // Store the work item so it can be cancelled later
+            self?.currentWorkItem = workItem
+
+            // Schedule the work item
+            DispatchQueue.main.asyncAfter(deadline: .now() + delayTime, execute: workItem)
         }
     }
 
     /**
-     * Cancels any currently scheduled delay task, if present.
+     Executes an action after a specified delay without cancelling previous actions.
+     
+     - Parameters:
+        - delayTime: The delay time in seconds before executing the action
+        - action: The closure to execute after the delay
      */
-    func cancelDelay() {
-        delayTask?.cancel()
-        delayTask = nil
+    func delayActionWithoutCancel(delayTime: TimeInterval, action: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delayTime) {
+            action()
+        }
     }
 
     /**
-     * Checks if there is an active delay task that has not yet been executed.
-     *
-     * - Returns: `true` if a delay task is pending execution, `false` otherwise.
+     Cancels any currently scheduled delayed action.
      */
-    func hasPendingContent() -> Bool {
-        return delayTask != nil
+    func cancelDelay() {
+        if !hasPendingAction() { return }
+        queue.async { [weak self] in
+            self?.currentWorkItem?.cancel()
+            self?.currentWorkItem = nil
+        }
+    }
+
+    /**
+     Checks if there's a currently scheduled action that hasn't been executed yet.
+    
+     - Returns: `true` if there's a pending action, `false` otherwise
+     */
+    func hasPendingAction() -> Bool {
+        return currentWorkItem != nil && currentWorkItem?.isCancelled == false
+    }
+
+    /**
+     Executes an action with a default delay of 0.5 seconds.
+     
+     - Parameter action: The closure to execute after the delay
+     */
+    func delayAction(action: @escaping () -> Void) {
+        delayAction(delayTime: 0.5, action: action)
     }
 }

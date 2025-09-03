@@ -85,4 +85,4 @@ func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent noti
 
 
 #### Example
-For more details refer to [AppDelegate+PushNotification.swif](https://github.com/Userpilot/ios-sdk/blob/main/Sample/UserPilotSample/UserpilotSample/AppDelegate+PushNotification.swift)
+For more details refer to [AppDelegate+PushNotification.swif](https://github.com/Userpilot/ios-sdk/blob/main/Sample/UserpilotSwiftSample/UserpilotSample/AppDelegate+PushNotification.swift)

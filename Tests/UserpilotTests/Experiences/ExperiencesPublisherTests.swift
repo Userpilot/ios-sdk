@@ -73,7 +73,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         var publishedEvent: SDKEvent?
         let expectation = XCTestExpectation(description: "Event should be published")
         
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
             publishedEvent = event
             expectation.fulfill()
         }
@@ -382,11 +382,9 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Arrange
         let mockEvent = MockSDKEvent(eventName: "test-event", eventPayload: ["key": "value"])
         var publishedEvent: SDKEvent?
-        var isExperienceEvent: Bool?
 
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, isExpEvent, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
             publishedEvent = event
-            isExperienceEvent = isExpEvent
         }
 
         // Act
@@ -395,7 +393,6 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Assert
         XCTAssertNotNil(publishedEvent)
         XCTAssertEqual(publishedEvent?.eventName, "test-event")
-        XCTAssertEqual(isExperienceEvent, true)
     }
 
     func testPublishInternalSDKEvent_shouldActivateFlag_ForCloseNPSEvent() {
