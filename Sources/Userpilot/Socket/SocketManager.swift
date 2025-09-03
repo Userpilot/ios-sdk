@@ -10,7 +10,6 @@
 //
 
 import Foundation
-import SwiftPhoenixClient
 
 // MARK: - Protocols
 

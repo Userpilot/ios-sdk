@@ -1,0 +1,186 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "5er-fn-f9o.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Type\"; ObjectID = \"5er-fn-f9o\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النوع"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "Bfv-O5-7U8.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"-\"; ObjectID = \"Bfv-O5-7U8\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "-"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "-"
+          }
+        }
+      }
+    },
+    "bPg-4I-12h.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Title\"; ObjectID = \"bPg-4I-12h\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Title"
+          }
+        }
+      }
+    },
+    "cz8-g3-81d.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Properties\"; ObjectID = \"cz8-g3-81d\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خصائص"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Properties"
+          }
+        }
+      }
+    },
+    "hDn-1b-KgM.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Type\"; ObjectID = \"hDn-1b-KgM\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "iU3-EK-jdd.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"-\"; ObjectID = \"iU3-EK-jdd\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "-"
+          }
+        }
+      }
+    },
+    "Rz5-EF-fFS.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Title\"; ObjectID = \"Rz5-EF-fFS\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "العنوان"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Title"
+          }
+        }
+      }
+    },
+    "srI-JJ-8EP.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"-\"; ObjectID = \"srI-JJ-8EP\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "-"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "-"
+          }
+        }
+      }
+    },
+    "sYn-5d-78z.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Properties\"; ObjectID = \"sYn-5d-78z\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Properties"
+          }
+        }
+      }
+    },
+    "Uvn-Gl-iPW.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"-\"; ObjectID = \"Uvn-Gl-iPW\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "-"
+          }
+        }
+      }
+    },
+    "uYh-8x-xPE.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"-\"; ObjectID = \"uYh-8x-xPE\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "-"
+          }
+        }
+      }
+    },
+    "ZoA-hV-KKj.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"-\"; ObjectID = \"ZoA-hV-KKj\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "-"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "-"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -52,6 +52,11 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
         registerKeyboardNotifications()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        surveyViewModel.onExperienceSeen()
+    }
+
     deinit {
         removeKeyboardNotifications()
     }

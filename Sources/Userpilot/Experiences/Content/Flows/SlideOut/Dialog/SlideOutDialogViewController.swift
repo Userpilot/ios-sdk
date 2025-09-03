@@ -50,6 +50,11 @@ internal class SlideOutDialogViewController: DialogViewController {
         setContent(content: slideOutContainerView)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        experienceViewModel.onExperienceSeen()
+    }
+
     /// Handle screen rotation
     override func viewWillTransition(
         to size: CGSize,

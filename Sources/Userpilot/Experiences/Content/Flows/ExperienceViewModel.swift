@@ -105,9 +105,6 @@ internal class ExperienceViewModel {
 
         // Bind data
         bindData?(shouldBindCarousel)
-        if shouldBindCarousel {
-            onExperienceOpened()
-        }
     }
 
     /// Return wither the content is RTL
@@ -122,6 +119,11 @@ internal class ExperienceViewModel {
 
     // MARK: - Experience Event Handling
 
+    func onExperienceSeen() {
+        delay(0.3) { [weak self] in
+            self?.onExperienceOpened()
+        }
+    }
     /**
      Sends a socket event indicating that an experience has been opened.
      */
@@ -328,7 +330,7 @@ internal class ExperienceViewModel {
         experienceId: Int
     ) {
         logger.info(
-            "Userpilot experience -> type: Flow, experienceId: %{public}@, state: %{public}@",
+            "🌠 Userpilot experience -> type: Flow, experienceId: %{public}@, state: %{public}@",
             String(experienceId),
             state
         )
@@ -342,7 +344,7 @@ internal class ExperienceViewModel {
         totalSteps: Int
     ) {
         logger.info(
-            "Userpilot experience step -> type: Flow, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
+            "🌠 Userpilot experience step -> type: Flow, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
             String(experienceId),
             state,
             String(stepId),

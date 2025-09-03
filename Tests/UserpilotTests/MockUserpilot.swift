@@ -10,7 +10,6 @@ import UIKit
 import Foundation
 import UserNotifications
 @testable import Userpilot
-@testable import SwiftPhoenixClient
 
 // swiftlint:disable all
 
@@ -183,6 +182,11 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
         onShowThankYouMessage?(surveyContent, surveyTheme)
     }
+    
+    var onUpdateSceen: ((String) -> Void)?
+    func updateSceen(_ screenName: String) {
+        onUpdateSceen?(screenName)
+    }
 
 }
 
@@ -262,18 +266,17 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
 
     var canRequestEvent: Bool = true
 
-    var onPublishInternalSDKEvent: ((SDKEvent, Bool, SocketSubscription?) -> Void)?
+    var onPublishInternalSDKEvent: ((SDKEvent, SocketSubscription?) -> Void)?
     func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
-        isExpereinceEvent: Bool,
         socketSubscription: SocketSubscription?
     ) {
-        onPublishInternalSDKEvent?(sdkEvent, isExpereinceEvent, socketSubscription)
+        onPublishInternalSDKEvent?(sdkEvent, socketSubscription)
     }
 
-    var onPublishFakeReloadScreenEvent: (() -> Void)?
-    func publishFakeReloadScreenEvent() {
-        onPublishFakeReloadScreenEvent?()
+    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?) -> Void)?
+    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
+        onPublishFakeReloadScreenEvent?(experienceType, experienceId)
     }
 
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?
@@ -292,6 +295,7 @@ class MockStorage: DataStoring {
     var socketURL: String = ""
     var pushToken: String? = ""
     var userId: String = "user-id"
+    var anonymousUserId: String = ""
     var user: String = ""
     var temporaryUser: String? = ""
     var sessionDate: Date? = Date()

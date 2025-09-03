@@ -11,7 +11,11 @@ import XCTest
 
 final class DelayUtilsTests: XCTestCase {
 
+    // MARK: - Properties
+
     var delayUtils: DelayUtils!
+
+    // MARK: - Setup & Teardown
 
     override func setUp() {
         super.setUp()
@@ -23,53 +27,58 @@ final class DelayUtilsTests: XCTestCase {
         super.tearDown()
     }
 
+    // MARK: - Tests
+
+    /// Verifies that a delayed action is executed after the specified delay.
     func testDelayActionExecutesAfterDelay() {
-        // Arrange
         let expectation = self.expectation(description: "Delayed action executed")
 
-        // Act
         delayUtils.delayAction(delayTime: 0.1) {
             expectation.fulfill()
         }
 
-        // Assert
         wait(for: [expectation], timeout: 0.5)
     }
 
+    /// Verifies that cancelling a delay prevents the action from executing.
     func testCancelDelayPreventsExecution() {
-        // Arrange
         let expectation = self.expectation(description: "Action should not execute")
         expectation.isInverted = true
 
-        // Act
         delayUtils.delayAction(delayTime: 0.2) {
             expectation.fulfill()
         }
 
         delayUtils.cancelDelay()
 
-        // Assert
         wait(for: [expectation], timeout: 0.4)
     }
 
-    func testHasPendingContentReturnsTrueWhenTaskIsScheduled() {
-        // Act
+    /// Verifies that `hasPendingAction()` returns true when a task is scheduled.
+    func testHasPendingActionReturnsTrueWhenTaskIsScheduled() {
+        let expectation = self.expectation(description: "Delay scheduled")
+
         delayUtils.delayAction(delayTime: 0.2) {
             // no-op
         }
 
-        // Assert
-        XCTAssertTrue(delayUtils.hasPendingContent())
+        // Wait a tiny bit to ensure currentWorkItem is set
+        DispatchQueue.main.async {
+            XCTAssertTrue(self.delayUtils.hasPendingAction())
+            expectation.fulfill()
+        }
+
+        wait(for: [expectation], timeout: 0.1)
     }
 
-    func testHasPendingContentReturnsFalseWhenNoTaskIsScheduled() {
-        // Act
+    /// Verifies that `hasPendingAction()` returns false when no task is scheduled.
+    func testHasPendingActionReturnsFalseWhenNoTaskIsScheduled() {
         delayUtils.cancelDelay()
-        XCTAssertFalse(delayUtils.hasPendingContent())
+        XCTAssertFalse(delayUtils.hasPendingAction())
     }
 
+    /// Verifies that scheduling a new delayed action cancels the previous one.
     func testSchedulingNewDelayCancelsPrevious() {
-        // Arrange
         var firstExecuted = false
         var secondExecuted = false
 
@@ -78,20 +87,20 @@ final class DelayUtilsTests: XCTestCase {
 
         let secondExpectation = expectation(description: "Second should execute")
 
-        // Act
+        // Schedule first delayed action
         delayUtils.delayAction(delayTime: 0.2) {
             firstExecuted = true
             firstExpectation.fulfill()
         }
 
-        // Schedule second delay before first one fires
+        // Schedule second delayed action before the first one fires
         delayUtils.delayAction(delayTime: 0.1) {
             secondExecuted = true
             secondExpectation.fulfill()
         }
 
-        // Assert
         wait(for: [firstExpectation, secondExpectation], timeout: 0.5)
+
         XCTAssertFalse(firstExecuted)
         XCTAssertTrue(secondExecuted)
     }

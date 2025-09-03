@@ -1,0 +1,486 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "1np-eJ-3OY.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Spider man\"; ObjectID = \"1np-eJ-3OY\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Spider man"
+          }
+        }
+      }
+    },
+    "8AB-FS-HLl.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"5\"; ObjectID = \"8AB-FS-HLl\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٥"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "5"
+          }
+        }
+      }
+    },
+    "17V-pX-CGJ.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"4.5\"; ObjectID = \"17V-pX-CGJ\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٤.٥"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "4.5"
+          }
+        }
+      }
+    },
+    "49c-K7-C5D.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Dragon ball\"; ObjectID = \"49c-K7-C5D\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dragon ball"
+          }
+        }
+      }
+    },
+    "AAQ-6W-hy5.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"9.7/10\"; ObjectID = \"AAQ-6W-hy5\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "9.7/10"
+          }
+        }
+      }
+    },
+    "BdL-Xg-skH.configuration.title" : {
+      "comment" : "Class = \"UIButton\"; configuration.title = \"Subscribe\"; ObjectID = \"BdL-Xg-skH\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اشتراك"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Subscribe"
+          }
+        }
+      }
+    },
+    "BdL-Xg-skH.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"BdL-Xg-skH\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "زر تحكم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "C1k-uu-1oC.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Spider man\"; ObjectID = \"C1k-uu-1oC\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سبايدر مان"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Spider man"
+          }
+        }
+      }
+    },
+    "Dma-rq-MYL.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Bat man\"; ObjectID = \"Dma-rq-MYL\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باتمان"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Bat man"
+          }
+        }
+      }
+    },
+    "DU3-H7-12i.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"5.5/10\"; ObjectID = \"DU3-H7-12i\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "5.5/10"
+          }
+        }
+      }
+    },
+    "e8H-hu-fOT.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"9/10\"; ObjectID = \"e8H-hu-fOT\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٩/١٠"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "9/10"
+          }
+        }
+      }
+    },
+    "EcY-A9-3g6.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"7/10\"; ObjectID = \"EcY-A9-3g6\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "7/10"
+          }
+        }
+      }
+    },
+    "FTW-Iq-BFj.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"9.7/10\"; ObjectID = \"FTW-Iq-BFj\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٩.٧/١٠"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "9.7/10"
+          }
+        }
+      }
+    },
+    "gHE-Da-Y13.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"5.5/10\"; ObjectID = \"gHE-Da-Y13\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٥.٥/١٠"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "5.5/10"
+          }
+        }
+      }
+    },
+    "gjl-Cw-RCq.configuration.title" : {
+      "comment" : "Class = \"UIButton\"; configuration.title = \"Subscribe\"; ObjectID = \"gjl-Cw-RCq\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Subscribe"
+          }
+        }
+      }
+    },
+    "gjl-Cw-RCq.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"gjl-Cw-RCq\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "HsP-Oi-Qbw.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"HsP-Oi-Qbw\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "ipL-FR-aAC.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Movies Gallery\"; ObjectID = \"ipL-FR-aAC\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Movies Gallery"
+          }
+        }
+      }
+    },
+    "iyX-CP-MPO.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Conan\"; ObjectID = \"iyX-CP-MPO\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كونان"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Conan"
+          }
+        }
+      }
+    },
+    "LWz-8I-Qgh.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Conan\"; ObjectID = \"LWz-8I-Qgh\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Conan"
+          }
+        }
+      }
+    },
+    "Mzb-wO-WNl.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"7/10\"; ObjectID = \"Mzb-wO-WNl\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٧/١٠"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "7/10"
+          }
+        }
+      }
+    },
+    "osS-dY-9Bb.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"4.5\"; ObjectID = \"osS-dY-9Bb\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "4.5"
+          }
+        }
+      }
+    },
+    "QVY-uE-Wdx.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"3\"; ObjectID = \"QVY-uE-Wdx\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "3"
+          }
+        }
+      }
+    },
+    "rbH-Kw-xaU.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Movies Gallery\"; ObjectID = \"rbH-Kw-xaU\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معرض الافلام"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Movies Gallery"
+          }
+        }
+      }
+    },
+    "rUb-RF-AwN.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Dragon ball\"; ObjectID = \"rUb-RF-AwN\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "داجون بول"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dragon ball"
+          }
+        }
+      }
+    },
+    "u3j-SH-cgX.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Bat man\"; ObjectID = \"u3j-SH-cgX\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Bat man"
+          }
+        }
+      }
+    },
+    "wag-T9-xvL.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"9/10\"; ObjectID = \"wag-T9-xvL\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "9/10"
+          }
+        }
+      }
+    },
+    "WuL-Ex-tZv.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"WuL-Ex-tZv\";",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "زر تحكم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Button"
+          }
+        }
+      }
+    },
+    "Xeb-Bw-AkV.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"3\"; ObjectID = \"Xeb-Bw-AkV\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٣"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "3"
+          }
+        }
+      }
+    },
+    "Z3K-qg-R9o.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"4\"; ObjectID = \"Z3K-qg-R9o\";",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٤"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "4"
+          }
+        }
+      }
+    },
+    "Z95-B4-hgg.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"5\"; ObjectID = \"Z95-B4-hgg\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "5"
+          }
+        }
+      }
+    },
+    "zLK-DR-2Pt.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"4\"; ObjectID = \"zLK-DR-2Pt\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "4"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

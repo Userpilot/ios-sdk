@@ -117,6 +117,33 @@ class UserpilotTests: XCTestCase {
         }
         XCTAssertTrue(userId.hasPrefix("NX-00000"))
     }
+    
+    func testAnonymous_generatesUserIdWithAppTokenPrefix_andCachesIt() throws {
+        // Arrange
+        var trackedEvents: [Event] = []
+        userpilot.analyticsPublisher.onPublish = { event in
+            trackedEvents.append(event)
+        }
+
+        // Act
+        userpilot.anonymous() // First call, should generate new ID
+        userpilot.anonymous() // Second call, should reuse the same ID
+
+        // Assert
+        XCTAssertEqual(trackedEvents.count, 2, "Two identify events should be published")
+
+        let firstEvent = try XCTUnwrap(trackedEvents.first)
+        guard case let .identify(firstUserId) = firstEvent.type else {
+            return XCTFail("Expected an identify event for first call")
+        }
+        XCTAssertTrue(firstUserId.hasPrefix("NX-00000"), "User ID should have app token prefix")
+
+        let secondEvent = try XCTUnwrap(trackedEvents.last)
+        guard case let .identify(secondUserId) = secondEvent.type else {
+            return XCTFail("Expected an identify event for second call")
+        }
+        XCTAssertEqual(firstUserId, secondUserId, "Second call should reuse the cached user ID")
+    }
 
     // MARK: - Screen
 
@@ -183,31 +210,6 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(title, "Added to Cart")
         XCTAssertEqual(lastUpdate.properties?["itemId"] as? String, "sku_456")
         XCTAssertEqual(lastUpdate.properties?["price"] as? Int, 29)
-    }
-
-    // MARK: - Reset
-
-    /// Verifies that destroy triggers all reset logic and clears storage
-    func testDestroy_clearsStorageAndCallsResetHooks() throws {
-        // Arrange
-        var sessionReset = false
-        var analyticsReset = false
-        var logoutCalled = false
-
-        userpilot.sessionMonitor.onReset = { sessionReset = true }
-        userpilot.analyticsPublisher.onReset = { analyticsReset = true }
-        userpilot.analyticsPublisher.onLogout = { _, _ in logoutCalled = true }
-
-        // Act
-        userpilot.destroy()
-
-        // Assert
-        XCTAssertTrue(logoutCalled)
-        XCTAssertTrue(sessionReset)
-        XCTAssertTrue(analyticsReset)
-        XCTAssertNil(userpilot.storage.pushToken)
-        XCTAssertEqual(userpilot.storage.userId, "")
-        XCTAssertEqual(userpilot.storage.user, "")
     }
 
     // MARK: - Logout

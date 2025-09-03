@@ -8,7 +8,6 @@
 
 import XCTest
 @testable import Userpilot
-@testable import SwiftPhoenixClient
 
 final class SocketManagerTests: XCTestCase {
 
@@ -16,16 +15,21 @@ final class SocketManagerTests: XCTestCase {
     var userpilot: MockUserpilot!
     var mockSocketSubscription: MockSocketSubscription!
 
+    private static let socketUrl = "<#SOCKET_URL#>"
+    private static let appToken = "<#APP_TOKEN#>"
+    private static let userId = "<#USER_ID#>"
+
     override func setUpWithError() throws {
         super.setUp()
 
-        let config = Userpilot.Config(token: TestConfig.userpilotToken)
-        userpilot = MockUserpilot(config: config)
-        userpilot.storage.socketURL = TestConfig.socketURL
-        userpilot.storage.userId = TestConfig.userId
+        if socketUrl == "<#SOCKET_URL#>" || appToken == "<#APP_TOKEN#>" || userId == "<#USER_ID#>" {
+            throw XCTSkip("configuration not configured - add your credentials and run test again")
+        }
 
-        socketManager = SocketManager(container: userpilot.container)
-        mockSocketSubscription = MockSocketSubscription()
+        let config = Userpilot.Config(token: appToken)
+        userpilot = MockUserpilot(config: config)
+        userpilot.storage.socketURL = socketUrl
+        userpilot.storage.userId = userId
     }
 
     override func tearDown() {

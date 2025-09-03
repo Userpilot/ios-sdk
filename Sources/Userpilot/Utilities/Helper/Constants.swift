@@ -16,10 +16,11 @@ public typealias Payload = [String: Any]?
 
 // swiftlint:disable identifier_name
 internal struct DispatchQueueConstants {
-    static let EVENT_QUEUE = "userpilot-event-queue"
-    static let EXPERIENCE_QUEUE = "userpilot-experience-queue"
-    static let DI_CONTAINER_QUEUE = "userpilot-dicontainer"
-    static let THROTTLE_QUEUE = "userpilot-throttle-queue"
+    static let EVENT_QUEUE = "com.userpilot.event-queue"
+    static let EXPERIENCE_QUEUE = "com.userpilot.experience-queue"
+    static let DELAY_QUEUE = "com.userpilot.delay-queue"
+    static let DI_CONTAINER_QUEUE = "com.userpilot.dicontainer-queue"
+    static let THROTTLE_QUEUE = "com.userpilot.throttle-queue"
 }
 
 internal struct GeneralConstants {

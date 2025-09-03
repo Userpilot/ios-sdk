@@ -15,7 +15,7 @@ final class ReadWriteLockTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        lock = ReadWriteLock(label: "test.readWriteLock")
+        lock = ReadWriteLock()
     }
 
     override func tearDown() {

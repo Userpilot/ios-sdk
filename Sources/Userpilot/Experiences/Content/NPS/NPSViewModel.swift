@@ -63,7 +63,6 @@ internal class NPSViewModel {
 
         // Bind data
         bindData?(true)
-        onNPSOpened()
     }
 
     /// Return wither the content is RTL
@@ -71,6 +70,12 @@ internal class NPSViewModel {
         return (npsContent?.localeCode ?? "en").isRTL == true
     }
     // MARK: - Experience Event Handling
+
+    func onExperienceSeen() {
+        delay(0.3) { [weak self] in
+            self?.onNPSOpened()
+        }
+    }
 
     /**
      Sends a socket event indicating that an experience has been opened.
@@ -135,7 +140,7 @@ internal class NPSViewModel {
 
     private func logExperience(state: String) {
         logger.info(
-            "Userpilot experience -> type: NPS, state: %{public}@",
+            "🌠 Userpilot experience -> type: NPS, state: %{public}@",
             state
         )
     }

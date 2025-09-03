@@ -44,6 +44,11 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
         registerKeyboardNotifications()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        npsViewModel.onExperienceSeen()
+    }
+
     deinit {
         removeKeyboardNotifications()
     }

@@ -262,7 +262,7 @@ internal extension BottomSheetViewController {
 internal extension UIViewController {
 
     /// Present a `BottomSheetViewController` modally
-    func presentBottomSheet(viewController: BottomSheetViewController) {
+    func presentBottomSheet(viewController: UIViewController) {
         viewController.modalPresentationStyle = .overFullScreen
         present(viewController, animated: false, completion: nil)
     }
