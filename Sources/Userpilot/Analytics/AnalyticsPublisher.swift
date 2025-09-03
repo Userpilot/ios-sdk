@@ -256,7 +256,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     private func handleIdentifyEvent(_ event: Event) -> Bool {
         // Return true to stop publishing
-        let ssss = User.fromJson(storage.user).isSameIdentifyEvent(event: event)
         if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) {
             return true
         }
