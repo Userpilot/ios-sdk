@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://shorturl.at/nfAcE" alt="Userpilot iOS Library" height="150"/>
-</p>
-
 # Userpilot iOS SDK
 
 ![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
