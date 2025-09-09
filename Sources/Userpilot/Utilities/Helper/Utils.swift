@@ -173,21 +173,6 @@ internal func tryCatch<T>(
     }
 }
 
-// Use default iOS User Agent to revent Cloudflare blocking
-internal func getUserAgent() -> String {
-    if Thread.isMainThread {
-        let webView = WKWebView()
-        return webView.value(forKey: "userAgent") as? String ??
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-    } else {
-        return DispatchQueue.main.sync {
-            let webView = WKWebView()
-            return webView.value(forKey: "userAgent") as? String ??
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-        }
-    }
-}
-
 /// Loads and decodes a JSON file from the app's resource bundle into a specified `Decodable` type.
 /// - Parameters:
 ///   - fileName: The name of the JSON file (without the `.json` extension).
@@ -227,10 +212,10 @@ internal func print(
     separator: String = " ",
     terminator: String = "\n"
 ) {
-    if Environment.environmentType == .DEVELOPMENT {
+    //if Environment.environmentType == .DEVELOPMENT {
         let output = items.map { "\($0)" }.joined(separator: separator)
         Swift.print(output, terminator: terminator)
-    }
+    //}
 }
 
 /// Sanitizes a payload by filtering out unsupported property types and applying key transformations.

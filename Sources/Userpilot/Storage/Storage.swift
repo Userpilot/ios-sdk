@@ -55,7 +55,7 @@ internal protocol DataStoring: AnyObject {
  It utilizes `UserDefaults` to store data that should persist between app sessions, such as the
  socket URL, device ID, and user ID. The class ensures that data is retrieved efficiently and updated when necessary.
  */
-internal class Storage: DataStoring, BootUp {
+internal class Storage: DataStoring {
     // MARK: - Keys
 
     /**
@@ -73,11 +73,6 @@ internal class Storage: DataStoring, BootUp {
         case sessionDate
         case configurationDate
         case pushToken
-    }
-
-    // MARK: - BootUp
-    func start() {
-        sessionDate = nil
     }
 
     // MARK: - Properties
@@ -179,6 +174,7 @@ internal class Storage: DataStoring, BootUp {
      */
     init(container: DIContainer) {
         self.config = container.resolve(Userpilot.Config.self)
+        sessionDate = nil
     }
 
     // MARK: - Helper Methods

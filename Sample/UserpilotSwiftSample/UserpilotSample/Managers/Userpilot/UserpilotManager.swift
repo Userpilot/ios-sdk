@@ -103,23 +103,21 @@ class UserpilotManager {
 extension UserpilotManager: UserpilotNavigationDelegate {
     
     func navigate(to url: URL) {
-        delay(1) {
-            if url.scheme == "userpilot-example" {
-                guard let destination = url.host else {
-                    return
-                }
-                if destination == "demo" {
-                    FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
-                } else if destination == "identify" {
-                    FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
-                } else if destination == "screen_one" {
-                    FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
-                } else if destination == "screen_two" {
-                    FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
-                }
-            } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        if url.scheme == "userpilot-example" {
+            guard let destination = url.host else {
+                return
             }
+            if destination == "demo" {
+                FlowRoutingManager.shared.openViewController(DeepLinkViewController.newInstance())
+            } else if destination == "identify" {
+                FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
+            } else if destination == "screen_one" {
+                FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
+            } else if destination == "screen_two" {
+                FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())
+            }
+        } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
     }
     

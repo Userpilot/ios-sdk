@@ -16,10 +16,17 @@ final class ExperiencesPublisherTests: XCTestCase {
     var experiencesPublisher: ExperiencesPublisher!
     var userpilot: MockUserpilot!
 
+    var callbackRegistered = false
+    
     override func setUpWithError() throws {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
         userpilot = MockUserpilot(config: config)
+       
+        userpilot.socketManager.onRegisterCallback = { _ in
+            self.callbackRegistered = true
+        }
+        
         experiencesPublisher = ExperiencesPublisher(container: userpilot.container)
     }
 
@@ -31,15 +38,6 @@ final class ExperiencesPublisherTests: XCTestCase {
     // MARK: - Register Socket Callback Tests
 
     func testStart_shouldRegisterSocketCallback() {
-        // Arrange
-        var callbackRegistered = false
-        userpilot.socketManager.onRegisterCallback = { _ in
-            callbackRegistered = true
-        }
-
-        // Act
-        experiencesPublisher.start()
-
         // Assert
         XCTAssertTrue(callbackRegistered)
     }
@@ -52,17 +50,6 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Assert
         XCTAssertTrue(result)
-    }
-
-    func testCanRequestScreenEvent_shouldReturnFalse_WhenOneSecondFlagIsActive() {
-        // Arrange
-        experiencesPublisher.activeOneTimeFlag()
-
-        // Act
-        let result = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertFalse(result)
     }
 
     // MARK: - triggerExperience Tests
@@ -95,14 +82,13 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testEndExperience_shouldTriggerCloseOnTopViewController() {
         // Arrange
         let mockVC = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: mockVC)
         let expectation = XCTestExpectation(description: "triggerClose was called")
 
         mockVC.onTriggerClose = { manualClose in
             XCTAssertTrue(manualClose)
             expectation.fulfill()
         }
-
-        experiencesPublisher.topViewControllerProvider = { return mockVC }
 
         // Act
         experiencesPublisher.endExperience(manualClose: true)
@@ -181,11 +167,9 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testOnSocketEventSent_shouldUpdateCurrentScreen_ForScreenEvent() {
         // Arrange
         let screenTitle = "TestScreen"
-        let payload: [String: Any]? = [AnalyticsPublisher.screenTitleProperty: screenTitle]
-        let message = Message(payload: ["test": "data"])
 
         // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, payload, message, true)
+        experiencesPublisher.updateSceen(screenTitle)
 
         // Assert
         XCTAssertEqual(experiencesPublisher.mockGetCurrentScreen(), "TestScreen")
@@ -447,21 +431,6 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Assert
         wait(for: [reloadExpectation], timeout: 1.0)
         XCTAssertTrue(publishFakeReloadEventCalled)
-    }
-
-    // MARK: - activeOneTimeFlag Tests
-
-    func testActiveOneTimeFlag_shouldPreventScreenEvents() {
-        // Arrange
-        let initialCanRequest = experiencesPublisher.canRequestScreenEvent()
-        XCTAssertTrue(initialCanRequest)
-
-        // Act
-        experiencesPublisher.activeOneTimeFlag()
-
-        // Assert
-        let finalCanRequest = experiencesPublisher.canRequestScreenEvent()
-        XCTAssertFalse(finalCanRequest)
     }
 
     // MARK: - showThankYouMessage Tests

@@ -173,11 +173,6 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         onCancelPendingSurveyContent?()
     }
 
-    var onActiveOneTimeFlag: (() -> Void)?
-    func activeOneTimeFlag() {
-        onActiveOneTimeFlag?()
-    }
-
     var onShowThankYouMessage: ((SurveyContent, SurveyTheme) -> Void)?
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
         onShowThankYouMessage?(surveyContent, surveyTheme)
@@ -186,6 +181,11 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     var onUpdateSceen: ((String) -> Void)?
     func updateSceen(_ screenName: String) {
         onUpdateSceen?(screenName)
+    }
+    
+    var onLogout: (() -> Void)?
+    func logout() {
+        onLogout?()
     }
 
 }
@@ -305,6 +305,8 @@ class MockStorage: DataStoring {
 // MARK: - Mock Session Monitor
 
 class MockSessionMonitor: SessionMonitoring {
+
+    var isAppActive: Bool = true
 
     var onReset: (() -> Void)?
     func reset() {

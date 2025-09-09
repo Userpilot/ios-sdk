@@ -128,7 +128,6 @@ internal class NPSViewModel {
     }
 
     func endNPS(_ completedData: CompletedData?) {
-        experiencesPublisher.activeOneTimeFlag()
         if completedData?.button.buttonAction == .deepLink,
            let deepLink = completedData?.button.iosDeepLink,
            let url = URL(string: deepLink) {

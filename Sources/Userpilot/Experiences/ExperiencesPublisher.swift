@@ -42,14 +42,14 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL)
 
-    /// active one time flag
-    func activeOneTimeFlag()
+    /// logout event
+    func logout()
 
     /// Show thank you message
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
 }
 
-internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
+internal class ExperiencesPublisher: ExperiencesPublishing {
 
     // MARK: - Properties
 
@@ -103,6 +103,12 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
     /// Date for fake reload that has been requested.
     private var requestFakeScreenReloadEventDate: Date?
 
+    /// Track last active experience
+    private weak var activeExperience: UIViewController?
+    private var hasActiveExperience: Bool {
+        return activeExperience != nil
+    }
+
     /// Expereinces presentation style.
     private enum PresentationStyle {
         case fullScreen
@@ -126,23 +132,24 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
-    }
 
-    // MARK: - Public Methods
-
-    /**
-     Starts the experience publisher by registering itself as a socket callback listener.
-     */
-    func start() {
         socketManager.registerCallback(self)
     }
 
     // MARK: - SDK APIs
 
+    /// cancel pending experiences
+    func logout() {
+        tryCatch {
+            delayUtils.cancelDelay()
+            clearPendingExperiences()
+        }
+    }
+
     /// Determine if can requst screen event
     func canRequestScreenEvent() -> Bool {
         return requestFakeScreenReloadEventDate?.isMoreThanOneSecond(from: Date()) ?? true &&
-        !hasActiveExperience() &&
+        !hasActiveExperience &&
         !isTriggeringThankYouMessage
     }
 
@@ -163,19 +170,19 @@ internal class ExperiencesPublisher: ExperiencesPublishing, BootUp {
         }
     }
 
-    /*
-     End experience manually
-     */
+    /// Helper method to get top view controller
     internal var topViewControllerProvider: () -> UIViewController? = {
-        return UIApplication.shared.fetchTopViewController()
+        return UIApplication.shared.resolveTopViewController()
     }
 
+    /// End experience manually
     func endExperience(manualClose: Bool) {
         performOn(.main) { [weak self] in
-            if let topVC = self?.topViewControllerProvider(),
+            if let topVC = self?.activeExperience,
                let experience = topVC as? UPExperience {
                 experience.triggerCloseExpereince(manualClose: manualClose)
             }
+            self?.activeExperience = nil
         }
     }
 
@@ -245,7 +252,7 @@ extension ExperiencesPublisher: SocketSubscription {
     ) {
         experienceQueue.async { [weak self] in
             guard let self,
-                  !self.hasActiveExperience(),
+                  !hasActiveExperience,
                   !message.payload.isEmpty,
                   let response = message.payload.toJSONString()
             else {
@@ -297,8 +304,8 @@ extension ExperiencesPublisher: SocketSubscription {
     func onNewMessage(_ message: Message) {
         if let payload = message.payload["payload"] as? [String: Any] {
             experienceQueue.async { [weak self] in
-                guard let self = self,
-                      !self.hasActiveExperience(),
+                guard let self,
+                      !hasActiveExperience,
                       payload.keys.contains("request_id"),
                       payload["request_id"] as? Int == nil else { return }
 
@@ -389,10 +396,13 @@ extension ExperiencesPublisher {
             }
 
             if sdkEvent.isEventForCloseExperience() || sdkEvent.hasDeepLink {
+                activeExperience = nil
                 requestFakeScreenReloadEventDate = Date()
             }
 
             if sdkEvent.isEventForCloseNPSExperience() || sdkEvent.hasDeepLink {
+                activeExperience = nil
+                requestFakeScreenReloadEventDate = Date()
                 return
             }
 
@@ -583,20 +593,23 @@ internal extension ExperiencesPublisher {
             guard
                 let self,
                 self.canShowExperience(),
-                let topViewController = self.topViewControllerProvider(),
                 let container = self.container
             else {
-                self?.isTriggerManualExperience = false
-                self?.clearCurrentPendingExperiences()
+                self?.resetStateForExperiences()
                 return
             }
 
             performOn(.main) {
+                guard let topViewController = self.topViewControllerProvider() else {
+                    self.resetStateForExperiences()
+                    return
+                }
                 let viewModel = makeViewModel(container)
                 let viewController = makeViewController(viewModel)
                 if presentation == .fullScreen {
                     viewController.modalPresentationStyle = .fullScreen
                 }
+                self.activeExperience = viewController
                 switch presentation {
                 case .fullScreen, .normal:
                     topViewController.present(viewController, animated: true)
@@ -608,6 +621,11 @@ internal extension ExperiencesPublisher {
             }
         }
     }
+
+    private func resetStateForExperiences() {
+        isTriggerManualExperience = false
+        clearCurrentPendingExperiences()
+    }
 }
 
 // MARK: - Experience content helper methods
@@ -618,7 +636,7 @@ extension ExperiencesPublisher {
     private func canShowExperience() -> Bool {
         guard
             let experienceContent = pendingExperiences.first,
-            !hasActiveExperience()
+            !hasActiveExperience
         else { return false }
 
         let isForAllScreens: Bool
@@ -643,24 +661,6 @@ extension ExperiencesPublisher {
         screens.contains(currentScreen)
 
         return isValidContent
-    }
-
-    /// Check top view controller if its one of Experiences view controller
-    private func hasActiveExperience() -> Bool {
-        guard let topViewController = topViewControllerProvider() else {
-            return false
-        }
-
-        let isActive = topViewController.isKind(of: CarouselExperienceViewController.self) ||
-        topViewController.isKind(of: DialogViewController.self) ||
-        topViewController.isKind(of: BottomSheetViewController.self) ||
-        topViewController.isKind(of: SurveyListViewController.self)
-
-        return isActive
-    }
-
-    func activeOneTimeFlag() {
-        requestFakeScreenReloadEventDate = Date()
     }
 
     /// Clear all pending experiences
@@ -689,6 +689,10 @@ internal extension ExperiencesPublisher {
 
     func mockGetCurrentScreen() -> String {
         return currentScreen
+    }
+
+    func mockActiveExperience(experience: UIViewController) {
+        self.activeExperience = experience
     }
 }
 #endif

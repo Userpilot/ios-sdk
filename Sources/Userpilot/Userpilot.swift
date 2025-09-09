@@ -62,16 +62,6 @@ public class Userpilot: NSObject {
     /// The delegate object that manages and observes experience presentations.
     @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
 
-    /// the bootup manager for boots inuse managers
-    private lazy var bootManager = BootManager(
-        components: [
-            sessionMonitor,
-            experiencesPublisher,
-            pushNotificationMonitor,
-            storage
-        ]
-    )
-
     // MARK: - Initialization
 
     /**
@@ -92,9 +82,6 @@ public class Userpilot: NSObject {
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // start boots up managers
-        bootManager.initialize()
-
         // register pushNotificationMonitoring for push notification auto config
         PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
 
@@ -114,16 +101,16 @@ public class Userpilot: NSObject {
     internal func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
-        container.registerLazy(DataStoring.self, initializer: Storage.init)
         container.registerLazy(AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
-        container.registerLazy(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
-        container.registerLazy(SessionMonitoring.self, initializer: SessionMonitor.init)
         container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
-        container.registerLazy(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
-        container.registerLazy(PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
+        container.registerEager(DataStoring.self, initializer: Storage.init)
+        container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
+        container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
+        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
+        container.registerEager(PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
     }
 }
 

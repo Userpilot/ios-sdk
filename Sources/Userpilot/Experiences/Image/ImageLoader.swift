@@ -40,15 +40,12 @@ internal class ImageLoader: ImageLoading {
 
     private var blurCache = [String: UIImage]()
     private var imageCache = [String: UIImage]()
-    private var userAgent: String?
 
     // Private initializer to prevent instantiation from outside
-    init(container: DIContainer) { }
+    init(container: DIContainer) {
+    }
 
     func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
-        if userAgent == nil {
-            userAgent = getUserAgent()
-        }
         performOn(.background) { [weak self] in
             guard
                 let self,
@@ -76,14 +73,14 @@ internal class ImageLoader: ImageLoading {
         }
     }
 
-    func setBlurImage(_ target: UIImageView, _ image: UIImage) {
+    private func setBlurImage(_ target: UIImageView, _ image: UIImage) {
         performOn(.main) { [weak self] in
             guard self != nil else { return }
             target.setImageWithCrossfade(image)
         }
     }
 
-    func setImage(_ target: UIImageView, _ image: UIImage) {
+    private func setImage(_ target: UIImageView, _ image: UIImage) {
         performOn(.main) { [weak self] in
             guard self != nil else { return }
             target.setImageWithCrossfade(image)
@@ -96,14 +93,11 @@ internal class ImageLoader: ImageLoading {
     ///   - url: The URL of the image to load.
     ///   - completion: A completion handler with the loaded `UIImage` (optional).
     private func loadImage(from url: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
-        var imageRequest = URLRequest(url: url)
-        imageRequest.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        URLSession.shared.dataTask(with: imageRequest) { [weak self] data, _, error in
+        URLSession.shared.dataTask(with: URLRequest(url: url)) { [weak self] data, _, error in
             guard let self, let data = data, error == nil else {
                 completion(nil)
                 return
             }
-
             if let image = self.createImage(from: data, size: size) {
                 self.imageCache[url.absoluteString] = image
                 completion(image)
@@ -176,9 +170,10 @@ internal class ImageLoader: ImageLoading {
 
         // Get the unclamped delay time (if available), otherwise fallback to the normal delay time
         let delayTime = gifProperties[kCGImagePropertyGIFUnclampedDelayTime] as? Double ??
-                        gifProperties[kCGImagePropertyGIFDelayTime] as? Double ?? 0.1
+        gifProperties[kCGImagePropertyGIFDelayTime] as? Double ?? 0.1
 
         // Ensure the delay is non-zero (default to 0.1 seconds if the value is 0)
         return delayTime > 0 ? delayTime : 0.1
     }
+
 }
