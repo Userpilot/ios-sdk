@@ -42,16 +42,32 @@ final class DelayUtilsTests: XCTestCase {
 
     /// Verifies that cancelling a delay prevents the action from executing.
     func testCancelDelayPreventsExecution() {
-        let expectation = self.expectation(description: "Action should not execute")
-        expectation.isInverted = true
+        let executionExpectation = expectation(description: "Action should not execute")
+        executionExpectation.isInverted = true
 
+        let cancelExpectation = expectation(description: "Cancel should complete")
+
+        // Schedule the delayed action
         delayUtils.delayAction(delayTime: 0.2) {
-            expectation.fulfill()
+            executionExpectation.fulfill()
         }
 
-        delayUtils.cancelDelay()
+        // Wait a brief moment to ensure the work item is scheduled
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            // Cancel the delay
+            self?.delayUtils.cancelDelay()
 
-        wait(for: [expectation], timeout: 0.4)
+            // Wait for cancel to complete (since it's async)
+            DispatchQueue(label: DispatchQueueConstants.DELAY_QUEUE).asyncAfter(deadline: .now() + 0.01) {
+                DispatchQueue.main.async {
+                    cancelExpectation.fulfill()
+                }
+            }
+        }
+
+        // Wait for cancel to complete first, then wait to ensure action doesn't execute
+        wait(for: [cancelExpectation], timeout: 1.0)
+        wait(for: [executionExpectation], timeout: 0.3)
     }
 
     /// Verifies that `hasPendingAction()` returns true when a task is scheduled.

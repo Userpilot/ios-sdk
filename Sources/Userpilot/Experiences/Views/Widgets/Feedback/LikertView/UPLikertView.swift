@@ -173,29 +173,54 @@ internal class UPLikertView: UIView {
 
     /// Calculates the width of each item in the Likert scale collection view based on screen width and number of items.
     private func calculateItemWidth(isDialog: Bool) {
-        // Handling the case where there are exactly 10 items
-        let margin = CGFloat(40 + (isDialog ? 50 : 0))
-        if ratingItems.count == 10 || ratingItems.count == 11 {
-            let screenWidth = UIScreen.main.bounds.width - margin
-            let minItemWidth: CGFloat = 48
-            let itemCountPerRow = max(1, Int(screenWidth / minItemWidth))
-            if itemCountPerRow < 10 {
-                let screenWidth = UIScreen.main.bounds.width - margin - (6 * 8)
-                itemWidth = screenWidth / CGFloat(7)
-                collectionView.heightAnchor.constraint(equalToConstant: 90).isActive = true
-            } else {
+        // in case its landscap, show all items in one line
+        if isLandscape {
+            let viewWidth = screenWidth * calculateDialogWidthRatio()
+            var margin = 0
+            if ratingItems.count == 5 {
+                margin = 1
+            } else if ratingItems.count == 7 {
+                margin = 2
+            } else if ratingItems.count == 10 {
+                margin = 3
+            }
+
+            itemWidth = viewWidth / CGFloat(ratingItems.count + margin)
+            collectionView.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        } else {
+            // Handling the case where there are exactly 10 items
+            let margin = CGFloat(40 + (isDialog ? 50 : 0))
+            if ratingItems.count == 10 || ratingItems.count == 11 {
                 let screenWidth = UIScreen.main.bounds.width - margin
-                let totalSpacing = CGFloat(ratingItems.count - 1) * 8
-                let availableWidth = screenWidth - totalSpacing
-                itemWidth = availableWidth / CGFloat(ratingItems.count)
+                let minItemWidth: CGFloat = 48
+                let itemCountPerRow = max(1, Int(screenWidth / minItemWidth))
+                if itemCountPerRow < 10 {
+                    let screenWidth = UIScreen.main.bounds.width - margin - (6 * 8)
+                    itemWidth = screenWidth / CGFloat(7)
+                    collectionView.heightAnchor.constraint(equalToConstant: 90).isActive = true
+                } else {
+                    let screenWidth = UIScreen.main.bounds.width - margin
+                    let totalSpacing = CGFloat(ratingItems.count - 1) * 8
+                    let availableWidth = screenWidth - totalSpacing
+                    itemWidth = availableWidth / CGFloat(ratingItems.count)
+                    collectionView.heightAnchor.constraint(equalToConstant: 40).isActive = true
+                }
+            } else {
+                // Handle case when the number of items is less than 10
+                let screenWidth = Int(UIScreen.main.bounds.width) - Int(margin) - (8 * (ratingItems.count - 1))
+                itemWidth = CGFloat(screenWidth / ratingItems.count)
                 collectionView.heightAnchor.constraint(equalToConstant: 40).isActive = true
             }
-        } else {
-            // Handle case when the number of items is less than 10
-            let screenWidth = Int(UIScreen.main.bounds.width) - Int(margin) - (8 * (ratingItems.count - 1))
-            itemWidth = CGFloat(screenWidth / ratingItems.count)
-            collectionView.heightAnchor.constraint(equalToConstant: 40).isActive = true
         }
+    }
+
+    /// - Returns: A CGFloat representing the width ratio.
+    private func calculateDialogWidthRatio() -> CGFloat {
+        var size = 0.9
+        if isLandscape {
+            size = 0.7
+        }
+        return size
     }
 
     func collectionViewHeight() -> Int {

@@ -52,7 +52,7 @@ internal protocol PushNotificationMonitoring: AnyObject {
 /// including token management, push status updates,
 /// and handling received notifications. It interacts with the `PushNotificationAutoConfig` and
 /// publishes analytics events.
-internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscription, BootUp {
+internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscription {
 
     private weak var userpilot: Userpilot?
     private let config: Userpilot.Config
@@ -86,10 +86,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
         PushNotificationAutoConfig.register(observer: self)
         refreshPushStatus()
-    }
-
-    /// Starts the `PushNotificationMonitor` and registers for socket events.
-    func start() {
         socketManager.registerCallback(self)
     }
 

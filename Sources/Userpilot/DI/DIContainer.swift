@@ -51,6 +51,15 @@ internal class DIContainer {
         initializers[String(describing: Component.self)] = initializer
     }
 
+    /// Register the compnenet and resolve it to excute init block
+    func registerEager<Component>(
+        _ type: Component.Type,
+        initializer: @escaping (DIContainer) -> Component
+    ) {
+        registerLazy(type, initializer: initializer)
+        _ = resolve(type) // force initialization immediately
+    }
+
     /**
      Registers a lazy initializer for a component type with a default initializer.
      

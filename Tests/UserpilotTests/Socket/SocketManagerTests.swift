@@ -15,9 +15,9 @@ final class SocketManagerTests: XCTestCase {
     var userpilot: MockUserpilot!
     var mockSocketSubscription: MockSocketSubscription!
 
-    private static let socketUrl = "<#SOCKET_URL#>"
-    private static let appToken = "<#APP_TOKEN#>"
-    private static let userId = "<#USER_ID#>"
+    private let socketUrl = "<#SOCKET_URL#>"
+    private let appToken = "<#APP_TOKEN#>"
+    private let userId = "<#USER_ID#>"
 
     override func setUpWithError() throws {
         super.setUp()

@@ -33,9 +33,9 @@ class SDKEventTableViewCell: UITableViewCell, ReusableTableCellView, TableViewCe
         if sdkEvent.analytic == "Identify" ||
             sdkEvent.analytic == "Screen" ||
             sdkEvent.analytic == "Event" {
-            containerView.backgroundColor = UIColor(red: 103/255.0, green: 101/255.0, blue: 232/255.0, alpha: 0.102)
+            containerView.backgroundColor = UIColor(red: 0.4, green: 0.4, blue: 0.9, alpha: 0.15)
         } else {
-            containerView.backgroundColor = UIColor(red: 233/255.0, green: 30/255.0, blue: 99/255.0, alpha: 0.027)
+            containerView.backgroundColor = UIColor(red: 0.9, green: 0.12, blue: 0.39, alpha: 0.05)
         }
     }
 

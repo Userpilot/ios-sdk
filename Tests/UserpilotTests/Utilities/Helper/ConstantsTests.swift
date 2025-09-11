@@ -12,10 +12,10 @@ import XCTest
 final class ConstantsTests: XCTestCase {
 
     func testDispatchQueueConstants() {
-        XCTAssertEqual(DispatchQueueConstants.EVENT_QUEUE, "userpilot-event-queue")
-        XCTAssertEqual(DispatchQueueConstants.EXPERIENCE_QUEUE, "userpilot-experience-queue")
-        XCTAssertEqual(DispatchQueueConstants.DI_CONTAINER_QUEUE, "userpilot-dicontainer")
-        XCTAssertEqual(DispatchQueueConstants.THROTTLE_QUEUE, "userpilot-throttle-queue")
+        XCTAssertEqual(DispatchQueueConstants.EVENT_QUEUE, "com.userpilot.event-queue")
+        XCTAssertEqual(DispatchQueueConstants.EXPERIENCE_QUEUE, "com.userpilot.experience-queue")
+        XCTAssertEqual(DispatchQueueConstants.DI_CONTAINER_QUEUE, "com.userpilot.dicontainer-queue")
+        XCTAssertEqual(DispatchQueueConstants.THROTTLE_QUEUE, "com.userpilot.throttle-queue")
     }
 
     func testGeneralConstants() {

@@ -173,21 +173,6 @@ internal func tryCatch<T>(
     }
 }
 
-// Use default iOS User Agent to revent Cloudflare blocking
-internal func getUserAgent() -> String {
-    if Thread.isMainThread {
-        let webView = WKWebView()
-        return webView.value(forKey: "userAgent") as? String ??
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-    } else {
-        return DispatchQueue.main.sync {
-            let webView = WKWebView()
-            return webView.value(forKey: "userAgent") as? String ??
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-        }
-    }
-}
-
 /// Loads and decodes a JSON file from the app's resource bundle into a specified `Decodable` type.
 /// - Parameters:
 ///   - fileName: The name of the JSON file (without the `.json` extension).

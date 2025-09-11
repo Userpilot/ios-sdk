@@ -46,30 +46,13 @@ internal extension UIApplication {
     // MARK: - Public API
 
     /// Retrieves the top-most view controller, ensuring it is executed on the main thread.
-    /// - Returns: The top-most `UIViewController`, or `nil` if none is found.
-    @objc func fetchTopViewController() -> UIViewController? {
+    func fetchTopViewController(completion: @escaping (UIViewController?) -> Void) {
         if Thread.isMainThread {
-            return resolveTopViewController()
+            completion(resolveTopViewController())
         } else {
-            var topViewController: UIViewController?
-            DispatchQueue.main.sync {
-                topViewController = self.resolveTopViewController()
+            DispatchQueue.main.async { [weak self] in
+                completion(self?.resolveTopViewController())
             }
-            return topViewController
-        }
-    }
-
-    func isAppInBackgroundOrInactive() -> Bool {
-        if Thread.isMainThread {
-            return UIApplication.shared.applicationState == .background ||
-                   UIApplication.shared.applicationState == .inactive
-        } else {
-            var result = false
-            DispatchQueue.main.sync {
-                result = UIApplication.shared.applicationState == .background ||
-                         UIApplication.shared.applicationState == .inactive
-            }
-            return result
         }
     }
 
@@ -77,7 +60,7 @@ internal extension UIApplication {
 
     /// Resolves the top-most view controller starting from the root view controller.
     /// - Returns: The top-most `UIViewController`, or `nil` if none is found.
-    private func resolveTopViewController() -> UIViewController? {
+    func resolveTopViewController() -> UIViewController? {
         var window: UIWindow? = activeKeyWindow
 
         if window == nil {

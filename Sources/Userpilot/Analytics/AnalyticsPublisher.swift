@@ -95,6 +95,10 @@ internal class AnalyticsPublisher {
         return container?.resolve(ExperiencesPublishing.self)
     }
 
+    private weak var sessionMonitorer: SessionMonitoring? {
+        return container?.resolve(SessionMonitoring.self)
+    }
+
     /// Decorator used to modify event properties before sending.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
 
@@ -182,6 +186,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             }
         }
         startSession = true
+        experiencesPublisher?.logout()
         screenViewEntity?.resetState()
         socketManager.updateSocketState(socketState, forceUpdateState: true)
         clearAllCachedProperties(shouldClearCachedIdentifyEvent)
@@ -229,7 +234,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func publish(_ event: Event) {
         tryCatch {
             // Handle App state
-            guard !UIApplication.shared.isAppInBackgroundOrInactive() else {
+            guard sessionMonitorer?.isAppActive ?? false else {
                 cacheEvent(event)
                 return
             }

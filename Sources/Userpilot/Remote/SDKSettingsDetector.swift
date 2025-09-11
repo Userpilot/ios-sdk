@@ -60,14 +60,14 @@ internal class SDKSettingsDetector {
     }
 
     // Custom (test) initializer
-    #if DEBUG
+#if DEBUG
     init(container: DIContainer, session: URLSession) {
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.logger = config.logger
         self.session = session
     }
-    #endif
+#endif
 
 }
 
@@ -75,11 +75,8 @@ internal class SDKSettingsDetector {
 
 extension SDKSettingsDetector: SDKSettingsDetectoring {
 
-    /**
-     * Fetches SDK settings from the remote server and updates the storage with the obtained data.
-     *
-     * - Parameter callback: A closure to be executed after the settings have been fetched.
-     */
+    // Fetches SDK settings from the remote server and updates the storage with the obtained data.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length superfluous_disable_command
     func fetchSettings(callback: @escaping () -> Void) {
         if let configurationDate = storage.configurationDate, storage.socketURL.isNotEmpty {
             let difference = Date().timeIntervalSince(configurationDate)
@@ -95,50 +92,41 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
             callback()
             return
         }
-        let request = getURLRequest(for: url)
-        performOn(.highPriority) { [weak self] in
-            let task = self?.session.dataTask(with: request) { [weak self] data, response, error in
-                guard let self = self else {
-                    callback()
-                    return
-                }
 
-                if let error {
-                    self.logger.error("Request failed: %{public}@", error.localizedDescription)
-                    callback()
-                    return
-                }
+        let task = session.dataTask(with: URLRequest(url: url)) { [weak self] data, response, error in
+            guard let self else {
+                callback()
+                return
+            }
 
-                guard let httpResponse = response as? HTTPURLResponse, httpResponse.isSuccessStatusCode else {
-                    if let httpResponse = response as? HTTPURLResponse {
-                        self.logger.error("Request failed with code: %{public}@", String(httpResponse.statusCode))
-                    }
-                    callback()
-                    return
-                }
+            if let error {
+                self.logger.error("Request failed: %{public}@", error.localizedDescription)
+                callback()
+                return
+            }
 
-                if let data, let responseBody = String(data: data, encoding: .utf8) {
-                    self.logger.info("SDK Settings response: %{public}@", responseBody)
-                    do {
-                        if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                           let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
-                            self.storage.configurationDate = Date()
-                            self.storage.socketURL = url + GeneralConstants.PATH_NAME
-                        }
-                    } catch {
-                        self.logger.error("Failed to parse JSON: %{public}@", error.localizedDescription)
-                    }
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.isSuccessStatusCode else {
+                if let httpResponse = response as? HTTPURLResponse {
+                    self.logger.error("Request failed with code: %{public}@", String(httpResponse.statusCode))
                 }
                 callback()
+                return
             }
-            task?.resume()
-        }
-    }
 
-    /// Prepare URL request
-    private func getURLRequest(for url: URL) -> URLRequest {
-        var request = URLRequest(url: url)
-        request.setValue(getUserAgent(), forHTTPHeaderField: "User-Agent")
-        return request
+            if let data, let responseBody = String(data: data, encoding: .utf8) {
+                self.logger.info("SDK Settings response: %{public}@", responseBody)
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                       let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
+                        self.storage.configurationDate = Date()
+                        self.storage.socketURL = url + GeneralConstants.PATH_NAME
+                    }
+                } catch {
+                    self.logger.error("Failed to parse JSON: %{public}@", error.localizedDescription)
+                }
+            }
+            callback()
+        }
+        task.resume()
     }
 }
