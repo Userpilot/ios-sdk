@@ -212,10 +212,10 @@ internal func print(
     separator: String = " ",
     terminator: String = "\n"
 ) {
-    //if Environment.environmentType == .DEVELOPMENT {
+    if Environment.environmentType == .DEVELOPMENT {
         let output = items.map { "\($0)" }.joined(separator: separator)
         Swift.print(output, terminator: terminator)
-    //}
+    }
 }
 
 /// Sanitizes a payload by filtering out unsupported property types and applying key transformations.
