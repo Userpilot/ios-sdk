@@ -99,7 +99,13 @@ internal struct SurveyLogicHandler {
         if let answerList = answer as? [String], answerList.count == 1 {
             return answerList.first ?? ""
         }
-        return (answer as? String) ?? ""
+        if let stringAnswer = answer as? String {
+            return stringAnswer
+        }
+        if let intAnswer = answer as? Int {
+            return String(intAnswer)
+        }
+        return ""
     }
 
     /// Export the logic metadata value as string
