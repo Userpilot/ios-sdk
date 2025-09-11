@@ -129,15 +129,7 @@ internal class SurveyContainerView: UIView {
      */
     func resetContentHeight(_ size: CGSize) {
         stepsProgressView.setNeedsDisplay()
-
-        // Calculate the target height, considering the screen size and a 50-point padding
-        let targetHeight = min(size.height * 0.7 - 50, viewHeight)
-
-        // Update the scroll view height constraint only if necessary
-        if scrollViewHeightConstraint?.constant != targetHeight {
-            scrollViewHeightConstraint?.constant = targetHeight
-            layoutIfNeeded()
-        }
+        bindSurveyViews()
     }
 
     /**

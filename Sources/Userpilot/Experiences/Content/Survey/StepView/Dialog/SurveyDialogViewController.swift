@@ -63,6 +63,7 @@ internal class SurveyDialogViewController: DialogViewController {
         coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self else { return }
             self.surveyContainerView.resetContentHeight(size)
+            self.resetWidth(size)
         }, completion: nil)
     }
 
