@@ -37,7 +37,7 @@ internal class SessionMonitor: SessionMonitoring {
     private var hasInitializedForeground = false
 
     /// A flag to mintor app status
-    private var _isAppActive = false
+    private var _isAppActive = true
 
     /// Initializes the `SessionMonitor` with a dependency container that resolves an `AnalyticsPublishing` instance.
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
