@@ -265,8 +265,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             return true
         }
 
-        // Reset screen view state and update user data
-        screenViewEntity?.resetState() // Due to new user
+        if event.userId != storage.userId {
+            screenViewEntity?.resetState()
+        }
         storage.temporaryUser = event.toUser().toJson()
         cachedIdentifyEvent = event
 
@@ -337,7 +338,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 userpilot?.clean()
                 logout(socketState: .switchingUser)
             } else {
-                flushPriorityEvents()
+                flushPriorityEvents(fakeReloadScreenEvent: true)
             }
         }
     }
@@ -441,7 +442,10 @@ extension AnalyticsPublisher {
      Flushes high-priority events, such as identify or screen events, through the socket, or events that
      opens the socket.
      */
-    private func flushPriorityEvents(_ canRequestScreenEvent: Bool = true) {
+    private func flushPriorityEvents(
+        canRequestScreenEvent: Bool = true,
+        fakeReloadScreenEvent: Bool = false
+    ) {
         tryCatch {
             if !socketManager.isSocketOpened || socketManager.isJoiningSocket {
                 checkFallbackState()
@@ -473,7 +477,7 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
                 payload[AnalyticsPublisher.metaDataProperty] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
-                    AnalyticsPublisher.fakeReload: false,
+                    AnalyticsPublisher.fakeReload: fakeReloadScreenEvent,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
                     AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
@@ -552,7 +556,7 @@ extension AnalyticsPublisher: SocketSubscription {
     /// Socket opened callback.
     func onSocketOpened() {
         clearCachedEvents()
-        flushPriorityEvents(experiencesPublisher?.canRequestScreenEvent() == true)
+        flushPriorityEvents(canRequestScreenEvent: experiencesPublisher?.canRequestScreenEvent() == true)
     }
 
     // Fallback state to close socket if channel not opened
