@@ -355,14 +355,14 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         tryCatch {
             if setupScreenEvent(event) {
                 _ = eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "")
-                flushPriorityEvents()
+                flushPriorityEvents(isRequestIdentify: false)
                 return
             }
             if experiencesPublisher?.canRequestScreenEvent() == false ||
                 eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
             }
-            flushPriorityEvents()
+            flushPriorityEvents(isRequestIdentify: false)
         }
     }
 
@@ -443,6 +443,7 @@ extension AnalyticsPublisher {
      opens the socket.
      */
     private func flushPriorityEvents(
+        isRequestIdentify: Bool = true,
         canRequestScreenEvent: Bool = true,
         fakeReloadScreenEvent: Bool = false
     ) {
@@ -453,19 +454,21 @@ extension AnalyticsPublisher {
             }
 
             /// Identify event
-            if let cachedIdentifyEvent {
-                var payload: [String: Any] = [:]
-                guard let userId = cachedIdentifyEvent.userId else { return }
-                // In-case identify event called again when joining socket channel
-                if storage.userId.isNotEmpty && userId != storage.userId {
-                    identify(cachedIdentifyEvent)
-                    return
+            if isRequestIdentify {
+                if let cachedIdentifyEvent {
+                    var payload: [String: Any] = [:]
+                    guard let userId = cachedIdentifyEvent.userId else { return }
+                    // In-case identify event called again when joining socket channel
+                    if storage.userId.isNotEmpty && userId != storage.userId {
+                        identify(cachedIdentifyEvent)
+                        return
+                    }
+                    payload[AnalyticsPublisher.metaDataProperty] = cachedIdentifyEvent.properties ?? [:]
+                    if let company = cachedIdentifyEvent.company, !company.isEmpty {
+                        payload[AnalyticsPublisher.identifyCompanyProperty] = company
+                    }
+                    socketManager.publish(cachedIdentifyEvent.eventName, payload: payload)
                 }
-                payload[AnalyticsPublisher.metaDataProperty] = cachedIdentifyEvent.properties ?? [:]
-                if let company = cachedIdentifyEvent.company, !company.isEmpty {
-                    payload[AnalyticsPublisher.identifyCompanyProperty] = company
-                }
-                socketManager.publish(cachedIdentifyEvent.eventName, payload: payload)
             }
 
             /// Screen event
