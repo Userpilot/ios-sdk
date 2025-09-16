@@ -672,8 +672,8 @@ extension ExperiencesPublisher {
         if pendingExperiences.isEmpty { return }
         experienceQueue.async { [weak self] in
             guard let self else { return }
-            if self.pendingExperiences.count > 1 {
-                self.pendingExperiences = [self.pendingExperiences.last!]
+            if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
+                self.pendingExperiences = [lastContent]
                 self.openExperienceFlow()
             } else {
                 self.pendingExperiences.removeAll()
