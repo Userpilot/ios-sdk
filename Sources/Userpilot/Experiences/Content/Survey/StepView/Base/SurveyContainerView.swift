@@ -419,7 +419,7 @@ internal class SurveyContainerView: UIView {
             }
         }
         if newView.isKind(of: UPSingleInputView.self) {
-            newHeight = newHeight + 20
+            newHeight = newHeight + 30
         }
 
         // Animate height change smoothly

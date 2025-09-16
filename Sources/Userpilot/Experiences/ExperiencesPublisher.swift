@@ -231,6 +231,7 @@ extension ExperiencesPublisher: SocketSubscription {
             currentScreen = screenName
             delayUtils.cancelDelay()
             clearPendingExperiences()
+            isTriggeringThankYouMessage = false
         }
     }
 
@@ -595,13 +596,13 @@ internal extension ExperiencesPublisher {
                 self.canShowExperience(),
                 let container = self.container
             else {
-                self?.resetStateForExperiences()
+                self?.processNextPendingExperiences()
                 return
             }
 
             performOn(.main) {
                 guard let topViewController = self.topViewControllerProvider() else {
-                    self.resetStateForExperiences()
+                    self.processNextPendingExperiences()
                     return
                 }
                 let viewModel = makeViewModel(container)
@@ -622,10 +623,6 @@ internal extension ExperiencesPublisher {
         }
     }
 
-    private func resetStateForExperiences() {
-        isTriggerManualExperience = false
-        clearCurrentPendingExperiences()
-    }
 }
 
 // MARK: - Experience content helper methods
@@ -671,11 +668,16 @@ extension ExperiencesPublisher {
         }
     }
 
-    private func clearCurrentPendingExperiences() {
+    private func processNextPendingExperiences() {
         if pendingExperiences.isEmpty { return }
         experienceQueue.async { [weak self] in
-            self?.pendingExperiences.removeFirst()
-            self?.openExperienceFlow()
+            guard let self else { return }
+            if self.pendingExperiences.count > 1 {
+                self.pendingExperiences = [self.pendingExperiences.last!]
+                self.openExperienceFlow()
+            } else {
+                self.pendingExperiences.removeAll()
+            }
         }
     }
 
