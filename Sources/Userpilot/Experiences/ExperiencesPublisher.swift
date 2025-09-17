@@ -235,7 +235,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
             if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                 activeExperience = nil
-                requestFakeScreenReloadEventDate = Date()
+                if socketManager.isSocketOpened {
+                    requestFakeScreenReloadEventDate = Date()
+                }
             }
 
             if sdkEvent.isEventForCloseNPSExperience() || sdkEvent.hasDeepLink {
