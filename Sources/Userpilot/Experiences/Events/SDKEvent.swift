@@ -47,7 +47,8 @@ internal extension SDKEvent {
 
     func getContentType() -> ExperienceType {
         if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
-            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue {
+            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
+            self.eventName == SDKEventsName.flowExperienceSeen.rawValue {
             return .flow
         } else {
             return .survey
@@ -56,7 +57,8 @@ internal extension SDKEvent {
 
     func getContentId() -> Int? {
         if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
-            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue {
+            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
+            self.eventName == SDKEventsName.flowExperienceSeen.rawValue {
             return self.eventPayload["mobile_content_id"] as? Int
         } else {
             return self.eventPayload["survey_id"] as? Int

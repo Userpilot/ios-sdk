@@ -219,6 +219,36 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             }
         }
     }
+
+    /**
+     Sends a socket request based on the provided event interface.
+     
+     - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
+     */
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+        tryCatch {
+            analyticsPublisher.publishInternalSDKEvent(sdkEvent, socketSubscription: self)
+
+            if sdkEvent.isSeenContentEvent(), let contentId = sdkEvent.getContentId() {
+                analyticsPublisher.experiencePublished(sdkEvent.getContentType(), contentId)
+            }
+
+            if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
+                activeExperience = nil
+                requestFakeScreenReloadEventDate = Date()
+            }
+
+            if sdkEvent.isEventForCloseNPSExperience() || sdkEvent.hasDeepLink {
+                return
+            }
+
+            if sdkEvent.isEventForCloseExperience() && !isTriggerManualExperience {
+                analyticsPublisher.publishFakeReloadScreenEvent(
+                    sdkEvent.getContentType(), sdkEvent.getContentId()
+                )
+            }
+        }
+    }
 }
 
 // MARK: - SocketSubscription
@@ -270,8 +300,6 @@ extension ExperiencesPublisher: SocketSubscription {
             if eventName == EventType.screenEvent ||
                 eventName == SDKEventsName.fetchExperienceContent.rawValue {
 
-                self.isTriggerManualExperience = eventName == SDKEventsName.fetchExperienceContent.rawValue
-
                 // Determine the new experience based on response
                 let experience: ExperienceContent? = {
                     if let flowContent = response.toFlowContent()?.flowContent {
@@ -285,6 +313,7 @@ extension ExperiencesPublisher: SocketSubscription {
                 }()
 
                 if let experience {
+                    self.isTriggerManualExperience = eventName == SDKEventsName.fetchExperienceContent.rawValue
                     self.pendingExperiences.append(experience)
                 }
             }
@@ -331,17 +360,11 @@ extension ExperiencesPublisher: SocketSubscription {
                 if let experience {
                     self.pendingExperiences.append(experience)
                     self.isTriggerManualExperience = true
-
-                    if experience.asNPSContent() != nil {
-                        self.openNPSBottomSheetExperience()
-                    } else {
-                        self.checkCachedThemes(experience.experienceThemeId())
-                    }
+                    self.checkCachedThemes(experience.experienceThemeId())
                 }
             }
         }
     }
-
 }
 
 // MARK: - Theme
@@ -382,38 +405,6 @@ extension ExperiencesPublisher {
 // MARK: - Launch experiences
 
 extension ExperiencesPublisher {
-
-    /**
-     Sends a socket request based on the provided event interface.
-     
-     - Parameter sdkEvent: The event interface containing the event name and payload to be sent.
-     */
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
-        tryCatch {
-            analyticsPublisher.publishInternalSDKEvent(sdkEvent, socketSubscription: self)
-
-            if sdkEvent.isSeenContentEvent() || sdkEvent.hasDeepLink, let contentId = sdkEvent.getContentId() {
-               analyticsPublisher.experiencePublished(sdkEvent.getContentType(), contentId)
-            }
-
-            if sdkEvent.isEventForCloseExperience() || sdkEvent.hasDeepLink {
-                activeExperience = nil
-                requestFakeScreenReloadEventDate = Date()
-            }
-
-            if sdkEvent.isEventForCloseNPSExperience() || sdkEvent.hasDeepLink {
-                activeExperience = nil
-                requestFakeScreenReloadEventDate = Date()
-                return
-            }
-
-            if sdkEvent.isEventForCloseExperience() && !isTriggerManualExperience {
-                analyticsPublisher.publishFakeReloadScreenEvent(
-                    sdkEvent.getContentType(), sdkEvent.getContentId()
-                )
-            }
-        }
-    }
 
     /**
      Opens the triggered flow.
