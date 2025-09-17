@@ -674,10 +674,8 @@ extension ExperiencesPublisher {
             guard let self else { return }
             if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
                 self.pendingExperiences = [lastContent]
-                self.openExperienceFlow()
-            } else {
-                self.pendingExperiences.removeAll()
             }
+            self.openExperienceFlow()
         }
     }
 
