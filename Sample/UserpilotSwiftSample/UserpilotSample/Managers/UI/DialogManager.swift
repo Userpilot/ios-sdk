@@ -27,9 +27,9 @@ class DialogManager {
     }
 
     // MARK: - Alert Dialog
-    func showAPIAlertDialog(propertyTitle: String,
-                            propertyValue: String,
-                            doneButtonHandler: ((String, String) -> Void)?) {
+    func showAddPropertyDialogViewController(propertyTitle: String,
+                                             propertyValue: String,
+                                             doneButtonHandler: ((String, String?) -> Void)?) {
 
         let dialog = AddPropertyDialogViewController(
             propertyTitle: propertyTitle,

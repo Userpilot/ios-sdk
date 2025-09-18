@@ -39,7 +39,6 @@ internal protocol SocketEvents: AnyObject {
     func publish(
         _ eventName: String,
         payload: Payload,
-        shouldCloseSocket: Bool,
         socketSubscription: SocketSubscription?
     )
 
@@ -52,13 +51,11 @@ internal extension SocketEvents {
     func publish(
         _ eventName: String,
         payload: Payload,
-        shouldCloseSocket: Bool = false,
         socketSubscription: SocketSubscription? = nil
     ) {
         publish(
             eventName,
             payload: payload,
-            shouldCloseSocket: shouldCloseSocket,
             socketSubscription: socketSubscription
         )
     }
@@ -387,7 +384,6 @@ extension SocketManager: SocketEvents {
     func publish(
         _ eventName: String,
         payload: Payload,
-        shouldCloseSocket: Bool,
         socketSubscription: SocketSubscription?
     ) {
         _ = tryCatch {
@@ -402,7 +398,6 @@ extension SocketManager: SocketEvents {
                             }
                         }
                     }
-                    if shouldCloseSocket { self?.closeSocket() }
                 }
                 .receive(SocketManager.errorKey) { [weak self] message in
                     if self?.socketState != .shuttingDown {
@@ -413,7 +408,6 @@ extension SocketManager: SocketEvents {
                             }
                         }
                     }
-                    if shouldCloseSocket { self?.closeSocket() }
                 }
         }
     }

@@ -6,9 +6,10 @@
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 
-import UIKit
 import Foundation
+import UIKit
 import UserNotifications
+
 @testable import Userpilot
 
 // swiftlint:disable all
@@ -126,12 +127,12 @@ class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
         AutoPropertyDecorator.appVersionKey: Bundle.main.version,
         AutoPropertyDecorator.deviceTypeKey: UIDevice.current.modelName,
         AutoPropertyDecorator.screenWidthKey: Int(UIScreen.main.bounds.size.width),
-        AutoPropertyDecorator.screenHeightKey: Int(UIScreen.main.bounds.size.height)
+        AutoPropertyDecorator.screenHeightKey: Int(UIScreen.main.bounds.size.height),
     ]
 
     var appProperties: [String: Any] = [
         AutoPropertyDecorator.appNameKey: Bundle.main.displayName,
-        AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier
+        AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier,
     ]
 }
 
@@ -177,12 +178,12 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
         onShowThankYouMessage?(surveyContent, surveyTheme)
     }
-    
+
     var onUpdateSceen: ((String) -> Void)?
     func updateSceen(_ screenName: String) {
         onUpdateSceen?(screenName)
     }
-    
+
     var onLogout: (() -> Void)?
     func logout() {
         onLogout?()
@@ -224,14 +225,13 @@ class MockSocketManager: SocketEvents {
         onUpdateSocketState?(socketState, forceUpdateState)
     }
 
-    var onPublish: ((String, Payload, Bool, SocketSubscription?) -> Void)?
+    var onPublish: ((String, Payload, SocketSubscription?) -> Void)?
     func publish(
         _ eventName: String,
         payload: Payload,
-        shouldCloseSocket: Bool,
         socketSubscription: SocketSubscription?
     ) {
-        onPublish?(eventName, payload, shouldCloseSocket, socketSubscription)
+        onPublish?(eventName, payload, socketSubscription)
     }
 
 }
@@ -338,7 +338,9 @@ class MockPushNotificationMonitor: PushNotificationMonitoring {
     }
 
     var onDidReceiveNotification: ((UNNotificationResponse) -> Bool)?
-    func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool {
+    func didReceiveNotification(
+        response: UNNotificationResponse, completionHandler: @escaping () -> Void
+    ) -> Bool {
         let result = onDidReceiveNotification?(response) ?? false
         if result {
             completionHandler()
@@ -418,9 +420,11 @@ class MockSDKEvent: SDKEvent {
     var isCloseNPSEvent = false
     var isCloseEvent = false
 
-    init(eventName: String = "test-event",
-         eventPayload: [String: Any] = [:],
-         hasDeepLink: Bool = false) {
+    init(
+        eventName: String = "test-event",
+        eventPayload: [String: Any] = [:],
+        hasDeepLink: Bool = false
+    ) {
         self.eventName = eventName
         self.eventPayload = eventPayload
         self.hasDeepLink = hasDeepLink
@@ -461,7 +465,9 @@ class MockSocketSubscription: SocketSubscription {
         onSocketOpenedCalled?()
     }
 
-    func onSocketEventSent(_ event: String, _ payload: [String: Any]?, _ message: Message, _ status: Bool) {
+    func onSocketEventSent(
+        _ event: String, _ payload: [String: Any]?, _ message: Message, _ status: Bool
+    ) {
         onSocketEventSentCalled?(event, payload, message, status)
     }
 

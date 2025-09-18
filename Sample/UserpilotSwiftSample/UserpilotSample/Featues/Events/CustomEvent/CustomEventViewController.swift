@@ -69,7 +69,7 @@ extension CustomEventViewController {
 extension CustomEventViewController {
 
     internal func showAddEventPropertyDiaog(_ propertyTitle: String = "", _ propertyValue: String = "") {
-        DialogManager.shared().showAPIAlertDialog(propertyTitle: propertyTitle,
+        DialogManager.shared().showAddPropertyDialogViewController(propertyTitle: propertyTitle,
                                                   propertyValue: propertyValue,
                                                   doneButtonHandler: { [weak self] propertyTitle, propertyValue in
             guard let self else { return }
@@ -77,7 +77,7 @@ extension CustomEventViewController {
         })
     }
 
-    private func addUserProperty(_ propertyTitle: String, _ propertyValue: String) {
+    private func addUserProperty(_ propertyTitle: String, _ propertyValue: String?) {
         let propertyView = PropertyView()
 
         propertyView.onEditProperty = { [weak self] propertyTitle, propertyValue in

@@ -41,7 +41,7 @@ class PropertyView: UIView, NibLoadable {
     }
 
     // MARK: - Helper methods
-    func bindData(propertyName: String, propertyValue: String) {
+    func bindData(propertyName: String, propertyValue: String?) {
         self.propertyName.text = propertyName
         self.propertyValue.text = propertyValue
     }

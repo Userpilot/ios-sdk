@@ -96,10 +96,7 @@ internal class UPMultipleChoiceView: UIView {
             tableView.reloadData()
         }
 
-        // Adjust the table view height based on the content size.
-        // let itemCount = self.choices.count
-        // let height = self.tableView.contentSize.height ?? CGFloat(55 * itemCount)
-        let height = self.tableView.contentSize.height + CGFloat(16)
+        let height = self.tableView.contentSize.height + CGFloat(30) // Bottom margin
         self.tableView.heightAnchor.constraint(equalToConstant: height).isActive = true
     }
 
