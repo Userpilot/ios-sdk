@@ -70,7 +70,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.isSocketOpened = true
 
         var didPublishEvent = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in
+        userpilot.socketManager.onPublish = { _, _, _ in
             didPublishEvent = true
         }
 
@@ -236,7 +236,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.isSocketOpened = true
 
         var publishLogoutEventCalled = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in publishLogoutEventCalled = true }
+        userpilot.socketManager.onPublish = { _, _, _ in publishLogoutEventCalled = true }
 
         // Act
         analyticsPublisher.logout(socketState: .closed, shouldClearCachedIdentifyEvent: true)
@@ -257,7 +257,7 @@ class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.publish(identifyEvent)
 
         var didPublishEvent = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in
+        userpilot.socketManager.onPublish = { _, _, _ in
             didPublishEvent = true
         }
 
@@ -340,7 +340,7 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
         var didPublishEvent = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in
+        userpilot.socketManager.onPublish = { _, _, _ in
             didPublishEvent = true
         }
         let sdkEvent = MockSDKEvent()
@@ -357,7 +357,7 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange
         userpilot.socketManager.isSocketOpened = false
         var didPublishEvent = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in
+        userpilot.socketManager.onPublish = { _, _, _ in
             didPublishEvent = true
         }
         let sdkEvent = MockSDKEvent()
@@ -379,7 +379,7 @@ class AnalyticsPublisherTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Wait for delayed fake reload publish")
 
         var publishScreenEventCalled = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in
+        userpilot.socketManager.onPublish = { _, _, _ in
             publishScreenEventCalled = true
             expectation.fulfill()
         }
@@ -401,7 +401,7 @@ class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.publish(screenEvent)
 
         var publishScreenEventCalled = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in publishScreenEventCalled = true }
+        userpilot.socketManager.onPublish = { _, _, _ in publishScreenEventCalled = true }
 
         // Act
         analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
@@ -524,7 +524,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.user = user.toJson() ?? ""
 
         var publishIdentifyEventCalled = false
-        userpilot.socketManager.onPublish = { _, _, _, _ in publishIdentifyEventCalled = true }
+        userpilot.socketManager.onPublish = { _, _, _ in publishIdentifyEventCalled = true }
 
         // Act
         analyticsPublisher.publish(identifyEvent)

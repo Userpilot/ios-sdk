@@ -379,8 +379,9 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertEqual(publishedEvent?.eventName, "test-event")
     }
 
-    func testPublishInternalSDKEvent_shouldActivateFlag_ForCloseNPSEvent() {
+    func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseNPSEvent() {
         // Arrange
+        userpilot.socketManager.isSocketOpened = true
         let mockEvent = MockSDKEvent(eventName: "dismiss_NPS")
         mockEvent.isCloseNPSEvent = true
 
@@ -389,7 +390,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         let canRequest = experiencesPublisher.canRequestScreenEvent()
 
         // Assert
-        XCTAssertFalse(canRequest) // oneSecondFlag should be active
+        XCTAssertFalse(canRequest)
     }
 
     func testPublishInternalSDKEvent_shouldHandleCloseEvent_WithDeepLink() {

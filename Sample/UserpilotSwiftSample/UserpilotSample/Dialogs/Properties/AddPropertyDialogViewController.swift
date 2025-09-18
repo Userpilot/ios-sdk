@@ -27,11 +27,11 @@ class AddPropertyDialogViewController: UIViewController {
 
     private var propertyTitleData: String?
     private var propertyValueData: String?
-    private var doneButtonHandler: ((String, String) -> Void)?
+    private var doneButtonHandler: ((String, String?) -> Void)?
 
     // MARK: - Initialization
 
-    public init(propertyTitle: String, propertyValue: String, doneButtonHandler: ((String, String) -> Void)?) {
+    public init(propertyTitle: String, propertyValue: String, doneButtonHandler: ((String, String?) -> Void)?) {
         super.init(nibName: "AddPropertyDialogViewController", bundle: nil)
 
         self.propertyTitleData = propertyTitle
@@ -84,7 +84,7 @@ class AddPropertyDialogViewController: UIViewController {
     func executeDoneButtonHandler() {
         if self.doneButtonHandler != nil,
            let propertyTitle = propertyTitle.text, !propertyTitle.isEmpty,
-           let propertyValue = propertyValue.text, !propertyValue.isEmpty {
+           let propertyValue = propertyValue.text {
             self.doneButtonHandler!(propertyTitle, propertyValue)
         }
         dismiss(animated: true)

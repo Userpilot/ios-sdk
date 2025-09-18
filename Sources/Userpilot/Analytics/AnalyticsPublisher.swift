@@ -64,18 +64,49 @@ internal protocol AnalyticsPublishing: AnyObject {
 }
 
 /**
- The `AnalyticsPublisher` class implements the `AnalyticsPublishing` protocol
- to process events and send them to the backend.
- 
- It handles socket connections, event caching, and ensures events are sent
- reliably. The class supports tracking user identification, screen views, and
- custom events, with event queuing and debouncing to optimize network traffic.
+ * AnalyticsPublisher is responsible for managing and publishing analytics events through WebSocket connections.
+ *
+ * This class handles:
+ * - Event queuing and throttling
+ * - Socket connection management
+ * - User identification and session management
+ * - Screen tracking with experience state management
+ * - Background/foreground state handling
+ *
+ * The publisher ensures events are sent reliably by caching them when the socket is unavailable
+ * and flushing them once the connection is re-established.
  */
 internal class AnalyticsPublisher {
 
+    // MARK: - Constants
+
+    /** Property key for event metadata */
+    static let metaDataProperty = "metadata"
+
+    /** Property key for company information in identify events */
+    private static let identifyCompanyProperty = "company"
+
+    /** Property key for screen title in screen events */
+    static let screenTitleProperty = "title"
+
+    /** Property key indicating if this is the start of a new session */
+    static let isSessionStartedProperty = "is_session_start"
+
+    /** Property key for fake reload state */
+    static let fakeReload = "fake_reload"
+
+    /** Property key for tracking seen flows/experiences */
+    static let seenContents = "seen_contents"
+
+    /** Property key for tracking seen surveys */
+    static let seenSurveys = "seen_surveys"
+
+    /** Property key for custom event names */
+    private static let eventNameProperty = "event_name"
+
     // MARK: - Properties
 
-    // A weak reference to ExperienceRendering would be expected here to avoid a retain cycle with AnalyticsPublisher
+    /// A weak reference to ExperienceRendering would be expected here to avoid a retain cycle with AnalyticsPublisher
     private weak var container: DIContainer?
 
     /// Weak reference to the owning `Userpilot` instance.
@@ -95,6 +126,7 @@ internal class AnalyticsPublisher {
         return container?.resolve(ExperiencesPublishing.self)
     }
 
+    /// Session monitoring to track app state
     private weak var sessionMonitorer: SessionMonitoring? {
         return container?.resolve(SessionMonitoring.self)
     }
@@ -105,33 +137,39 @@ internal class AnalyticsPublisher {
     /// Manages socket connections and event publishing over web socket.
     private let socketManager: SocketEvents
 
-    /// Queue to hold events waiting to be sent.
+    // MARK: - Properties
+
+    /// Queue to hold events waiting to be sent
     private lazy var eventsToFlush = [Event]()
 
-    /// EventThrottle to throttle events
-    private lazy var eventThrottle = EventThrottle(throttleDuration: 1.0)
-
-    /// Read-write lock for thread-safe event queue operations.
+    /// Read-write lock for thread-safe event queue operations
     private lazy var readWriteLock = ReadWriteLock()
 
-    /// Cached identify event, to be sent when the socket is ready.
-    private var cachedIdentifyEvent: Event?
+    /// Event throttling mechanism to prevent spam
+    private lazy var eventThrottle = EventThrottle(throttleDuration: 1.0)
 
-    /// Tracks the last screen viewed, bool for fake reload state.
+    /**
+     * Tracks the last screen viewed and its state including seen experiences.
+     * Contains boolean flag for fake reload state.
+     */
     private(set) var screenViewEntity: ScreenViewEntity?
 
-    /// Tracks the first event to open the socket.
+    /// Cached identify event, to be sent when the socket is ready
+    private var cachedIdentifyEvent: Event?
+
+    /// Tracks the first event to open the socket
     private var cachedEvent: Event?
 
-    /// Hold session start state
+    /// Holds session start state - true indicates a new session should be started
     private var startSession = true
 
     // MARK: - Initialization
 
     /**
-     Initializes the `AnalyticsPublisher` with dependencies from the provided dependency injection container.
-     
-     - Parameter container: The dependency injection container holding references to required services.
+     * Initializes the AnalyticsPublisher with dependencies from the provided dependency injection container.
+     * Restores any previously cached user from storage.
+     *
+     * - Parameter container: The dependency injection container holding references to required services.
      */
     init(container: DIContainer) {
         self.container = container
@@ -144,6 +182,8 @@ internal class AnalyticsPublisher {
 
         // Register socket event callback
         self.socketManager.registerCallback(self)
+
+        // Restore any previously cached user from storage
         if let temporaryUserString = storage.temporaryUser {
             let temporaryUser = User.fromJson(temporaryUserString)
             cachedIdentifyEvent = Event(
@@ -159,16 +199,25 @@ internal class AnalyticsPublisher {
 
 extension AnalyticsPublisher: AnalyticsPublishing {
 
+    // MARK: - Public Methods
+
     /**
-     Flush the event once the app enter background.
+     * Flushes all pending events when the app enters background.
+     * This ensures no events are lost when the app is backgrounded.
      */
     func flush() {
         socketManager.updateSocketState(.shuttingDown, forceUpdateState: true)
-        flushQueue(shouldCloseSocket: true, flushImmediately: true)
+        flushQueue(shouldCloseSocket: true)
     }
 
     /**
-     Clear all cached data and close the socket.
+     * Clears all cached data and closes the socket connection.
+     *
+     * - Parameter socketState: The state to set for the socket after logout
+     * - Parameter shouldClearCachedIdentifyEvent: If true, indicates this logout comes from app level,
+     *        meaning the user is logged out and there is no new login. This will clear the
+     *        FCM token from backend. On user switch, the backend handles clearing the
+     *        FCM token from the old user.
      */
     func logout(
         socketState: SocketManager.SocketState,
@@ -185,16 +234,24 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 )
             }
         }
+        // Reset start session for next login user
         startSession = true
+        // Reset content states
         experiencesPublisher?.logout()
+        // Clear seen contents from screenViewEntity
         screenViewEntity?.resetState()
+        // Update socket state: SHUTTING_DOWN for app logout, otherwise SWITCHING_USER state
         socketManager.updateSocketState(socketState, forceUpdateState: true)
+        // Clear all content for app logout, otherwise keep them to re-establish connection
+        // after closing old user channel
         clearAllCachedProperties(shouldClearCachedIdentifyEvent)
+        // Close socket connection
         socketManager.close()
     }
 
     /**
-     Resume socket connection when back from background.
+     * Resumes socket connection when app opens or returns from background.
+     * This is the entry point that establishes socket connection.
      */
     func resume() {
         updateSessionState()
@@ -207,7 +264,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     Reset session state
+     * Reset session state
      */
     func reset() {
         startSession = true
@@ -215,7 +272,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     Compare the saved date with the current date and return true if the difference is more than 30 minutes
+     * Compares the saved date with the current date and returns true if the difference is more than 30 minutes.
+     * Updates startSession when comparing storage.sessionDate with current date if it's
+     * more than 30 minutes.
      */
     func updateSessionState() {
         guard let sessionDate = storage.sessionDate else { return }
@@ -226,14 +285,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     // MARK: - Publish Helper Methods
 
-    /*
-     Publishes an event to the backend based on its type (identify, screen, or custom event).
-     
-     - Parameter event: The event to publish.
+    /**
+     * Publishes an event to the server through the WebSocket connection.
+     * If the socket is not opened or still in the process of joining, the event is cached for later.
+     *
+     * - Parameter event: The event to be published. The type of the event determines the action to be taken.
      */
     func publish(_ event: Event) {
         tryCatch {
-            // Handle App state
+            // Handle app state - cache events when app is not in active state
             guard sessionMonitorer?.isAppActive ?? false else {
                 cacheEvent(event)
                 return
@@ -242,38 +302,52 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Handle identify events
             guard !event.isIdentifyEvent || !handleIdentifyEvent(event) else { return }
 
-            // Check if system is in shutdown state
+            // Check if socket is in shutdown state
+            // For example: getting event while logging out, ignore the event
             guard !socketManager.isShutdownState else { return }
 
             // Handle socket joining state
+            // If socket is joining, cache the event to process it after establishing socket connection
             guard !socketManager.isJoiningSocket else {
                 cacheEvent(event)
                 return
             }
 
             // Handle closed socket state
+            // If socket is closed, cache event and verify there is a valid
+            // user ID, then establish connection and return
             guard socketManager.isSocketOpened || !handleClosedSocket(event) else { return }
 
-            // Process the event
+            // Socket is opened, process the event immediately
             processEvent(event)
         }
     }
 
+    /**
+     * Handles identify events by checking for duplicate users and caching the event.
+     *
+     * - Parameter event: The identify event to handle
+     * - Returns: true if the event should be ignored (same user), false if processing should continue
+     */
     private func handleIdentifyEvent(_ event: Event) -> Bool {
-        // Return true to stop publishing
+        // When same user, return true to stop and ignore event
         if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) {
             return true
         }
 
-        if event.userId != storage.userId {
-            screenViewEntity?.resetState()
-        }
+        // Update cached user
         storage.temporaryUser = event.toUser().toJson()
         cachedIdentifyEvent = event
 
         return false
     }
 
+    /**
+     * Handles events when socket is closed by caching the event and attempting to open connection.
+     *
+     * - Parameter event: The event to handle
+     * - Returns: true if processing should stop, false if it should continue
+     */
     private func handleClosedSocket(_ event: Event) -> Bool {
         cacheEvent(event)
 
@@ -287,6 +361,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         return false
     }
 
+    /**
+     * Updates the stored user ID from the event, prioritizing current event over cached identify event.
+     *
+     * - Parameter event: The event containing potential user ID
+     */
     private func updateUserIdFromEvent(_ event: Event) {
         // Priority: current event userId > cached identify event userId
         if let userId = event.userId, !userId.isEmpty {
@@ -296,6 +375,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
     }
 
+    /**
+     * Processes an event based on its type.
+     *
+     * - Parameter event: The event to process
+     */
     private func processEvent(_ event: Event) {
         switch event.type {
         case .identify:
@@ -307,7 +391,12 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
     }
 
-    /// Cache Event when socket is not opened or is joining.
+    /**
+     * Caches an event when socket is not opened or is joining.
+     * Different event types are cached in different properties.
+     *
+     * - Parameter event: The event to cache
+     */
     private func cacheEvent(_ event: Event) {
         switch event.type {
         case .identify:
@@ -319,21 +408,19 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
     }
 
-    // MARK: - Event Handling
+    // MARK: - Private Methods
 
     /**
-     Identifies the user and handles the `identify` event.
-     
-     - If the user Id has changed, it resets the socket connection and caches the new event.
-     - If the socket is open, the event is sent immediately; otherwise, it waits for the socket to connect.
-     
-     - Parameter event: The `identify` event to process.
+     * Identifies the user and handles the identify event.
+     * If a new user ID is detected, it closes the socket and cleans up for user switching.
+     *
+     * - Parameter event: The identify event containing user information
      */
     private func identify(_ event: Event) {
         tryCatch {
             guard let userId = event.userId else { return }
 
-            /// In-case new user ID
+            // If new user ID detected, close socket and clean up
             if storage.userId.isNotEmpty && userId != storage.userId {
                 userpilot?.clean()
                 logout(socketState: .switchingUser)
@@ -344,20 +431,20 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     Processes and sends screen view events.
-     
-     - Ensures that the socket is open and the screen has not been previously viewed.
-     - Resets the event count for a new screen view.
-     
-     - Parameter event: The screen event to process.
+     * Processes and sends screen view events.
+     * Handles screen throttling and determines when to trigger screen events.
+     *
+     * - Parameter event: The screen event to process
      */
     private func screen(_ event: Event) {
         tryCatch {
+            // Returns true if this is a new screen, which triggers screen event and throttling
             if setupScreenEvent(event) {
                 _ = eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "")
                 flushPriorityEvents(isRequestIdentify: false)
                 return
             }
+            // Not a new screen, check if valid to trigger screen event
             if experiencesPublisher?.canRequestScreenEvent() == false ||
                 eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
                 return
@@ -367,11 +454,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     Tracks general user events.
-     
-     - Ensures the event count and uniqueness constraints are met before publishing.
-     
-     - Parameter event: The event to track.
+     * Tracks general user events by adding them to the flush queue.
+     * Events are throttled to prevent spam.
+     *
+     * - Parameter event: The custom event to track
      */
     private func trackEvent(_ event: Event) {
         tryCatch {
@@ -386,17 +472,20 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
     }
 
+    // MARK: - Screen Management
+
     /**
-     Sets up the screen event by updating the `screenViewEntity` based on the given event.
-
-     If the screen title of the incoming event differs from the current `screenViewEntity`'s event:
-     - The `startSession` flag is set to `false`.
-     - A new `ScreenViewEntity` is created with an empty set of seen experiences.
-
-     If the screen title matches the current `screenViewEntity`'s event:
-     - A new `ScreenViewEntity` is created, retaining the existing set of seen experiences.
-
-     - Parameter event: The new screen event to process.
+     * Sets up the screen event by updating the screenViewEntity based on the given event.
+     *
+     * If the screen title of the incoming event differs from the current screenViewEntity's event:
+     * - The startSession flag is set to false
+     * - A new ScreenViewEntity is created with an empty set of seen experiences
+     *
+     * If the screen title matches the current screenViewEntity's event:
+     * - A new ScreenViewEntity is created, retaining the existing set of seen experiences
+     *
+     * - Parameter event: The new screen event to process
+     * - Returns: true if this is a new screen, false if it's the same screen
      */
     @discardableResult
     private func setupScreenEvent(_ event: Event) -> Bool {
@@ -410,7 +499,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 startSession = false
             }
 
-            // Update the `screenViewEntity` with the new event and handle seen experiences accordingly
+            // Update the screenViewEntity with the new event and handle seen experiences accordingly
             if isScreenTitleChanged {
                 isNewScreen = true
 
@@ -434,13 +523,20 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
 }
 
-// MARK: - SocketSubscription
+// MARK: - Socket Subscription Management
 
 extension AnalyticsPublisher {
 
     /**
-     Flushes high-priority events, such as identify or screen events, through the socket, or events that
-     opens the socket.
+     * Flushes high-priority events, such as identify or screen events, through the socket.
+     * These are events that open the socket or are critical for user tracking.
+     *
+     * - Parameter isRequestIdentify: When socket opens or identifies new user, request identify.
+     *        If from screen event, don't request identify to avoid duplicates.
+     * - Parameter canRequestScreenEvent: Request screen from screen event, from identify new user
+     *        and we have cached screen. Check ExperiencePublisher state for validation.
+     * - Parameter fakeReloadScreenEvent: When from identify (update user properties), request
+     *        identify with fake reload true, otherwise false.
      */
     private func flushPriorityEvents(
         isRequestIdentify: Bool = true,
@@ -453,12 +549,12 @@ extension AnalyticsPublisher {
                 return
             }
 
-            /// Identify event
+            // Handle identify event
             if isRequestIdentify {
                 if let cachedIdentifyEvent {
                     var payload: [String: Any] = [:]
                     guard let userId = cachedIdentifyEvent.userId else { return }
-                    // In-case identify event called again when joining socket channel
+                    // If identify event is called again when joining socket channel
                     if storage.userId.isNotEmpty && userId != storage.userId {
                         identify(cachedIdentifyEvent)
                         return
@@ -471,7 +567,7 @@ extension AnalyticsPublisher {
                 }
             }
 
-            /// Screen event
+            // Handle screen event
             if let screenViewEntity, canRequestScreenEvent {
                 if let screenTitle = screenViewEntity.event.screenTitle {
                     experiencesPublisher?.updateSceen(screenTitle)
@@ -488,7 +584,7 @@ extension AnalyticsPublisher {
                 broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
             }
 
-            /// Track event
+            // Handle cached track event
             if let cachedEvent {
                 trackEvent(cachedEvent)
             }
@@ -496,12 +592,11 @@ extension AnalyticsPublisher {
     }
 
     /**
-     Flush the queue directly, for example when application moves to background
+     * Flushes the event queue by sending events one by one through the socket.
+     *
+     * - Parameter shouldCloseSocket: When move app to background
      */
-    private func flushQueue(
-        shouldCloseSocket: Bool = false,
-        flushImmediately: Bool = false
-    ) {
+    private func flushQueue(shouldCloseSocket: Bool = false) {
         tryCatch {
             readWriteLock.write { [weak self] in
                 guard let self else { return }
@@ -522,22 +617,18 @@ extension AnalyticsPublisher {
                     payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
 
                     self.broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
-                    self.socketManager.publish(
-                        eventToSend.eventName,
-                        payload: payload,
-                        shouldCloseSocket: shouldCloseSocket
-                    )
-
-                    if flushImmediately {
-                        self.flushQueue(shouldCloseSocket: shouldCloseSocket, flushImmediately: true)
-                    } else {
-                        if !shouldCloseSocket {
-                            self.flushQueue()
-                        }
-                    }
+                    self.socketManager.publish(eventToSend.eventName, payload: payload)
+                    self.flushQueue(shouldCloseSocket: shouldCloseSocket)
                 }
             }
         }
+    }
+
+    /**
+     * Fallback state handler to close socket if channel is not opened properly.
+     */
+    private func checkFallbackState() {
+        if socketManager.isSocketConnectedWithUnknownChannel { closeSocket() }
     }
 
 }
@@ -546,28 +637,32 @@ extension AnalyticsPublisher {
 
 extension AnalyticsPublisher: SocketSubscription {
 
-    /// Opens the socket and sends the event once the connection is established on callback.
+    /// Opens the socket connection
     private func openSocket() {
         socketManager.connect()
     }
 
-    /// Closes the socket when a new user is identified, then reopens the socket for the new user on callback.
+    /**
+     * Closes the socket connection.
+     * Used when a new user is identified, then reopens the socket for the new user via callback.
+     */
     private func closeSocket() {
         socketManager.close()
     }
 
-    /// Socket opened callback.
+    /**
+     * Socket opened callback.
+     * Clears cached events and flushes priority events.
+     */
     func onSocketOpened() {
         clearCachedEvents()
         flushPriorityEvents(canRequestScreenEvent: experiencesPublisher?.canRequestScreenEvent() == true)
     }
 
-    // Fallback state to close socket if channel not opened
-    private func checkFallbackState() {
-        if socketManager.isSocketConnectedWithUnknownChannel { closeSocket() }
-    }
-
-    /// Socket closed callback.
+    /**
+     * Socket closed callback.
+     * Handles reconnection logic or clears cached properties based on closure reason.
+     */
     func onSocketClosed() {
         tryCatch {
             if socketManager.isShutdownState || socketManager.didErrorOccurred {
@@ -583,11 +678,13 @@ extension AnalyticsPublisher: SocketSubscription {
     }
 
     /**
-     Callback method triggered when a socket event has been sent, ensuring any remaining queued events are flushed.
-
-     - Parameters:
-       - eventName: The name of the event sent.
-       - eventSent: Whether the event was successfully sent.
+     * Callback method triggered when a socket event has been sent.
+     * Ensures any remaining queued events are flushed and handles identify event completion.
+     *
+     * - Parameter eventName: The name of the event sent
+     * - Parameter payload: The payload that was sent
+     * - Parameter message: The socket message response
+     * - Parameter eventSent: Whether the event was successfully sent
      */
     func onSocketEventSent(
         _ eventName: String,
@@ -612,18 +709,22 @@ extension AnalyticsPublisher: SocketSubscription {
 
 }
 
-// MARK: - Reset cached properties
+// MARK: - Cache Management
 
 private extension AnalyticsPublisher {
 
-    /// Clear all cached properties in case we get closed callback from socket.
+    /**
+     * Clears all cached properties when receiving closed callback from socket.
+     *
+     * - Parameter shouldClearCachedIdentifyEvent: Whether to clear the cached identify event
+     */
     private func clearAllCachedProperties(_ shouldClearCachedIdentifyEvent: Bool = false) {
         clearCachedEvents()
         clearCachedEvent()
         if shouldClearCachedIdentifyEvent { clearCachedIdentifyEvent() }
     }
 
-    /// Clears the cached events on new identify event or when socket opened.
+    /** Clears the cached events on new identify event or when socket opens */
     private func clearCachedEvents() {
         tryCatch {
             readWriteLock.write { [weak self] in
@@ -633,13 +734,13 @@ private extension AnalyticsPublisher {
         }
     }
 
-    /// Clears the cached identify event after it has been successfully sent.
+    /** Clears the cached identify event after it has been successfully sent */
     private func clearCachedIdentifyEvent() {
         cachedIdentifyEvent = nil
         storage.temporaryUser = nil
     }
 
-    /// Clears the cached identify event after it has been successfully sent.
+    /** Clears the cached event after it has been successfully sent */
     private func clearCachedEvent() {
         cachedEvent = nil
     }
@@ -657,11 +758,15 @@ internal extension AnalyticsPublisher {
 }
 #endif
 
-// MARK: - Experiences events
+// MARK: - Experience Publisher Integration
 
 extension AnalyticsPublisher {
 
-    /// check socket state
+    /**
+     * Checks if socket is open and ready to send events.
+     *
+     * - Returns: true if socket is open and can accept events
+     */
     var canRequestEvent: Bool {
         socketManager.isSocketOpened
     }
@@ -671,12 +776,17 @@ extension AnalyticsPublisher {
         startSession
     }
 
-    /// For experience which are come from start session
+    /// To return current screen entity
     var screenEntity: ScreenViewEntity? {
         screenViewEntity
     }
 
-    /// publish experience event
+    /**
+     * Publishes internal SDK events through the socket.
+     *
+     * - Parameter sdkEvent: The SDK event to publish
+     * - Parameter socketSubscription: Optional listener for socket events
+     */
     func publishInternalSDKEvent(
         _ sdkEvent: SDKEvent,
         socketSubscription: SocketSubscription?
@@ -691,7 +801,13 @@ extension AnalyticsPublisher {
         }
     }
 
-    /// publish fake reload event
+    /**
+     * Publishes a fake reload screen event when an experience is shown.
+     * This ensures proper state tracking for experiences.
+     *
+     * - Parameter experienceType: The type of experience (FLOW or SURVEY)
+     * - Parameter experienceId: The ID of the experience being shown
+     */
     func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
         tryCatch {
             guard
@@ -699,6 +815,8 @@ extension AnalyticsPublisher {
                 canRequestEvent
             else { return }
             if let screenViewEntity {
+                // update the seen content to make sure it contains the dismissed content that
+                // trigger this fake reload
                 experiencePublished(experienceType, experienceId!)
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return
@@ -716,7 +834,12 @@ extension AnalyticsPublisher {
         }
     }
 
-    /// update seen experiences
+    /**
+     * Updates the seen experiences when an experience is published/shown.
+     *
+     * - Parameter experienceType: The type of experience that was shown
+     * - Parameter experienceId: The ID of the experience that was shown
+     */
     func experiencePublished(
         _ experienceType: ExperienceType,
         _ experienceId: Int
@@ -730,10 +853,17 @@ extension AnalyticsPublisher {
 
 }
 
-// MARK: - broadcast event
+// MARK: - Event Broadcasting
 
 internal extension AnalyticsPublisher {
 
+    /**
+     * Broadcasts events to analytics listeners for external consumption.
+     *
+     * - Parameter event: The event to broadcast
+     * - Parameter value: The event value/identifier
+     * - Parameter properties: The event payload data
+     */
     func broadcastEvent(
         _ event: Event,
         _ value: String,
@@ -747,21 +877,5 @@ internal extension AnalyticsPublisher {
         }
     }
 
-}
-
-// MARK: - Properties name
-
-internal extension AnalyticsPublisher {
-
-    // Static constants
-    static let metaDataProperty = "metadata"
-    private static let identifyCompanyProperty = "company"
-
-    static let screenTitleProperty = "title"
-    static let isSessionStartedProperty = "is_session_start"
-    static let fakeReload = "fake_reload"
-    static let seenContents = "seen_contents"
-    static let seenSurveys = "seen_surveys"
-    private static let eventNameProperty = "event_name"
 }
 // swiftlint:enable file_length

@@ -12,7 +12,7 @@ import Foundation
 extension IdentifyViewController {
 
     internal func showAddCompanyPropertyDialog(_ propertyTitle: String = "", _ propertyValue: String = "") {
-        DialogManager.shared().showAPIAlertDialog(propertyTitle: propertyTitle,
+        DialogManager.shared().showAddPropertyDialogViewController(propertyTitle: propertyTitle,
                                                   propertyValue: propertyValue,
                                                   doneButtonHandler: { [weak self] propertyTitle, propertyValue in
             guard let self else { return }
@@ -20,7 +20,7 @@ extension IdentifyViewController {
         })
     }
 
-    private func addCompanyProperty(_ propertyTitle: String, _ propertyValue: String) {
+    private func addCompanyProperty(_ propertyTitle: String, _ propertyValue: String?) {
         let propertyView = PropertyView()
 
         propertyView.onEditProperty = { [weak self] propertyTitle, propertyValue in
