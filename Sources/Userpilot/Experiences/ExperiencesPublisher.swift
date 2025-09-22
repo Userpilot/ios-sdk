@@ -787,13 +787,19 @@ extension ExperiencesPublisher {
      * Retains only the last experience and processes it.
      */
     private func processNextPendingExperiences() {
-        if pendingExperiences.isEmpty { return }
-        experienceQueue.async { [weak self] in
-            guard let self else { return }
-            if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
-                self.pendingExperiences = [lastContent]
+        tryCatch {
+            if pendingExperiences.isEmpty { return }
+            experienceQueue.async { [weak self] in
+                guard let self else { return }
+                if pendingExperiences.count == 1 {
+                    pendingExperiences.removeAll()
+                } else {
+                    if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
+                        self.pendingExperiences = [lastContent]
+                        self.openExperienceFlow()
+                    }
+                }
             }
-            self.openExperienceFlow()
         }
     }
 
