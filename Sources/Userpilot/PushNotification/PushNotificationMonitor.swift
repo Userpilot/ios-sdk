@@ -73,6 +73,9 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     }
 
     private var deferredNotification: UserpilotNotification?
+    // Later, we could make this as configuration option,
+    // to request the permission many times till we get it.
+    private var didRequestPermissions = false
 
     /// Initializes the `PushNotificationMonitor` with dependencies from the dependency injection container.
     ///
@@ -85,7 +88,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         self.socketManager = container.resolve(SocketEvents.self)
 
         PushNotificationAutoConfig.register(observer: self)
-        refreshPushStatus()
         socketManager.registerCallback(self)
     }
 
@@ -134,6 +136,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
     /// Called when the socket is opened, and the push token is set if cached.
     func onSocketOpened() {
+        refreshPushStatus()
         if let cachedToken {
             setPushToken(cachedToken)
         }
@@ -146,6 +149,8 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     ///
     /// - Parameter completion: An optional closure that is called with the updated authorization status.
     func refreshPushStatus(completion: ((UNAuthorizationStatus) -> Void)? = nil) {
+        if config.disableRequestPushPermission || didRequestPermissions { return }
+        didRequestPermissions = true
         #if targetEnvironment(simulator)
         print("🔧 Running on Simulator - push notification settings are not available.")
         // Optionally simulate a status (e.g., .notDetermined or .authorized)

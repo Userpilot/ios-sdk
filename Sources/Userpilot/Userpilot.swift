@@ -109,8 +109,8 @@ public class Userpilot: NSObject {
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
-        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerEager(PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
+        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
     }
 }
 

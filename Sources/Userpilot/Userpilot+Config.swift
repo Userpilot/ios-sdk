@@ -26,6 +26,9 @@ public extension Userpilot {
         /// Userpilot SDK logger
         var logger: Logging = OSLog.disabled
 
+        /// Disable request push notifications permission by SDK.
+        var disableRequestPushPermission: Bool = false
+
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
         @objc
@@ -43,6 +46,19 @@ public extension Userpilot {
             logger = isEnabled ? OSLog(userpilotCategory: GeneralConstants.USERPILOT_LOGGING_CATEOGRY) : .disabled
             return self
         }
+
+        /// Disables the automatic request for push notification permissions.
+        ///
+        /// By default, the SDK may prompt the user to grant push notification permissions.
+        /// Calling this method prevents the SDK from showing that prompt automatically.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func disableRequestPushNotificationsPermission() -> Self {
+            self.disableRequestPushPermission = true
+            return self
+        }
+
     }
 
 }
