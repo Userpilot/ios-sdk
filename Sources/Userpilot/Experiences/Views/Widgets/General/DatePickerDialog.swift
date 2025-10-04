@@ -108,7 +108,7 @@ internal class DatePickerDialog: UIView {
         if let locale = self.locale { self.datePicker.locale = locale }
 
         /* Add dialog to main window */
-        guard let window = getWindow() else { fatalError() }
+        guard let window = getWindow() else { return }
         window.addSubview(self)
         window.bringSubviewToFront(self)
         window.endEditing(true)

@@ -244,7 +244,11 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
      3. Provide default .normalClosure function
      */
     guard let closeCode = URLSessionWebSocketTask.CloseCode.init(rawValue: code) else {
-      fatalError("Could not create a CloseCode with invalid code: [\(code)].")
+#if DEBUG
+        fatalError("Could not create a CloseCode with invalid code: [\(code)].")
+#else
+        return
+#endif
     }
     
     self.readyState = .closing
@@ -310,7 +314,9 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
             case .string(let text):
                 delegate?.onMessage(message: text)
             default:
+#if DEBUG
                 fatalError("Nil message received.")
+#endif
             }
               
             // Since `.receive()` is only good for a single message, it must

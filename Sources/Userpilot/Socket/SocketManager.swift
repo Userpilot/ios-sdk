@@ -271,7 +271,7 @@ extension SocketManager {
 
             // Connect to the channel
             phoenixChannel = channel
-            phoenixChannel?.join()
+            phoenixChannel?.join()?
                 .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
                     self.logger.info("🚀 SOCKET channel joined")
                     self.updateSocketState(.opened)
@@ -388,7 +388,7 @@ extension SocketManager: SocketEvents {
     ) {
         _ = tryCatch {
             phoenixChannel?
-                .push(eventName, payload: payload ?? [:])
+                .push(eventName, payload: payload ?? [:])?
                 .receive(SocketManager.successKey) { [weak self] message in
                     if self?.socketState != .shuttingDown {
                         if let socketSubscription {

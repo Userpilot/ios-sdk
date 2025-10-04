@@ -299,8 +299,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 return
             }
 
-            // Handle identify events
-            guard !event.isIdentifyEvent || !handleIdentifyEvent(event) else { return }
+            guard !didHandleIdentifyEvent(event) else { return }
 
             // Check if socket is in shutdown state
             // For example: getting event while logging out, ignore the event
@@ -316,7 +315,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Handle closed socket state
             // If socket is closed, cache event and verify there is a valid
             // user ID, then establish connection and return
-            guard socketManager.isSocketOpened || !handleClosedSocket(event) else { return }
+            guard socketManager.isSocketOpened else {
+                handleClosedSocket(event)
+                return
+            }
 
             // Socket is opened, process the event immediately
             processEvent(event)
@@ -329,9 +331,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter event: The identify event to handle
      * - Returns: true if the event should be ignored (same user), false if processing should continue
      */
-    private func handleIdentifyEvent(_ event: Event) -> Bool {
+    private func didHandleIdentifyEvent(_ event: Event) -> Bool {
+        guard event.isIdentifyEvent else { return false }
+
         // When same user, return true to stop and ignore event
-        if storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event) {
+        guard !(storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event)) else {
             return true
         }
 
