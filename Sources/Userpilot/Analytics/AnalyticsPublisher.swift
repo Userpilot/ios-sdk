@@ -33,10 +33,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     func reset()
 
     /// Logout user from socket
-    func logout(
-        socketState: SocketManager.SocketState,
-        shouldClearCachedIdentifyEvent: Bool
-    )
+    func logout(shouldClearCachedIdentifyEvent: Bool)
 
     /// check socket state
     var canRequestEvent: Bool { get }
@@ -206,23 +203,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * This ensures no events are lost when the app is backgrounded.
      */
     func flush() {
-        socketManager.updateSocketState(.shuttingDown, forceUpdateState: true)
         flushQueue(shouldCloseSocket: true)
     }
 
     /**
      * Clears all cached data and closes the socket connection.
      *
-     * - Parameter socketState: The state to set for the socket after logout
      * - Parameter shouldClearCachedIdentifyEvent: If true, indicates this logout comes from app level,
      *        meaning the user is logged out and there is no new login. This will clear the
      *        FCM token from backend. On user switch, the backend handles clearing the
      *        FCM token from the old user.
      */
-    func logout(
-        socketState: SocketManager.SocketState,
-        shouldClearCachedIdentifyEvent: Bool = false
-    ) {
+    func logout(shouldClearCachedIdentifyEvent: Bool = false) {
         if shouldClearCachedIdentifyEvent && canRequestEvent {
             if let token = storage.pushToken {
                 publishInternalSDKEvent(
@@ -240,8 +232,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         experiencesPublisher?.logout()
         // Clear seen contents from screenViewEntity
         screenViewEntity?.resetState()
-        // Update socket state: SHUTTING_DOWN for app logout, otherwise SWITCHING_USER state
-        socketManager.updateSocketState(socketState, forceUpdateState: true)
         // Clear all content for app logout, otherwise keep them to re-establish connection
         // after closing old user channel
         clearAllCachedProperties(shouldClearCachedIdentifyEvent)
@@ -303,7 +293,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Check if socket is in shutdown state
             // For example: getting event while logging out, ignore the event
-            guard !socketManager.isShutdownState else { return }
+            guard !socketManager.isShutdownState else {
+                print("closed return")
+                return
+            }
 
             // Handle socket joining state
             // If socket is joining, cache the event to process it after establishing socket connection
@@ -353,14 +346,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Returns: true if processing should stop, false if it should continue
      */
     private func handleClosedSocket(_ event: Event) -> Bool {
-        cacheEvent(event)
-
         // Update userId from cached identify event or current event
         updateUserIdFromEvent(event)
 
         // Only proceed if we have a valid userId
-        if storage.userId.isEmpty { return true }
+        // This could be valid case when user logged out and sent tracked or screen event
+        // then in this case return and don't processed the event, ignore it.
+        guard !storage.userId.isEmpty else { return true }
 
+        cacheEvent(event)
         openSocket()
         return false
     }
@@ -427,7 +421,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // If new user ID detected, close socket and clean up
             if storage.userId.isNotEmpty && userId != storage.userId {
                 userpilot?.clean()
-                logout(socketState: .switchingUser)
+                logout()
             } else {
                 flushPriorityEvents(fakeReloadScreenEvent: true)
             }

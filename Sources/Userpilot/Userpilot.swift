@@ -241,7 +241,7 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         storage.user = ""
-        analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
+        analyticsPublisher.logout(shouldClearCachedIdentifyEvent: true)
         clean()
     }
 

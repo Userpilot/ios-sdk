@@ -13,10 +13,7 @@ import Foundation
 
 // MARK: - Protocols
 
-/*
- `SocketEvents` defines methods and properties for managing WebSocket connections and events.
- */
-// swiftlint:disable file_length
+/// `SocketEvents` defines methods and properties for managing WebSocket connections and events.
 internal protocol SocketEvents: AnyObject {
     /// Return socket state
     var isSocketOpened: Bool { get }
@@ -24,12 +21,6 @@ internal protocol SocketEvents: AnyObject {
     var didErrorOccurred: Bool { get }
     var isShutdownState: Bool { get }
     var isSocketConnectedWithUnknownChannel: Bool { get }
-
-    /// Update socket state
-    func updateSocketState(
-        _ socketState: SocketManager.SocketState,
-        forceUpdateState: Bool
-    )
 
     /// Handle socket open & close
     func connect()
@@ -57,16 +48,6 @@ internal extension SocketEvents {
             eventName,
             payload: payload,
             socketSubscription: socketSubscription
-        )
-    }
-
-    func updateSocketState(
-        _ socketState: SocketManager.SocketState,
-        forceUpdateState: Bool = false
-    ) {
-        updateSocketState(
-            socketState,
-            forceUpdateState: forceUpdateState
         )
     }
 }
@@ -121,40 +102,6 @@ internal class SocketManager {
 
     // MARK: - Properties
 
-    // Socket state enums
-    enum SocketState {
-        /**
-         When application enter background state, the SDK flush events and then close socket
-         without need to reopen.
-        */
-        case shuttingDown
-
-        /**
-         When SDK getting Identify event while it's already identified/opened channel.
-         */
-        case switchingUser
-
-        /**
-         When socket is opened.
-         */
-        case opened
-
-        /**
-         When socket closed.
-         */
-        case closed
-
-        /**
-         When socket channel is setup including getting settings and open the channel.
-         */
-        case connecting
-
-        /**
-         When getting socket channel error, to prevent retry.
-         */
-        case error
-    }
-
     /// The WebSocket instance for handling connections.
     private var phoenixSocket: Socket?
 
@@ -183,7 +130,7 @@ internal class SocketManager {
     @Multicast var socketSubscription: SocketSubscription
 
     // track socket state
-    private var socketState: SocketState = .closed
+    // private var socketState: SocketState = .closed
 
     // MARK: - Initialization
 
@@ -222,8 +169,6 @@ extension SocketManager {
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
         else { return }
         tryCatch {
-            socketState = .connecting
-
             let socketProperties: [String: Any] = [
                 SocketManager.tokenKey: Environment.getClientToken(config: config),
                 SocketManager.userIdKey: storage.userId,
@@ -245,8 +190,7 @@ extension SocketManager {
 
             phoenixSocket.delegateOnClose(to: self) { (self) in
                 self.logger.error("🛑 SOCKET closed")
-                self.updateSocketState(.closed)
-                if self.socketState != .shuttingDown {
+                if self.isShutdownState == false {
                     self.$socketSubscription.invoke { $0.onSocketClosed() }
                 }
             }
@@ -254,7 +198,6 @@ extension SocketManager {
             phoenixSocket.delegateOnError(to: self) { (self, error) in
                 let (error, _) = error
                 self.logger.error("❗ SOCKET error - details %{public}@", error.localizedDescription)
-                self.updateSocketState(.error)
             }
 
             phoenixSocket.onMessage(callback: { [weak self] message in
@@ -274,24 +217,20 @@ extension SocketManager {
             phoenixChannel?.join()?
                 .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
                     self.logger.info("🚀 SOCKET channel joined")
-                    self.updateSocketState(.opened)
                     self.$socketSubscription.invoke { $0.onSocketOpened() }
                 })
                 .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
                     self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
-                    self.updateSocketState(.error)
                     self.closeSocket()
                 })
 
             phoenixChannel?.onError { [weak self] message in
                 self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
-                self?.updateSocketState(.error)
                 self?.closeSocket()
             }
 
             phoenixChannel?.onClose { [weak self] message in
                 self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
-                self?.updateSocketState(.closed)
             }
 
             // Connect the socket
@@ -305,15 +244,15 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        performOn(.main) { [weak self] in
+        // performOn(.main) { [weak self] in
             tryCatch {
-                if let channel = self?.phoenixChannel, !channel.isClosed {
+                if let channel = phoenixChannel, !channel.isClosed {
                     channel.leave(timeout: 0.0)
-                    self?.phoenixSocket?.remove(channel)
+                    phoenixSocket?.remove(channel)
                 }
-                self?.phoenixSocket?.disconnect()
+                phoenixSocket?.disconnect()
             }
-        }
+        // }
     }
 
 }
@@ -324,7 +263,7 @@ extension SocketManager: SocketEvents {
 
     /// Logic to determine if the channel state is joining
     var isJoiningSocket: Bool {
-        phoenixChannel?.isJoining == true || socketState == .connecting
+        phoenixSocket?.isConnecting == true || phoenixChannel?.isJoining == true
     }
 
     /// Logic to check if the socket is currently open
@@ -334,27 +273,12 @@ extension SocketManager: SocketEvents {
 
     /// Checks if the socket is closed due to error reason
     var didErrorOccurred: Bool {
-        socketState == .error
+        phoenixChannel?.isErrored == true
     }
 
     /// Checks if the socket in shutting down state
     var isShutdownState: Bool {
-        socketState == .shuttingDown
-    }
-
-    /// Update socket state
-    func updateSocketState(
-        _ newSocketState: SocketManager.SocketState,
-        forceUpdateState: Bool = false
-    ) {
-        tryCatch {
-            if forceUpdateState || newSocketState == .error {
-                socketState = newSocketState
-                return
-            }
-            if socketState == newSocketState || socketState == .error { return }
-            socketState = newSocketState
-        }
+        phoenixSocket?.connectionState == .closing || phoenixChannel?.isLeaving == true
     }
 
     /// Checks if the socket is currently opened without channel
@@ -365,10 +289,8 @@ extension SocketManager: SocketEvents {
     /// Implementation to open a WebSocket connection
     func connect() {
         if config.token.isEmpty || storage.userId.isEmpty {
-            updateSocketState(.closed)
             return
         }
-        updateSocketState(.connecting)
         sdkSettingsDetector.fetchSettings { [weak self] in
             self?.openSocket()
         }
@@ -376,7 +298,6 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to close the WebSocket connection
     func close() {
-        updateSocketState(.closed)
         closeSocket()
     }
 
@@ -390,7 +311,7 @@ extension SocketManager: SocketEvents {
             phoenixChannel?
                 .push(eventName, payload: payload ?? [:])?
                 .receive(SocketManager.successKey) { [weak self] message in
-                    if self?.socketState != .shuttingDown {
+                    if self?.isShutdownState == false {
                         if let socketSubscription {
                             socketSubscription.onSocketEventSent(eventName, payload, message, true)
                         } else {
@@ -400,7 +321,7 @@ extension SocketManager: SocketEvents {
                     }
                 }
                 .receive(SocketManager.errorKey) { [weak self] message in
-                    if self?.socketState != .shuttingDown {
+                    if self?.isShutdownState == false {
                         if let socketSubscription {
                             socketSubscription.onSocketEventSent(eventName, payload, message, false)
                         } else {
