@@ -36,7 +36,6 @@ internal extension Bundle {
     }
 
 }
-
 internal extension Userpilot {
     static let resourceBundle: Bundle = {
 #if SWIFT_PACKAGE
