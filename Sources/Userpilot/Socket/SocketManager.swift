@@ -398,7 +398,7 @@ extension SocketManager: SocketEvents {
         payload: Payload,
         socketSubscription: SocketSubscription?
     ) {
-        tryCatch {
+        _ = tryCatch {
             phoenixChannel?
                 .push(eventName, payload: payload ?? [:])?
                 .receive(SocketManager.successKey) { [weak self] message in
