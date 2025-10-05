@@ -201,9 +201,17 @@ public class Socket: PhoenixTransportDelegate {
     self.paramsClosure = paramsClosure
     self.endPoint = endPoint
     self.vsn = vsn
-    self.endPointUrl = Socket.buildEndpointUrl(endpoint: endPoint,
-                                               paramsClosure: paramsClosure,
-                                               vsn: vsn)
+
+    guard let endPointUrl = Socket.buildEndpointUrl(
+        endpoint: endPoint,
+        paramsClosure: paramsClosure,
+        vsn: vsn) else {
+        self.endPointUrl = URL(string: "about:blank")!
+        self.reconnectTimer = TimeoutTimer()
+        return
+    }
+    
+    self.endPointUrl = endPointUrl
 
     self.reconnectTimer = TimeoutTimer()
     self.reconnectTimer.callback.delegate(to: self) { (self) in
@@ -260,10 +268,12 @@ public class Socket: PhoenixTransportDelegate {
 
     // We need to build this right before attempting to connect as the
     // parameters could be built upon demand and change over time
-    self.endPointUrl = Socket.buildEndpointUrl(endpoint: self.endPoint,
-                                               paramsClosure: self.paramsClosure,
-                                               vsn: vsn)
-
+    guard let endPointUrl = Socket.buildEndpointUrl(
+        endpoint: endPoint,
+        paramsClosure: paramsClosure,
+        vsn: vsn) else { return }
+    self.endPointUrl = endPointUrl
+      
     self.connection = self.transport(self.endPointUrl)
     self.connection?.delegate = self
 //    self.connection?.disableSSLCertValidation = disableSSLCertValidation
@@ -748,11 +758,17 @@ public class Socket: PhoenixTransportDelegate {
   }
 
   /// Builds a fully qualified socket `URL` from `endPoint` and `params`.
-  internal static func buildEndpointUrl(endpoint: String, paramsClosure params: PayloadClosure?, vsn: String) -> URL {
+  internal static func buildEndpointUrl(endpoint: String, paramsClosure params: PayloadClosure?, vsn: String) -> URL? {
     guard
       let url = URL(string: endpoint),
       var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
-      else { fatalError("Malformed URL: \(endpoint)") }
+      else {
+#if DEBUG
+        fatalError("Malformed URL: \(endpoint)")
+#else
+        return nil
+#endif
+    }
 
     // Ensure that the URL ends with "/websocket
     if !urlComponents.path.contains("/websocket") {
@@ -776,7 +792,14 @@ public class Socket: PhoenixTransportDelegate {
     }
 
     guard let qualifiedUrl = urlComponents.url
-      else { fatalError("Malformed URL while adding parameters") }
+      else {
+        
+#if DEBUG
+        fatalError("Malformed URL while adding parameters")
+#else
+        return nil
+#endif
+    }
     return qualifiedUrl
   }
   

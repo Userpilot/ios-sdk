@@ -245,10 +245,14 @@ public class Channel {
   /// - parameter timeout: Optional. Defaults to Channel's timeout
   /// - return: Push event
   @discardableResult
-  public func join(timeout: TimeInterval? = nil) -> Push {
+  public func join(timeout: TimeInterval? = nil) -> Push? {
     guard !joinedOnce else {
-      fatalError("tried to join multiple times. 'join' "
+#if DEBUG
+        fatalError("tried to join multiple times. 'join' "
         + "can only be called a single time per channel instance")
+#else
+        return nil
+#endif
     }
     
     // Join the Channel
@@ -448,9 +452,15 @@ public class Channel {
   @discardableResult
   public func push(_ event: String,
                    payload: SwiftPhoenixClientPayload,
-                   timeout: TimeInterval = Defaults.timeoutInterval) -> Push {
-    guard joinedOnce else { fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events") }
-    
+                   timeout: TimeInterval = Defaults.timeoutInterval) -> Push? {
+      guard joinedOnce else {
+#if DEBUG
+          fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events")
+#else
+          return nil
+#endif
+      }
+
     let pushEvent = Push(channel: self,
                          event: event,
                          payload: payload,
@@ -555,14 +565,16 @@ public class Channel {
   
   /// Rejoins the channel
   func rejoin(_ timeout: TimeInterval? = nil) {
-    // Do not attempt to rejoin if the channel is in the process of leaving
-    guard !self.isLeaving else { return }
-    
-    // Leave potentially duplicate channels
-    self.socket?.leaveOpenTopic(topic: self.topic)
-    
-    // Send the joinPush
-    self.sendJoin(timeout ?? self.timeout)
+      tryCatch {
+          // Do not attempt to rejoin if the channel is in the process of leaving
+          guard !self.isLeaving else { return }
+          
+          // Leave potentially duplicate channels
+          self.socket?.leaveOpenTopic(topic: self.topic)
+          
+          // Send the joinPush
+          self.sendJoin(timeout ?? self.timeout)
+      }
   }
   
   /// Triggers an event to the correct event bindings created by
