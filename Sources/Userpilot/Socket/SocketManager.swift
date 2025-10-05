@@ -129,8 +129,8 @@ internal class SocketManager {
     /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
 
-    // track socket state
-    // private var socketState: SocketState = .closed
+    // track fetching socket settings
+    private var isFetchingSocketSettings = false
 
     // MARK: - Initialization
 
@@ -235,6 +235,7 @@ extension SocketManager {
 
             // Connect the socket
             phoenixSocket.connect()
+            isFetchingSocketSettings = false
         }
     }
 
@@ -244,15 +245,17 @@ extension SocketManager {
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
-        // performOn(.main) { [weak self] in
+        performOn(.main) { [weak self] in
             tryCatch {
-                if let channel = phoenixChannel, !channel.isClosed {
+                if let channel = self?.phoenixChannel, !channel.isClosed {
                     channel.leave(timeout: 0.0)
-                    phoenixSocket?.remove(channel)
+                    self?.phoenixSocket?.remove(channel)
                 }
-                phoenixSocket?.disconnect()
+                self?.phoenixSocket?.disconnect()
+                self?.phoenixSocket = nil
+                self?.phoenixChannel = nil
             }
-        // }
+        }
     }
 
 }
@@ -291,6 +294,10 @@ extension SocketManager: SocketEvents {
         if config.token.isEmpty || storage.userId.isEmpty {
             return
         }
+        if isFetchingSocketSettings || isSocketOpened || isJoiningSocket {
+            return
+        }
+        isFetchingSocketSettings = true
         sdkSettingsDetector.fetchSettings { [weak self] in
             self?.openSocket()
         }

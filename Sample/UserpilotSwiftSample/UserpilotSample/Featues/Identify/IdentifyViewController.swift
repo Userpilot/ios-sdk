@@ -38,10 +38,7 @@ class IdentifyViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        UserpilotManager.shared.identify(userId: "34343", properties: ["test_id": 34])
         UserpilotManager.shared.screen("identify")
-        UserpilotManager.shared.identify(userId: "34343", properties: ["test_id": 56])
-
     }
 
     // MARK: - IBActions
@@ -67,9 +64,6 @@ class IdentifyViewController: BaseViewController {
     @IBAction func onLogout(_ sender: UIButton) {
         FlowRoutingManager.shared.showAlertMessage("User logged out successfully!")
         UserpilotManager.shared.logout()
-        UserpilotManager.shared.screen("identify 1")
-        UserpilotManager.shared.screen("identify 2")
-        UserpilotManager.shared.screen("identify 3")
 
     }
 

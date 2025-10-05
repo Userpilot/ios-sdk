@@ -293,10 +293,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Check if socket is in shutdown state
             // For example: getting event while logging out, ignore the event
-            guard !socketManager.isShutdownState else {
-                print("closed return")
-                return
-            }
+            guard !socketManager.isShutdownState else { return }
 
             // Handle socket joining state
             // If socket is joining, cache the event to process it after establishing socket connection
