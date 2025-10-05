@@ -565,14 +565,16 @@ public class Channel {
   
   /// Rejoins the channel
   func rejoin(_ timeout: TimeInterval? = nil) {
-    // Do not attempt to rejoin if the channel is in the process of leaving
-    guard !self.isLeaving else { return }
-    
-    // Leave potentially duplicate channels
-    self.socket?.leaveOpenTopic(topic: self.topic)
-    
-    // Send the joinPush
-    self.sendJoin(timeout ?? self.timeout)
+      tryCatch {
+          // Do not attempt to rejoin if the channel is in the process of leaving
+          guard !self.isLeaving else { return }
+          
+          // Leave potentially duplicate channels
+          self.socket?.leaveOpenTopic(topic: self.topic)
+          
+          // Send the joinPush
+          self.sendJoin(timeout ?? self.timeout)
+      }
   }
   
   /// Triggers an event to the correct event bindings created by

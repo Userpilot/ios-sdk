@@ -71,9 +71,7 @@ internal extension SocketEvents {
     }
 }
 
-/**
- `SocketSubscription` defines a callback interface for handling socket event notifications.
- */
+/// `SocketSubscription` defines a callback interface for handling socket event notifications.
 internal protocol SocketSubscription: AnyObject {
     /// Listen to socket state
     func onSocketClosed()
@@ -114,9 +112,7 @@ extension SocketSubscription {
 
 // MARK: - SocketManager
 
-/**
- `SocketManager` is responsible for managing WebSocket connections, sending events, and handling responses.
- */
+/// `SocketManager` is responsible for managing WebSocket connections, sending events, and handling responses.
 internal class SocketManager {
 
     // MARK: - Properties
@@ -126,7 +122,7 @@ internal class SocketManager {
         /**
          When application enter background state, the SDK flush events and then close socket
          without need to reopen.
-        */
+         */
         case shuttingDown
 
         /**
@@ -189,7 +185,7 @@ internal class SocketManager {
 
     /**
      Initializes the `SocketManager` with dependencies provided by the `DIContainer`.
-     
+
      - Parameter container: The dependency injection container.
      */
     init(container: DIContainer) {
@@ -209,7 +205,7 @@ extension SocketManager {
 
     /*
      Opens a WebSocket connection and joins the specified channel.
-     
+
      - Parameter completion: A closure that is called when the connection attempt completes.
      */
     // swiftlint:disable:next function_body_length
@@ -236,7 +232,10 @@ extension SocketManager {
                 params: socketProperties
             )
 
-            guard let phoenixSocket else { return }
+            guard let phoenixSocket else {
+                socketState = .closed
+                return
+            }
 
             // Setup delegates for socket events
             phoenixSocket.delegateOnOpen(to: self) { (self) in
@@ -266,22 +265,28 @@ extension SocketManager {
                 self?.logger.debug("✈️ SOCKET message: %{public}@", message)
             }
 
-            // Setup the channel
+            // Setup the channel - always create a new channel instance to avoid join conflicts
             let channel = phoenixSocket.channel(SocketManager.channelTopic)
 
             // Connect to the channel
             phoenixChannel = channel
             phoenixChannel?.join()?
-                .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
-                    self.logger.info("🚀 SOCKET channel joined")
-                    self.updateSocketState(.opened)
-                    self.$socketSubscription.invoke { $0.onSocketOpened() }
-                })
-                .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
-                    self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
-                    self.updateSocketState(.error)
-                    self.closeSocket()
-                })
+                .delegateReceive(
+                    SocketManager.successKey, to: self,
+                    callback: { (self, _) in
+                        self.logger.info("🚀 SOCKET channel joined")
+                        self.updateSocketState(.opened)
+                        self.$socketSubscription.invoke { $0.onSocketOpened() }
+                    }
+                )
+                .delegateReceive(
+                    SocketManager.errorKey, to: self,
+                    callback: { (self, message) in
+                        self.logger.error(
+                            "⚠️ SOCKET channel join failed: %{public}@", message.payload)
+                        self.updateSocketState(.error)
+                        self.closeSocket()
+                    })
 
             phoenixChannel?.onError { [weak self] message in
                 self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
@@ -301,7 +306,7 @@ extension SocketManager {
 
     /**
      Closes the WebSocket connection and leaves the channel.
-     
+
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
@@ -312,6 +317,8 @@ extension SocketManager {
                     self?.phoenixSocket?.remove(channel)
                 }
                 self?.phoenixSocket?.disconnect()
+                self?.phoenixSocket = nil
+                self?.phoenixChannel = nil
             }
         }
     }
@@ -368,6 +375,13 @@ extension SocketManager: SocketEvents {
             updateSocketState(.closed)
             return
         }
+
+        // Prevent multiple connection attempts when already connecting or connected
+        guard socketState != .connecting && !isSocketOpened else {
+            logger.debug("🔄 SOCKET already connecting or opened, skipping connect")
+            return
+        }
+
         updateSocketState(.connecting)
         sdkSettingsDetector.fetchSettings { [weak self] in
             self?.openSocket()
@@ -386,7 +400,7 @@ extension SocketManager: SocketEvents {
         payload: Payload,
         socketSubscription: SocketSubscription?
     ) {
-        _ = tryCatch {
+        tryCatch {
             phoenixChannel?
                 .push(eventName, payload: payload ?? [:])?
                 .receive(SocketManager.successKey) { [weak self] message in
@@ -394,7 +408,8 @@ extension SocketManager: SocketEvents {
                         if let socketSubscription {
                             socketSubscription.onSocketEventSent(eventName, payload, message, true)
                         } else {
-                            self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true)
+                            self?.$socketSubscription.invoke {
+                                $0.onSocketEventSent(eventName, payload, message, true)
                             }
                         }
                     }
@@ -404,7 +419,8 @@ extension SocketManager: SocketEvents {
                         if let socketSubscription {
                             socketSubscription.onSocketEventSent(eventName, payload, message, false)
                         } else {
-                            self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, false)
+                            self?.$socketSubscription.invoke {
+                                $0.onSocketEventSent(eventName, payload, message, false)
                             }
                         }
                     }
