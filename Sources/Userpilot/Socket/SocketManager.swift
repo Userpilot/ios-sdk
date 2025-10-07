@@ -52,9 +52,7 @@ internal extension SocketEvents {
     }
 }
 
-/**
- `SocketSubscription` defines a callback interface for handling socket event notifications.
- */
+/// `SocketSubscription` defines a callback interface for handling socket event notifications.
 internal protocol SocketSubscription: AnyObject {
     /// Listen to socket state
     func onSocketClosed()
@@ -95,9 +93,7 @@ extension SocketSubscription {
 
 // MARK: - SocketManager
 
-/**
- `SocketManager` is responsible for managing WebSocket connections, sending events, and handling responses.
- */
+/// `SocketManager` is responsible for managing WebSocket connections, sending events, and handling responses.
 internal class SocketManager {
 
     // MARK: - Properties
@@ -136,7 +132,7 @@ internal class SocketManager {
 
     /**
      Initializes the `SocketManager` with dependencies provided by the `DIContainer`.
-     
+
      - Parameter container: The dependency injection container.
      */
     init(container: DIContainer) {
@@ -156,7 +152,7 @@ extension SocketManager {
 
     /*
      Opens a WebSocket connection and joins the specified channel.
-     
+
      - Parameter completion: A closure that is called when the connection attempt completes.
      */
     // swiftlint:disable:next function_body_length
@@ -209,7 +205,7 @@ extension SocketManager {
                 self?.logger.debug("✈️ SOCKET message: %{public}@", message)
             }
 
-            // Setup the channel
+            // Setup the channel - always create a new channel instance to avoid join conflicts
             let channel = phoenixSocket.channel(SocketManager.channelTopic)
 
             // Connect to the channel
@@ -223,7 +219,6 @@ extension SocketManager {
                     self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
                     self.closeSocket()
                 })
-
             phoenixChannel?.onError { [weak self] message in
                 self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
                 self?.closeSocket()
@@ -241,7 +236,7 @@ extension SocketManager {
 
     /**
      Closes the WebSocket connection and leaves the channel.
-     
+
      - Parameter completion: A closure that is called when the disconnection completes.
      */
     private func closeSocket() {
@@ -320,7 +315,8 @@ extension SocketManager: SocketEvents {
                         if let socketSubscription {
                             socketSubscription.onSocketEventSent(eventName, payload, message, true)
                         } else {
-                            self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, true)
+                            self?.$socketSubscription.invoke {
+                                $0.onSocketEventSent(eventName, payload, message, true)
                             }
                         }
                     }
@@ -330,7 +326,8 @@ extension SocketManager: SocketEvents {
                         if let socketSubscription {
                             socketSubscription.onSocketEventSent(eventName, payload, message, false)
                         } else {
-                            self?.$socketSubscription.invoke { $0.onSocketEventSent(eventName, payload, message, false)
+                            self?.$socketSubscription.invoke {
+                                $0.onSocketEventSent(eventName, payload, message, false)
                             }
                         }
                     }

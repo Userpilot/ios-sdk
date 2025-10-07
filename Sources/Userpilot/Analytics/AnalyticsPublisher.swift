@@ -342,18 +342,17 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter event: The event to handle
      * - Returns: true if processing should stop, false if it should continue
      */
-    private func handleClosedSocket(_ event: Event) -> Bool {
+    private func handleClosedSocket(_ event: Event) {
         // Update userId from cached identify event or current event
         updateUserIdFromEvent(event)
 
         // Only proceed if we have a valid userId
         // This could be valid case when user logged out and sent tracked or screen event
         // then in this case return and don't processed the event, ignore it.
-        guard !storage.userId.isEmpty else { return true }
+        guard !storage.userId.isEmpty else { return }
 
         cacheEvent(event)
         openSocket()
-        return false
     }
 
     /**
