@@ -252,8 +252,6 @@ extension SocketManager {
                     self?.phoenixSocket?.remove(channel)
                 }
                 self?.phoenixSocket?.disconnect()
-                self?.phoenixSocket = nil
-                self?.phoenixChannel = nil
             }
         }
     }
