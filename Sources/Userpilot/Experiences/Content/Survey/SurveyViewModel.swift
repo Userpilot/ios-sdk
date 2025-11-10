@@ -39,6 +39,7 @@ internal class SurveyViewModel {
     var bindData: ((Bool) -> Void)?
     var closeSurvey: (() -> Void)?
     var bindNextSurveyStep: (() -> Void)?
+    let submissionId: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
 
     // MARK: - Initializers
 
@@ -252,6 +253,7 @@ internal class SurveyViewModel {
 
         let eventContentSubmitted = ExperienceSurveySubmittedEvent(
             surveyId: surveyContent.id,
+            submissionId: submissionId,
             feedback: answersPayload
         )
         experiencesPublisher.publishInternalSDKEvent(eventContentSubmitted)
@@ -278,6 +280,7 @@ internal class SurveyViewModel {
             surveyId: surveyContent.id,
             moduleId: surveyStep.id,
             type: surveyStep.type.rawValue,
+            submissionId: submissionId,
             feedback: answersPayload?["value"]
         )
         experiencesPublisher.publishInternalSDKEvent(eventStepSubmitted)
