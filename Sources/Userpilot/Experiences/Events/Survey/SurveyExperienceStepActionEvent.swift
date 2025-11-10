@@ -65,14 +65,17 @@ internal class ExperienceSurveyStepSkippedEvent: SurveyExperienceStepActionEvent
 internal class ExperienceSurveyStepSubmittedEvent: SurveyExperienceStepActionEvent {
 
     // Custom parameters for the Submitted event
+    let submissionId: Int64
     let feedback: Any?
 
     init(
         surveyId: Int,
         moduleId: Int,
         type: String,
+        submissionId: Int64,
         feedback: Any? = nil
     ) {
+        self.submissionId = submissionId
         self.feedback = feedback
         super.init(surveyId: surveyId, moduleId: moduleId, type: type)
     }
@@ -84,6 +87,7 @@ internal class ExperienceSurveyStepSubmittedEvent: SurveyExperienceStepActionEve
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
+        basePayload["submission_id"] = submissionId
         if feedback != nil {
             basePayload["feedback"] = feedback
         }
