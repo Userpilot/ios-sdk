@@ -7,9 +7,10 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
-final class AutoPropertyDecoratorTests: XCTestCase {
+class AutoPropertyDecoratorTests: XCTestCase {
 
     var decorator: AutoPropertyDecorator!
     var userpilot: MockUserpilot!
@@ -27,12 +28,12 @@ final class AutoPropertyDecoratorTests: XCTestCase {
 
         // Assert
         let expectedKeys: Set<String> = [
-            AutoPropertyDecorator.osKey,
-            AutoPropertyDecorator.osVersionKey,
-            AutoPropertyDecorator.deviceTypeKey,
-            AutoPropertyDecorator.appVersionKey,
-            AutoPropertyDecorator.screenWidthKey,
-            AutoPropertyDecorator.screenHeightKey
+            Constants.AutoProperty.osKey,
+            Constants.AutoProperty.osVersionKey,
+            Constants.AutoProperty.deviceTypeKey,
+            Constants.AutoProperty.appVersionKey,
+            Constants.AutoProperty.screenWidthKey,
+            Constants.AutoProperty.screenHeightKey
         ]
 
         for key in expectedKeys {
@@ -47,8 +48,8 @@ final class AutoPropertyDecoratorTests: XCTestCase {
 
         // Assert
         let expectedKeys: Set<String> = [
-            AutoPropertyDecorator.appNameKey,
-            AutoPropertyDecorator.appIdentifierKey
+            Constants.AutoProperty.appNameKey,
+            Constants.AutoProperty.appIdentifierKey
         ]
 
         for key in expectedKeys {

@@ -15,7 +15,7 @@
 import Foundation
 import UIKit
 
-internal extension CarouselExperienceViewController {
+extension CarouselExperienceViewController {
 
     /// Binds the view model to update the UI based on the view model state.
     /// Sets up closures for data binding and dismiss actions.

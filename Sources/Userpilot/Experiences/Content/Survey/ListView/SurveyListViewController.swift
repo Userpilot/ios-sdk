@@ -64,6 +64,8 @@ internal class SurveyListViewController: UIViewController {
         super.viewWillAppear(animated)
         if surveyViewModel.isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 
@@ -99,7 +101,7 @@ internal class SurveyListViewController: UIViewController {
 // MARK: - UPExperience
 
 extension SurveyListViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
+    func triggerCloseExperience(isInternalEvent: Bool) {
         closeExperience()
     }
 }

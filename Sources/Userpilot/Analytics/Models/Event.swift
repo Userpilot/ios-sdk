@@ -30,10 +30,6 @@ internal struct Event {
 
     // MARK: - Variables from `EventType`
 
-    var caseName: String {
-        return type.caseName
-    }
-
     var eventName: String {
         return type.eventName
     }
@@ -42,12 +38,16 @@ internal struct Event {
         return type.eventTitle ?? ""
     }
 
-    var isEvent: Bool {
-        return type.isEvent
-    }
-
     var isIdentifyEvent: Bool {
         return type.isIdentifyEvent
+    }
+
+    var isScreenEvent: Bool {
+        return type.isScreenEvent
+    }
+
+    var isTrackEvent: Bool {
+        return type.isTrackEvent
     }
 
     var screenTitle: String? {
@@ -70,10 +70,64 @@ internal struct Event {
     }
 }
 
-internal extension Event {
+// MARK: - Codable Conformance
+
+extension Event: Codable {
+    enum CodingKeys: String, CodingKey {
+        case type
+        case properties
+        case company
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+
+        // Encode Payload ([String: Any]?) as JSON data
+        if let properties = properties {
+            let jsonData = try JSONSerialization.data(withJSONObject: properties, options: [])
+            if let jsonObject = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                try container.encode(jsonObject.mapValues { AnyCodable($0) }, forKey: .properties)
+            }
+        }
+
+        if let company = company {
+            let jsonData = try JSONSerialization.data(withJSONObject: company, options: [])
+            if let jsonObject = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                try container.encode(jsonObject.mapValues { AnyCodable($0) }, forKey: .company)
+            }
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(EventType.self, forKey: .type)
+
+        // Decode properties as [String: AnyCodable]? and convert to [String: Any]?
+        if let propertiesDict = try container.decodeIfPresent(
+            [String: AnyCodable].self, forKey: .properties) {
+            properties = propertiesDict.mapValues { $0.value }
+        } else {
+            properties = nil
+        }
+
+        // Decode company as [String: AnyCodable]? and convert to [String: Any]?
+        if let companyDict = try container.decodeIfPresent(
+            [String: AnyCodable].self, forKey: .company) {
+            company = companyDict.mapValues { $0.value }
+        } else {
+            company = nil
+        }
+    }
+}
+
+// MARK: - User Conversion
+
+extension Event {
     func toUser() -> User {
-        return User(userId: userId ?? "",
-                    properties: properties ?? [:],
-                    company: company ?? [:])
+        return User(
+            userId: userId ?? "",
+            properties: properties ?? [:],
+            company: company ?? [:])
     }
 }

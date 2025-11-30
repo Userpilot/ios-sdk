@@ -9,7 +9,7 @@ import UIKit
 
 // swiftlint:disable all
 internal class NPSContainerView: UIView {
-    
+
     // MARK: - UI Components
 
     /// A container for the dismiss button, with a fixed height.
@@ -17,13 +17,13 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 30).isActive = true
         return view
     }()
-    
+
     /// The dismiss button.
     private var buttonDismiss: UPButtonView?
-    
+
     /// The action button at the bottom of the view.
     private var actionButton: UPButtonView?
 
@@ -34,7 +34,7 @@ internal class NPSContainerView: UIView {
         button.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
         return button
     }()
-    
+
     /// A vertical stack view contains footer action buttons
     private lazy var footerButtonsStackView: UIStackView = {
         //let stackView = UIStackView(arrangedSubviews: [updateAnswerButton, actionButton])
@@ -45,7 +45,7 @@ internal class NPSContainerView: UIView {
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
-    
+
     /// A container for footer action buttons
     private lazy var footerButtonsContianer: UIView = {
         let view = UIView()
@@ -54,7 +54,7 @@ internal class NPSContainerView: UIView {
         view.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
         return view
     }()
-    
+
     /// The steps progess view
     private lazy var barStepsProgressView: UPStepsBarProgressView = {
         let progressView = UPStepsBarProgressView()
@@ -62,7 +62,7 @@ internal class NPSContainerView: UIView {
         progressView.heightAnchor.constraint(equalToConstant: 5).isActive = true
         return progressView
     }()
-    
+
     /// The steps progess view
     private lazy var stepsProgressView: UPStepsProgressView = {
         let progressView = UPStepsProgressView()
@@ -70,7 +70,7 @@ internal class NPSContainerView: UIView {
         progressView.heightAnchor.constraint(equalToConstant: 20).isActive = true
         return progressView
     }()
-    
+
     private lazy var spaceView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -78,11 +78,11 @@ internal class NPSContainerView: UIView {
         view.heightAnchor.constraint(equalToConstant: ThemeHandler.DefaultValues.smallDistanceBetweenSections).isActive = true
         return view
     }()
-    
+
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            buttonDismissContainerView, spaceView, scrollView, footerButtonsContianer, stepsProgressView])
+            buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
@@ -90,7 +90,7 @@ internal class NPSContainerView: UIView {
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
-    
+
     /// A scroll view to allow the central content to be scrollable.
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
@@ -98,7 +98,7 @@ internal class NPSContainerView: UIView {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         return scrollView
     }()
-    
+
     /// A container view that holds the scrollable content inside the scroll view.
     private let contentContainerView: UIView = {
         let view = UIView()
@@ -107,7 +107,7 @@ internal class NPSContainerView: UIView {
         //view.heightAnchor.constraint(equalToConstant: 0).isActive = true
         return view
     }()
-    
+
     /// A container for image logo.
     private lazy var imageContainerView: UIView = {
         let view = UIView()
@@ -117,7 +117,7 @@ internal class NPSContainerView: UIView {
         view.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)).isActive = true
         return view
     }()
-    
+
     /// The logo image
     private let imageView: UPImageView = {
         let imageView = UPImageView()
@@ -127,7 +127,7 @@ internal class NPSContainerView: UIView {
         ])
         return imageView
     }()
-    
+
     /// A vertical stack view for managing dynamically added sections.
     private let stepSectionsStackView: UIStackView = {
         let stackView = UIStackView()
@@ -137,10 +137,10 @@ internal class NPSContainerView: UIView {
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
-    
+
     private var scrollViewHeightConstraint: NSLayoutConstraint?
     private var storedConstraints: [NSLayoutConstraint] = []
-    
+
     // MARK: - Properties
     private var imageLoader: ImageLoading!
     private var theme: NPSTheme!
@@ -206,7 +206,7 @@ internal class NPSContainerView: UIView {
             scrollView.addSubview(contentContainerView)
             contentContainerView.addSubview(stepSectionsStackView)
             footerButtonsContianer.addSubview(footerButtonsStackView)
-            
+
             //buttonDismissContainerView.addSubview(buttonDismiss)
             stepSectionsStackView.addArrangedSubview(imageContainerView)
             imageContainerView.addSubview(imageView)
@@ -222,7 +222,7 @@ internal class NPSContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
+                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: -12),
                 barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
                 barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
 
@@ -252,12 +252,12 @@ internal class NPSContainerView: UIView {
                     equalTo: footerButtonsContianer.trailingAnchor),
                 footerButtonsStackView.centerYAnchor.constraint(
                     equalTo: footerButtonsContianer.centerYAnchor),
-                
+
                 imageView.centerYAnchor.constraint(equalTo: imageContainerView.centerYAnchor),
                 imageView.centerXAnchor.constraint(equalTo: imageContainerView.centerXAnchor),
-                
+
                 // Content container view height constraint
-                contentViewHeightConstraint
+                contentViewHeightConstraint,
             ])
 
             // Activate the stored constraints
@@ -276,17 +276,19 @@ internal class NPSContainerView: UIView {
        - slideOutContainerViewDelegate: Delegate for handling actions within the view.
        - imageLoader: Object responsible for loading images.
      */
-    func bindStep(withimageLoader imageLoader: ImageLoading,
-                  withTheme theme: NPSTheme,
-                  andContent npsContent: NPSContent,
-                  withLocal isRTL: Bool,
-                  npsContainerViewDelegate: NPSContainerViewDelegate) {
+    func bindStep(
+        withimageLoader imageLoader: ImageLoading,
+        withTheme theme: NPSTheme,
+        andContent npsContent: NPSContent,
+        withLocal isRTL: Bool,
+        npsContainerViewDelegate: NPSContainerViewDelegate
+    ) {
         self.imageLoader = imageLoader
         self.theme = theme
         self.npsContent = npsContent
         self.isRTL = isRTL
         self.npsContainerViewDelegate = npsContainerViewDelegate
-        
+
         setupGeneralStyle()
         bindProgressBar()
         bindSurveyViews()
@@ -294,6 +296,8 @@ internal class NPSContainerView: UIView {
 
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 
@@ -308,21 +312,27 @@ internal class NPSContainerView: UIView {
                 imageContainerView.isHidden = false
             }
             let likertView = UPLikertView()
-            likertView.setupView(npsStep: npsContent.content, npsTheme: theme, isRTL: isRTL, answer: userAnswer, viewStateProtocol: self)
+            likertView.setupView(
+                npsStep: npsContent.content, npsTheme: theme, isRTL: isRTL, answer: userAnswer,
+                viewStateProtocol: self)
             newView = likertView
         case 1:
             imageContainerView.isHidden = true
             let openTextView = UPOpenTextView()
-            openTextView.setupView(followUpQuestion: getFollowUpQuestion(), placeholder: npsContent.content.followUp.placeholder, npsTheme: theme, isRTL: isRTL, viewStateProtocol: self)
+            openTextView.setupView(
+                followUpQuestion: getFollowUpQuestion(),
+                placeholder: npsContent.content.followUp.placeholder, npsTheme: theme, isRTL: isRTL,
+                viewStateProtocol: self)
             newView = openTextView
         case 2:
             let thankYouView = UPThankYouView()
-            thankYouView.setupView(completedData: getThankYouMessage(), npsTheme: theme, isRTL: isRTL)
+            thankYouView.setupView(
+                completedData: getThankYouMessage(), npsTheme: theme, isRTL: isRTL)
             newView = thankYouView
         default:
             break
         }
-        
+
         if let newView = newView {
             stepSectionsStackView.addArrangedSubview(newView)
             updateContent(with: newView, animationSubViews: false)
@@ -332,46 +342,70 @@ internal class NPSContainerView: UIView {
     func updateContent(with newView: UIView, animationSubViews: Bool) {
         newView.alpha = 0
         buttonDismissContainerView.alpha = 0
-        barStepsProgressView.alpha = 0
+        // barStepsProgressView.alpha = 0
         stepsProgressView.alpha = 0
         imageContainerView.alpha = 0
-        
+
         // Remove old views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach {
             if $0 is UPExperienceView {
                 $0.removeFromSuperview()
             }
         }
-        
+
         stepSectionsStackView.addArrangedSubview(newView)
 
-        // Ensure layout updates before calculating the height
+        // Force layout update to ensure constraints are applied
+        stepSectionsStackView.setNeedsLayout()
         stepSectionsStackView.layoutIfNeeded()
 
-        
+        // Additional layout pass for RTL content to ensure proper text wrapping
+        if isRTL {
+            newView.setNeedsLayout()
+            newView.layoutIfNeeded()
+        }
+
         // Calculate the new height required for contentContainerView
-        let newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+        // Use the actual width available to get accurate height calculation for text wrapping
+        let targetWidth = scrollView.frame.width > 0 ? scrollView.frame.width : bounds.width
+        let targetSize = CGSize(
+            width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
+
+        var newHeight = stepSectionsStackView.systemLayoutSizeFitting(
+            targetSize,
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        ).height
+
+        // Add spacing from stack view if needed
+        let spacing =
+            contentStackView.spacing * CGFloat(contentStackView.arrangedSubviews.count - 1)
+        newHeight += spacing
+
+        // Ensure minimum height for small content
+        newHeight = max(newHeight, 100)
 
         // Animate height change smoothly
-        UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
-            if let scrollViewHeightConstraint = self?.scrollViewHeightConstraint {
-                NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
-            }
-            self?.scrollViewHeightConstraint = self?.scrollView.heightAnchor.constraint(
-                lessThanOrEqualToConstant: min(newHeight, screenHeight * 0.7))
-            self?.scrollViewHeightConstraint?.isActive = true
-
-            // self?.scrollViewHeightConstraint?.constant = min(newHeight, screenHeight * 0.7)
-            self?.viewHeight = min(newHeight, screenHeight * 0.7)
-            self?.layoutIfNeeded()
-        })
+        UIView.animate(
+            withDuration: 0.2, delay: 0, options: .curveEaseInOut,
+            animations: { [weak self] in
+                guard let self = self else { return }
+                if let scrollViewHeightConstraint = self.scrollViewHeightConstraint {
+                    NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+                }
+                self.scrollViewHeightConstraint = self.scrollView.heightAnchor.constraint(
+                    lessThanOrEqualToConstant: min(newHeight, screenHeight * 0.7))
+                self.scrollViewHeightConstraint?.isActive = true
+                self.viewHeight = min(newHeight, screenHeight * 0.7)
+                self.layoutIfNeeded()
+            })
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.1) { [weak self] in
                 guard self != nil else { return }
                 newView.alpha = 1
             }
         }
-        
+
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.2) { [weak self] in
                 self?.buttonDismissContainerView.alpha = 1
@@ -400,13 +434,13 @@ extension NPSContainerView {
     // Return current survey follow-up question
     private func getFollowUpQuestion() -> FollowUpQuestion? {
         let followUpContent = npsContent.content.followUp
-        
+
         // Universal case
         if followUpContent.type == .universal, let all = followUpContent.all {
             userFollowUpKey = all.key
             return all
         }
-        
+
         // Conditional cases based on userAnswer
         switch userAnswer {
         case 0...6:
@@ -431,12 +465,12 @@ extension NPSContainerView {
     // Return the "Thank You" message after survey completion
     private func getThankYouMessage() -> CompletedData? {
         let completedContent = npsContent.content.completed
-        
+
         // Universal case
         if completedContent.type == .universal, let all = completedContent.all {
             return all
         }
-        
+
         // Conditional cases based on userAnswer
         switch userAnswer {
         case 0...6:
@@ -458,9 +492,11 @@ extension NPSContainerView: ViewStateDelegate {
     }
 
     private func getAnswerAndMoveToFollowUpQuestion() {
-        guard let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap({ $0 as? UPExperienceView })
-            .first else { return }
+        guard
+            let upExperienceView = stepSectionsStackView.arrangedSubviews
+                .compactMap({ $0 as? UPExperienceView })
+                .first
+        else { return }
 
         if let answer = upExperienceView.getAnswer() as? Int {
             userAnswer = answer
@@ -471,9 +507,11 @@ extension NPSContainerView: ViewStateDelegate {
     }
 
     private func getFollowUpAnswer() {
-        guard let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap({ $0 as? UPExperienceView })
-            .first else { return }
+        guard
+            let upExperienceView = stepSectionsStackView.arrangedSubviews
+                .compactMap({ $0 as? UPExperienceView })
+                .first
+        else { return }
 
         if let answer = upExperienceView.getAnswer() as? String {
             userFollowUp = answer
@@ -482,14 +520,14 @@ extension NPSContainerView: ViewStateDelegate {
 }
 
 extension NPSContainerView {
-    
+
     // MARK: - Component Setup
 
     /** Configures the action button based on the step's data. */
     private func setupActionButton() {
         // Hide footer buttons for the first step
         footerButtonsContianer.isHidden = currentStep == 0
-        
+
         // Set up dismiss button
         buttonDismiss = getCloseButton()
         setupDismissButton(for: currentStep)
@@ -523,12 +561,14 @@ extension NPSContainerView {
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             buttonDismiss.heightAnchor.constraint(equalToConstant: 30),
-            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor, constant: 10),
-            buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor, constant: 20)
+            buttonDismiss.bottomAnchor.constraint(
+                equalTo: buttonDismissContainerView.bottomAnchor, constant: 0),
+            buttonDismiss.trailingAnchor.constraint(
+                equalTo: buttonDismissContainerView.trailingAnchor, constant: 20),
         ])
         return buttonDismiss
     }
-    
+
     private func getActionButton() -> UPButtonView {
         actionButton?.removeFromSuperview()
         let button = UPButtonView()
@@ -547,7 +587,8 @@ extension NPSContainerView {
                 isSecondaryButton: true,
                 isDismissButton: true
             ) { [weak self] _ in
-                self?.npsContainerViewDelegate?.onNPSSubmitted(self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
+                self?.npsContainerViewDelegate?.onNPSSubmitted(
+                    self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
                 self?.npsContainerViewDelegate?.onEndNPS(completedData: nil)
             }
         default:
@@ -576,12 +617,13 @@ extension NPSContainerView {
             isDismissButton: false
         ) { [weak self] _ in
             self?.getFollowUpAnswer()
-            self?.npsContainerViewDelegate?.onNPSSubmitted(self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
+            self?.npsContainerViewDelegate?.onNPSSubmitted(
+                self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
             self?.currentStep = 2
             self?.bindSurveyViews()
             self?.setupActionButton()
         }
-        
+
         updateAnswerButton.setupViews(
             title: npsContent.content.followUp.updateScore ?? "Update score",
             npsTheme: theme,
@@ -598,7 +640,7 @@ extension NPSContainerView {
         if let completedData = getThankYouMessage() {
             stepsProgressView.isHidden = true
             barStepsProgressView.isHidden = true
-            if (!completedData.button.enabled) {
+            if !completedData.button.enabled {
                 footerButtonsStackView.isHidden = true
                 return
             }

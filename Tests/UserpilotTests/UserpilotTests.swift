@@ -7,6 +7,7 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
 // swiftlint:disable all
@@ -39,7 +40,7 @@ class UserpilotTests: XCTestCase {
     func testIdentify_doesNotTrack_whenUserIdIsEmpty() throws {
         // Arrange
         var trackedUpdates = false
-        userpilot.analyticsPublisher.onPublish = { _ in trackedUpdates = true }
+        userpilot.analyticsPublisher.onPublish = { _, _ in trackedUpdates = true }
 
         // Act
         userpilot.identify(userId: "", properties: nil)
@@ -52,7 +53,7 @@ class UserpilotTests: XCTestCase {
     func testIdentify_tracksEvent_whenUserIdIsValid() throws {
         // Arrange
         var trackedEvent: Event?
-        userpilot.analyticsPublisher.onPublish = { event in trackedEvent = event }
+        userpilot.analyticsPublisher.onPublish = { event, _ in trackedEvent = event }
 
         // Act
         userpilot.identify(userId: "default-00000")
@@ -105,7 +106,7 @@ class UserpilotTests: XCTestCase {
     func testAnonymous_generatesUserIdWithAppTokenPrefix() throws {
         // Arrange
         var trackedEvent: Event?
-        userpilot.analyticsPublisher.onPublish = { event in trackedEvent = event }
+        userpilot.analyticsPublisher.onPublish = { event, _ in trackedEvent = event }
 
         // Act
         userpilot.anonymous()
@@ -117,17 +118,17 @@ class UserpilotTests: XCTestCase {
         }
         XCTAssertTrue(userId.hasPrefix("NX-00000"))
     }
-    
+
     func testAnonymous_generatesUserIdWithAppTokenPrefix_andCachesIt() throws {
         // Arrange
         var trackedEvents: [Event] = []
-        userpilot.analyticsPublisher.onPublish = { event in
+        userpilot.analyticsPublisher.onPublish = { event, _ in
             trackedEvents.append(event)
         }
 
         // Act
-        userpilot.anonymous() // First call, should generate new ID
-        userpilot.anonymous() // Second call, should reuse the same ID
+        userpilot.anonymous()  // First call, should generate new ID
+        userpilot.anonymous()  // Second call, should reuse the same ID
 
         // Assert
         XCTAssertEqual(trackedEvents.count, 2, "Two identify events should be published")
@@ -151,7 +152,7 @@ class UserpilotTests: XCTestCase {
     func testScreen_doesNotTrack_whenTitleIsEmpty() throws {
         // Arrange
         var trackedUpdates = false
-        userpilot.analyticsPublisher.onPublish = { _ in trackedUpdates = true }
+        userpilot.analyticsPublisher.onPublish = { _, _ in trackedUpdates = true }
 
         // Act
         userpilot.screen("")
@@ -164,7 +165,7 @@ class UserpilotTests: XCTestCase {
     func testScreen_tracksEvent_whenTitleIsValid() throws {
         // Arrange
         var trackedEvent: Event?
-        userpilot.analyticsPublisher.onPublish = { event in trackedEvent = event }
+        userpilot.analyticsPublisher.onPublish = { event, _ in trackedEvent = event }
 
         // Act
         userpilot.screen("Profile")
@@ -184,7 +185,7 @@ class UserpilotTests: XCTestCase {
     func testTrack_doesNotSendEvent_whenNameIsEmpty() throws {
         // Arrange
         var trackedUpdates = false
-        userpilot.analyticsPublisher.onPublish = { _ in trackedUpdates = true }
+        userpilot.analyticsPublisher.onPublish = { _, _ in trackedUpdates = true }
 
         // Act
         userpilot.track(eventName: "")
@@ -197,7 +198,7 @@ class UserpilotTests: XCTestCase {
     func testTrack_sendsEvent_whenNameAndPropertiesAreValid() throws {
         // Arrange
         var trackedEvent: Event?
-        userpilot.analyticsPublisher.onPublish = { event in trackedEvent = event }
+        userpilot.analyticsPublisher.onPublish = { event, _ in trackedEvent = event }
 
         // Act
         userpilot.track(eventName: "Added to Cart", properties: ["itemId": "sku_456", "price": 29])
@@ -218,7 +219,7 @@ class UserpilotTests: XCTestCase {
     func testLogout_resetsUserAndEmitsLogoutEvent() throws {
         // Arrange
         var logoutCalled = false
-        userpilot.analyticsPublisher.onLogout = { _, _ in logoutCalled = true }
+        userpilot.analyticsPublisher.onLogout = { _ in logoutCalled = true }
 
         // Act
         userpilot.logout()
@@ -250,7 +251,7 @@ class UserpilotTests: XCTestCase {
         let expectedUser: [String: Any] = [
             "userId": "default-00000",
             "properties": ["email": "test@mail.com"],
-            "company": ["id": "1"]
+            "company": ["id": "1"],
         ]
         let userData = try JSONSerialization.data(withJSONObject: expectedUser, options: [])
         userpilot.storage.user = String(data: userData, encoding: .utf8) ?? ""
@@ -264,14 +265,16 @@ class UserpilotTests: XCTestCase {
 
         let user = settings["User"] as? [String: Any]
         XCTAssertEqual(user?["userId"] as? String, "default-00000")
-        XCTAssertEqual((user?["properties"] as? [String: Any])?["email"] as? String, "test@mail.com")
+        XCTAssertEqual(
+            (user?["properties"] as? [String: Any])?["email"] as? String, "test@mail.com")
         XCTAssertEqual((user?["company"] as? [String: Any])?["id"] as? String, "1")
 
         let autoProps = settings["Auto properties"] as? [String: Any]
-        XCTAssertEqual(autoProps?[AutoPropertyDecorator.osKey] as? String, "iOS")
+        XCTAssertEqual(autoProps?[Constants.AutoProperty.osKey] as? String, "iOS")
 
         let appProps = settings["App properties"] as? [String: Any]
-        XCTAssertEqual(appProps?[AutoPropertyDecorator.appNameKey] as? String, Bundle.main.displayName)
+        XCTAssertEqual(
+            appProps?[Constants.AutoProperty.appNameKey] as? String, Bundle.main.displayName)
     }
 
     // MARK: - Trigger Experience
@@ -306,7 +309,7 @@ class UserpilotTests: XCTestCase {
     func testEndExperience_invokesHandler() throws {
         // Arrange
         var experienceEnded = false
-        userpilot.experiencesPublisher.onEndExperience = { _ in experienceEnded = true }
+        userpilot.experiencesPublisher.onEndExperience = { _, _ in experienceEnded = true }
 
         // Act
         userpilot.endExperience()
@@ -346,11 +349,14 @@ class UserpilotTests: XCTestCase {
         weak var weakDataStoring: DataStoring?
         weak var weakSessionMonitoring: SessionMonitoring?
         weak var weakAutoPropertyDecoration: AutoPropertyDecoratoring?
-        weak var weakSocketManager: SocketEvents?
-        weak var weakSDKSettingsDetector: SDKSettingsDetectoring?
+        weak var weakSocketManager: SocketManaging?
+        weak var weakRemoteSource: UserpilotRemoteSourcing?
         weak var weakThemeHandler: ThemeHandling?
         weak var weakImageLoader: ImageLoading?
         weak var weakPushNotificationMonitor: PushNotificationMonitoring?
+        weak var weakLinkOpener: LinkOpening?
+        weak var weakDeepLinkHandler: DeepLinkHandling?
+        weak var weakEventStoring: EventStoring?
 
         // Act
         autoreleasepool {
@@ -362,11 +368,15 @@ class UserpilotTests: XCTestCase {
             weakDataStoring = userpilot.container.resolve(DataStoring.self)
             weakSessionMonitoring = userpilot.container.resolve(SessionMonitoring.self)
             weakAutoPropertyDecoration = userpilot.container.resolve(AutoPropertyDecoratoring.self)
-            weakSocketManager = userpilot.container.resolve(SocketEvents.self)
-            weakSDKSettingsDetector = userpilot.container.resolve(SDKSettingsDetectoring.self)
+            weakSocketManager = userpilot.container.resolve(SocketManaging.self)
+            weakRemoteSource = userpilot.container.resolve(UserpilotRemoteSourcing.self)
             weakThemeHandler = userpilot.container.resolve(ThemeHandling.self)
             weakImageLoader = userpilot.container.resolve(ImageLoading.self)
-            weakPushNotificationMonitor = userpilot.container.resolve(PushNotificationMonitoring.self)
+            weakPushNotificationMonitor = userpilot.container.resolve(
+                PushNotificationMonitoring.self)
+            weakLinkOpener = userpilot.container.resolve(LinkOpening.self)
+            weakDeepLinkHandler = userpilot.container.resolve(DeepLinkHandling.self)
+            weakEventStoring = userpilot.container.resolve(EventStoring.self)
 
             XCTAssertNotNil(weakUserpilot)
         }
@@ -384,10 +394,13 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(weakSessionMonitoring)
         XCTAssertNil(weakAutoPropertyDecoration)
         XCTAssertNil(weakSocketManager)
-        XCTAssertNil(weakSDKSettingsDetector)
+        XCTAssertNil(weakRemoteSource)
         XCTAssertNil(weakThemeHandler)
         XCTAssertNil(weakImageLoader)
         XCTAssertNil(weakPushNotificationMonitor)
+        XCTAssertNil(weakLinkOpener)
+        XCTAssertNil(weakDeepLinkHandler)
+        XCTAssertNil(weakEventStoring)
         XCTAssertNil(weakConfig)
     }
 

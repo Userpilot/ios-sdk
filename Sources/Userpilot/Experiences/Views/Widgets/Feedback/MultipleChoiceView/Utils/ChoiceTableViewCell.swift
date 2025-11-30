@@ -120,6 +120,8 @@ internal class ChoiceTableViewCell: UITableViewCell {
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
         if isRTL {
             label.textAlignment = .right
+        } else {
+            label.textAlignment = .left
         }
 
         // Styling based on selection state

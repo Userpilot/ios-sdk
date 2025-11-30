@@ -54,7 +54,7 @@ internal class UPButtonView: UIButton {
         if self.bounds.width == 0 {
             let attributes: [NSAttributedString.Key: Any] = [.font: font]
             let size = text.size(withAttributes: attributes)
-            return CGSize(width: size.width + 40, height: max(actualHight, 40))
+            return CGSize(width: size.width + 40, height: max(actualHight, UPButtonView.buttonHeight))
         } else {
             return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
         }
@@ -88,8 +88,8 @@ internal class UPButtonView: UIButton {
         line: Line?,
         action: ButtonAction?,
         theme: ExperienceTheme,
-        callback: ((ButtonAction?
-                   ) -> Void)?) {
+        callback: ((ButtonAction?) -> Void)?
+    ) {
         self.action = action
         self.callback = callback
 
@@ -131,31 +131,31 @@ internal class UPButtonView: UIButton {
         isDismissButton: Bool,
         callback: ((ButtonAction?) -> Void)?
     ) {
-            // Apply theme-based styling properties to the button
-            titleLabel?.font = UIFont.matching(
-                fontName: npsTheme.fontFamily,
-                fontWeight: !isDismissButton ? [.traitBold] : [],
-                fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
-            )
+        // Apply theme-based styling properties to the button
+        titleLabel?.font = UIFont.matching(
+            fontName: npsTheme.fontFamily,
+            fontWeight: !isDismissButton ? [.traitBold] : [],
+            fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
+        )
 
-            if isSecondaryButton {
-                setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
-            } else {
-                setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
-            }
+        if isSecondaryButton {
+            setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
+        } else {
+            setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
+        }
 
-            setTitle(title, for: .normal)
-            contentHorizontalAlignment = .center
+        setTitle(title, for: .normal)
+        contentHorizontalAlignment = .center
 
-            tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
-            backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+        tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+        backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
 
-            layer.cornerRadius = 12
-            layer.borderWidth = 1
-            layer.borderColor = (isSecondaryButton && !isDismissButton) ?
-            ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
+        layer.cornerRadius = 12
+        layer.borderWidth = 1
+        layer.borderColor = (isSecondaryButton && !isDismissButton) ?
+        ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
 
-            self.callback = callback
+        self.callback = callback
     }
 
     /// Applies font.

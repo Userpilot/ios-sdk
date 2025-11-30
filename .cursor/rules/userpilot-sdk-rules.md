@@ -1,4 +1,4 @@
-# Userpilot iOS SDK - Cursor AI Rules
+# Userpilot iOS SDK - Architecture & Rules
 
 ## Project Overview
 This is the Userpilot iOS SDK - a native Swift framework for in-app user engagement, analytics tracking, and experience delivery. The SDK is designed as a zero-dependency, protocol-oriented framework with thread-safe operations and comprehensive error handling.
@@ -1308,5 +1308,5 @@ public func identify(
 
 ---
 
-This `.cursorrules` file represents the complete coding standards, patterns, and best practices for the Userpilot iOS SDK. Follow these rules meticulously to maintain consistency, quality, and reliability across the codebase.
+This document represents the complete coding standards, patterns, and best practices for the Userpilot iOS SDK. Follow these rules to maintain consistency, quality, and reliability across the codebase.
 

@@ -14,8 +14,7 @@
 
 import Foundation
 
-// swiftlint:disable line_length
-
+// swiftlint:disable all
 internal class ExperienceViewModel {
 
     // MARK: - Properties
@@ -78,7 +77,6 @@ internal class ExperienceViewModel {
             bindData?(false)
             return
         }
-
         // Setup content
         self.flowContent = flowContent
 
@@ -119,6 +117,7 @@ internal class ExperienceViewModel {
 
     // MARK: - Experience Event Handling
 
+    // Due to showing content on top of current view, then we wait to finish the transition for screen
     func onExperienceSeen() {
         delay(0.3) { [weak self] in
             self?.onExperienceOpened()
@@ -138,7 +137,7 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             experienceState: .started
         )
-        logExperience(state: "Started", experienceId: flowContent.id)
+        logExperience(state: UserpilotExperienceState.started.rawValueString, experienceId: flowContent.id)
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             experienceType: .flow,
@@ -149,7 +148,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Started",
+            state: UserpilotExperienceState.started.rawValueString,
             experienceId: flowContent.id,
             stepId: step.id,
             step: 1,
@@ -183,7 +182,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Completed",
+            state: UserpilotExperienceState.completed.rawValueString,
             experienceId: flowContent.id,
             stepId: step.id,
             step: flowContent.steps.count,
@@ -195,7 +194,7 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             experienceState: .completed
         )
-        logExperience(state: "Completed", experienceId: flowContent.id)
+        logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: flowContent.id)
 
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
@@ -235,7 +234,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Completed",
+            state: UserpilotExperienceState.completed.rawValueString,
             experienceId: flowContent.id,
             stepId: currentStep.id,
             step: step,
@@ -251,7 +250,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Started",
+            state: UserpilotExperienceState.started.rawValueString,
             experienceId: flowContent.id,
             stepId: currentStep.id,
             step: step + 1,
@@ -289,7 +288,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Dismissed",
+            state: UserpilotExperienceState.dismissed.rawValueString,
             experienceId: flowContent.id,
             stepId: step.id,
             step: lastStep + 1,
@@ -301,7 +300,7 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             experienceState: .dismissed
         )
-        logExperience(state: "Dismissed", experienceId: flowContent.id)
+        logExperience(state: UserpilotExperienceState.dismissed.rawValueString, experienceId: flowContent.id)
 
         let eventExperienceDismissed = ExperienceFlowDismissedEvent(
             flowId: flowContent.id,
@@ -344,7 +343,8 @@ internal class ExperienceViewModel {
         totalSteps: Int
     ) {
         logger.info(
-            "🌠 Userpilot experience step -> type: Flow, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
+            "🌠 Userpilot experience step -> type: %{public}@, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
+            UserpilotExperienceType.flow.rawValueString,
             String(experienceId),
             state,
             String(stepId),
@@ -353,5 +353,4 @@ internal class ExperienceViewModel {
         )
     }
 }
-
-// swiftlint:enable line_length
+// swiftlint:enable all

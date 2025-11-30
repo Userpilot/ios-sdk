@@ -26,4 +26,8 @@ internal extension Date {
         return abs(self.timeIntervalSince(other)) > 1.0
     }
 
+    func isLessThanTenSecond(from other: Date) -> Bool {
+        return abs(self.timeIntervalSince(other)) < 10.0
+    }
+
 }

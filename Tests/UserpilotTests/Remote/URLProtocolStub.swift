@@ -19,7 +19,7 @@ import Foundation
 
 // swiftlint:disable all
 
-final class URLProtocolStub: URLProtocol {
+class URLProtocolStub: URLProtocol {
 
     /// The stubbed response to return when a request is intercepted.
     /// Set this before initiating the request in your test.

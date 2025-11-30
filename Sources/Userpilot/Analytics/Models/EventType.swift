@@ -12,17 +12,15 @@
 
 import Foundation
 
-/**
- The `EventType` enum is used to categorize and manage different types of events within the Userpilot SDK.
-
- It defines three types of events:
- - `event`: Tracks custom events, such as button clicks or other user interactions.
- - `screen`: Tracks screen views, logging when a particular screen is opened.
- - `identify`: Tracks a user being identified, either as part of a company or based on their unique ID.
-
- The enum also provides utility methods to retrieve metadata (such as event name and user ID) and check event types.
- */
-internal enum EventType: Equatable {
+/// The `EventType` enum is used to categorize and manage different types of events within the Userpilot SDK.
+///
+/// It defines three types of events:
+/// - `event`: Tracks custom events, such as button clicks or other user interactions.
+/// - `screen`: Tracks screen views, logging when a particular screen is opened.
+/// - `identify`: Tracks a user being identified, either as part of a company or based on their unique ID.
+///
+/// The enum also provides utility methods to retrieve metadata (such as event name and user ID) and check event types.
+internal enum EventType: Equatable, Codable {
 
     /// Custom event for tracking a user action (e.g., a button click).
     case event(String)
@@ -33,20 +31,50 @@ internal enum EventType: Equatable {
     /// Event for tracking a user's identity or association with a company.
     case identify(String)
 
-    // MARK: - Event Case Names
+    // MARK: - Coding Keys
 
-    /**
-     Returns the constant name of the event case (e.g., "event", "screen", "identify").
-     This is used to categorize events in a standardized way.
-     */
-    var caseName: String {
+    enum CodingKeys: String, CodingKey {
+        case type
+        case value
+    }
+
+    // MARK: - Decodable
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        let value = try container.decode(String.self, forKey: .value)
+
+        switch type {
+        case Constants.Event.trackEvent:
+            self = .event(value)
+        case Constants.Event.screenEvent:
+            self = .screen(value)
+        case Constants.Event.identifyEvent:
+            self = .identify(value)
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Unknown event type: \(type)"
+            )
+        }
+    }
+
+    // MARK: - Encodable
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case .event:
-            return EventType.trackEvent
-        case .screen:
-            return EventType.screenEvent
-        case .identify:
-            return EventType.identifyCaseEvent
+        case .event(let eventName):
+            try container.encode(Constants.Event.trackEvent, forKey: .type)
+            try container.encode(eventName, forKey: .value)
+        case .screen(let screenTitle):
+            try container.encode(Constants.Event.screenEvent, forKey: .type)
+            try container.encode(screenTitle, forKey: .value)
+        case .identify(let userId):
+            try container.encode(Constants.Event.identifyEvent, forKey: .type)
+            try container.encode(userId, forKey: .value)
         }
     }
 
@@ -60,29 +88,29 @@ internal enum EventType: Equatable {
     var eventName: String {
         switch self {
         case .event:
-            return EventType.trackEvent
+            return Constants.Event.trackEvent
         case .screen:
-            return EventType.screenEvent
+            return Constants.Event.screenEvent
         case .identify:
-            return EventType.identifyEvent
+            return Constants.Event.identifyEvent
         }
     }
 
     // MARK: - Type Checking
 
-    /// Checks if the event is a custom event (`event` case).
-    var isEvent: Bool {
-        return self.caseName == EventType.trackEvent
+    /// Checks if the event is an identification event (`identify` case).
+    var isIdentifyEvent: Bool {
+        return self.eventName == Constants.Event.identifyEvent
     }
 
     /// Checks if the event is related to a screen view (`screen` case).
     var isScreenEvent: Bool {
-        return self.caseName == EventType.screenEvent
+        return self.eventName == Constants.Event.screenEvent
     }
 
-    /// Checks if the event is an identification event (`identify` case).
-    var isIdentifyEvent: Bool {
-        return self.caseName == EventType.identifyCaseEvent
+    /// Checks if the event is an track event (`track` case).
+    var isTrackEvent: Bool {
+        return self.eventName == Constants.Event.trackEvent
     }
 
     // MARK: - Associated Values
@@ -122,13 +150,4 @@ internal enum EventType: Equatable {
             return nil
         }
     }
-}
-
-internal extension EventType {
-
-    // Static constants
-    static let identifyEvent = "user_identify"
-    private static let identifyCaseEvent = "identify"
-    static let screenEvent = "screen"
-    private static let trackEvent = "track"
 }

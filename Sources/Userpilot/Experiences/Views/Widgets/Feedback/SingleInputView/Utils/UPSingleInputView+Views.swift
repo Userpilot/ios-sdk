@@ -11,6 +11,7 @@
 
 import UIKit
 
+// swiftlint:disable all
 extension UPSingleInputView {
 
     // MARK: - Configure Text Field
@@ -24,10 +25,14 @@ extension UPSingleInputView {
             countryStackView.isHidden = true
             calendarIconButton.isHidden = true
         case .date:
-            if isRTL {
+            if isRTL && isAppRTL {
+                textField.setPadding(start: 10, end: 60)
+            } else if !isRTL && !isAppRTL {
+                textField.setPadding(start: 10, end: 60)
+            } else if isRTL && !isAppRTL {
                 textField.setPadding(start: 60, end: 10)
             } else {
-                textField.setPadding(start: 10, end: 60)
+                textField.setPadding(start: 60, end: 10)
             }
             textField.keyboardType = .numberPad
             textField.placeholder = "dd/mm/yyyy"
@@ -35,10 +40,14 @@ extension UPSingleInputView {
             countryStackView.isHidden = true
             calendarIconButton.tintColor = ThemeHandler.DefaultValues.grayColor
         case .phone:
-            if isRTL {
+            if isRTL && isAppRTL {
+                textField.setPadding(start: 120, end: 10)
+            } else if !isRTL && !isAppRTL {
+                textField.setPadding(start: 120, end: 10)
+            } else if isRTL && !isAppRTL {
                 textField.setPadding(start: 10, end: 120)
             } else {
-                textField.setPadding(start: 120, end: 10)
+                textField.setPadding(start: 10, end: 120)
             }
             textField.keyboardType = .phonePad
             countryStackView.isHidden = false
@@ -64,7 +73,6 @@ extension UPSingleInputView {
     }
 
     // MARK: - Setup View
-    // swiftlint:disable:next function_body_length
     func setupView() {
         addTapGesture { [weak self] in
             self?.endEditing(true)
@@ -141,3 +149,4 @@ extension UPSingleInputView {
         ])
     }
 }
+// swiftlint:enable all

@@ -125,6 +125,9 @@ internal class UPLikertView: UIView {
             collectionView.transform = CGAffineTransform(scaleX: -1, y: 1)
             lowScoreTextLabel.textAlignment = .right
             highScoreTextLabel.textAlignment = .left
+        } else {
+            lowScoreTextLabel.textAlignment = .left
+            highScoreTextLabel.textAlignment = .right
         }
 
         // Reload the collection view data
@@ -163,6 +166,9 @@ internal class UPLikertView: UIView {
             collectionView.transform = CGAffineTransform(scaleX: -1, y: 1)
             lowScoreTextLabel.textAlignment = .right
             highScoreTextLabel.textAlignment = .left
+        } else {
+            lowScoreTextLabel.textAlignment = .left
+            highScoreTextLabel.textAlignment = .right
         }
 
         // Reload the collection view data
@@ -221,9 +227,5 @@ internal class UPLikertView: UIView {
             size = 0.7
         }
         return size
-    }
-
-    func collectionViewHeight() -> Int {
-        return Int(collectionView.frame.height)
     }
 }

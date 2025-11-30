@@ -51,9 +51,7 @@ internal extension Userpilot {
             let bundle = Bundle(url: url) {
             return bundle
         } else {
-#if DEBUG
             fatalError("Can't find 'Userpilot' resource bundle")
-#endif
         }
 #endif
     }()

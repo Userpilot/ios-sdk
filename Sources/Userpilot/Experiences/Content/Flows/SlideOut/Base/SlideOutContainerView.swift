@@ -24,7 +24,7 @@ internal class SlideOutContainerView: UIView {
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize + 10).isActive = true
+        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
         return view
     }()
 

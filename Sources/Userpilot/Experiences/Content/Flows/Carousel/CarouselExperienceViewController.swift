@@ -118,8 +118,8 @@ internal class CarouselExperienceViewController: UIViewController {
 // MARK: - UPExperience
 
 extension CarouselExperienceViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
-        if manualClose {
+    func triggerCloseExperience(isInternalEvent: Bool) {
+        if !isInternalEvent {
             closeExperience()
         } else {
             dismiss(animated: true)

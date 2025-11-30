@@ -17,7 +17,6 @@ internal struct SurveyContentData: Decodable {
 
 internal struct SurveyContent: Decodable {
     let id: Int
-    let token: String
     let type: SurveyType
     var modules: [SurveyStep]
     let metadata: SurveyContentMetaData?
@@ -29,7 +28,6 @@ internal struct SurveyContent: Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case id
-        case token
         case type
         case modules
         case metadata

@@ -11,7 +11,7 @@
 
 import UIKit
 
-internal extension UPMultipleChoiceView {
+extension UPMultipleChoiceView {
 
     /// Configures the view's subviews and applies layout constraints.
     ///

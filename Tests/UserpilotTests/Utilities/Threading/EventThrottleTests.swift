@@ -7,9 +7,10 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
-final class EventThrottleTests: XCTestCase {
+class EventThrottleTests: XCTestCase {
 
     var throttle: EventThrottle!
     let throttleDuration: TimeInterval = 0.2

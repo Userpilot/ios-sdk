@@ -54,18 +54,18 @@ internal class AutoPropertyDecorator {
 
     /// Provides system and device properties.
     private lazy var userpilotAutoProperties: [String: Any] = [
-        AutoPropertyDecorator.osKey: "iOS",
-        AutoPropertyDecorator.osVersionKey: UIDevice.current.systemVersion,
-        AutoPropertyDecorator.appVersionKey: Bundle.main.version,
-        AutoPropertyDecorator.deviceTypeKey: UIDevice.current.modelName,
-        AutoPropertyDecorator.screenWidthKey: Int(UIScreen.main.bounds.size.width),
-        AutoPropertyDecorator.screenHeightKey: Int(UIScreen.main.bounds.size.height)
+        Constants.AutoProperty.osKey: "iOS",
+        Constants.AutoProperty.osVersionKey: UIDevice.current.systemVersion,
+        Constants.AutoProperty.appVersionKey: Bundle.main.version,
+        Constants.AutoProperty.deviceTypeKey: UIDevice.current.modelName,
+        Constants.AutoProperty.screenWidthKey: Int(UIScreen.main.bounds.size.width),
+        Constants.AutoProperty.screenHeightKey: Int(UIScreen.main.bounds.size.height)
     ]
 
     /// Provides application properties.
     private lazy var userpilotAppProperties: [String: Any] = [
-        AutoPropertyDecorator.appNameKey: Bundle.main.displayName,
-        AutoPropertyDecorator.appIdentifierKey: Bundle.main.identifier
+        Constants.AutoProperty.appNameKey: Bundle.main.displayName,
+        Constants.AutoProperty.appIdentifierKey: Bundle.main.identifier
     ]
 
 }
@@ -81,24 +81,4 @@ extension AutoPropertyDecorator: AutoPropertyDecoratoring {
     var appProperties: [String: Any] {
         return userpilotAppProperties
     }
-}
-
-// MARK: - Properties name
-
-internal extension AutoPropertyDecorator {
-
-    // Static constants
-    static let autoPropertiesKey = "autoProperties"
-    static let fontsKey = "fontsProperties"
-    static let appPropertiesKey = "appProperties"
-
-    static let osKey = "operating_system"
-    static let osVersionKey = "operating_system_version"
-    static let appVersionKey = "app_version"
-    static let deviceTypeKey = "device_type"
-    static let screenWidthKey = "screen_width"
-    static let screenHeightKey = "screen_height"
-
-    static let appNameKey = "app_name"
-    static let appIdentifierKey = "app_identifier"
 }

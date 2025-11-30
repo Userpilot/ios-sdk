@@ -7,9 +7,10 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
-final class DelayUtilsTests: XCTestCase {
+class DelayUtilsTests: XCTestCase {
 
     // MARK: - Properties
 
@@ -58,7 +59,7 @@ final class DelayUtilsTests: XCTestCase {
             self?.delayUtils.cancelDelay()
 
             // Wait for cancel to complete (since it's async)
-            DispatchQueue(label: DispatchQueueConstants.DELAY_QUEUE).asyncAfter(deadline: .now() + 0.01) {
+            DispatchQueue(label: Constants.DispatchQueues.delay).asyncAfter(deadline: .now() + 0.01) {
                 DispatchQueue.main.async {
                     cancelExpectation.fulfill()
                 }

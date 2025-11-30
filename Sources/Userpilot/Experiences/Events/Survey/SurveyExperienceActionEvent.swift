@@ -122,12 +122,15 @@ internal class ExperienceSurveyCompletedEvent: SurveyExperienceActionEvent {
 internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
 
     // Custom parameters for the Submitted event
+    let submissionId: Int64
     let feedback: Any?
 
     init(
         surveyId: Int,
+        submissionId: Int64,
         feedback: Any? = nil
     ) {
+        self.submissionId = submissionId
         self.feedback = feedback
         super.init(surveyId: surveyId)
     }
@@ -139,6 +142,7 @@ internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
+        basePayload["submissionId"] = submissionId
         if feedback != nil {
             basePayload["feedback"] = feedback
         }

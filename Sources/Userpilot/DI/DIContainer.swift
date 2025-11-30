@@ -22,7 +22,7 @@ internal class DIContainer {
 
     /// A queue used for concurrent reads and synchronized writes to the container's components.
     private let componentQueue = DispatchQueue(
-        label: DispatchQueueConstants.DI_CONTAINER_QUEUE,
+        label: Constants.DispatchQueues.diContainer,
         qos: .userInitiated,
         attributes: .concurrent
     )

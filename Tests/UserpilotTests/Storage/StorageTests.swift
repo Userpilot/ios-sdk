@@ -7,9 +7,10 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
-final class StorageTests: XCTestCase {
+class StorageTests: XCTestCase {
 
     var storage: Storage!
     var userpilot: MockUserpilot!
@@ -20,13 +21,15 @@ final class StorageTests: XCTestCase {
         userpilot = MockUserpilot(config: config)
 
         // Use test-specific UserDefaults suite
-        UserDefaults().removePersistentDomain(forName: "\(Storage.userDefaultSuiteName)\(Bundle.main.identifier)")
+        let suiteName = "com.userpilot.storage.\(Bundle.main.identifier)"
+        UserDefaults().removePersistentDomain(forName: suiteName)
         storage = Storage(container: userpilot.container)
     }
 
     override func tearDown() {
         // Clean up UserDefaults
-        if let defaults = UserDefaults(suiteName: "\(Storage.userDefaultSuiteName)\(Bundle.main.identifier)") {
+        let suiteName = "com.userpilot.storage.\(Bundle.main.identifier)"
+        if let defaults = UserDefaults(suiteName: suiteName) {
             for key in defaults.dictionaryRepresentation().keys {
                 defaults.removeObject(forKey: key)
             }

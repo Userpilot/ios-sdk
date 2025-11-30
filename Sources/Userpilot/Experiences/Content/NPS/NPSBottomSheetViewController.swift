@@ -16,6 +16,7 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
         npsContainerView.translatesAutoresizingMaskIntoConstraints = false
         return npsContainerView
     }()
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Properties
 
@@ -47,6 +48,24 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         npsViewModel.onExperienceSeen()
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if npsViewModel.isRTL {
+            UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if let appSemanticContentAttribute {
+            UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+            ? .forceLeftToRight : .forceRightToLeft
+        }
     }
 
     deinit {
@@ -104,7 +123,7 @@ extension NPSBottomSheetViewController {
 // MARK: - UPExperience
 
 extension NPSBottomSheetViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
+    func triggerCloseExperience(isInternalEvent: Bool) {
         dismissBottomSheet()
     }
 }

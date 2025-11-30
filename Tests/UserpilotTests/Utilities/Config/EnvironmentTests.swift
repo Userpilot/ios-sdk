@@ -1,15 +1,16 @@
-//
-//  ConfigTests.swift
-//  Userpilot SDK
-//
-//  Created by Motasem Hamed on 07/07/2025.
-//  Copyright © 2025 Userpilot. All rights reserved.
-//
+////
+////  ConfigTests.swift
+////  Userpilot SDK
+////
+////  Created by Motasem Hamed on 07/07/2025.
+////  Copyright © 2025 Userpilot. All rights reserved.
+////
 
 import XCTest
+
 @testable import Userpilot
 
-final class EnvironmentTests: XCTestCase {
+class EnvironmentTests: XCTestCase {
 
     var userpilot: MockUserpilot!
 

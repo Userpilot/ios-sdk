@@ -9,7 +9,7 @@
 import XCTest
 @testable import Userpilot
 
-final class SurveyLogicHandlerTests: XCTestCase {
+class SurveyLogicHandlerTests: XCTestCase {
 
     func makeSurveyStep(id: Int) -> SurveyStep {
         SurveyStep(

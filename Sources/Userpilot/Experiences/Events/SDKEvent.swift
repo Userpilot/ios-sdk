@@ -22,7 +22,7 @@ internal protocol SDKEvent {
     var hasDeepLink: Bool { get }
 }
 
-internal extension SDKEvent {
+extension SDKEvent {
 
     var hasDeepLink: Bool {
         return false
@@ -43,7 +43,7 @@ internal extension SDKEvent {
 }
 
 /// Used to pass seen content for cached ScreenViewEntity
-internal extension SDKEvent {
+extension SDKEvent {
 
     func getContentType() -> ExperienceType {
         if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||

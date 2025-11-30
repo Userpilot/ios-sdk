@@ -39,7 +39,9 @@ internal protocol PushNotificationMonitoring: AnyObject {
     ///   - completionHandler: A closure that should be called after processing the notification.
     ///
     /// - Returns: A boolean indicating whether the notification was successfully handled.
-    func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool
+    func didReceiveNotification(
+        response: UNNotificationResponse, completionHandler: @escaping () -> Void
+    ) -> Bool
 
     /// Attempts to handle a deferred notification response.
     ///
@@ -58,7 +60,8 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     private let config: Userpilot.Config
     private let storage: DataStoring
     private let analyticsPublisher: AnalyticsPublishing
-    private let socketManager: SocketEvents
+    private let socketManager: SocketManaging
+    private let linkOpener: LinkOpening
 
     // MARK: - Push Token Management
 
@@ -85,7 +88,8 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-        self.socketManager = container.resolve(SocketEvents.self)
+        self.socketManager = container.resolve(SocketManaging.self)
+        self.linkOpener = container.resolve(LinkOpening.self)
 
         PushNotificationAutoConfig.register(observer: self)
         socketManager.registerCallback(self)
@@ -108,12 +112,17 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
         if analyticsPublisher.canRequestEvent {
             analyticsPublisher.publishInternalSDKEvent(
-                PushNotificationTokenEvent(
-                    appToken: config.token,
-                    userId: storage.userId,
-                    token: newToken),
-                socketSubscription: self)
+                PushNotificationTokenEvent(appToken: config.token, userId: storage.userId, token: newToken))
         }
+    }
+
+    /// Called when the socket is opened, and the push token is set if cached.
+    func onSocketOpened() {
+        refreshPushStatus()
+        if let cachedToken {
+            setPushToken(cachedToken)
+        }
+        attemptDeferredNotificationResponse()
     }
 
     /// Handles the socket event for sending the push token.
@@ -134,15 +143,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         }
     }
 
-    /// Called when the socket is opened, and the push token is set if cached.
-    func onSocketOpened() {
-        refreshPushStatus()
-        if let cachedToken {
-            setPushToken(cachedToken)
-        }
-        attemptDeferredNotificationResponse()
-    }
-
     // MARK: - Refresh Push Status
 
     /// Refreshes the push notification status by querying the UNUserNotificationCenter.
@@ -152,19 +152,19 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         if config.disableRequestPushPermission || didRequestPermissions { return }
         didRequestPermissions = true
         #if targetEnvironment(simulator)
-        print("🔧 Running on Simulator - push notification settings are not available.")
-        // Optionally simulate a status (e.g., .notDetermined or .authorized)
-        DispatchQueue.main.async {
-            UIApplication.shared.registerForRemoteNotifications()
-            completion?(.authorized)
-        }
-        #else
-        print("📱 Running on Device - checking push notification settings...")
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            print("🔧 Running on Simulator - push notification settings are not available.")
+            // Optionally simulate a status (e.g., .notDetermined or .authorized)
             DispatchQueue.main.async {
-                self.handlePushStatusUpdate(settings.authorizationStatus, completion: completion)
+                UIApplication.shared.registerForRemoteNotifications()
+                completion?(.authorized)
             }
-        }
+        #else
+            print("📱 Running on Device - checking push notification settings...")
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                DispatchQueue.main.async {
+                    self.handlePushStatusUpdate(settings.authorizationStatus, completion: completion)
+                }
+            }
         #endif
     }
 
@@ -232,7 +232,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         guard
             let parsedNotification = UserpilotNotification(userInfo: userInfo),
             parsedNotification.notificationType == "userpilot-notification"
-        else { return false } // Not a Userpilot push notification
+        else { return false }  // Not a Userpilot push notification
 
         guard let userpilot = userpilot else {
             return false  // Early exit if userpilot is nil
@@ -298,51 +298,29 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         parsedNotification: UserpilotNotification,
         completionHandler: (() -> Void)? = nil
     ) {
-        let properties: [String: Any] = [
-            "notification_id": Int(parsedNotification.notificationId) ?? 0
-        ]
-
-        analyticsPublisher.publishInternalSDKEvent(
-            PushNotificationOpenedEvent(payload: properties),
-            socketSubscription: self
-        )
+        if parsedNotification.isTest != "true" {
+            let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
+            analyticsPublisher.publishInternalSDKEvent(PushNotificationOpenedEvent(payload: properties))
+        }
 
         if let url = parsedNotification.deeplink {
-            navigateToDeepLink(url, userpilot: userpilot)
+            linkOpener.handleURL(url)
         }
 
         completionHandler?()
     }
-
-    /// Navigates to a deep link URL when the notification includes a deep link.
-    ///
-    /// - Parameters:
-    ///   - url: The URL to navigate to.
-    ///   - userpilot: The Userpilot instance managing navigation.
-    private func navigateToDeepLink(
-        _ url: URL,
-        userpilot: Userpilot
-    ) {
-        if let navigationDelegate = userpilot.navigationDelegate {
-            navigationDelegate.navigate(to: url)
-        } else {
-            if url.isHttpOrHttps, UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
-            }
-        }
-    }
 }
 
 #if DEBUG
-extension PushNotificationMonitor {
+    extension PushNotificationMonitor {
 
-    func mockPushStatus(_ status: UNAuthorizationStatus) {
-        pushAuthorizationStatus = status
+        func mockPushStatus(_ status: UNAuthorizationStatus) {
+            pushAuthorizationStatus = status
+        }
+
+        func setCachedToken(token: Data?) {
+            cachedToken = token
+        }
+
     }
-
-    func setCachedToken(token: Data?) {
-        cachedToken = token
-    }
-
-}
 #endif

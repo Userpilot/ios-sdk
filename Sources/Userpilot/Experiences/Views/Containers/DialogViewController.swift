@@ -122,7 +122,7 @@ internal class DialogViewController: UIViewController {
                 constant: ThemeHandler.DefaultValues.contentMargin.negative),
             contentView.topAnchor.constraint(
                 equalTo: mainContainerView.topAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: ThemeHandler.DefaultValues.contentTopMargin),
             contentView.bottomAnchor.constraint(
                 equalTo: mainContainerView.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
@@ -202,7 +202,7 @@ extension DialogViewController {
 
 // MARK: - Update constraints on screen rotation
 
-internal extension DialogViewController {
+extension DialogViewController {
     func resetWidth(_ size: CGSize) {
         let widthRatio = self.calculateDialogWidthRatio()
         self.mainContainerWidthConstraint?.constant = size.width * widthRatio

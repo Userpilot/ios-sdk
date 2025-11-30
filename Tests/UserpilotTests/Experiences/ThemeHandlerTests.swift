@@ -9,7 +9,7 @@
 import XCTest
 @testable import Userpilot
 
-final class ThemeHandlerTests: XCTestCase {
+class ThemeHandlerTests: XCTestCase {
 
     var themeHandler: ThemeHandler!
 

@@ -99,7 +99,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
 }
 
 // MARK: - ViewModel Binding
-internal extension ThankYouBottomSheetViewController {
+extension ThankYouBottomSheetViewController {
 
     /// Binds the view model's data and updates the `slideOutContainerView` accordingly.
     /// This method is responsible for responding to any changes in the view model's state and ensuring the

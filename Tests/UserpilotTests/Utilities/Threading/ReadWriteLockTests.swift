@@ -7,9 +7,10 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
-final class ReadWriteLockTests: XCTestCase {
+class ReadWriteLockTests: XCTestCase {
 
     var lock: ReadWriteLock!
 

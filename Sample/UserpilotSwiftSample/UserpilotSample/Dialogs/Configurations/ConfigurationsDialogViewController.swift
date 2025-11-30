@@ -47,21 +47,22 @@ class ConfigurationsDialogViewController: UIViewController {
     func excuteDoneButton() {
         if !self.isViewLoaded {
             self.executeDoneButtonHandler()
+            self.doneButtonHandler?()
             return
         }
 
+        executeDoneButtonHandler()
+
         self.dismiss(animated: true, completion: {
-            self.executeDoneButtonHandler()
+            self.doneButtonHandler?()
         })
     }
 
     func executeDoneButtonHandler() {
         if self.doneButtonHandler != nil,
-           let appToken = textFieldAppToken.text, !appToken.isEmpty {
+            let appToken = textFieldAppToken.text, !appToken.isEmpty {
             StorageManager.shared.set(value: appToken, forKey: StorageManager.Keys.appToken)
-            self.doneButtonHandler?()
         }
-        dismiss(animated: true)
     }
 
 }

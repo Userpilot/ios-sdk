@@ -17,7 +17,7 @@ internal class SurveyContainerView: UIView {
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize + 10).isActive = true
+        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
         return view
     }()
 
@@ -64,8 +64,8 @@ internal class SurveyContainerView: UIView {
     /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            buttonDismissContainerView, scrollView, spaceView, actionButton,
-            stepsProgressView])
+            buttonDismissContainerView, scrollView, spaceView, actionButton, stepsProgressView,
+        ])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
@@ -109,7 +109,7 @@ internal class SurveyContainerView: UIView {
     private weak var surveyContainerViewDelegate: SurveyContainerViewDelegate?
     private var currentStep = 0
     private var viewHeight = CGFloat(0)
-    
+
     // MARK: - Initial Setup
 
     override init(frame: CGRect) {
@@ -173,7 +173,7 @@ internal class SurveyContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
+                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: -12),
                 barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
                 barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
 
@@ -239,6 +239,8 @@ internal class SurveyContainerView: UIView {
 
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 
@@ -253,7 +255,7 @@ internal class SurveyContainerView: UIView {
 
     /**
      Configures the dismiss button based on the theme data.
-     
+
      - Parameter theme: The `ExperienceTheme` used to style the dismiss button.
      */
     private func setupDismissButton() {
@@ -296,13 +298,14 @@ internal class SurveyContainerView: UIView {
             barStepsProgressView.isHidden = true
         } else {
             if theme.isStepsProgressBallType {
-                barStepsProgressView.isHidden = true
+                //barStepsProgressView.isHidden = true
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
-                barStepsProgressView.setupView(stepsCount: surveyContent.modules.count,
-                                               theme: theme,
-                                               isRTL: isRTL)
+                barStepsProgressView.setupView(
+                    stepsCount: surveyContent.modules.count,
+                    theme: theme,
+                    isRTL: isRTL)
             }
         }
     }
@@ -386,10 +389,13 @@ internal class SurveyContainerView: UIView {
             thankYouView.setupView(surveyStep: contentStep, surveyTheme: theme, isRTL: isRTL)
             newView = thankYouView
         }
-        
+
         if let newView = newView {
-            stepSectionsStackView.addArrangedSubview(newView)
-            updateContent(with: newView, animationSubViews: isPreviousViewSameToCurrentView())
+            delay(0.2) { [weak self] in
+                self?.stepSectionsStackView.addArrangedSubview(newView)
+                self?.updateContent(
+                    with: newView, animationSubViews: self!.isPreviousViewSameToCurrentView())
+            }
         }
     }
 
@@ -400,39 +406,52 @@ internal class SurveyContainerView: UIView {
         newView.alpha = 0
         if !animationSubViews {
             actionButton.alpha = 0
-            barStepsProgressView.alpha = 0
+            //barStepsProgressView.alpha = 0
         }
         // Remove old views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         stepSectionsStackView.addArrangedSubview(newView)
 
-        // Ensure layout updates before calculating the height
+        // Force layout update to ensure constraints are applied
+        stepSectionsStackView.setNeedsLayout()
         stepSectionsStackView.layoutIfNeeded()
 
-        // Calculate the new height required for contentContainerView
-        var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-        if newView.isKind(of: UPLikertView.self) {
-            if isDialogContent {
-                newHeight = newHeight - 20
-            }else {
-                newHeight = newHeight - 40
-            }
-        }
-        if newView.isKind(of: UPSingleInputView.self) {
-            newHeight = newHeight + 30
+        // Additional layout pass for RTL content to ensure proper text wrapping
+        if isRTL {
+            newView.setNeedsLayout()
+            newView.layoutIfNeeded()
         }
 
+        // Calculate the new height required for contentContainerView
+        // Use the actual width available to get accurate height calculation for text wrapping
+        let targetWidth = scrollView.frame.width > 0 ? scrollView.frame.width : bounds.width
+        let targetSize = CGSize(
+            width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
+
+        var newHeight = stepSectionsStackView.systemLayoutSizeFitting(
+            targetSize,
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        ).height
+
+        // Add spacing from stack view if needed
+        let spacing =
+            contentStackView.spacing * CGFloat(contentStackView.arrangedSubviews.count - 1)
+        newHeight += spacing
+
         // Animate height change smoothly
-        UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut, animations: { [weak self] in
-            if let scrollViewHeightConstraint = self?.scrollViewHeightConstraint {
-                NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
-            }
-            self?.scrollViewHeightConstraint = self?.scrollView.heightAnchor.constraint(
-                lessThanOrEqualToConstant: min(newHeight, screenHeight * 0.7))
-            self?.scrollViewHeightConstraint?.isActive = true
-            self?.viewHeight = min(newHeight, screenHeight * 0.7)
-            self?.layoutIfNeeded()
-        })
+        UIView.animate(
+            withDuration: 0.2, delay: 0, options: .curveEaseInOut,
+            animations: { [weak self] in
+                guard let self = self else { return }
+                if let scrollViewHeightConstraint = self.scrollViewHeightConstraint {
+                    NSLayoutConstraint.deactivate([scrollViewHeightConstraint])
+                }
+                self.scrollViewHeightConstraint = self.scrollView.heightAnchor.constraint(
+                    lessThanOrEqualToConstant: min(newHeight, screenHeight * 0.7))
+                self.scrollViewHeightConstraint?.isActive = true
+                self.layoutIfNeeded()
+            })
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.1) { [weak self] in
                 guard self != nil else { return }
@@ -468,7 +487,7 @@ extension SurveyContainerView {
     private func getCurrentStepSurveyContent() -> SurveyStep {
         return surveyContent.modules[currentStep]
     }
-    
+
     private func isPreviousViewSameToCurrentView() -> Bool {
         if currentStep - 1 < 0 { return false }
         return surveyContent.modules[currentStep].type == surveyContent.modules[currentStep - 1].type

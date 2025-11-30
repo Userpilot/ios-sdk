@@ -30,6 +30,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             window.makeKeyAndVisible()
         }
 
+        // Handle Userpilot deep links.
+        let unhandledURLContexts = UserpilotManager.shared.filterAndHandle(connectionOptions.urlContexts)
+        // Handle app-specific deep links.
+        print(unhandledURLContexts)
+
         guard (scene as? UIWindowScene) != nil else { return }
     }
 
@@ -61,6 +66,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Called as the scene transitions from the foreground to the background.
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        // Handle Userpilot deep links.
+        let unhandledURLContexts = UserpilotManager.shared.filterAndHandle(URLContexts)
+        // Handle app-specific deep links.
+        print(unhandledURLContexts)
     }
 
 }

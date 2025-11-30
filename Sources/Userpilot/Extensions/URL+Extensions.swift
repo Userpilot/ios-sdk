@@ -12,7 +12,19 @@
 import Foundation
 
 internal extension URL {
-    var isHttpOrHttps: Bool {
-        return scheme == "http" || scheme == "https"
+    var isWebLink: Bool {
+        return scheme?.lowercased() == "http" || scheme?.lowercased() == "https"
+    }
+
+    var queryItems: [URLQueryItem] {
+        URLComponents(url: self, resolvingAgainstBaseURL: false)?
+            .queryItems ?? []
+    }
+
+    func queryValue(for name: String) -> String? {
+        URLComponents(url: self, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first { $0.name.lowercased() == name }?
+            .value
     }
 }

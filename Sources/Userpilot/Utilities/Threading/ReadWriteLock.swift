@@ -23,7 +23,7 @@ internal class ReadWriteLock {
     /// - Concurrent reads are allowed.
     /// - Writes are executed exclusively using a barrier.
     private let concurrentQueue = DispatchQueue(
-        label: DispatchQueueConstants.EVENT_QUEUE,
+        label: Constants.DispatchQueues.event,
         qos: .utility,
         attributes: .concurrent,
         autoreleaseFrequency: .workItem

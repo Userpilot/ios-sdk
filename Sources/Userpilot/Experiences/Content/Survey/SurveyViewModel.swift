@@ -39,6 +39,7 @@ internal class SurveyViewModel {
     var bindData: ((Bool) -> Void)?
     var closeSurvey: (() -> Void)?
     var bindNextSurveyStep: (() -> Void)?
+    let submissionId: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
 
     // MARK: - Initializers
 
@@ -64,7 +65,6 @@ internal class SurveyViewModel {
             bindData?(false)
             return
         }
-
         // Setup content
         self.surveyContent = surveyContent
         if let lastModule = surveyContent.modules.last,
@@ -142,7 +142,7 @@ internal class SurveyViewModel {
             experienceId: NSNumber(value: surveyContent.id),
             experienceState: .started
         )
-        logExperience(state: "Started", experienceId: surveyContent.id)
+        logExperience(state: UserpilotExperienceState.started.rawValueString, experienceId: surveyContent.id)
 
         let eventExperienceSeen = ExperienceSurveySeenEvent(surveyId: surveyContent.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
@@ -167,7 +167,7 @@ internal class SurveyViewModel {
             experienceId: NSNumber(value: surveyContent.id),
             experienceState: .completed
         )
-        logExperience(state: "Completed", experienceId: surveyContent.id)
+        logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: surveyContent.id)
 
         let eventExperienceSeen = ExperienceSurveyCompletedEvent(
             surveyId: surveyContent.id,
@@ -190,7 +190,7 @@ internal class SurveyViewModel {
                 experienceId: NSNumber(value: surveyContent.id),
                 experienceState: .completed
             )
-            logExperience(state: "Completed", experienceId: surveyContent.id)
+            logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: surveyContent.id)
 
             let eventExperienceSeen = ExperienceSurveyCompletedEvent(
                 surveyId: surveyContent.id,
@@ -203,7 +203,7 @@ internal class SurveyViewModel {
                 experienceId: NSNumber(value: surveyContent.id),
                 experienceState: .dismissed
             )
-            logExperience(state: "Dismissed", experienceId: surveyContent.id)
+            logExperience(state: UserpilotExperienceState.dismissed.rawValueString, experienceId: surveyContent.id)
 
             let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
                 surveyId: surveyContent.id,
@@ -214,7 +214,10 @@ internal class SurveyViewModel {
     }
 
     private func onSurveyStepSeen() {
-        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard
+            let surveyContent,
+            let surveyStep = getCurrentStepSurveyContent()
+        else { return }
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             experienceType: .survey,
@@ -225,7 +228,7 @@ internal class SurveyViewModel {
             totalSteps: nil
         )
         logStep(
-            state: "Started",
+            state: UserpilotExperienceState.started.rawValueString,
             experienceId: surveyContent.id,
             stepId: surveyStep.id
         )
@@ -242,23 +245,27 @@ internal class SurveyViewModel {
      Sends a socket event indicating that the experience has been completed.
      */
     func onSurveyListSubmitted(answersPayload: [Payload]) {
-        guard let surveyContent  else { return }
+        guard let surveyContent else { return }
         userpilot?.experienceDelegate?.onExperienceStateChanged(
             experienceType: .survey,
             experienceId: NSNumber(value: surveyContent.id),
             experienceState: .submitted
         )
-        logExperience(state: "Submitted", experienceId: surveyContent.id)
+        logExperience(state: UserpilotExperienceState.submitted.rawValueString, experienceId: surveyContent.id)
 
         let eventContentSubmitted = ExperienceSurveySubmittedEvent(
             surveyId: surveyContent.id,
+            submissionId: submissionId,
             feedback: answersPayload
         )
         experiencesPublisher.publishInternalSDKEvent(eventContentSubmitted)
     }
 
     private func onSurveyModuleSubmitted(_ answersPayload: Payload) {
-        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard
+            let surveyContent,
+            let surveyStep = getCurrentStepSurveyContent()
+        else { return }
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             experienceType: .survey,
@@ -269,7 +276,7 @@ internal class SurveyViewModel {
             totalSteps: nil
         )
         logStep(
-            state: "Submitted",
+            state: UserpilotExperienceState.submitted.rawValueString,
             experienceId: surveyContent.id,
             stepId: surveyStep.id
         )
@@ -278,13 +285,17 @@ internal class SurveyViewModel {
             surveyId: surveyContent.id,
             moduleId: surveyStep.id,
             type: surveyStep.type.rawValue,
+            submissionId: submissionId,
             feedback: answersPayload?["value"]
         )
         experiencesPublisher.publishInternalSDKEvent(eventStepSubmitted)
     }
 
     private func onSurveyModuleSkipped() {
-        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard
+            let surveyContent,
+            let surveyStep = getCurrentStepSurveyContent()
+        else { return }
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             experienceType: .survey,
@@ -295,7 +306,7 @@ internal class SurveyViewModel {
             totalSteps: nil
         )
         logStep(
-            state: "Skipped",
+            state: UserpilotExperienceState.skipped.rawValueString,
             experienceId: surveyContent.id,
             stepId: surveyStep.id
         )
@@ -303,7 +314,8 @@ internal class SurveyViewModel {
         let eventStepSkipped = ExperienceSurveyStepSkippedEvent(
             surveyId: surveyContent.id,
             moduleId: surveyStep.id,
-            type: surveyStep.type.rawValue
+            type: surveyStep.type.rawValue,
+            submissionId: submissionId
         )
         experiencesPublisher.publishInternalSDKEvent(eventStepSkipped)
     }
@@ -324,7 +336,7 @@ internal class SurveyViewModel {
         _ answer: Any?,
         _ answerPayload: Payload
     ) {
-        guard  let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
         // We are on the last step, close the survey
         if isLastStep(), surveyStep.type == .completed {
             onDeepLinkTriggered()
@@ -392,7 +404,8 @@ internal class SurveyViewModel {
         stepId: Int
     ) {
         logger.info(
-            "🌠 Userpilot experience step -> type: Survey, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
+            "🌠 Userpilot experience step -> type: %{public}@, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
+            UserpilotExperienceType.survey.rawValueString,
             String(experienceId),
             state,
             String(stepId)

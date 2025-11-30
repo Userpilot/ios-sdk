@@ -13,13 +13,14 @@ import Foundation
 
 // MARK: - Protocols
 
-/// `SocketEvents` defines methods and properties for managing WebSocket connections and events.
-internal protocol SocketEvents: AnyObject {
+/// `SocketManaging` defines methods and properties for managing WebSocket connections and events.
+internal protocol SocketManaging: AnyObject {
     /// Return socket state
     var isSocketOpened: Bool { get }
     var isJoiningSocket: Bool { get }
-    var didErrorOccurred: Bool { get }
+    var didCloseFromError: Bool { get }
     var isShutdownState: Bool { get }
+    var isAllowToOpenSocket: Bool { get }
     var isSocketConnectedWithUnknownChannel: Bool { get }
 
     /// Handle socket open & close
@@ -30,26 +31,11 @@ internal protocol SocketEvents: AnyObject {
     func publish(
         _ eventName: String,
         payload: Payload,
-        socketSubscription: SocketSubscription?
+        isClosingSocket: Bool
     )
 
     /// Register socket subscription
     func registerCallback(_ socketSubscription: SocketSubscription)
-}
-
-internal extension SocketEvents {
-
-    func publish(
-        _ eventName: String,
-        payload: Payload,
-        socketSubscription: SocketSubscription? = nil
-    ) {
-        publish(
-            eventName,
-            payload: payload,
-            socketSubscription: socketSubscription
-        )
-    }
 }
 
 /// `SocketSubscription` defines a callback interface for handling socket event notifications.
@@ -94,7 +80,7 @@ extension SocketSubscription {
 // MARK: - SocketManager
 
 /// `SocketManager` is responsible for managing WebSocket connections, sending events, and handling responses.
-internal class SocketManager {
+internal class SocketManager: SocketManaging {
 
     // MARK: - Properties
 
@@ -120,13 +106,13 @@ internal class SocketManager {
     private let logger: Logging
 
     /// SDK settings detector.
-    private let sdkSettingsDetector: SDKSettingsDetectoring
+    private let userpilotRemoteSource: UserpilotRemoteSourcing
 
     /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
 
     // track fetching socket settings
-    private var isFetchingSocketSettings = false
+    private lazy var isFetchingSocketSettings: AtomicReference<Bool> = AtomicReference(false)
 
     // MARK: - Initialization
 
@@ -140,14 +126,46 @@ internal class SocketManager {
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
-        self.sdkSettingsDetector = container.resolve(SDKSettingsDetectoring.self)
+        self.userpilotRemoteSource = container.resolve(UserpilotRemoteSourcing.self)
         self.logger = config.logger
     }
 
 }
 
-// MARK: - Socket Connection and Callbacks
+// MARK: - SocketManaging
+// Open socket
+extension SocketManager {
 
+    /// Implementation to open a WebSocket connection
+    func connect() {
+        if config.token.isEmpty || storage.userId.isEmpty || isSocketOpened || isJoiningSocket {
+            return
+        }
+        if !isFetchingSocketSettings.compareAndSet(expected: false, new: true) {
+            return
+        }
+        logger.debug("🚥 Socket connection is establishing...")
+        userpilotRemoteSource.fetchSettings { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success:
+                self.openSocket()
+            case .failure(let error):
+                self.logger.error(
+                    "❗ Failed to fetch SDK settings: %{public}@, socket connection aborted",
+                    error.localizedDescription)
+                self.isFetchingSocketSettings.value = false
+            }
+        }
+    }
+
+    /// Implementation to close the WebSocket connection
+    func close() {
+        closeSocket()
+    }
+}
+
+// Handle connections
 extension SocketManager {
 
     /*
@@ -166,11 +184,11 @@ extension SocketManager {
         else { return }
         tryCatch {
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: Environment.getClientToken(config: config),
-                SocketManager.userIdKey: storage.userId,
-                SocketManager.sdkVersionKey: userpilot?.version() ?? "",
-                SocketManager.autoPropertiesKey: autoProperties,
-                SocketManager.appPropertiesKey: appProperties
+                Constants.Socket.tokenKey: Environment.getClientToken(config: config),
+                Constants.Socket.userIdKey: storage.userId,
+                Constants.Socket.sdkVersionKey: userpilot?.version() ?? "",
+                Constants.Socket.autoPropertiesKey: autoProperties,
+                Constants.Socket.appPropertiesKey: appProperties
             ]
             phoenixSocket = Socket(
                 Environment.getSocketURL(storage: storage),
@@ -206,31 +224,39 @@ extension SocketManager {
             }
 
             // Setup the channel - always create a new channel instance to avoid join conflicts
-            let channel = phoenixSocket.channel(SocketManager.channelTopic)
+            let channel = phoenixSocket.channel(Constants.Socket.channelTopic)
 
             // Connect to the channel
             phoenixChannel = channel
             phoenixChannel?.join()?
-                .delegateReceive(SocketManager.successKey, to: self, callback: { (self, _) in
-                    self.logger.info("🚀 SOCKET channel joined")
-                    self.$socketSubscription.invoke { $0.onSocketOpened() }
-                })
-                .delegateReceive(SocketManager.errorKey, to: self, callback: { (self, message) in
-                    self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
-                    self.closeSocket()
-                })
+                .delegateReceive(
+                    Constants.Socket.successKey, to: self,
+                    callback: { (self, _) in
+                        self.logger.info("🚀 SOCKET channel joined")
+                        self.$socketSubscription.invoke { $0.onSocketOpened() }
+                        self.isFetchingSocketSettings.value = false
+                    }
+                )
+                .delegateReceive(
+                    Constants.Socket.errorKey, to: self,
+                    callback: { (self, message) in
+                        self.logger.error("⚠️ SOCKET channel join failed: %{public}@", message.payload)
+                        self.closeSocket()
+                        self.isFetchingSocketSettings.value = false
+                    })
             phoenixChannel?.onError { [weak self] message in
                 self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
                 self?.closeSocket()
+                self?.isFetchingSocketSettings.value = false
             }
 
             phoenixChannel?.onClose { [weak self] message in
                 self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
+                self?.isFetchingSocketSettings.value = false
             }
 
             // Connect the socket
             phoenixSocket.connect()
-            isFetchingSocketSettings = false
         }
     }
 
@@ -253,23 +279,43 @@ extension SocketManager {
 
 }
 
-// MARK: - SocketEvents
+// Push events
+extension SocketManager {
 
-extension SocketManager: SocketEvents {
-
-    /// Logic to determine if the channel state is joining
-    var isJoiningSocket: Bool {
-        phoenixSocket?.isConnecting == true || phoenixChannel?.isJoining == true
+    /// Implementation to publish an event over the WebSocket
+    func publish(_ eventName: String, payload: Payload, isClosingSocket: Bool) {
+        _ = tryCatch {
+            phoenixChannel?
+                .push(eventName, payload: payload ?? [:])?
+                .receive(Constants.Socket.successKey) { [weak self] message in
+                    if self?.isShutdownState == false && !isClosingSocket {
+                        self?.$socketSubscription.invoke {
+                            $0.onSocketEventSent(message.resolvedEvent ?? eventName, payload, message, true)
+                        }
+                    }
+                }
+                .receive(Constants.Socket.errorKey) { [weak self] message in
+                    if self?.isShutdownState == false && !isClosingSocket {
+                        self?.$socketSubscription.invoke {
+                            $0.onSocketEventSent(message.resolvedEvent ?? eventName, payload, message, false)
+                        }
+                    }
+                }
+        }
     }
+}
+
+/// Socket state
+extension SocketManager {
 
     /// Logic to check if the socket is currently open
     var isSocketOpened: Bool {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == true
     }
 
-    /// Checks if the socket is closed due to error reason
-    var didErrorOccurred: Bool {
-        phoenixChannel?.isErrored == true
+    /// Logic to determine if the channel state is joining
+    var isJoiningSocket: Bool {
+        phoenixSocket?.isConnecting == true || phoenixChannel?.isJoining == true
     }
 
     /// Checks if the socket in shutting down state
@@ -282,77 +328,18 @@ extension SocketManager: SocketEvents {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == false
     }
 
-    /// Implementation to open a WebSocket connection
-    func connect() {
-        if config.token.isEmpty || storage.userId.isEmpty {
-            return
-        }
-        if isFetchingSocketSettings || isSocketOpened || isJoiningSocket {
-            return
-        }
-        isFetchingSocketSettings = true
-        sdkSettingsDetector.fetchSettings { [weak self] in
-            self?.openSocket()
-        }
+    /// Checks if the socket is closed due to error reason
+    var didCloseFromError: Bool {
+        phoenixChannel?.isErrored == true
     }
 
-    /// Implementation to close the WebSocket connection
-    func close() {
-        closeSocket()
-    }
-
-    /// Implementation to publish an event over the WebSocket
-    func publish(
-        _ eventName: String,
-        payload: Payload,
-        socketSubscription: SocketSubscription?
-    ) {
-        _ = tryCatch {
-            phoenixChannel?
-                .push(eventName, payload: payload ?? [:])?
-                .receive(SocketManager.successKey) { [weak self] message in
-                    if self?.isShutdownState == false {
-                        if let socketSubscription {
-                            socketSubscription.onSocketEventSent(eventName, payload, message, true)
-                        } else {
-                            self?.$socketSubscription.invoke {
-                                $0.onSocketEventSent(eventName, payload, message, true)
-                            }
-                        }
-                    }
-                }
-                .receive(SocketManager.errorKey) { [weak self] message in
-                    if self?.isShutdownState == false {
-                        if let socketSubscription {
-                            socketSubscription.onSocketEventSent(eventName, payload, message, false)
-                        } else {
-                            self?.$socketSubscription.invoke {
-                                $0.onSocketEventSent(eventName, payload, message, false)
-                            }
-                        }
-                    }
-                }
-        }
+    /// Checks if the socket in shutting down state
+    var isAllowToOpenSocket: Bool {
+        !isShutdownState && !isSocketOpened && !isJoiningSocket
     }
 
     /// Implementation to register a callback for socket events
     func registerCallback(_ socketSubscription: SocketSubscription) {
         self.socketSubscription = socketSubscription
     }
-}
-
-// MARK: - Properties name
-
-internal extension SocketManager {
-
-    // Static constants
-    private static let channelTopic = "events:*"
-    private static let successKey = "ok"
-    private static let errorKey = "error"
-
-    private static let tokenKey = "app_token"
-    private static let userIdKey = "user_id"
-    private static let autoPropertiesKey = "auto_properties"
-    private static let appPropertiesKey = "app_properties"
-    private static let sdkVersionKey = "sdk_version"
 }

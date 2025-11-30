@@ -55,4 +55,9 @@ internal extension UIView {
         }
         return nil
     }
+
+    var isAppRTL: Bool {
+        UIView.userInterfaceLayoutDirection(for: self.semanticContentAttribute) == .rightToLeft
+    }
+
 }

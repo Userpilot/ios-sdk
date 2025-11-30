@@ -17,4 +17,7 @@ internal extension Message {
         self.payload.isEmpty || self.event == "phx_close" || self.topic == "phoenix"
     }
 
+    var resolvedEvent: String? {
+        return (payload["request_type"] as? String)
+    }
 }

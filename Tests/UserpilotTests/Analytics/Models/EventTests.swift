@@ -14,9 +14,7 @@ final class EventTests: XCTestCase {
     func testEventTypeProperties_forEvent() {
         let eventType = EventType.event("Button Clicked")
 
-        XCTAssertEqual(eventType.caseName, "track")
         XCTAssertEqual(eventType.eventName, "track")
-        XCTAssertTrue(eventType.isEvent)
         XCTAssertFalse(eventType.isScreenEvent)
         XCTAssertFalse(eventType.isIdentifyEvent)
         XCTAssertEqual(eventType.eventTitle, "Button Clicked")
@@ -27,10 +25,8 @@ final class EventTests: XCTestCase {
     func testEventTypeProperties_forScreen() {
         let eventType = EventType.screen("Home Screen")
 
-        XCTAssertEqual(eventType.caseName, "screen")
         XCTAssertEqual(eventType.eventName, "screen")
         XCTAssertTrue(eventType.isScreenEvent)
-        XCTAssertFalse(eventType.isEvent)
         XCTAssertFalse(eventType.isIdentifyEvent)
         XCTAssertEqual(eventType.screenTitle, "Home Screen")
         XCTAssertNil(eventType.eventTitle)
@@ -40,10 +36,8 @@ final class EventTests: XCTestCase {
     func testEventTypeProperties_forIdentify() {
         let eventType = EventType.identify("user-00000")
 
-        XCTAssertEqual(eventType.caseName, "identify")
         XCTAssertEqual(eventType.eventName, "user_identify")
         XCTAssertTrue(eventType.isIdentifyEvent)
-        XCTAssertFalse(eventType.isEvent)
         XCTAssertFalse(eventType.isScreenEvent)
         XCTAssertEqual(eventType.userId, "user-00000")
         XCTAssertNil(eventType.eventTitle)
@@ -53,10 +47,8 @@ final class EventTests: XCTestCase {
     func testEventDerivedProperties() {
         let event = Event(type: .event("Clicked CTA"))
 
-        XCTAssertEqual(event.caseName, "track")
         XCTAssertEqual(event.eventName, "track")
         XCTAssertEqual(event.eventTitle, "Clicked CTA")
-        XCTAssertTrue(event.isEvent)
         XCTAssertFalse(event.isIdentifyEvent)
         XCTAssertNil(event.userId)
         XCTAssertNil(event.screenTitle)

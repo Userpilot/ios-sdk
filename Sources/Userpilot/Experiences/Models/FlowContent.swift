@@ -35,7 +35,6 @@ internal struct FlowContentData: Decodable {
 
 internal struct FlowContent: Decodable {
     let id: Int
-    let token: String
     let type: ContentType
     let steps: [Step]
     let mobileTheme: ContentMobileTheme
@@ -44,7 +43,7 @@ internal struct FlowContent: Decodable {
     let localeCode: String
 
     private enum CodingKeys: String, CodingKey {
-        case id, token, type, steps
+        case id, type, steps
         case mobileTheme = "theme_data"
         case screens
         case screenType = "screen_type"
@@ -283,7 +282,7 @@ internal enum TextAlignmentType: String, Decodable {
 
 // MARK: - String Extension for JSON Deserialization
 
-internal extension String {
+extension String {
     /// Converts a JSON string into a `FlowContentData` object using `JSONDecoder`.
     func toFlowContent() -> FlowContentData? {
         if let mobileContent: FlowContentData = self.toObject() {

@@ -7,6 +7,7 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
 class PushNotificationMonitorTests: XCTestCase {
@@ -61,9 +62,10 @@ class PushNotificationMonitorTests: XCTestCase {
     func testSetPushToken_doesNotTrack_whenTokenIsSameAsStored() throws {
         // Arrange
         var didTrackedFlushEvent = false
-        userpilot.analyticsPublisher.onPublish = { _ in didTrackedFlushEvent = true }
+        userpilot.analyticsPublisher.onPublish = { _, _ in didTrackedFlushEvent = true }
 
-        userpilot.storage.pushToken = Data("token-00000".utf8).map({ String(format: "%02x", $0) }).joined()
+        userpilot.storage.pushToken = Data("token-00000".utf8).map({ String(format: "%02x", $0) })
+            .joined()
         let token = Data("token-00000".utf8)
 
         // Act
@@ -76,7 +78,7 @@ class PushNotificationMonitorTests: XCTestCase {
     func testSetPushToken_tracksEvent_whenNewValidTokenIsSet() throws {
         // Arrange
         var didTrackedFlushEvent = true
-        userpilot.analyticsPublisher.onPublish = { _ in didTrackedFlushEvent = true }
+        userpilot.analyticsPublisher.onPublish = { _, _ in didTrackedFlushEvent = true }
 
         userpilot.storage.pushToken = ""
         let token = Data("token-00000".utf8)
@@ -90,7 +92,8 @@ class PushNotificationMonitorTests: XCTestCase {
 
     func testOnSocketEventSent_updatesToken_whenUserTokenEventReceived() throws {
         // Act
-        pushNotificationMonitor.onSocketEventSent("user_token", ["token": "token-00000"], Message(), true)
+        pushNotificationMonitor.onSocketEventSent(
+            "user_token", ["token": "token-00000"], Message(), true)
 
         // Assert
         XCTAssertEqual(userpilot.storage.pushToken, "token-00000")
@@ -101,14 +104,14 @@ class PushNotificationMonitorTests: XCTestCase {
         pushNotificationMonitor.onSocketEventSent("screen", ["title": "Profile"], Message(), true)
 
         // Assert
-        XCTAssertEqual(userpilot.storage.pushToken, "")
+        XCTAssertEqual(userpilot.storage.pushToken, nil)
     }
 
     func testOnSocketOpened_tracksCachedToken_ifAvailable() throws {
         pushNotificationMonitor.setCachedToken(token: Data("token-00000".utf8))
 
         var didTrackedFlushEvent = true
-        userpilot.analyticsPublisher.onPublish = { _ in didTrackedFlushEvent = true }
+        userpilot.analyticsPublisher.onPublish = { _, _ in didTrackedFlushEvent = true }
 
         // Act
         pushNotificationMonitor.onSocketOpened()
@@ -119,14 +122,16 @@ class PushNotificationMonitorTests: XCTestCase {
 
     // MARK: Receive Handler
 
-    func testDidReceiveNotification_returnsFalse_whenSessionIsActiveWithNonUserpilotNotification() throws {
+    func testDidReceiveNotification_returnsFalse_whenSessionIsActiveWithNonUserpilotNotification()
+        throws {
         // Arrange
-        let userInfo = Dictionary<AnyHashable, Any>.basicPush // swiftlint:disable:this syntactic_sugar
+        let userInfo = Dictionary<AnyHashable, Any>.basicPush  // swiftlint:disable:this syntactic_sugar
         let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
         userpilot.storage.userId = "default-00000"
 
         // Act
-        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: {})
+        let result = pushNotificationMonitor.didReceiveNotification(
+            response: response, completionHandler: {})
 
         // Assert
         XCTAssertFalse(result)
@@ -134,12 +139,13 @@ class PushNotificationMonitorTests: XCTestCase {
 
     func testDidReceiveNotification_returnsTrue_whenUserpilotPushAndUserMatches() throws {
         // Arrange
-        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification // swiftlint:disable:this syntactic_sugar
+        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification  // swiftlint:disable:this syntactic_sugar
         let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
         userpilot.storage.userId = "default-00000"
 
         // Act
-        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: { })
+        let result = pushNotificationMonitor.didReceiveNotification(
+            response: response, completionHandler: {})
 
         // Assert
         XCTAssertTrue(result)
@@ -147,7 +153,7 @@ class PushNotificationMonitorTests: XCTestCase {
 
     func testDidReceiveNotification_callsCompletion_whenUserpilotPushMatchesUser() throws {
         // Arrange
-        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification // swiftlint:disable:this syntactic_sugar
+        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification  // swiftlint:disable:this syntactic_sugar
         let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
         let completionExpectation = expectation(description: "completion called")
         let completion = { completionExpectation.fulfill() }
@@ -155,7 +161,8 @@ class PushNotificationMonitorTests: XCTestCase {
         userpilot.storage.userId = "default-1111"
 
         // Act
-        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: completion)
+        let result = pushNotificationMonitor.didReceiveNotification(
+            response: response, completionHandler: completion)
 
         // Assert
         waitForExpectations(timeout: 1.0)
@@ -164,7 +171,7 @@ class PushNotificationMonitorTests: XCTestCase {
 
     func testDidReceiveNotification_returnsTrue_whenUserpilotPushButEventRequestsNotAllowed() throws {
         // Arrange
-        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification // swiftlint:disable:this syntactic_sugar
+        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification  // swiftlint:disable:this syntactic_sugar
         let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
         let completionExpectation = expectation(description: "completion called")
         let completion = { completionExpectation.fulfill() }
@@ -173,7 +180,8 @@ class PushNotificationMonitorTests: XCTestCase {
         userpilot.analyticsPublisher.canRequestEvent = false
 
         // Act
-        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: completion)
+        let result = pushNotificationMonitor.didReceiveNotification(
+            response: response, completionHandler: completion)
 
         // Assert
         waitForExpectations(timeout: 1.0)
@@ -182,7 +190,7 @@ class PushNotificationMonitorTests: XCTestCase {
 
     func testAttemptDeferredNotificationResponse_handlesDeferred_whenUserMatches() throws {
         // Arrange
-        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification // swiftlint:disable:this syntactic_sugar
+        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification  // swiftlint:disable:this syntactic_sugar
         let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
 
         let analyticsExpectation = expectation(description: "push open event")
@@ -194,7 +202,7 @@ class PushNotificationMonitorTests: XCTestCase {
         userpilot.storage.userId = "default-00000"
         userpilot.analyticsPublisher.canRequestEvent = false
 
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { sdkEvent, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { sdkEvent in
             // Try casting to your specific event type
             guard let event = sdkEvent as? PushNotificationOpenedEvent else {
                 XCTFail("sdkEvent is not PushNotificationOpenedEvent")
@@ -215,7 +223,8 @@ class PushNotificationMonitorTests: XCTestCase {
             analyticsExpectation.fulfill()
         }
 
-        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: completion)
+        let result = pushNotificationMonitor.didReceiveNotification(
+            response: response, completionHandler: completion)
 
         let navigationDelegate = MockNavigationDelegate()
         userpilot.navigationDelegate = navigationDelegate
@@ -235,13 +244,14 @@ class PushNotificationMonitorTests: XCTestCase {
 
     func testAttemptDeferredNotificationResponse_doesNotHandle_whenUserMismatch() throws {
         // Arrange
-        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification // swiftlint:disable:this syntactic_sugar
+        let userInfo = Dictionary<AnyHashable, Any>.userpilotPushNotification  // swiftlint:disable:this syntactic_sugar
         let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
 
         userpilot.storage.userId = "default-11111"
         userpilot.analyticsPublisher.canRequestEvent = false
 
-        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: {})
+        let result = pushNotificationMonitor.didReceiveNotification(
+            response: response, completionHandler: {})
 
         // Act
         let didHandleDeferred = pushNotificationMonitor.attemptDeferredNotificationResponse()
@@ -271,14 +281,13 @@ extension Dictionary where Key == AnyHashable, Value == Any {
                 "notification_id": "5",
                 "user_id": "default-00000",
                 "deep_link": "app://some-link"
-
             ]
         ]
     }
 }
 
-private extension UNNotificationResponse {
-    final class KeyedArchiver: NSKeyedArchiver {
+extension UNNotificationResponse {
+    fileprivate final class KeyedArchiver: NSKeyedArchiver {
         override func decodeObject(forKey _: String) -> Any { "" }
 
         deinit {
@@ -287,12 +296,15 @@ private extension UNNotificationResponse {
         }
     }
 
-    static func mock(
+    fileprivate static func mock(
         userInfo: [AnyHashable: Any],
         actionIdentifier: String = UNNotificationDefaultActionIdentifier
     ) -> UNNotificationResponse? {
-        guard let response = UNNotificationResponse(coder: KeyedArchiver(requiringSecureCoding: false)),
-              let notification = UNNotification(coder: KeyedArchiver(requiringSecureCoding: false)) else {
+        guard
+            let response = UNNotificationResponse(
+                coder: KeyedArchiver(requiringSecureCoding: false)),
+            let notification = UNNotification(coder: KeyedArchiver(requiringSecureCoding: false))
+        else {
             return nil
         }
 

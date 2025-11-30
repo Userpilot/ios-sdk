@@ -20,6 +20,9 @@ internal extension Optional where Wrapped == String {
         return !(self?.isEmpty ?? true)
     }
 
+    func orEmpty() -> String {
+        return self ?? ""
+    }
 }
 
 internal extension String {
@@ -118,6 +121,11 @@ internal extension String {
         return Double(self) != nil
     }
 
+    func isAnalyticsEvent() -> Bool {
+        return self == Constants.Event.identifyEvent ||
+        self == Constants.Event.screenEvent ||
+        self == Constants.Event.trackEvent
+    }
 }
 
 // MARK: - Colors
@@ -310,7 +318,7 @@ internal extension String {
     - Parameter type: The type to decode into, which must conform to `Decodable`.
     */
     func toObject<T: Decodable>() -> T? {
-        let decoder = JSONDecoder()
+        let decoder = UserpilotDecoder.shared
         do {
             let decodedData = try decoder.decode(T.self, from: Data(self.utf8))
             return decodedData

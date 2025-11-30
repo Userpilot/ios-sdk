@@ -11,6 +11,7 @@
 //  allowing you to deliver personalized, context-aware content based on user actions and data.
 //
 
+// swiftlint:disable file_length
 import UIKit
 
 /// `Userpilot` manages the lifecycle of the Userpilot SDK and tracks user activity, enabling
@@ -33,8 +34,8 @@ public class Userpilot: NSObject {
     /// Lazy loading of the `DataStoring` instance that manages persistent storage (e.g., user data, preferences).
     private lazy var storage = container.resolve(DataStoring.self)
 
-    /// Lazy loading of the `SocketEvents` instance that manages WebSocket connections and event-driven communication.
-    private lazy var socketManager = container.resolve(SocketEvents.self)
+    /// Lazy loading of the `SocketManaging` instance that manages WebSocket connections and event-driven communication.
+    private lazy var socketManager = container.resolve(SocketManaging.self)
 
     /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
@@ -53,23 +54,23 @@ public class Userpilot: NSObject {
 
     // MARK: - Delegates
 
-    /// The delegate object that handles application screen navigation during experience presentation.
+    /// The delegate object that handle deep link navigation from experiences and push notifications.
     @objc public weak var navigationDelegate: UserpilotNavigationDelegate?
 
-    /// The delegate object that broadcast analytics events.
+    /// The delegate object to notify about published analytics events.
     @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
 
-    /// The delegate object that manages and observes experience presentations.
+    /// The delegate object to notify about the display of Experience content.
     @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
 
     // MARK: - Initialization
 
     /**
      Initializes the `Userpilot` SDK with the provided configuration.
-     
+
      This method sets up the required services such as analytics, storage, and networking, and prepares
      the SDK for tracking and rendering.
-     
+
      - Parameter config: A `Config` object that contains various initialization settings like logging,
      API keys, and anonymous user tracking settings.
      */
@@ -93,24 +94,31 @@ public class Userpilot: NSObject {
 
     /**
      Initializes the DI (Dependency Injection) container and registers required services.
-     
+
      This method sets up lazy initialization for essential SDK services like `DataStoring`,
-     `Networking`, `SocketEvents`, and more.
+     `Networking`, `SocketManaging`, and more.
      By using lazy registration, the services are only created when they are first used, improving performance.
      */
     internal func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
         container.registerLazy(AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
-        container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
-        container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
+        container.registerLazy(SocketManaging.self, initializer: SocketManager.init)
+        container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
+        container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
+        container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
+        container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
+        container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateManager.init)
+        container.registerEager(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
+        container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
+        container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
-        container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
         container.registerEager(PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
         container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
+        container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
     }
 }
 
@@ -120,9 +128,9 @@ extension Userpilot {
 
     /**
      Retrieves the current version of the Userpilot SDK as a string.
-     
+
      This method provides the static version of the SDK, useful for logging or debugging purposes.
-     
+
      - Returns: A string representing the current version of the Userpilot SDK.
      */
     @objc(sdkVersion)
@@ -144,10 +152,10 @@ extension Userpilot {
 
     /**
      Identifies a user to the SDK, enabling personalized content and behavior tracking.
-     
+
      This method allows the SDK to associate analytics and content with a known user by passing their unique `userId`.
      Additional properties and company details can be provided for more context.
-     
+
      - Parameters:
        - userId: A unique identifier for the user, which is used to track their behavior across sessions.
        - properties: An optional dictionary containing user-specific properties like email, role, or age.
@@ -164,17 +172,14 @@ extension Userpilot {
             return
         }
         analyticsPublisher.publish(
-            Event(
-                type: .identify(userId.trim()),
-                properties: properties,
-                company: company
-            )
+            Event(type: .identify(userId.trim()), properties: properties, company: company),
+            isInternalEvent: false
         )
     }
 
     /**
      Tracks an anonymous user session.
-     
+
      This method generates a unique anonymous ID - cache it, allowing the SDK to track behavior and trigger
      relevant content even when the user has not explicitly signed in or identified themselves.
      */
@@ -188,10 +193,10 @@ extension Userpilot {
 
     /**
      Tracks a screen view event when a user navigates to a specific screen in the app.
-      
+
      This method records the screen title and sends it to the analytics service for tracking
      user activity and triggering content.
-      
+
      - Parameter title: The title of the screen that the user has viewed.
      */
     @objc
@@ -200,16 +205,16 @@ extension Userpilot {
             config.logger.error("Invalid screen title - empty string")
             return
         }
-        analyticsPublisher.publish(Event(type: .screen(title)))
+        analyticsPublisher.publish(Event(type: .screen(title)), isInternalEvent: false)
     }
 
     /**
      Tracks a custom event based on a user action.
-     
+
      This method allows developers to track any arbitrary action taken by the user, such as button clicks,
      form submissions, or purchases.
      The event is recorded and sent to the analytics service for further analysis or content triggering.
-     
+
      - Parameters:
        - name: The name of the custom event (e.g., "purchase", "button_click").
        - properties: An optional dictionary containing additional context or metadata related to the event.
@@ -223,17 +228,12 @@ extension Userpilot {
             config.logger.error("Invalid event name - empty string")
             return
         }
-        analyticsPublisher.publish(
-            Event(
-                type: .event(eventName),
-                properties: properties
-            )
-        )
+        analyticsPublisher.publish(Event(type: .event(eventName), properties: properties), isInternalEvent: false)
     }
 
     /**
      Logs the user out and clears their session data.
-     
+
      This method should be called when the user logs out of the application.
      It calls clean method and close user socket.
      */
@@ -241,7 +241,7 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         storage.user = ""
-        analyticsPublisher.logout(shouldClearCachedIdentifyEvent: true)
+        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
         clean()
     }
 
@@ -292,7 +292,7 @@ extension Userpilot {
 
     /**
      Clear user session data.
-     
+
      This method should be called when the user logs out or when identify called with new userId.
      It resets the session state, clears user-related data, and ensures no further tracking occurs for
      the logged-out user.
@@ -310,7 +310,7 @@ extension Userpilot {
 
     /**
      Manually starts an experience within the client application using the provided experience token.
-     
+
      - Parameters:
        - experienceId: unique identifier for the experience to be launched, this ID should be provided
         by the backend or obtained during experience configuration.
@@ -329,7 +329,7 @@ extension Userpilot {
      */
     @objc
     public func endExperience() {
-        experiencesPublisher.endExperience(manualClose: true)
+        experiencesPublisher.endExperience(isInternalEvent: false, component: nil)
     }
 }
 
@@ -375,3 +375,29 @@ extension Userpilot {
     }
 
 }
+
+// MARK: - Deep links
+
+extension Userpilot {
+
+    /// Verifies if an incoming URL is intended for the Userpilot SDK.
+    /// - Parameter url: The URL being opened.
+    /// - Returns: `true` if the URL matches the Userpilot URL Scheme or `false` if the URL is not
+    ///  known by the Userpilot SDK.
+    ///
+    /// If the `url` is an Userpilot URL, this function may launch an experience or otherwise alter
+    /// the UI state.
+    ///
+    /// This function is intended to be called added at the top of your
+    /// `UIApplicationDelegate`'s `application(_:open:options:)` function:
+    /// ```swift
+    /// guard !userpilot.didHandleURL(url) else { return true }
+    /// ```
+    @discardableResult
+    @objc
+    public func didHandleURL(_ url: URL) -> Bool {
+        return container.resolve(DeepLinkHandling.self).didHandleURL(url)
+    }
+
+}
+// swiftlint:enable file_length

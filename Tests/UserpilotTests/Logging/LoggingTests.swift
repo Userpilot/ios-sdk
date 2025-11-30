@@ -9,7 +9,7 @@
 import XCTest
 @testable import Userpilot
 
-final class LoggingTests: XCTestCase {
+class LoggingTests: XCTestCase {
 
     private var logger: MockLogger!
 

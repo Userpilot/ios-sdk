@@ -30,11 +30,11 @@ internal struct Environment {
 
     /**
      Returns the appropriate socket URL based on the current environment type.
-     
+
      - Parameters:
        - storage: An instance of the `Storage` class used to fetch the socket URL
         for non-DEVELOPMENT/STAGING environments.
-     
+
      - Returns: The socket URL as a `String`.
      */
     static func getSocketURL(storage: DataStoring) -> String {
@@ -48,10 +48,10 @@ internal struct Environment {
 
     /**
      Returns the appropriate client token based on the current environment type.
-     
+
      - Parameters:
        - config: An instance of `UserpilotConfig` used to fetch the client token for non-DEVELOPMENT environments.
-     
+
      - Returns: The client token as a `String`.
      */
     static func getClientToken(config: Userpilot.Config) -> String {

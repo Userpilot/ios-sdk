@@ -47,6 +47,19 @@ extension ExperienceContent {
         return nil
     }
 
+    /// Retrieves the id for the content.
+    /// - Returns: A Int representing the id of the content.
+    func experienceId() -> Int {
+        switch self {
+        case .flow(let content):
+            return content.id
+        case .survey(let content):
+            return content.id
+        case .nps:
+            return 0
+        }
+    }
+
     /// Retrieves the locale code for the content.
     /// - Returns: A string representing the locale code of the content.
     func experienceLocale() -> String {

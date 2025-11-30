@@ -11,7 +11,7 @@
 
 import UIKit
 
-internal extension UPOpenTextView {
+extension UPOpenTextView {
 
     // Sets up the views.
     // swiftlint:disable:next function_body_length

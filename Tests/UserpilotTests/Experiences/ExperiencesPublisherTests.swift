@@ -7,26 +7,27 @@
 //
 
 import XCTest
+
 @testable import Userpilot
 
 // swiftlint:disable all
 
-final class ExperiencesPublisherTests: XCTestCase {
+class ExperiencesPublisherTests: XCTestCase {
 
     var experiencesPublisher: ExperiencesPublisher!
     var userpilot: MockUserpilot!
 
     var callbackRegistered = false
-    
+
     override func setUpWithError() throws {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
         userpilot = MockUserpilot(config: config)
-       
+
         userpilot.socketManager.onRegisterCallback = { _ in
             self.callbackRegistered = true
         }
-        
+
         experiencesPublisher = ExperiencesPublisher(container: userpilot.container)
     }
 
@@ -59,8 +60,8 @@ final class ExperiencesPublisherTests: XCTestCase {
         let experienceId = "test-experience-id"
         var publishedEvent: SDKEvent?
         let expectation = XCTestExpectation(description: "Event should be published")
-        
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
             expectation.fulfill()
         }
@@ -82,16 +83,23 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testEndExperience_shouldTriggerCloseOnTopViewController() {
         // Arrange
         let mockVC = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: mockVC)
+        let mockContent = createMockExperienceContent()
+        let experienceStateManager =
+            userpilot.container.resolve(ExperienceStateManaging.self) as! MockExperienceStateManager
+
+        // Set up active state with mock component
+        experienceStateManager.markActive(.manual, mockContent)
+        experienceStateManager.setActiveComponent(mockVC)
+
         let expectation = XCTestExpectation(description: "triggerClose was called")
 
-        mockVC.onTriggerClose = { manualClose in
-            XCTAssertTrue(manualClose)
+        mockVC.onTriggerClose = { isInternalEvent in
+            XCTAssertTrue(isInternalEvent)
             expectation.fulfill()
         }
 
         // Act
-        experiencesPublisher.endExperience(manualClose: true)
+        experiencesPublisher.endExperience(isInternalEvent: true)
 
         // Assert
         wait(for: [expectation], timeout: 1.0)
@@ -118,7 +126,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Act
         experiencesPublisher.onNewMessage(message)
         experiencesPublisher.onNewMessage(message)
-        
+
         // Wait for async processing to complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             let result = self.experiencesPublisher.getActiveMobileContent()
@@ -131,7 +139,7 @@ final class ExperiencesPublisherTests: XCTestCase {
                 expectation.fulfill()
             }
         }
-        
+
         wait(for: [expectation], timeout: 3.0)
     }
 
@@ -169,7 +177,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         let screenTitle = "TestScreen"
 
         // Act
-        experiencesPublisher.updateSceen(screenTitle)
+        experiencesPublisher.updateScreen(screenTitle)
 
         // Assert
         XCTAssertEqual(experiencesPublisher.mockGetCurrentScreen(), "TestScreen")
@@ -183,8 +191,8 @@ final class ExperiencesPublisherTests: XCTestCase {
             "theme_data": [
                 "carousel": [:],
                 "slideout": [:],
-                "survey": [:]
-            ]
+                "survey": [:],
+            ],
         ]
         let message = Message(payload: themeData)
 
@@ -195,7 +203,8 @@ final class ExperiencesPublisherTests: XCTestCase {
         }
 
         // Act
-        experiencesPublisher.onSocketEventSent(SDKEventsName.fetchExperienceTheme.rawValue, nil, message, true)
+        experiencesPublisher.onSocketEventSent(
+            SDKEventsName.fetchExperienceTheme.rawValue, nil, message, true)
 
         // Assert
         wait(for: [expectation], timeout: 1.0)
@@ -208,22 +217,22 @@ final class ExperiencesPublisherTests: XCTestCase {
         let message = Message(payload: MockContentFactory.makeFlowContentPayload())
 
         // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
+        experiencesPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, message, true)
 
         // Wait for async processing to complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let result = self.experiencesPublisher.getActiveMobileContent()
-            
+
             // Assert
             XCTAssertNotNil(result)
             if case .flow(let content) = result {
-                XCTAssertEqual(content.token, "mobile:77")
+                XCTAssertEqual(content.id, 77)
             } else {
                 XCTFail("Expected flow content")
             }
             expectation.fulfill()
         }
-        
+
         wait(for: [expectation], timeout: 1.0)
     }
 
@@ -233,35 +242,34 @@ final class ExperiencesPublisherTests: XCTestCase {
         let surveyData: [String: Any] = [
             "surveys": [
                 "id": 1,
-                "token": "survey-123",
                 "type": "step",
                 "modules": [],
                 "theme_data": ["id": 1],
                 "screens": [],
                 "screen_type": "all",
                 "locale_code": "en",
-                "time_delay": 0
+                "time_delay": 0,
             ]
         ]
         let message = Message(payload: surveyData)
 
         // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
+        experiencesPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, message, true)
 
         // Wait for async processing to complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let result = self.experiencesPublisher.getActiveMobileContent()
-            
+
             // Assert
             XCTAssertNotNil(result)
             if case .survey(let content) = result {
-                XCTAssertEqual(content.token, "survey-123")
+                XCTAssertEqual(content.id, 1)
             } else {
                 XCTFail("Expected survey content")
             }
             expectation.fulfill()
         }
-        
+
         wait(for: [expectation], timeout: 1.0)
     }
 
@@ -271,24 +279,26 @@ final class ExperiencesPublisherTests: XCTestCase {
         let message = Message(payload: MockContentFactory.makeNPSContentPayload())
 
         // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
+        experiencesPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, message, true)
 
         // Wait for async processing to complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let result = self.experiencesPublisher.getActiveMobileContent()
-            
+
             // Assert
             XCTAssertNotNil(result)
             if case .nps(let content) = result {
                 XCTAssertEqual(content.localeCode, "en")
                 XCTAssertEqual(content.timeDelay, 0)
-                XCTAssertEqual(content.content.survey.question, "How likely are you to recommend us to a friend?")
+                XCTAssertEqual(
+                    content.content.survey.question,
+                    "How likely are you to recommend us to a friend?")
             } else {
                 XCTFail("Expected NPS content")
             }
             expectation.fulfill()
         }
-        
+
         wait(for: [expectation], timeout: 1.0)
     }
 
@@ -309,7 +319,7 @@ final class ExperiencesPublisherTests: XCTestCase {
             XCTAssertNotNil(result)
             expectation.fulfill()
         }
-        
+
         wait(for: [expectation], timeout: 1.0)
     }
 
@@ -317,7 +327,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Arrange
         let payload: [String: Any] = [
             "mobile_contents": ["test": "data"],
-            "request_id": 123
+            "request_id": 123,
         ]
         let message = Message(payload: ["payload": payload])
 
@@ -331,7 +341,8 @@ final class ExperiencesPublisherTests: XCTestCase {
 
     func testOnNewMessage_shouldNotProcessContent_WhenActiveExperienceExists() {
         // Arrange
-        let expectation = XCTestExpectation(description: "First content should be processed, second should not")
+        let expectation = XCTestExpectation(
+            description: "First content should be processed, second should not")
         let mockPayload: [String: Any?] = MockContentFactory.makeFlowContentPayload()
         let firstMessage = Message(payload: ["payload": mockPayload])
 
@@ -343,7 +354,7 @@ final class ExperiencesPublisherTests: XCTestCase {
             // Now try to process another message - this should be ignored due to pending experience
             let secondMessage = Message(payload: ["payload": mockPayload])
             self.experiencesPublisher.onNewMessage(secondMessage)
-            
+
             // Wait a bit more and check result
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let result = self.experiencesPublisher.getActiveMobileContent()
@@ -356,7 +367,7 @@ final class ExperiencesPublisherTests: XCTestCase {
                 expectation.fulfill()
             }
         }
-        
+
         wait(for: [expectation], timeout: 1.0)
     }
 
@@ -367,7 +378,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         let mockEvent = MockSDKEvent(eventName: "test-event", eventPayload: ["key": "value"])
         var publishedEvent: SDKEvent?
 
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
         }
 
@@ -451,7 +462,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Assert
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             let canRequest = self.experiencesPublisher.canRequestScreenEvent()
-            XCTAssertFalse(canRequest) // Should be false when triggering thank you message
+            XCTAssertFalse(canRequest)  // Should be false when triggering thank you message
             expectation.fulfill()
         }
 
