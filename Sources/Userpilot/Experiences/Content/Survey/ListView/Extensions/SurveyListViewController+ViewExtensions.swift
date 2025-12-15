@@ -47,6 +47,15 @@ extension SurveyListViewController {
             self?.processSurvey()
         }
         actionButton.updateEnableState(isEnabled: !surveyViewModel.isAnyQuestionRequired())
+
+        if #available(iOS 26.0, *) {
+            let interaction = UIScrollEdgeElementContainerInteraction()
+            interaction.scrollView = scrollView
+            interaction.edge = .bottom
+            actionButton.addInteraction(interaction)
+        } else {
+            scrollViewBottomConstraint.constant = actionButton.frame.height + 32 // button height + 16 top + 16 bottom
+        }
     }
 
     /// Process survey form answers.
@@ -143,6 +152,18 @@ extension SurveyListViewController {
             default:
                 break
             }
+        }
+
+        if #available(iOS 26.0, *) {
+            let spaceView: UIView = {
+                let view = UIView()
+                view.translatesAutoresizingMaskIntoConstraints = false
+                view.backgroundColor = .clear
+                // button height + 16 top space
+                view.heightAnchor.constraint(equalToConstant: actionButton.frame.height + 66).isActive = true
+                return view
+            }()
+            containerView.addArrangedSubview(spaceView)
         }
     }
 }

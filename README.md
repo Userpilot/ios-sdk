@@ -188,7 +188,9 @@ If you have additional configuration needs, you can pass a custom configuration 
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
-        .logging(true) // Enable or disable logging
+        .logging(true) // Enable or disable logging.
+        .enableUseInAppBrowser(enabled: true) // Enable Open external link In-app browser using SFSafariViewController.
+        .disableRequestPushNotificationsPermission() // Disable request push notifications permission by SDK.
 )
 userpilot.navigationDelegate = self
 userpilot.analyticsDelegate = self

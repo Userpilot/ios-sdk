@@ -82,7 +82,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
 
     // MARK: - Section Binding Methods
 
-    /**
+    /*
      Binds the sections of the provided step to the stack view.
      
      - Parameters:
@@ -91,6 +91,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
        - experienceContentProtocol: A listener for handling interactions related to experience content.
        - imageLoader: An object responsible for loading images.
      */
+    // swiftlint:disable:next function_body_length
     private func bindSections(
         _ step: Step,
         withTheme theme: ExperienceTheme,
@@ -146,6 +147,17 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 break
             }
         }
+
+        if #available(iOS 26.0, *) {
+            let spaceView: UIView = {
+                let view = UIView()
+                view.translatesAutoresizingMaskIntoConstraints = false
+                view.backgroundColor = .clear
+                view.heightAnchor.constraint(equalToConstant: 100).isActive = true
+                return view
+            }()
+            stackView.addArrangedSubview(spaceView)
+        }
     }
 
     // MARK: - UI Setup
@@ -171,8 +183,8 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             }
 
             // Add the scroll view and its content view to the cell's content view
-            contentView.addSubview(actionButton)
             contentView.addSubview(theScrollView)
+            contentView.addSubview(actionButton)
             theScrollView.addSubview(contentContainerView)
             contentContainerView.addSubview(stackView)
 
@@ -183,61 +195,110 @@ internal class StepCollectionViewCell: UICollectionViewCell {
 
             // Constraint for the content container view height
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
-                equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
+                equalTo: frameLayoutGuide.heightAnchor,
+                constant: 0.0
+            )
             contentViewHeightConstraint.priority = .defaultLow
 
-            // Define layout constraints for the scroll view and its content
+            // Base constraints
             storedConstraints.append(contentsOf: [
-                actionButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                  constant: ThemeHandler.DefaultValues.contentMargin + ThemeHandler.DefaultValues.leftRightMargin),
-                actionButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative
-                                                       + ThemeHandler.DefaultValues.leftRightMargin.negative),
-                actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
-                                                     constant:
-                  theme.isStepsProgressEnabled ? ThemeHandler.DefaultValues.buttonBottomMarginWithStepProgress.negative
-                    : ThemeHandler.DefaultValues.buttonBottomMarginWithoutStepProgress.negative),
-                theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
-                  constant: ThemeHandler.DefaultValues.carouselContentTopMargin),
-                theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                  constant: ThemeHandler.DefaultValues.leftRightMargin),
-                theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                  constant: ThemeHandler.DefaultValues.leftRightMargin.negative),
-                theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
-                  constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative),
-                contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor,
-                  constant: 0.0),
-                contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor,
-                  constant: 0.0),
-                contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor,
-                  constant: 0.0),
-                contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor,
-                  constant: 0.0),
-                contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor,
-                  constant: 0.0),
-                stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor,
-                  constant: -8.0),
-                stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor,
-                  constant: ThemeHandler.DefaultValues.contentMargin),
-                stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor,
-                  constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                // Action button constraints
+                actionButton.leadingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.leadingAnchor,
+                    constant: ThemeHandler.DefaultValues.contentMargin + ThemeHandler.DefaultValues.leftRightMargin
+                ),
+                actionButton.trailingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.trailingAnchor,
+                    constant: ThemeHandler.DefaultValues.contentMargin.negative +
+                              ThemeHandler.DefaultValues.leftRightMargin.negative
+                ),
+                actionButton.bottomAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.bottomAnchor,
+                    constant: theme.isStepsProgressEnabled ?
+                        ThemeHandler.DefaultValues.buttonBottomMarginWithStepProgress.negative :
+                        ThemeHandler.DefaultValues.buttonBottomMarginWithoutStepProgress.negative
+                ),
+
+                // ScrollView top/leading/trailing
+                theScrollView.topAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.topAnchor,
+                    constant: ThemeHandler.DefaultValues.carouselContentTopMargin
+                ),
+                theScrollView.leadingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.leadingAnchor,
+                    constant: ThemeHandler.DefaultValues.leftRightMargin
+                ),
+                theScrollView.trailingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.trailingAnchor,
+                    constant: ThemeHandler.DefaultValues.leftRightMargin.negative
+                )
+            ])
+
+            // 🟦 iOS 26 vs older iOS — ScrollView bottom anchor
+            let scrollBottomConstraint: NSLayoutConstraint
+            if #available(iOS 26.0, *) {
+                // ScrollView touches bottom safe area directly
+                scrollBottomConstraint = theScrollView.bottomAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.bottomAnchor)
+            } else {
+                // Older iOS -> ScrollView sits above the action button
+                scrollBottomConstraint = theScrollView.bottomAnchor.constraint(
+                    equalTo: actionButton.topAnchor,
+                    constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative
+                )
+            }
+            storedConstraints.append(scrollBottomConstraint)
+
+            // Content container inside scroll view
+            storedConstraints.append(contentsOf: [
+                contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor),
+                contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor),
+                contentContainerView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor),
+                contentContainerView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor),
+                contentContainerView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor),
+
+                // StackView constraints
+                stackView.bottomAnchor.constraint(
+                    lessThanOrEqualTo: contentContainerView.bottomAnchor, constant: -8.0
+                ),
+                stackView.leadingAnchor.constraint(
+                    equalTo: contentContainerView.leadingAnchor,
+                    constant: ThemeHandler.DefaultValues.contentMargin
+                ),
+                stackView.trailingAnchor.constraint(
+                    equalTo: contentContainerView.trailingAnchor,
+                    constant: ThemeHandler.DefaultValues.contentMargin.negative
+                ),
+
                 contentViewHeightConstraint
             ])
 
-            // Conditional layout based on content alignment
+            // Conditional layout based on alignment
             if theme.contentAlignment == .middle {
                 storedConstraints.append(contentsOf: [
-                    stackView.topAnchor.constraint(greaterThanOrEqualTo: contentContainerView.topAnchor, constant: 0.0),
-                    stackView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor, constant: 0.0)
+                    stackView.topAnchor.constraint(
+                        greaterThanOrEqualTo: contentContainerView.topAnchor
+                    ),
+                    stackView.centerYAnchor.constraint(
+                        equalTo: contentContainerView.centerYAnchor
+                    )
                 ])
             } else {
                 storedConstraints.append(
-                    stackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 0.0)
+                    stackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor)
                 )
             }
 
-            // Activate the stored constraints
+            // Activate everything
             NSLayoutConstraint.activate(storedConstraints)
+        }
+
+        // iOS 26 interaction
+        if #available(iOS 26.0, *) {
+            let interaction = UIScrollEdgeElementContainerInteraction()
+            interaction.scrollView = theScrollView
+            interaction.edge = .bottom
+            actionButton.addInteraction(interaction)
         }
     }
 

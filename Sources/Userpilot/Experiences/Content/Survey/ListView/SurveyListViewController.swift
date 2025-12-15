@@ -22,6 +22,7 @@ internal class SurveyListViewController: UIViewController {
     @IBOutlet internal weak var buttonDismiss: UPDismissButton!
     @IBOutlet internal weak var actionButton: UPButtonView!
     @IBOutlet internal weak var containerView: UIStackView!
+    @IBOutlet internal weak var scrollViewBottomConstraint: NSLayoutConstraint!
 
     // MARK: - Properties
 

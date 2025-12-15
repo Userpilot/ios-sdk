@@ -28,6 +28,8 @@ internal class UPIconTextView: UIStackView {
             imageView.widthAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.iconImageDimensions)),
             imageView.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.iconImageDimensions))
         ])
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
         return imageView
     }()
 

@@ -19,6 +19,17 @@ internal class SurveyExperienceStepActionEvent: SurveyExperienceActionEvent {
     let moduleId: Int
     let type: String
 
+    init(
+        surveyId: Int,
+        submissionId: Int64,
+        moduleId: Int,
+        type: String
+    ) {
+        self.moduleId = moduleId
+        self.type = type
+        super.init(surveyId: surveyId, submissionId: submissionId)
+    }
+
     /// Creates a dictionary representation of the event data, including the step Id.
     ///
     /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
@@ -29,15 +40,6 @@ internal class SurveyExperienceStepActionEvent: SurveyExperienceActionEvent {
         return map
     }
 
-    init(
-        surveyId: Int,
-        moduleId: Int,
-        type: String
-    ) {
-        self.moduleId = moduleId
-        self.type = type
-        super.init(surveyId: surveyId)
-    }
 }
 
 // MARK: - FlowExperienceStepActionEvent Subclasses
@@ -55,27 +57,8 @@ internal class ExperienceSurveyStepSeenEvent: SurveyExperienceStepActionEvent {
  */
 internal class ExperienceSurveyStepSkippedEvent: SurveyExperienceStepActionEvent {
 
-    let submissionId: Int64
-
-    init(
-        surveyId: Int,
-        moduleId: Int,
-        type: String,
-        submissionId: Int64
-    ) {
-        self.submissionId = submissionId
-        super.init(surveyId: surveyId, moduleId: moduleId, type: type)
-    }
-
     override var name: String {
         return SDKEventsName.surveyExperienceStepSkipped.rawValue
-    }
-
-    /// Combines base event payload with custom parameters.
-    override var eventPayload: [String: Any] {
-        var basePayload = super.eventPayload
-        basePayload["submissionId"] = submissionId
-        return basePayload
     }
 }
 
@@ -85,19 +68,17 @@ internal class ExperienceSurveyStepSkippedEvent: SurveyExperienceStepActionEvent
 internal class ExperienceSurveyStepSubmittedEvent: SurveyExperienceStepActionEvent {
 
     // Custom parameters for the Submitted event
-    let submissionId: Int64
     let feedback: Any?
 
     init(
         surveyId: Int,
+        submissionId: Int64,
         moduleId: Int,
         type: String,
-        submissionId: Int64,
         feedback: Any? = nil
     ) {
-        self.submissionId = submissionId
         self.feedback = feedback
-        super.init(surveyId: surveyId, moduleId: moduleId, type: type)
+        super.init(surveyId: surveyId, submissionId: submissionId, moduleId: moduleId, type: type)
     }
 
     override var name: String {
@@ -107,7 +88,6 @@ internal class ExperienceSurveyStepSubmittedEvent: SurveyExperienceStepActionEve
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
-        basePayload["submissionId"] = submissionId
         if feedback != nil {
             basePayload["feedback"] = feedback
         }

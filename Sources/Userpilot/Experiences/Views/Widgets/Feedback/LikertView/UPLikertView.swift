@@ -27,6 +27,7 @@ internal class UPLikertView: UIView {
         layout.minimumInteritemSpacing = 8
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
         return collectionView
     }()
 

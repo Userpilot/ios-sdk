@@ -18,32 +18,23 @@ internal class BottomSheetViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// Main bottom sheet container view with a rounded top and clipped corners
     private lazy var mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .white
+        view.clipsToBounds = false
+        view.layer.masksToBounds = false
         view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
-        view.clipsToBounds = true
         return view
     }()
 
-    /// View to hold dynamic content for the bottom sheet
     private lazy var contentView: UIView = {
         let view = UIView()
+        view.clipsToBounds = false
+        view.layer.masksToBounds = false
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    /// Top bar view for dragging the bottom sheet to dismiss
-    private lazy var topBarView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// Dimmed background view that appears behind the bottom sheet
     private lazy var dimmedView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -55,12 +46,8 @@ internal class BottomSheetViewController: UIViewController {
         return view
     }()
 
-    // MARK: - Properties
-
-    /// Minimum vertical drag height required to dismiss the bottom sheet
-    private let minDismissiblePanHeight: CGFloat = 20
-    /// Minimum spacing between the top edge of the view and the bottom sheet
-    private var minTopSpacing: CGFloat = 100
+    private var blurEffectView: UIVisualEffectView?
+    private var mainContainerBottomConstraint: NSLayoutConstraint?
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - View Lifecycle
@@ -79,20 +66,15 @@ internal class BottomSheetViewController: UIViewController {
 
     deinit {
         UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
-        ? .forceLeftToRight : .forceRightToLeft
+            ? .forceLeftToRight : .forceRightToLeft
     }
 
-}
+    // MARK: - Setup Views
 
-// MARK: - Setup Views
-
-private extension BottomSheetViewController {
-
-    /// Set up the views for the bottom sheet and dimmed background
-    func setupViews() {
+    private func setupViews() {
         view.backgroundColor = .clear
 
-        // Add dimmed background view
+        // Dimmed background
         view.addSubview(dimmedView)
         NSLayoutConstraint.activate([
             dimmedView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -101,25 +83,18 @@ private extension BottomSheetViewController {
             dimmedView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        // Add bottom sheet container view
+        // Main container
         view.addSubview(mainContainerView)
+        mainContainerBottomConstraint = mainContainerView.bottomAnchor.constraint(
+            equalTo: view.bottomAnchor,
+            constant: view.frame.height)
         NSLayoutConstraint.activate([
             mainContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             mainContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            mainContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            mainContainerView.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor, constant: minTopSpacing)
+            mainContainerBottomConstraint!
         ])
 
-        // Add top draggable bar view
-//        mainContainerView.addSubview(topBarView)
-//        NSLayoutConstraint.activate([
-//            topBarView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
-//            topBarView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
-//            topBarView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor),
-//            topBarView.heightAnchor.constraint(equalToConstant: 20)
-//        ])
-
-        // Add content view
+        // Content view inside main container
         mainContainerView.addSubview(contentView)
         NSLayoutConstraint.activate([
             contentView.leadingAnchor.constraint(
@@ -127,53 +102,62 @@ private extension BottomSheetViewController {
                 constant: ThemeHandler.DefaultValues.contentMargin),
             contentView.trailingAnchor.constraint(
                 equalTo: mainContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                constant: -ThemeHandler.DefaultValues.contentMargin),
             contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
             contentView.bottomAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
+                constant: -ThemeHandler.DefaultValues.contentBottomMargin)
         ])
-
-        /// prepare the view for slide in animation
-        dimmedView.alpha = 0
-        mainContainerView.transform = CGAffineTransform(translationX: 0, y: view.frame.height)
     }
-}
 
-// MARK: - Setup Gestures
+    // MARK: - Blur Effect
 
-private extension BottomSheetViewController {
+    private func applyBlurEffect(backgroundColor: UIColor, radius: CGFloat) {
+        blurEffectView?.removeFromSuperview()
 
-    /// Set up tap and pan gestures for dismissing the bottom sheet
-    func setupGestures() {
-//        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapDimmedView))
-//        dimmedView.addGestureRecognizer(tapGesture)
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        blurView.clipsToBounds = true
+        blurView.layer.cornerRadius = radius
+        blurView.backgroundColor = backgroundColor
+
+        mainContainerView.insertSubview(blurView, at: 0)
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
+            blurView.bottomAnchor.constraint(equalTo: mainContainerView.bottomAnchor),
+            blurView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor)
+        ])
+        blurEffectView = blurView
+    }
+
+    // MARK: - Gestures
+
+    private func setupGestures() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapDimmedView))
+        dimmedView.addGestureRecognizer(tapGesture)
 
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
         panGesture.delaysTouchesBegan = false
         panGesture.delaysTouchesEnded = false
-        topBarView.addGestureRecognizer(panGesture)
+        mainContainerView.addGestureRecognizer(panGesture)
     }
 
-    /// Handle tap gesture on the dimmed view to dismiss the bottom sheet
-    @objc func handleTapDimmedView() {
-        dismissBottomSheet()
+    @objc private func handleTapDimmedView() {
+        // dismissBottomSheet()
     }
 
-    /// Handle pan gesture to track dragging and dismiss the bottom sheet when necessary
-    @objc func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
+    @objc private func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view)
-        let isDraggingDown = translation.y > 0
-        guard isDraggingDown else { return }
+        guard translation.y > 0 else { return }
 
-        let pannedHeight = translation.y
         let currentY = view.frame.height - mainContainerView.frame.height
-
         switch gesture.state {
         case .changed:
-            mainContainerView.frame.origin.y = currentY + pannedHeight
+            mainContainerView.frame.origin.y = currentY + translation.y
         case .ended:
-            if pannedHeight >= minDismissiblePanHeight {
+            if translation.y >= 20 {
                 dismissBottomSheet()
             } else {
                 mainContainerView.frame.origin.y = currentY
@@ -182,87 +166,67 @@ private extension BottomSheetViewController {
             break
         }
     }
-}
 
-// MARK: - Animations
+    // MARK: - Animations
 
-extension BottomSheetViewController {
-
-    /// Animate the presentation of the bottom sheet
-    func animatePresent() {
-        UIView.animate(withDuration: 0.2) { [weak self] in
-            self?.mainContainerView.transform = .identity
-        }
-        UIView.animate(withDuration: 0.4) { [weak self] in
-            self?.dimmedView.alpha = 1
+    private func animatePresent() {
+        view.layoutIfNeeded()
+        mainContainerBottomConstraint?.constant = 0
+        UIView.animate(withDuration: 0.3) {
+            self.dimmedView.alpha = 1
+            self.view.layoutIfNeeded()
         }
     }
 
-    /// Dismiss the bottom sheet with an animation
     func dismissBottomSheet(completion: (() -> Void)? = nil) {
-        UIView.animate(withDuration: 0.2, animations: { [weak self] in
-            self?.dimmedView.alpha = 0
-            self?.mainContainerView.transform = CGAffineTransform(
-                translationX: 0, y: self?.mainContainerView.frame.height ?? 0)
-        }, completion: { [weak self] _ in
-            self?.dismiss(animated: false, completion: completion)
+        mainContainerBottomConstraint?.constant = view.frame.height
+        UIView.animate(withDuration: 0.2, animations: {
+            self.dimmedView.alpha = 0
+            self.view.layoutIfNeeded()
+        }, completion: { _ in
+            self.dismiss(animated: false, completion: completion)
         })
     }
-}
 
-// MARK: - Public APIs
+    // MARK: - Public APIs
 
-extension BottomSheetViewController {
-
-    /// Set the dynamic content for the bottom sheet
-    func setContent(
-        content: UIView,
-        withoutMargin: Bool = false
-    ) {
+    func setContent(content: UIView) {
         contentView.addSubview(content)
+        content.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor,
-                                         constant: ThemeHandler.DefaultValues.distanceBetweenSections),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
-        view.layoutIfNeeded()
     }
 
-    /// Customize the background color of the bottom sheet for `ExperienceTheme`
     func setBackgroundColor(_ theme: ExperienceTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
+        applyBlurEffect(backgroundColor: theme.backgroundColor, radius: 25)
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
     }
 
-    /// Customize the background color of the bottom sheet for `SurveyTheme`
     func setBackgroundColor(_ theme: SurveyTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        mainContainerView.setTopCornerRadius(theme.borderRadius)
+        applyBlurEffect(backgroundColor: theme.backgroundColor, radius: theme.borderRadius)
         dimmedView.isHidden = !theme.backdropEnabled
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
     }
 
-    /// Customize the background color of the bottom sheet for `SurveyTheme`
     func setBackgroundColor(_ theme: NPSTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        mainContainerView.setTopCornerRadius(theme.borderRadius)
+        applyBlurEffect(backgroundColor: theme.backgroundColor, radius: theme.borderRadius)
         dimmedView.isHidden = false
         dimmedView.backgroundColor = .black.withOpacity(0.4)
     }
 }
 
-// MARK: - Show BottomSheet view controller
+// MARK: - Present Bottom Sheet
 
 internal extension UIViewController {
-
-    /// Present a `BottomSheetViewController` modally
     func presentBottomSheet(viewController: UIViewController) {
         viewController.modalPresentationStyle = .overFullScreen
         present(viewController, animated: false, completion: nil)

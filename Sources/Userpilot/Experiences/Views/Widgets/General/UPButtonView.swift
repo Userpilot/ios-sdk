@@ -12,6 +12,7 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable:next type_body_length
 internal class UPButtonView: UIButton {
 
     // MARK: - Properties
@@ -47,16 +48,19 @@ internal class UPButtonView: UIButton {
         else {
             return CGSize(width: self.bounds.width, height: UPButtonView.buttonHeight)
         }
-        let edgeInsets = CGFloat(16) // 8 top, 8 bottom ,8 left, 8 right
-        let actualHight = text.height(
+        let edgeInsets = CGFloat(16)  // 8 top, 8 bottom ,8 left, 8 right
+        let actualHight =
+        text.height(
             withFont: font,
             width: self.bounds.width - edgeInsets) + edgeInsets
         if self.bounds.width == 0 {
             let attributes: [NSAttributedString.Key: Any] = [.font: font]
             let size = text.size(withAttributes: attributes)
-            return CGSize(width: size.width + 40, height: max(actualHight, UPButtonView.buttonHeight))
+            return CGSize(
+                width: size.width + 40, height: max(actualHight, UPButtonView.buttonHeight))
         } else {
-            return CGSize(width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
+            return CGSize(
+                width: self.bounds.width, height: max(actualHight, UPButtonView.buttonHeight))
         }
     }
 
@@ -65,7 +69,14 @@ internal class UPButtonView: UIButton {
     /// Configures initial properties for the button.
     private func initializeView() {
         translatesAutoresizingMaskIntoConstraints = false
-        layer.masksToBounds = true
+        // For iOS 15+, UIButton.Configuration handles clipping internally, so we disable it
+        // to allow scale animations to be fully visible. For iOS 14-, we'll enable it per-setup.
+        if #available(iOS 15.0, *) {
+            layer.masksToBounds = false
+            clipsToBounds = false
+        } else {
+            layer.masksToBounds = true
+        }
         titleLabel?.numberOfLines = 0
         titleLabel?.lineBreakMode = .byWordWrapping
         addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
@@ -112,18 +123,39 @@ internal class UPButtonView: UIButton {
         surveyTheme = theme
         self.callback = callback
 
-        titleLabel?.font = UIFont.matching(fontName: theme.fontFamily,
-                                           fontWeight: [.traitBold],
-                                           fontSize: 16)
+        titleLabel?.font = UIFont.matching(
+            fontName: theme.fontFamily,
+            fontWeight: [.traitBold],
+            fontSize: 16)
         setTitle(title, for: .normal)
-        setTitleColor(theme.primaryColorAsString.invertColor().color, for: .normal)
-        setTitleColor(theme.primaryColorAsString.invertColor().color, for: .disabled)
-        tintColor = theme.primaryColor
-        backgroundColor = theme.primaryColor
-        layer.cornerRadius = 12
-        layer.borderColor = theme.primaryColor.cgColor
+
+        if #available(iOS 26.0, *) {
+            // For iOS 26+, prominentGlass configuration
+            var config = UIButton.Configuration.prominentGlass()
+            config.baseBackgroundColor = theme.primaryColor
+            config.baseForegroundColor = theme.primaryColorAsString.invertColor().color
+            config.cornerStyle = .large
+            configuration = config
+        } else if #available(iOS 15.0, *) {
+            // iOS 15–25: filled style
+            var config = UIButton.Configuration.filled()
+            config.baseBackgroundColor = theme.primaryColor
+            config.baseForegroundColor = theme.primaryColorAsString.invertColor().color
+            config.background.cornerRadius = 12
+            configuration = config
+        } else {
+            // Fallback for iOS 14 and earlier
+            setTitleColor(theme.primaryColorAsString.invertColor().color, for: .normal)
+            setTitleColor(theme.primaryColorAsString.invertColor().color, for: .disabled)
+            tintColor = theme.primaryColor
+            backgroundColor = theme.primaryColor
+            layer.cornerRadius = 12
+            layer.borderColor = theme.primaryColor.cgColor
+            layer.masksToBounds = true
+        }
     }
 
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     func setupViews(
         title: String?,
         npsTheme: NPSTheme,
@@ -131,55 +163,106 @@ internal class UPButtonView: UIButton {
         isDismissButton: Bool,
         callback: ((ButtonAction?) -> Void)?
     ) {
-        // Apply theme-based styling properties to the button
-        titleLabel?.font = UIFont.matching(
+        // Calculate the font first so we can use it in configurations
+        let buttonFont = UIFont.matching(
             fontName: npsTheme.fontFamily,
             fontWeight: !isDismissButton ? [.traitBold] : [],
-            fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
+            fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 15
         )
 
-        if isSecondaryButton {
-            setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
-        } else {
-            setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
-        }
-
-        setTitle(title, for: .normal)
+        // Apply theme-based styling properties to the button
+        titleLabel?.font = buttonFont
         contentHorizontalAlignment = .center
 
-        tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
-        backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+        if #available(iOS 26.0, *) {
+            var config: UIButton.Configuration
 
-        layer.cornerRadius = 12
-        layer.borderWidth = 1
-        layer.borderColor = (isSecondaryButton && !isDismissButton) ?
-        ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
+            if isDismissButton {
+                config = UIButton.Configuration.plain()
+                config.baseBackgroundColor = .clear
+                config.baseForegroundColor = npsTheme.backgroundColorAsString.invertColor().color
+            } else if isSecondaryButton {
+                config = UIButton.Configuration.prominentGlass()
+                config.baseBackgroundColor = UIColor.systemGray5
+                config.baseForegroundColor = npsTheme.backgroundColorAsString.invertColor().color
+            } else {
+                config = UIButton.Configuration.prominentGlass()
+                config.baseBackgroundColor = npsTheme.primaryColor
+                config.baseForegroundColor = npsTheme.primaryColorAsString.invertColor().color
+            }
+
+            config.cornerStyle = .large
+            if isSecondaryButton && !isDismissButton {
+                config.background.strokeColor = ThemeHandler.DefaultValues.grayColor
+                config.background.strokeWidth = 1
+            }
+
+            // Set the font on the configuration using attributedTitle
+            if let title = title {
+                var attributedTitle = AttributedString(title)
+                attributedTitle.font = buttonFont
+                config.attributedTitle = attributedTitle
+            }
+
+            configuration = config
+        } else if #available(iOS 15.0, *) {
+            // iOS 15–25: filled or bordered style
+            if isSecondaryButton {
+                var config = UIButton.Configuration.plain()
+                config.baseBackgroundColor = .clear
+                config.baseForegroundColor = npsTheme.backgroundColorAsString.invertColor().color
+                config.background.cornerRadius = 12
+
+                if !isDismissButton {
+                    config.background.strokeColor = ThemeHandler.DefaultValues.grayColor
+                    config.background.strokeWidth = 1
+                }
+
+                // Set the font on the configuration using attributedTitle
+                if let title = title {
+                    var attributedTitle = AttributedString(title)
+                    attributedTitle.font = buttonFont
+                    config.attributedTitle = attributedTitle
+                }
+
+                configuration = config
+            } else {
+                var config = UIButton.Configuration.filled()
+                config.baseBackgroundColor = npsTheme.primaryColor
+                config.baseForegroundColor = npsTheme.primaryColorAsString.invertColor().color
+                config.background.cornerRadius = 12
+
+                // Set the font on the configuration using attributedTitle
+                if let title = title {
+                    var attributedTitle = AttributedString(title)
+                    attributedTitle.font = buttonFont
+                    config.attributedTitle = attributedTitle
+                }
+
+                configuration = config
+            }
+        } else {
+            // Fallback for iOS 14 and earlier - set title here
+            setTitle(title, for: .normal)
+
+            if isSecondaryButton {
+                setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
+            } else {
+                setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
+            }
+
+            tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+            backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+
+            layer.cornerRadius = 12
+            layer.borderWidth = 1
+            layer.borderColor =
+            (isSecondaryButton && !isDismissButton)
+            ? ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
+            layer.masksToBounds = true
+        }
 
         self.callback = callback
-    }
-
-    /// Applies font.
-    func setFont(
-        with line: Line?,
-        and theme: ExperienceTheme
-    ) {
-        let textStyleMark = line?.content?.first?.marks?.first(
-            where: { $0.type == ThemeHandler.StyleName.textStyle })
-        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize
-        ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
-
-        var traits = [UIFontDescriptor.SymbolicTraits]()
-        if let marks = line?.content?.first?.marks {
-            if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
-                traits.append(.traitBold)
-            }
-            if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
-                traits.append(.traitItalic)
-            }
-        }
-        titleLabel?.font = UIFont.matching(fontName: theme.fontFamily,
-                                           fontWeight: traits,
-                                           fontSize: fontSize)
     }
 
     /// Applies text and styling.
@@ -191,25 +274,86 @@ internal class UPButtonView: UIButton {
         setTitle(line.buttonTitle, for: .normal)
         contentHorizontalAlignment = line.buttonAlignment
 
-        setTitleColor(theme.buttonTextColor, for: .normal)
-        tintColor = theme.buttonBackgroundColor
-        backgroundColor = theme.buttonBackgroundColor
-        layer.cornerRadius = theme.buttonBorderRadius
-        layer.borderWidth = theme.buttonBorderWidth
-        layer.borderColor = theme.buttonBorderColor.cgColor
+        if #available(iOS 26.0, *) {
+            // For iOS 26+, prominentGlass configuration
+            var config = UIButton.Configuration.prominentGlass()
+            // config.title = line.buttonTitle
+            config.baseBackgroundColor = theme.buttonBackgroundColor
+            config.baseForegroundColor = theme.buttonTextColor
+
+            // Set corner radius through the configuration background
+            // config.background.cornerRadius = 12
+            if theme.buttonBorderRadius < 4 {
+                config.cornerStyle = .small
+            } else if theme.buttonBorderRadius > 12 {
+                config.cornerStyle = .capsule
+            } else {
+                config.cornerStyle = .large
+            }
+            configuration = config
+        } else if #available(iOS 15.0, *) {
+            // iOS 15–25: filled style
+            var config = UIButton.Configuration.filled()
+            config.title = line.buttonTitle
+            config.baseBackgroundColor = theme.buttonBackgroundColor
+            config.baseForegroundColor = theme.buttonTextColor
+            config.background.cornerRadius = theme.buttonBorderRadius
+            configuration = config
+        } else {
+            // Fallback for iOS 14 and earlier
+            setTitleColor(theme.buttonTextColor, for: .normal)
+            tintColor = theme.buttonBackgroundColor
+            backgroundColor = theme.buttonBackgroundColor
+            layer.cornerRadius = theme.buttonBorderRadius
+            layer.borderWidth = theme.buttonBorderWidth
+            layer.borderColor = theme.buttonBorderColor.cgColor
+            layer.masksToBounds = true
+        }
+    }
+
+    /// Applies font.
+    func setFont(
+        with line: Line?,
+        and theme: ExperienceTheme
+    ) {
+        let textStyleMark = line?.content?.first?.marks?.first(
+            where: { $0.type == ThemeHandler.StyleName.textStyle })
+        let fontSize =
+        textStyleMark?.attrs?.fontSize?.toFontSize
+        ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+
+        var traits = [UIFontDescriptor.SymbolicTraits]()
+        if let marks = line?.content?.first?.marks {
+            if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
+                traits.append(.traitBold)
+            }
+            if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
+                traits.append(.traitItalic)
+            }
+        }
+        titleLabel?.font = UIFont.matching(
+            fontName: theme.fontFamily,
+            fontWeight: traits,
+            fontSize: fontSize)
     }
 
     /// update button enabled state
     func updateEnableState(isEnabled: Bool) {
         guard let surveyTheme else { return }
         self.isEnabled = isEnabled
-        layer.borderColor = isEnabled ? surveyTheme.primaryColor.cgColor : surveyTheme.secondaryColor.cgColor
+        layer.borderColor =
+        isEnabled ? surveyTheme.primaryColor.cgColor : surveyTheme.secondaryColor.cgColor
         tintColor = isEnabled ? surveyTheme.primaryColor : surveyTheme.secondaryColor
         backgroundColor = isEnabled ? surveyTheme.primaryColor : surveyTheme.secondaryColor
     }
 
-    /// Handler for button tap action.
+    /// Handler for button tap action with haptic feedback.
     @objc private func buttonTapped() {
+        // Add haptic feedback for iOS 13+
+        if #available(iOS 13.0, *) {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+        }
         callback?(action)
     }
 }

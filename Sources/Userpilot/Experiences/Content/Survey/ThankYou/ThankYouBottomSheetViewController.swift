@@ -19,7 +19,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
         return view
     }()
 
@@ -129,7 +129,7 @@ extension ThankYouBottomSheetViewController {
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            buttonDismiss.topAnchor.constraint(equalTo: buttonDismissContainerView.topAnchor),
+            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor,
                 constant: ThemeHandler.DefaultValues.dismissButtonMargin),

@@ -29,7 +29,7 @@ public extension Userpilot {
         /// Disable request push notifications permission by SDK.
         var disableRequestPushPermission: Bool = false
 
-        /// Open external link In-app browser
+        /// Open external link In-app browser using SFSafariViewController
         var useInAppBrowser: Bool = false
 
         /// Create an Userpilot SDK configuration
@@ -62,9 +62,9 @@ public extension Userpilot {
             return self
         }
 
-        /// Sets the logging status for the configuration.
+        /// Sets the In-App browser status for the configuration.
         ///
-        /// - Parameter enabled: A boolean indicating whether logging is enabled.
+        /// - Parameter enabled: A boolean to Open external link In-app browser using SFSafariViewController.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc

@@ -22,8 +22,9 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
     /// Returns the number of items in the collection view.
     /// - Parameter section: The section in the collection view (used for multiple sections, but here it's always 1).
     /// - Returns: The count of rating items to display.
-    func collectionView(_ collectionView: UICollectionView,
-                        numberOfItemsInSection section: Int) -> Int {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        numberOfItemsInSection section: Int) -> Int {
         return ratingItems.count
     }
 
@@ -44,10 +45,18 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
         }
 
         // Bind the rating item data to the cell
-        likertCollectionViewCell.bindCell(ratingItem: ratingItems[indexPath.item],
-                                          surveyTheme: surveyTheme,
-                                          npsTheme: npsTheme,
-                                          isRTL: isRTL)
+        likertCollectionViewCell.bindCell(
+            ratingItem: ratingItems[indexPath.item],
+            surveyTheme: surveyTheme,
+            npsTheme: npsTheme,
+            isRTL: isRTL)
+
+        // Set the tap callback to handle button interaction with iOS 26 animations
+        likertCollectionViewCell.onTap = { [weak self, weak collectionView] in
+            guard let self = self, let collectionView = collectionView else { return }
+            self.handleCellSelection(at: indexPath, in: collectionView)
+        }
+
         return likertCollectionViewCell
     }
 
@@ -62,16 +71,40 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
         _ collectionView: UICollectionView,
         didSelectItemAt indexPath: IndexPath
     ) {
+        handleCellSelection(at: indexPath, in: collectionView)
+    }
+
+    // MARK: - Helper Methods
+
+    /// Common method to handle cell selection logic
+    /// - Parameters:
+    ///   - indexPath: The index path of the selected cell
+    ///   - collectionView: The collection view containing the cell
+    private func handleCellSelection(at indexPath: IndexPath, in collectionView: UICollectionView) {
+        // Track which cells need to be updated
+        var indexPathsToReload: [IndexPath] = []
+
         // Mark rating items as selected up to the selected index
         for index in ratingItems.indices {
-            ratingItems[index].isSelected = index <= indexPath.row
+            let wasSelected = ratingItems[index].isSelected
+            let shouldBeSelected = index <= indexPath.row
+
+            // Only update if the state changed
+            if wasSelected != shouldBeSelected {
+                ratingItems[index].isSelected = shouldBeSelected
+                indexPathsToReload.append(IndexPath(row: index, section: 0))
+            }
         }
 
         // Notify the view state delegate about the validity of the answer
         viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
 
-        // Reload the collection view to reflect the updated selection
-        collectionView.reloadData()
+        // Only reload cells that changed state, with animation disabled to prevent flicker
+        if !indexPathsToReload.isEmpty {
+            UIView.performWithoutAnimation {
+                collectionView.reloadItems(at: indexPathsToReload)
+            }
+        }
     }
 
     /// Returns the size of each item in the collection view.

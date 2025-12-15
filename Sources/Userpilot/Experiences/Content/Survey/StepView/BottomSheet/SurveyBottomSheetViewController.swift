@@ -49,7 +49,7 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bindViewModel()
-        setContent(content: surveyContainerView, withoutMargin: true)
+        setContent(content: surveyContainerView)
         registerKeyboardNotifications()
         appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
     }

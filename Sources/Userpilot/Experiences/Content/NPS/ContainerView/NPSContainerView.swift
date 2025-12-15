@@ -17,7 +17,7 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
         return view
     }()
 
@@ -40,6 +40,7 @@ internal class NPSContainerView: UIView {
         //let stackView = UIStackView(arrangedSubviews: [updateAnswerButton, actionButton])
         let stackView = UIStackView()
         stackView.axis = .horizontal
+        stackView.distribution = .fillProportionally
         stackView.backgroundColor = .clear
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -75,17 +76,22 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: ThemeHandler.DefaultValues.smallDistanceBetweenSections).isActive = true
+        view.heightAnchor.constraint(
+            equalToConstant: ThemeHandler.DefaultValues.smallDistanceBetweenSections
+        ).isActive = true
         return view
     }()
 
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView])
+            buttonDismissContainerView, scrollView, footerButtonsContianer, stepsProgressView,
+        ])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
+        stackView.clipsToBounds = false
+        stackView.layer.masksToBounds = false
         stackView.spacing = ThemeHandler.DefaultValues.smallDistanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
@@ -95,6 +101,8 @@ internal class NPSContainerView: UIView {
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.backgroundColor = .clear
+        scrollView.clipsToBounds = false
+        scrollView.layer.masksToBounds = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         return scrollView
     }()
@@ -104,7 +112,8 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        //view.heightAnchor.constraint(equalToConstant: 0).isActive = true
+        view.clipsToBounds = false
+        view.layer.masksToBounds = false
         return view
     }()
 
@@ -114,7 +123,9 @@ internal class NPSContainerView: UIView {
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)).isActive = true
+        view.heightAnchor.constraint(
+            equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)
+        ).isActive = true
         return view
     }()
 
@@ -122,8 +133,10 @@ internal class NPSContainerView: UIView {
     private let imageView: UPImageView = {
         let imageView = UPImageView()
         NSLayoutConstraint.activate([
-            imageView.widthAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)),
-            imageView.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions))
+            imageView.widthAnchor.constraint(
+                equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)),
+            imageView.heightAnchor.constraint(
+                equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)),
         ])
         return imageView
     }()
@@ -135,6 +148,8 @@ internal class NPSContainerView: UIView {
         stackView.backgroundColor = .clear
         stackView.spacing = ThemeHandler.DefaultValues.smallDistanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.clipsToBounds = false
+        stackView.layer.masksToBounds = false
         return stackView
     }()
 
@@ -181,6 +196,8 @@ internal class NPSContainerView: UIView {
      */
     private func setupUI() {
         tryCatch {
+            clipsToBounds = false
+            layer.masksToBounds = false
             // Deactivate and clear previously stored constraints
             NSLayoutConstraint.deactivate(storedConstraints)
             storedConstraints.removeAll()
@@ -195,8 +212,10 @@ internal class NPSContainerView: UIView {
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
-            [scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
-             contentStackView].forEach {
+            [
+                scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
+                contentStackView,
+            ].forEach {
                 $0.translatesAutoresizingMaskIntoConstraints = false
             }
 
@@ -216,37 +235,46 @@ internal class NPSContainerView: UIView {
 
             // Constraint for the content container view height
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
-                equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
+                equalTo: frameLayoutGuide.heightAnchor)
             contentViewHeightConstraint.priority = .defaultLow
 
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: -12),
-                barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
-                barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
+                barStepsProgressView.topAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.topAnchor),
+                barStepsProgressView.leadingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.leadingAnchor),
+                barStepsProgressView.trailingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.trailingAnchor),
 
                 contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
-                contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
-                contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
+                contentStackView.leadingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.leadingAnchor),
+                contentStackView.trailingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.trailingAnchor),
                 contentStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
 
                 // Scroll view constraints
-                contentContainerView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-                contentContainerView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
-                contentContainerView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
-                contentContainerView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-                contentContainerView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+                contentContainerView.topAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.topAnchor),
+                contentContainerView.leadingAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+                contentContainerView.trailingAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+                contentContainerView.bottomAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+                contentContainerView.widthAnchor.constraint(
+                    equalTo: scrollView.frameLayoutGuide.widthAnchor),
 
                 // Step section stack view inside content container
                 stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
                 stepSectionsStackView.leadingAnchor.constraint(
-                    equalTo: contentContainerView.leadingAnchor,
-                    constant: 0),
+                    equalTo: contentContainerView.leadingAnchor),
                 stepSectionsStackView.trailingAnchor.constraint(
-                    equalTo: contentContainerView.trailingAnchor,
-                    constant: 0),
-                stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
+                    equalTo: contentContainerView.trailingAnchor),
+                stepSectionsStackView.bottomAnchor.constraint(
+                    lessThanOrEqualTo: contentContainerView.bottomAnchor),
 
                 footerButtonsStackView.trailingAnchor.constraint(
                     equalTo: footerButtonsContianer.trailingAnchor),
@@ -269,7 +297,7 @@ internal class NPSContainerView: UIView {
 
     /**
      Binds the step data to the view and sets up the UI based on the provided theme and content.
-
+    
      - Parameters:
        - step: The `Step` object containing the step data.
        - theme: The `ExperienceTheme` containing styling attributes.
@@ -342,7 +370,7 @@ internal class NPSContainerView: UIView {
     func updateContent(with newView: UIView, animationSubViews: Bool) {
         newView.alpha = 0
         buttonDismissContainerView.alpha = 0
-        // barStepsProgressView.alpha = 0
+        barStepsProgressView.alpha = 0
         stepsProgressView.alpha = 0
         imageContainerView.alpha = 0
 
@@ -562,7 +590,7 @@ extension NPSContainerView {
         NSLayoutConstraint.activate([
             buttonDismiss.heightAnchor.constraint(equalToConstant: 30),
             buttonDismiss.bottomAnchor.constraint(
-                equalTo: buttonDismissContainerView.bottomAnchor, constant: 0),
+                equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor, constant: 20),
         ])

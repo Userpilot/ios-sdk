@@ -54,7 +54,11 @@ internal protocol ExperiencesPublishing: AnyObject {
     var getCurrentScreen: String { get }
 
     /// Show thank you message
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
+    func showThankYouMessage(
+        _ surveyContent: SurveyContent,
+        _ surveyTheme: SurveyTheme,
+        _ submissionId: Int64
+    )
 }
 
 /// ExperiencesPublisher manages the lifecycle and display of user experiences (flows, surveys, NPS).
@@ -235,8 +239,12 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      * - Parameter surveyContent: The survey content that was completed
      * - Parameter surveyTheme: The theme to apply to the thank you message
      */
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
-        triggerThankYouMessageView(surveyContent, surveyTheme)
+    func showThankYouMessage(
+        _ surveyContent: SurveyContent,
+        _ surveyTheme: SurveyTheme,
+        _ submissionId: Int64
+    ) {
+        triggerThankYouMessageView(surveyContent, surveyTheme, submissionId)
     }
 
     // MARK: - Helper Methods
@@ -290,6 +298,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     // swiftlint:disable:next cyclomatic_complexity
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
         tryCatch {
+            if case .pendingPreview = experienceStateManager.getCurrentState() { return }
             if isPreviewExperienceMode() {
                 if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                     resetProcessingPreviewExperienceStatus()
@@ -379,7 +388,9 @@ extension ExperiencesPublisher: SocketSubscription {
      * - Parameter eventSent: Whether the event was successfully sent
      */
     // swiftlint:disable:next cyclomatic_complexity superfluous_disable_command
-    func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
+    func onSocketEventSent(
+        _ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool
+    ) {
         experienceQueue.async { [weak self] in
             guard let self,
                 !experienceStateManager.isActive(),
@@ -413,7 +424,8 @@ extension ExperiencesPublisher: SocketSubscription {
 
                 if let experience {
                     if eventName == SDKEventsName.fetchExperienceContent.rawValue {
-                        self.experienceStateManager.markManualTrigger(experience.experienceId().toString())
+                        self.experienceStateManager.markManualTrigger(
+                            experience.experienceId().toString())
                     } else {
                         self.experienceStateManager.markAutomaticTrigger(experience)
                     }
@@ -473,7 +485,8 @@ extension ExperiencesPublisher: SocketSubscription {
                         logger.info("‼️ There is a currently active experience being processed")
                     } else {
                         self.delayUtils.cancelDelay()
-                        self.experienceStateManager.markManualTrigger(experience.experienceId().toString())
+                        self.experienceStateManager.markManualTrigger(
+                            experience.experienceId().toString())
                         self.pendingExperiences.append(experience)
                         self.checkCachedThemes(experience.experienceThemeId())
                     }
@@ -574,7 +587,8 @@ extension ExperiencesPublisher {
         if let themeData = mobileContent.mobileTheme.themeData {
             return themeData.general?.contentAlignment == ContentAlignmentType.bottom
         } else {
-            return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience == false
+            return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience
+                == false
         }
     }
 
@@ -586,7 +600,8 @@ extension ExperiencesPublisher {
      * - Returns: true if content should be displayed as bottom sheet, false for dialog
      */
     private func isBottomSheetSurveyContent(_ surveyContent: SurveyContent) -> Bool {
-        if let themeData = surveyContent.surveyTheme.themeData, let position = themeData.general?.position {
+        if let themeData = surveyContent.surveyTheme.themeData,
+            let position = themeData.general?.position {
             return position == .bottom
         } else {
             return themeHandler.getThemeById(surveyContent.surveyTheme.id)?.isDialogSurvey == false
@@ -664,7 +679,10 @@ extension ExperiencesPublisher {
 
     /** Opens an NPS experience as a bottom sheet fragment */
     private func openNPSBottomSheetExperience(_ experienceContent: ExperienceContent) {
-        if currentScreen == npsTrackedScreen { return }
+        if currentScreen == npsTrackedScreen {
+            resetProcessingPreviewExperienceStatus()
+            return
+        }
         showExperience(
             experienceContent,
             makeViewModel: NPSViewModel.init,
@@ -674,7 +692,11 @@ extension ExperiencesPublisher {
     }
 
     /** Opens the survey thank you bottom sheet after survey completion */
-    private func triggerThankYouMessageView(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme ) {
+    private func triggerThankYouMessageView(
+        _ surveyContent: SurveyContent,
+        _ surveyTheme: SurveyTheme,
+        _ submissionId: Int64
+    ) {
         experienceStateManager.markShowingThankYou()
         delayUtils.delayAction { [weak self] in
             guard let self else {
@@ -700,6 +722,7 @@ extension ExperiencesPublisher {
                     self?.publishInternalSDKEvent(
                         ExperienceSurveyCompletedEvent(
                             surveyId: surveyContent.id,
+                            submissionId: submissionId,
                             hasDeepLinkContent: deepLink != nil
                         )
                     )
@@ -790,7 +813,8 @@ extension ExperiencesPublisher {
 
                     if !self.experienceStateManager.isPreviewMode() {
                         // Mark as active and set component reference
-                        self.experienceStateManager.markActiveFromCurrentState(content: experienceContent)
+                        self.experienceStateManager.markActiveFromCurrentState(
+                            content: experienceContent)
                         if let upExperience = viewController as? UPExperience {
                             self.experienceStateManager.setActiveComponent(upExperience)
                         }
@@ -920,7 +944,8 @@ extension ExperiencesPublisher {
                 if pendingExperiences.count == 1 {
                     pendingExperiences.removeAll()
                 } else {
-                    if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
+                    if let lastContent = self.pendingExperiences.last,
+                        self.pendingExperiences.count > 1 {
                         self.pendingExperiences = [lastContent]
                         self.openExperienceFlow()
                     }

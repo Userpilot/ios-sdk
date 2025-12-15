@@ -16,8 +16,10 @@ import UIKit
 
 /// A custom collection view cell used to display items in a Likert scale, either with a label or an image.
 internal class LikertCollectionViewCell: UICollectionViewCell {
-    private let contentLabel = UILabel()
-    private let contentImageView = UIImageView()
+    private let cellButton = UIButton(type: .system)
+
+    /// Callback to handle button tap
+    var onTap: (() -> Void)?
 
     // MARK: - Initialization
 
@@ -35,37 +37,50 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
 
     // MARK: - UI Setup
 
-    /// Configures the user interface elements of the cell, including the label and image view.
+    /// Configures the user interface elements of the cell, including the button.
     private func setupUI() {
-        contentView.addSubview(contentLabel)
-        contentView.addSubview(contentImageView)
+        contentView.addSubview(cellButton)
 
-        // Disable autoresizing mask and set content mode for image view
-        contentLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentImageView.translatesAutoresizingMaskIntoConstraints = false
-        contentImageView.contentMode = .scaleAspectFit
+        // Disable autoresizing mask
+        cellButton.translatesAutoresizingMaskIntoConstraints = false
+        cellButton.isUserInteractionEnabled = true  // Enable interaction for iOS 26 animations
+        cellButton.addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
 
-        // Set corner radius for the content view and enable clipping
-        contentView.layer.cornerRadius = 8
-        contentView.clipsToBounds = true
+        // Disable clipping to allow scale animation to be visible
+        contentView.clipsToBounds = false
+        self.clipsToBounds = false
+        self.layer.masksToBounds = false
 
-        // Auto Layout constraints for the label and image view
+        // Auto Layout constraints for the button to fill the content view
         NSLayoutConstraint.activate([
-            contentImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            contentImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            contentImageView.widthAnchor.constraint(equalToConstant: 22),
-            contentImageView.heightAnchor.constraint(equalToConstant: 22),
-
-            contentLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            contentLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+            cellButton.topAnchor.constraint(equalTo: contentView.topAnchor),
+            cellButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            cellButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            cellButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
+    }
+
+    // MARK: - Actions
+
+    /// Handler for button tap with haptic feedback
+    @objc private func buttonTapped() {
+        // Add haptic feedback
+        if #available(iOS 13.0, *) {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+        }
+
+        onTap?()
     }
 
     // MARK: - Cell Binding
 
-    /// Binds data from the provided `ratingItem` and `surveyTheme` to the cell's UI elements.
-    /// - Parameter ratingItem: The item representing the individual rating choice in the Likert scale.
-    /// - Parameter surveyTheme: The theme that defines the visual appearance of the cell.
+    /*
+     Binds data from the provided `ratingItem` and `surveyTheme` to the cell's UI elements.
+     - Parameter ratingItem: The item representing the individual rating choice in the Likert scale.
+     - Parameter surveyTheme: The theme that defines the visual appearance of the cell.
+     */
+    // swiftlint:disable:next function_body_length
     func bindCell(
         ratingItem: RatingItem,
         surveyTheme: SurveyTheme?,
@@ -75,28 +90,100 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
         if isRTL {
             self.contentView.transform = CGAffineTransform(scaleX: -1, y: 1)
         }
-        // Show/hide the content label based on the rating item type
-        contentLabel.isHidden = ratingItem.type != .numbers
-        contentLabel.text = ratingItem.title
-        contentLabel.font = UIFont.matching(
-            fontName: fontFamily(surveyTheme, npsTheme), fontWeight: [],
+
+        // Configure button font
+        let font = UIFont.matching(
+            fontName: fontFamily(surveyTheme, npsTheme),
+            fontWeight: [],
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize))
 
-        // Show/hide the content image based on the rating item type
-        contentImageView.isHidden = ratingItem.type == .numbers
-        contentImageView.image = ratingItem.image
+        let primaryColor = primaryColor(surveyTheme, npsTheme)
+        let secondaryColor = secondaryColor(surveyTheme, npsTheme)
+        let selectedColor = contentSelectedColor(surveyTheme, npsTheme)
+        let unselectedColor = contentUnselectedColor(surveyTheme, npsTheme)
 
-        // Update background and text colors based on selection state
-        contentView.backgroundColor = ratingItem.isSelected ?
-            primaryColor(surveyTheme, npsTheme) : secondaryColor(surveyTheme, npsTheme)
+        if #available(iOS 26.0, *) {
+            // iOS 26+: Use prominentGlass for selected, use base colors when unselected
+            var config = UIButton.Configuration.prominentGlass()
 
-        contentImageView.tintColor = ratingItem.isSelected ?
-            contentSelectedColor(surveyTheme, npsTheme) :
-            contentUnselectedColor(surveyTheme, npsTheme)
+            if ratingItem.isSelected {
+                config.baseBackgroundColor = primaryColor
+                config.baseForegroundColor = selectedColor
+            } else {
+                config.baseBackgroundColor = secondaryColor
+                config.baseForegroundColor = unselectedColor
+            }
 
-        contentLabel.textColor = ratingItem.isSelected ?
-            contentSelectedColor(surveyTheme, npsTheme)  :
-            contentUnselectedColor(surveyTheme, npsTheme)
+            // Set title or image based on rating item type
+            if ratingItem.type == .numbers {
+                config.attributedTitle = AttributedString(
+                    ratingItem.title,
+                    attributes: AttributeContainer([.font: font])
+                )
+            } else {
+                config.image = ratingItem.image
+                config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(
+                    pointSize: 22)
+            }
+            // Use a concrete enum case to avoid ambiguity
+            config.cornerStyle = .medium
+            config.contentInsets = NSDirectionalEdgeInsets(
+                top: 8, leading: 8, bottom: 8, trailing: 8)
+            cellButton.configuration = config
+
+        } else if #available(iOS 15.0, *) {
+            // iOS 15–25: Use filled or plain style
+            var config: UIButton.Configuration
+
+            if ratingItem.isSelected {
+                config = UIButton.Configuration.filled()
+                config.baseBackgroundColor = primaryColor
+                config.baseForegroundColor = selectedColor
+            } else {
+                config = UIButton.Configuration.plain()
+                config.baseBackgroundColor = secondaryColor
+                config.baseForegroundColor = unselectedColor
+            }
+
+            // Set title or image based on rating item type
+            if ratingItem.type == .numbers {
+                // config.title = ratingItem.title
+                config.attributedTitle = AttributedString(
+                    ratingItem.title,
+                    attributes: AttributeContainer([.font: font])
+                )
+            } else {
+                config.image = ratingItem.image
+                config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(
+                    pointSize: 22)
+            }
+
+            config.background.cornerRadius = 8
+            config.contentInsets = NSDirectionalEdgeInsets(
+                top: 8, leading: 8, bottom: 8, trailing: 8)
+            cellButton.configuration = config
+
+        } else {
+            // Fallback for iOS 14 and earlier
+            if ratingItem.type == .numbers {
+                cellButton.setTitle(ratingItem.title, for: .normal)
+                cellButton.setImage(nil, for: .normal)
+                cellButton.titleLabel?.font = font
+            } else {
+                cellButton.setTitle(nil, for: .normal)
+                cellButton.setImage(ratingItem.image, for: .normal)
+                cellButton.imageView?.contentMode = .scaleAspectFit
+            }
+
+            cellButton.setTitleColor(
+                ratingItem.isSelected ? selectedColor : unselectedColor,
+                for: .normal
+            )
+            cellButton.tintColor = ratingItem.isSelected ? selectedColor : unselectedColor
+            cellButton.backgroundColor = ratingItem.isSelected ? primaryColor : secondaryColor
+            cellButton.layer.cornerRadius = 8
+            cellButton.layer.masksToBounds = true
+        }
     }
 
     private func fontFamily(
@@ -124,8 +211,8 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
         _ surveyTheme: SurveyTheme?,
         _ npsTheme: NPSTheme?
     ) -> UIColor? {
-        surveyTheme?.primaryColorAsString.invertColor().color ??
-        npsTheme?.primaryColorAsString.invertColor().color ?? .black
+        surveyTheme?.primaryColorAsString.invertColor().color ?? npsTheme?.primaryColorAsString
+            .invertColor().color ?? .black
     }
 
     private func contentUnselectedColor(

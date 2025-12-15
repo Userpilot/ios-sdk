@@ -28,6 +28,9 @@ internal class DialogViewController: UIViewController {
         return view
     }()
 
+    /// Blur effect view (stored to update background color later)
+    private var blurEffectView: UIVisualEffectView?
+
     /// View to hold dynamic content within the dialog
     lazy var contentView: UIView = {
         let view = UIView()
@@ -121,8 +124,7 @@ internal class DialogViewController: UIViewController {
                 equalTo: mainContainerView.trailingAnchor,
                 constant: ThemeHandler.DefaultValues.contentMargin.negative),
             contentView.topAnchor.constraint(
-                equalTo: mainContainerView.topAnchor,
-                constant: ThemeHandler.DefaultValues.contentTopMargin),
+                equalTo: mainContainerView.topAnchor),
             contentView.bottomAnchor.constraint(
                 equalTo: mainContainerView.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
@@ -130,6 +132,30 @@ internal class DialogViewController: UIViewController {
 
         dimmedView.alpha = 0
         mainContainerView.alpha = 0
+    }
+
+    // MARK: - Private Methods
+
+    /// Applies blur effect based on iOS version
+    private func applyBlurEffect(backgroundColor: UIColor, radius: CGFloat) {
+        // Remove existing blur view if any
+        blurEffectView?.removeFromSuperview()
+
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        blurView.clipsToBounds = true
+        blurView.layer.cornerRadius = radius
+        blurView.backgroundColor = backgroundColor.withAlphaComponent(0.8)
+
+        mainContainerView.insertSubview(blurView, at: 0)
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
+            blurView.bottomAnchor.constraint(equalTo: mainContainerView.bottomAnchor),
+            blurView.leadingAnchor.constraint(equalTo: mainContainerView.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: mainContainerView.trailingAnchor)
+        ])
+        blurEffectView = blurView
     }
 }
 
@@ -173,7 +199,7 @@ extension DialogViewController {
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: withMargin),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
@@ -182,8 +208,8 @@ extension DialogViewController {
     /// Sets the background color of the main container view.
     /// - Parameter color: The UIColor to set as the background color.
     func setBackgroundColor(_ theme: ExperienceTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        dimmedView.isHidden = !theme.backdropEnabled
+        applyBlurEffect(backgroundColor: theme.backgroundColor, radius: 25)
+        dimmedView.isHidden = false
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }
@@ -191,9 +217,8 @@ extension DialogViewController {
 
     /// Customize the background color of the bottom sheet for `SurveyTheme`
     func setBackgroundColor(_ theme: SurveyTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        mainContainerView.layer.cornerRadius = theme.borderRadius
-        dimmedView.isHidden = !theme.backdropEnabled
+        applyBlurEffect(backgroundColor: theme.backgroundColor, radius: theme.borderRadius)
+        dimmedView.isHidden = false
         if theme.backdropEnabled {
             dimmedView.backgroundColor = theme.backdropBackground
         }

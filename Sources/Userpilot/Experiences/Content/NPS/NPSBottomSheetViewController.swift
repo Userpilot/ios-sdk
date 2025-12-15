@@ -41,7 +41,7 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bindViewModel()
-        setContent(content: npsContainerView, withoutMargin: true)
+        setContent(content: npsContainerView)
         registerKeyboardNotifications()
     }
 

@@ -17,7 +17,7 @@ internal class SurveyContainerView: UIView {
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
         return view
     }()
 
@@ -33,7 +33,8 @@ internal class SurveyContainerView: UIView {
     private lazy var actionButton: UPButtonView = {
         let button = UPButtonView()
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(greaterThanOrEqualToConstant: UPButtonView.buttonHeight).isActive = true
+        button.heightAnchor.constraint(greaterThanOrEqualToConstant: UPButtonView.buttonHeight)
+            .isActive = true
         return button
     }()
 
@@ -77,6 +78,8 @@ internal class SurveyContainerView: UIView {
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.clipsToBounds = false
+        scrollView.layer.masksToBounds = false
         return scrollView
     }()
 
@@ -84,7 +87,8 @@ internal class SurveyContainerView: UIView {
     private let contentContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        // view.heightAnchor.constraint(greaterThanOrEqualToConstant: 0).isActive = true
+        view.clipsToBounds = false
+        view.layer.masksToBounds = false
         return view
     }()
 
@@ -94,6 +98,8 @@ internal class SurveyContainerView: UIView {
         stackView.axis = .vertical
         stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.clipsToBounds = false
+        stackView.layer.masksToBounds = false
         return stackView
     }()
 
@@ -136,6 +142,8 @@ internal class SurveyContainerView: UIView {
      Sets up the layout and constraints for the view components.
      */
     private func setupUI() {
+        clipsToBounds = false
+        layer.masksToBounds = false
         tryCatch {
             // Deactivate and clear previously stored constraints
             NSLayoutConstraint.deactivate(storedConstraints)
@@ -151,8 +159,10 @@ internal class SurveyContainerView: UIView {
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
-            [scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
-             actionButton, contentStackView].forEach {
+            [
+                scrollView, contentContainerView, stepSectionsStackView, buttonDismissContainerView,
+                actionButton, contentStackView,
+            ].forEach {
                 $0.translatesAutoresizingMaskIntoConstraints = false
             }
 
@@ -167,40 +177,49 @@ internal class SurveyContainerView: UIView {
 
             // Constraint for the content container view height
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
-                equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
+                equalTo: frameLayoutGuide.heightAnchor)
             contentViewHeightConstraint.priority = .defaultLow
 
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: -12),
-                barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
-                barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
+                barStepsProgressView.topAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.topAnchor),
+                barStepsProgressView.leadingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.leadingAnchor),
+                barStepsProgressView.trailingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.trailingAnchor),
 
                 contentStackView.topAnchor.constraint(equalTo: barStepsProgressView.bottomAnchor),
-                contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
-                contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
+                contentStackView.leadingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.leadingAnchor),
+                contentStackView.trailingAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.trailingAnchor),
                 contentStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
 
                 // Scroll view constraints
-                contentContainerView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-                contentContainerView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
-                contentContainerView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
-                contentContainerView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-                contentContainerView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+                contentContainerView.topAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.topAnchor),
+                contentContainerView.leadingAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+                contentContainerView.trailingAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+                contentContainerView.bottomAnchor.constraint(
+                    equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+                contentContainerView.widthAnchor.constraint(
+                    equalTo: scrollView.frameLayoutGuide.widthAnchor),
 
                 // Step section stack view inside content container
                 stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
                 stepSectionsStackView.leadingAnchor.constraint(
-                    equalTo: contentContainerView.leadingAnchor,
-                    constant: 0),
+                    equalTo: contentContainerView.leadingAnchor),
                 stepSectionsStackView.trailingAnchor.constraint(
-                    equalTo: contentContainerView.trailingAnchor,
-                    constant: 0),
-                stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
+                    equalTo: contentContainerView.trailingAnchor),
+                stepSectionsStackView.bottomAnchor.constraint(
+                    lessThanOrEqualTo: contentContainerView.bottomAnchor),
 
                 // Content container view height constraint
-                contentViewHeightConstraint
+                contentViewHeightConstraint,
             ])
 
             // Activate the stored constraints
@@ -212,7 +231,7 @@ internal class SurveyContainerView: UIView {
 
     /**
      Binds the step data to the view and sets up the UI based on the provided theme and content.
-
+    
      - Parameters:
        - step: The `Step` object containing the step data.
        - theme: The `ExperienceTheme` containing styling attributes.
@@ -255,7 +274,7 @@ internal class SurveyContainerView: UIView {
 
     /**
      Configures the dismiss button based on the theme data.
-
+    
      - Parameter theme: The `ExperienceTheme` used to style the dismiss button.
      */
     private func setupDismissButton() {
@@ -267,7 +286,7 @@ internal class SurveyContainerView: UIView {
                 equalTo: buttonDismissContainerView.trailingAnchor,
                 constant: ThemeHandler.DefaultValues.dismissButtonMargin),
             buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
-            buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
+            buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
         ])
         buttonDismiss.setupView(theme: theme)
     }
@@ -298,7 +317,7 @@ internal class SurveyContainerView: UIView {
             barStepsProgressView.isHidden = true
         } else {
             if theme.isStepsProgressBallType {
-                //barStepsProgressView.isHidden = true
+                barStepsProgressView.isHidden = true
                 stepsProgressView.setupView(stepsCount: surveyContent.modules.count, theme: theme)
             } else {
                 stepsProgressView.isHidden = true
@@ -406,7 +425,7 @@ internal class SurveyContainerView: UIView {
         newView.alpha = 0
         if !animationSubViews {
             actionButton.alpha = 0
-            //barStepsProgressView.alpha = 0
+            barStepsProgressView.alpha = 0
         }
         // Remove old views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }

@@ -24,7 +24,7 @@ internal class SlideOutContainerView: UIView {
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
         return view
     }()
 
@@ -144,7 +144,7 @@ internal class SlideOutContainerView: UIView {
 
             // Constraint for the content container view height
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
-                equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
+                equalTo: frameLayoutGuide.heightAnchor)
             contentViewHeightConstraint.priority = .defaultLow
 
             // Define constraints
@@ -165,11 +165,9 @@ internal class SlideOutContainerView: UIView {
                 // Step section stack view inside content container
                 stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
                 stepSectionsStackView.leadingAnchor.constraint(
-                    equalTo: contentContainerView.leadingAnchor,
-                    constant: 0),
+                    equalTo: contentContainerView.leadingAnchor),
                 stepSectionsStackView.trailingAnchor.constraint(
-                    equalTo: contentContainerView.trailingAnchor,
-                    constant: 0),
+                    equalTo: contentContainerView.trailingAnchor),
                 stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
 
                 // Content container view height constraint
