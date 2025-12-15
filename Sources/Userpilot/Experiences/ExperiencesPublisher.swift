@@ -46,7 +46,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func logout()
 
     /// Show thank you message
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme)
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme, _ submissionId: Int64)
 }
 
 /**
@@ -226,9 +226,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func showThankYouMessage(
         _ surveyContent: SurveyContent,
-        _ surveyTheme: SurveyTheme
+        _ surveyTheme: SurveyTheme,
+        _ submissionId: Int64
     ) {
-        triggerThankYouMessageView(surveyContent, surveyTheme)
+        triggerThankYouMessageView(surveyContent, surveyTheme, submissionId)
     }
 
     // MARK: - Helper Methods
@@ -622,7 +623,8 @@ extension ExperiencesPublisher {
     /** Opens the survey thank you bottom sheet after survey completion */
     private func triggerThankYouMessageView(
         _ surveyContent: SurveyContent,
-        _ surveyTheme: SurveyTheme
+        _ surveyTheme: SurveyTheme,
+        _ submissionId: Int64
     ) {
         isTriggeringThankYouMessage = true
         performOn(.main) { [weak self] in
@@ -639,6 +641,7 @@ extension ExperiencesPublisher {
                 thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
                     let eventExperienceSeen = ExperienceSurveyCompletedEvent(
                         surveyId: surveyContent.id,
+                        submissionId: submissionId,
                         hasDeepLinkContent: deepLink != nil
                     )
                     self?.publishInternalSDKEvent(eventExperienceSeen)

@@ -21,6 +21,8 @@ import Foundation
 internal class SurveyExperienceActionEvent: SDKEvent {
     /// Experience Id
     let surveyId: Int
+    // Submission Id
+    let submissionId: Int64
     /// Has deeplink to open it
     let hasDeepLinkContent: Bool
 
@@ -48,16 +50,19 @@ internal class SurveyExperienceActionEvent: SDKEvent {
     /// - Returns: A dictionary containing the action type, mobile content Id, application token, and user Id.
     func toMap() -> [String: Any] {
         let params: [String: Any] = [
-            "survey_id": surveyId
+            "survey_id": surveyId,
+            "submission_id": submissionId
         ]
         return params
     }
 
     init(
         surveyId: Int,
+        submissionId: Int64,
         hasDeepLinkContent: Bool = false
     ) {
         self.surveyId = surveyId
+        self.submissionId = submissionId
         self.hasDeepLinkContent = hasDeepLinkContent
     }
 }
@@ -82,12 +87,13 @@ internal class ExperienceSurveyDismissedEvent: SurveyExperienceActionEvent {
 
     init(
         surveyId: Int,
+        submissionId: Int64,
         moduleId: Int?,
         type: String?
     ) {
         self.moduleId = moduleId
         self.type = type
-        super.init(surveyId: surveyId)
+        super.init(surveyId: surveyId, submissionId: submissionId)
     }
 
     override var name: String {
@@ -122,7 +128,6 @@ internal class ExperienceSurveyCompletedEvent: SurveyExperienceActionEvent {
 internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
 
     // Custom parameters for the Submitted event
-    let submissionId: Int64
     let feedback: Any?
 
     init(
@@ -130,9 +135,8 @@ internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
         submissionId: Int64,
         feedback: Any? = nil
     ) {
-        self.submissionId = submissionId
         self.feedback = feedback
-        super.init(surveyId: surveyId)
+        super.init(surveyId: surveyId, submissionId: submissionId)
     }
 
     override var name: String {
@@ -142,7 +146,6 @@ internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
     /// Combines base event payload with custom parameters.
     override var eventPayload: [String: Any] {
         var basePayload = super.eventPayload
-        basePayload["submission_id"] = submissionId
         if feedback != nil {
             basePayload["feedback"] = feedback
         }
