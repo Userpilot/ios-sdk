@@ -87,30 +87,33 @@ extension OSLog: Logging {
         _ args: [CVarArg]
     ) {
         tryCatch {
-            /*
-             Swift doesn't support splatting so unfortunately `args` needs to be manually enumerated.
-             Limiting it to 6 since that seems reasonable.
-             */
             guard args.count <= 6 else {
-                error("Too many log args. 5 are supported, %{public}d passed.", args.count)
+                error("Too many log args. 6 are supported, %{public}d passed.", args.count)
                 return
             }
 
-            switch args.count {
-            case 1:
-                os_log(message, log: self, type: type, args[0])
-            case 2:
-                os_log(message, log: self, type: type, args[0], args[1])
-            case 3:
-                os_log(message, log: self, type: type, args[0], args[1], args[2])
-            case 4:
-                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
-            case 5:
-                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
-            case 6:
-                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4], args[5])
-            default:
-                os_log(message, log: self, type: type)
+            if Environment.environmentType == .DEVELOPMENT {
+                // Print all arguments in development
+                let argsString = args.map { "\($0)" }.joined(separator: ", ")
+                print("\(message) - \(argsString)")
+            } else {
+                // Send to os_log for production
+                switch args.count {
+                case 1:
+                    os_log(message, log: self, type: type, args[0])
+                case 2:
+                    os_log(message, log: self, type: type, args[0], args[1])
+                case 3:
+                    os_log(message, log: self, type: type, args[0], args[1], args[2])
+                case 4:
+                    os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
+                case 5:
+                    os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
+                case 6:
+                    os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4], args[5])
+                default:
+                    os_log(message, log: self, type: type)
+                }
             }
         }
     }

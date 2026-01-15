@@ -321,7 +321,7 @@ internal class UserSessionStateManager {
      * @return true if this is a fake reload (post-identify), false for real screen change
      */
     func getPostIdentificationFakeReloadConfig() -> Bool {
-        let isUserSwitch = isUserSwitching() || isUserSwitchingAwaitingScreen()
+        let isUserSwitch = isUserSwitching() || isUserSwitchingAwaitingScreen() || isAwaitingInitialScreen()
         return !isUserSwitch
     }
 }

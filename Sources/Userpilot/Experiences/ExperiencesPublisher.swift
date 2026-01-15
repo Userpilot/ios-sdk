@@ -306,7 +306,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 if socketManager.isSocketOpened { requestFakeScreenReloadEventDate = Date() }
                 analyticsPublisher.publishFakeReloadScreenEvent(
                     sdkEvent.getContentType(),
-                    sdkEvent.getContentId()
+                    sdkEvent.getContentId(),
+                    isFakeReload: true
                 )
                 return
             }
@@ -336,7 +337,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             // Trigger fake reload when closing experience that wasn't manually triggered
             if sdkEvent.isEventForCloseExperience() && !experienceStateManager.hasCachedExperience() {
                 analyticsPublisher.publishFakeReloadScreenEvent(
-                    sdkEvent.getContentType(), sdkEvent.getContentId()
+                    sdkEvent.getContentType(), sdkEvent.getContentId(), isFakeReload: true
                 )
             } else {
                 // Process cached experiences

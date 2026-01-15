@@ -37,7 +37,10 @@ internal protocol AnalyticsPublishing: AnyObject {
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// publish fake reload event
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType?, _ experienceId: Int?)
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType?,
+        _ experienceId: Int?,
+        isFakeReload: Bool)
 
     /// update seen experiences
     func experiencePublished(_ experienceType: ExperienceType?, _ experienceId: Int?)
@@ -256,7 +259,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // If network monitor is ready and reports no network, save event to local storage
             // During initial setup (first 1-3 seconds), assume network is available to avoid unnecessary saves
-            guard !offlineEventsHandler.shouldSaveOffline else {
+            if offlineEventsHandler.shouldSaveOffline && storage.userId.isNotEmpty {
                 offlineEventsHandler.saveEventToLocalStorage(event: event)
                 return
             }
@@ -340,49 +343,57 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     /** Processes an event based on its type. */
     private func processEvent() {
-        // Safety check: skip if already processing and last run was less than 10s ago
-        if isProcessingEvent.value, let lastProcessDate = processEventDate,
-            Date().isLessThanTenSecond(from: lastProcessDate) {
-            return
-        }
-
-        isProcessingEvent.value = true
-        processEventDate = Date()
-
-        // Priority 1: Check and process offline events FIRST
-        if offlineEventsHandler.hasCachedEvents {
-            offlineEventsHandler.restoreEventsFromLocalStorage { [weak self] in
-                // After offline events are restored and sent, reset processing status
-                // and continue processing queued events
-                self?.resetProcessingEventStatus()
-                self?.processEvent()
-            }
-            return
-        }
-
-        // Priority 2: Sync Internal SDK events directly
-        processSDKEvent()
-
-        // Priority 3: Process queue events only after offline events are done
-        if let event = eventsQueue.getFirst() {
-            // Double check user, this could occur when processing event become same to user
-            if didHandleIdentifyEvent(event) {
-                eventsQueue.deleteFirst()
-                resetProcessingEventStatus()
-                processEvent()
+        tryCatch {
+            // Safety check: skip if already processing and last run was less than 10s ago
+            if isProcessingEvent.value, let lastProcessDate = processEventDate,
+               Date().isLessThanTenSecond(from: lastProcessDate) {
                 return
             }
 
-            switch event.type {
-            case .identify:
-                identify(event)
-            case .screen:
-                screen(event)
-            case .event:
-                trackEvent(event)
+            isProcessingEvent.value = true
+            processEventDate = Date()
+
+            // Priority 1: Check and process offline events FIRST
+            if offlineEventsHandler.hasCachedEvents {
+                offlineEventsHandler.restoreEventsFromLocalStorage { [weak self] in
+                    // After offline events are restored and sent, reset processing status
+                    // and continue processing queued events
+                    self?.resetProcessingEventStatus()
+                    self?.processEvent()
+                }
+                return
             }
-        } else {
-            resetProcessingEventStatus()
+
+            // Priority 2: Sync Internal SDK events directly
+            processSDKEvent()
+
+            // Priority 3: Process queue events only after offline events are done
+            if let event = eventsQueue.getFirst() {
+                // Double check user, this could occur when processing event become same to user
+                if didHandleIdentifyEvent(event) {
+                    eventsQueue.deleteFirst()
+                    resetProcessingEventStatus()
+                    processEvent()
+                    return
+                }
+
+                switch event.type {
+                case .identify:
+                    identify(event)
+                case .screen:
+                    screen(event)
+                case .event:
+                    trackEvent(event)
+                }
+            } else {
+                if eventsQueue.isEmpty() &&
+                    userSessionStateManager.getCurrentState() == .backgroundToInitialScreen {
+                    publishFakeReloadScreenEvent(isFakeReload: false)
+                    userSessionStateManager.markNormal()
+                } else {
+                    resetProcessingEventStatus()
+                }
+            }
         }
     }
 
@@ -393,6 +404,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter event: The event to cache
      */
     private func cacheEvent(_ event: Event, isInternalEvent: Bool = false) {
+        if storage.userId.isEmpty {
+            eventsQueue.clear()
+        }
         // Throttle screen and track event before add them to eventsQueue
         if event.isScreenEvent, eventThrottle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") {
             return
@@ -546,11 +560,6 @@ extension AnalyticsPublisher: SocketSubscription {
     func onSocketOpened() {
         tryCatch {
             processEvent()
-            if eventsQueue.isEmpty() &&
-                userSessionStateManager.getCurrentState() == .backgroundToInitialScreen {
-                publishFakeReloadScreenEvent()
-                userSessionStateManager.markNormal()
-            }
         }
     }
 
@@ -683,7 +692,9 @@ extension AnalyticsPublisher {
      * - Parameter experienceId: The ID of the experience being shown
      */
     func publishFakeReloadScreenEvent(
-        _ experienceType: ExperienceType? = nil, _ experienceId: Int? = nil
+        _ experienceType: ExperienceType? = nil,
+        _ experienceId: Int? = nil,
+        isFakeReload: Bool = true
     ) {
         tryCatch {
             guard canRequestEvent, eventsQueue.isEmpty() else { return }
@@ -694,7 +705,7 @@ extension AnalyticsPublisher {
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return
                 }
-                publishScreenEvent(isFakeReload: true)
+                publishScreenEvent(isFakeReload: isFakeReload)
             }
         }
     }
@@ -715,6 +726,7 @@ extension AnalyticsPublisher {
     }
 
     private func publishScreenEvent(isFakeReload: Bool = false) {
+        verifyScreenViewEntity()
         if let screenViewEntity {
             var payload: [String: Any] = [:]
             startSession = userSessionStateManager.getPostIdentificationStartSessionConfig(
@@ -735,6 +747,30 @@ extension AnalyticsPublisher {
                 broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
             }
         }
+    }
+
+    /**
+     A special case needed when come from logout state.
+     In logout the app didn't execute setupScreenViewEntity, so after identify
+     we have to request screen event to get experiences.
+    */
+    private func verifyScreenViewEntity() {
+        // Early exit if we already have a screen view entity
+        guard screenViewEntity == nil else { return }
+
+        // Ensure user ID exists
+        guard storage.userId.isNotEmpty else { return }
+
+        // Get the current screen safely
+        guard let currentScreen = experiencesPublisher?.getCurrentScreen,
+              !currentScreen.isEmpty else { return }
+
+        // Initialize screenViewEntity
+        screenViewEntity = ScreenViewEntity(
+            event: Event(type: .screen(currentScreen)),
+            seenExperiences: screenViewEntity?.seenExperiences ?? Set(),
+            seenSurveys: screenViewEntity?.seenSurveys ?? Set()
+        )
     }
 
     /**
