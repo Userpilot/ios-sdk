@@ -92,28 +92,22 @@ extension OSLog: Logging {
                 return
             }
 
-            if Environment.environmentType == .DEVELOPMENT {
-                // Print all arguments in development
-                let argsString = args.map { "\($0)" }.joined(separator: ", ")
-                print("\(message) - \(argsString)")
-            } else {
-                // Send to os_log for production
-                switch args.count {
-                case 1:
-                    os_log(message, log: self, type: type, args[0])
-                case 2:
-                    os_log(message, log: self, type: type, args[0], args[1])
-                case 3:
-                    os_log(message, log: self, type: type, args[0], args[1], args[2])
-                case 4:
-                    os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
-                case 5:
-                    os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
-                case 6:
-                    os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4], args[5])
-                default:
-                    os_log(message, log: self, type: type)
-                }
+            // Send to os_log for production
+            switch args.count {
+            case 1:
+                os_log(message, log: self, type: type, args[0])
+            case 2:
+                os_log(message, log: self, type: type, args[0], args[1])
+            case 3:
+                os_log(message, log: self, type: type, args[0], args[1], args[2])
+            case 4:
+                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
+            case 5:
+                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
+            case 6:
+                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4], args[5])
+            default:
+                os_log(message, log: self, type: type)
             }
         }
     }
