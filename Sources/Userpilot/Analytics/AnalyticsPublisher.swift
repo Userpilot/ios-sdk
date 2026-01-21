@@ -98,6 +98,9 @@ internal class AnalyticsPublisher {
     /// Offline events handler for managing local storage and batch sending.
     private let offlineEventsHandler: OfflineEventsHandling
 
+    /// Network monitor to check initial network readiness.
+    private let networkMonitor: NetworkMonitoring
+
     /// The user session state manager
     private let userSessionStateManager: UserSessionStateManaging
 
@@ -120,6 +123,9 @@ internal class AnalyticsPublisher {
     /// Event queue to manage events
     private lazy var eventsQueue: EventQueue = EventQueue()
 
+    /// Initial queue to hold events until network state is ready.
+    private lazy var initialQueue: EventQueue = EventQueue()
+
     /// Tracks if offline data is being processed, to lock sending live events.
     private lazy var isProcessingEvent: AtomicReference<Bool> = AtomicReference(false)
 
@@ -141,11 +147,15 @@ internal class AnalyticsPublisher {
         self.storage = container.resolve(DataStoring.self)
         self.socketManager = container.resolve(SocketManaging.self)
         self.offlineEventsHandler = container.resolve(OfflineEventsHandling.self)
+        self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.userSessionStateManager = container.resolve(UserSessionStateManaging.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
 
         // Register socket event callback
         self.socketManager.registerCallback(self)
+
+        // Register network monitor delegate
+        self.networkMonitor.delegate = self
 
         // Restore any previously cached user from storage
         if let temporaryUserString = storage.temporaryUser {
@@ -257,8 +267,13 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Cache identify event or return when its same user
             guard !didHandleIdentifyEvent(event) else { return }
 
+            // Cache event while network monitor is still resolving initial state
+            if !networkMonitor.isReady {
+                initialQueue.enqueue(event, isInternalEvent: isInternalEvent)
+                return
+            }
+
             // If network monitor is ready and reports no network, save event to local storage
-            // During initial setup (first 1-3 seconds), assume network is available to avoid unnecessary saves
             if offlineEventsHandler.shouldSaveOffline && storage.userId.isNotEmpty {
                 offlineEventsHandler.saveEventToLocalStorage(event: event)
                 return
@@ -298,7 +313,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         // When same user, return true to stop and ignore event
         guard
-            !(storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event))
+            !(storage.user.isNotEmpty
+                && User.fromJson(storage.user).isSameIdentifyEvent(event: event))
         else {
             return true
         }
@@ -441,7 +457,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 if let company = event.company, !company.isEmpty {
                     payload[Constants.Analytics.identifyCompanyProperty] = company
                 }
-                socketManager.publish(event.eventName, payload: payload, isClosingSocket: isClosingSocket())
+                socketManager.publish(
+                    event.eventName, payload: payload, isClosingSocket: isClosingSocket())
             }
         }
     }
@@ -629,13 +646,33 @@ extension AnalyticsPublisher: SocketSubscription {
 
 }
 
+// MARK: - Network Monitor
+
+extension AnalyticsPublisher: NetworkMonitoringDelegate {
+    func networkMonitorDidUpdate(isReady: Bool, isNetworkAvailable: Bool) {
+        guard isReady else { return }
+        flushInitialQueue()
+    }
+
+    private func flushInitialQueue() {
+        let pendingEvents = initialQueue.getAndClear()
+        guard !pendingEvents.isEmpty else { return }
+        pendingEvents.forEach { event in
+            publish(event)
+        }
+    }
+}
+
 // MARK: - Cache Management
 
 extension AnalyticsPublisher {
 
     /** Clears all cached properties when receiving closed callback from socket. */
     private func clearEventsQueue(_ clearCachedIdentifyEvent: Bool) {
-        if clearCachedIdentifyEvent { eventsQueue.clear() }
+        if clearCachedIdentifyEvent {
+            eventsQueue.clear()
+            initialQueue.clear()
+        }
     }
 
     /** Clears the cached identify event after it has been successfully sent */
@@ -763,7 +800,8 @@ extension AnalyticsPublisher {
 
         // Get the current screen safely
         guard let currentScreen = experiencesPublisher?.getCurrentScreen,
-              !currentScreen.isEmpty else { return }
+            !currentScreen.isEmpty
+        else { return }
 
         // Initialize screenViewEntity
         screenViewEntity = ScreenViewEntity(

@@ -27,6 +27,11 @@ internal enum ConnectionType {
 
 // MARK: - Protocols
 
+/// Delegate for network monitor updates.
+internal protocol NetworkMonitoringDelegate: AnyObject {
+    func networkMonitorDidUpdate(isReady: Bool, isNetworkAvailable: Bool)
+}
+
 /// `NetworkMonitoring` defines methods and properties for monitoring network connectivity.
 internal protocol NetworkMonitoring: AnyObject {
     /// Indicates whether the device has an active network connection with real internet access.
@@ -43,6 +48,9 @@ internal protocol NetworkMonitoring: AnyObject {
 
     /// Indicates whether the monitor has received its first network state update
     var isReady: Bool { get }
+
+    /// Delegate to broadcast network updates
+    var delegate: NetworkMonitoringDelegate? { get set }
 
     /// Starts monitoring network connectivity changes.
     func startMonitoring()
@@ -62,6 +70,7 @@ internal class NetworkMonitor: NetworkMonitoring {
     private weak var userpilot: Userpilot?
     private let config: Userpilot.Config
     private let logger: Logging
+    weak var delegate: NetworkMonitoringDelegate?
 
     private let networkQueue = DispatchQueue(
         label: Constants.DispatchQueues.networkMonitor,
@@ -182,7 +191,6 @@ internal class NetworkMonitor: NetworkMonitoring {
 
         // Skip check if no interface connection
         guard hasInterface else {
-            updateInternetAccessState(hasAccess: false)
             return
         }
 
@@ -285,7 +293,13 @@ internal class NetworkMonitor: NetworkMonitoring {
             let interfaceChanged = oldInterfaceState != hasInterface
             let typeChanged = oldType != connectionType
 
-            guard interfaceChanged || typeChanged else { return }
+            guard interfaceChanged || typeChanged else {
+                let wasReady = self.stateQueue.sync { self._isReady }
+                if !wasReady && !hasInterface {
+                    self.updateInternetAccessState(hasAccess: false)
+                }
+                return
+            }
 
             self.stateQueue.async(flags: .barrier) {
                 self._hasInterfaceConnection = hasInterface
@@ -313,7 +327,6 @@ internal class NetworkMonitor: NetworkMonitoring {
         var oldNetworkState = false
         var wasReady = false
         var connType: ConnectionType = .unknown
-
         stateQueue.sync {
             oldAccessState = _hasInternetAccess
             oldNetworkState = _isNetworkAvailable
@@ -339,6 +352,11 @@ internal class NetworkMonitor: NetworkMonitoring {
             } else {
                 logger.debug("🌐 ❌ No internet access - Connection: %{public}@", typeString)
             }
+        }
+
+        let shouldNotify = accessChanged || !wasReady
+        if shouldNotify {
+            delegate?.networkMonitorDidUpdate(isReady: true, isNetworkAvailable: hasAccess)
         }
     }
 
