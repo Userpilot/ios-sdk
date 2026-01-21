@@ -91,7 +91,7 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
     /// Checks if network is available for sending events.
     /// - Returns: true if network is unavailable and events should be saved offline
     var shouldSaveOffline: Bool {
-        !networkMonitor.isNetworkAvailable && networkMonitor.isReady
+        return !networkMonitor.isNetworkAvailable && networkMonitor.isReady
     }
 
     /// Fast check to determine if there are cached events in local storage.
@@ -126,7 +126,8 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
                 eventStorage,
                 completion: { [weak self] saved in
                     if saved {
-                        self?.logger.info("🗃️ Event saved to local storage: %{public}@", event.eventName)
+                        self?.logger.info(
+                            "🗃️ Event saved to local storage: %{public}@", event.eventName)
                     } else {
                         self?.logger.error("⚠️ Event not saved - storage limit exceeded")
                     }
@@ -166,7 +167,8 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
                         return
                     }
 
-                    self.logger.info("🗃️ Restoring %{public}d events from local storage", localEvents.count)
+                    self.logger.info(
+                        "🗃️ Restoring %{public}d events from local storage", localEvents.count)
 
                     // Process events on our serial queue (heavy operation)
                     self.offlineEventsQueue.async { [weak self] in
