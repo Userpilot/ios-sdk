@@ -90,6 +90,13 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
         setupCloseButton()
         bindThankYouView()
         setupGeneralStyle()
+        // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
     }
 
     @objc private func buttonDismissClicked() {

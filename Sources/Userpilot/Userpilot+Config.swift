@@ -32,6 +32,18 @@ public extension Userpilot {
         /// Open external link In-app browser using SFSafariViewController
         var useInAppBrowser: Bool = false
 
+        /// Enable/Disable UIKit automatic screen tracking
+        var uiKitAutoCaptureScreensEnabled: Bool = false
+
+        /// Enable/Disable UIKit automatic click tracking
+        var uiKitAutoCaptureClicksEnabled: Bool = false
+
+        /// Enable/Disable SwiftUI automatic screen tracking
+        var swiftUIAutoCaptureScreensEnabled: Bool = false
+
+        /// Enable/Disable SwiftUI automatic click tracking
+        var swiftUIAutoCaptureClicksEnabled: Bool = false
+
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
         @objc
@@ -70,6 +82,62 @@ public extension Userpilot {
         @objc
         public func enableUseInAppBrowser(enabled isEnabled: Bool) -> Self {
             useInAppBrowser = isEnabled
+            return self
+        }
+
+        /// Sets the autoCaptureEnabled for the configuration.
+        ///
+        /// - Parameter enabled: A boolean to enable auto capture screens and clicks.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableAutoCaptureForUIKit(enabled isEnabled: Bool) -> Self {
+            uiKitAutoCaptureScreensEnabled = isEnabled
+            uiKitAutoCaptureClicksEnabled = isEnabled
+            return self
+        }
+
+        /// Sets the autoCaptureEnabled for the configuration.
+        ///
+        /// - Parameter enabled: A boolean to enable auto capture screens and clicks.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableAutoCaptureForSwiftUI(enabled isEnabled: Bool) -> Self {
+            swiftUIAutoCaptureScreensEnabled = isEnabled
+            swiftUIAutoCaptureClicksEnabled = isEnabled
+            return self
+        }
+
+        /// Enables or disables UIKit automatic screen tracking.
+        @discardableResult
+        @objc
+        public func enableUIKitScreenAutoCapture(enabled isEnabled: Bool) -> Self {
+            uiKitAutoCaptureScreensEnabled = isEnabled
+            return self
+        }
+
+        /// Enables or disables UIKit automatic click tracking.
+        @discardableResult
+        @objc
+        public func enableUIKitClickAutoCapture(enabled isEnabled: Bool) -> Self {
+            uiKitAutoCaptureClicksEnabled = isEnabled
+            return self
+        }
+
+        /// Enables or disables SwiftUI automatic screen tracking.
+        @discardableResult
+        @objc
+        public func enableSwiftUIScreenAutoCapture(enabled isEnabled: Bool) -> Self {
+            swiftUIAutoCaptureScreensEnabled = isEnabled
+            return self
+        }
+
+        /// Enables or disables SwiftUI automatic click tracking.
+        @discardableResult
+        @objc
+        public func enableSwiftUIClickAutoCapture(enabled isEnabled: Bool) -> Self {
+            swiftUIAutoCaptureClicksEnabled = isEnabled
             return self
         }
 

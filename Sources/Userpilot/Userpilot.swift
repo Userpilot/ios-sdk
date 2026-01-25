@@ -83,8 +83,14 @@ public class Userpilot: NSObject {
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // register pushNotificationMonitoring for push notification auto config
+        // Register pushNotificationMonitoring for push notification auto config
         PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
+
+        // Start Auto capture
+        checkAutoCapture()
+
+        // Register SDK Notifications
+        registerSDKNotifications()
 
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
@@ -110,6 +116,9 @@ public class Userpilot: NSObject {
         container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
+        container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
+        container.registerLazy(UIKitAutoCaptureEngine.self, initializer: UIKitAutoCaptureEngine.init)
+        container.registerLazy(SwiftUIAutoCaptureEngine.self, initializer: SwiftUIAutoCaptureEngine.init)
         container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateManager.init)
         container.registerEager(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
         container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
@@ -399,5 +408,45 @@ extension Userpilot {
         return container.resolve(DeepLinkHandling.self).didHandleURL(url)
     }
 
+}
+
+// MARK: - Auto capture
+
+extension Userpilot {
+    /// Check auto capture configuration.
+    public func checkAutoCapture() {
+        let config = container.resolve(Userpilot.Config.self)
+        let uiKitScreensEnabled = config.uiKitAutoCaptureScreensEnabled
+        let uiKitClicksEnabled = config.uiKitAutoCaptureClicksEnabled
+        let swiftUIScreenEnabled = config.swiftUIAutoCaptureScreensEnabled
+        let swiftUIClicksEnabled = config.swiftUIAutoCaptureClicksEnabled
+
+        if uiKitScreensEnabled || uiKitClicksEnabled {
+            _ = container.resolve(UIKitAutoCaptureEngine.self)
+        }
+        if swiftUIScreenEnabled || swiftUIClicksEnabled {
+            _ = container.resolve(SwiftUIAutoCaptureEngine.self)
+        }
+    }
+}
+
+// MARK: - SwiftUI Track screen API
+
+extension Userpilot {
+
+    private func registerSDKNotifications() {
+        NotificationCenter.userpilot.addObserver(
+            self,
+            selector: #selector(screenTracked),
+            name: .userpilotTrackedScreenEvent,
+            object: nil)
+    }
+
+    @objc
+    private func screenTracked(notification: Notification) {
+        let title: String? = notification.value()
+        guard let title = title else { return }
+        screen(title)
+    }
 }
 // swiftlint:enable file_length

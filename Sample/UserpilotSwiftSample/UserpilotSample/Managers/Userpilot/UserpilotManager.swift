@@ -41,6 +41,7 @@ class UserpilotManager {
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(enabled: true)
             .enableUseInAppBrowser(enabled: true)
+            .enableAutoCaptureForUIKit(enabled: true)
         )
         userpilot?.navigationDelegate = self
         userpilot?.analyticsDelegate = self
@@ -70,16 +71,16 @@ class UserpilotManager {
     
     /// Track screens
     func screen(_ screenTitle: String) {
-        userpilot?.screen(screenTitle)
+        //userpilot?.screen(screenTitle)
     }
     
     /// Track user events
     func track(eventName: String, properties: [String: Any]? = nil) {
-        userpilot?.track(eventName: eventName, properties: properties)
+        //userpilot?.track(eventName: eventName, properties: properties)
     }
     
     func triggerExperience(experienceId: String) {
-        userpilot?.triggerExperience(experienceId)
+        //userpilot?.triggerExperience(experienceId)
     }
     
     func endExperience() {

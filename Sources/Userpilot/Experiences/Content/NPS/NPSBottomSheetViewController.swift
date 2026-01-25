@@ -43,6 +43,13 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
         bindViewModel()
         setContent(content: npsContainerView)
         registerKeyboardNotifications()
+        // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {

@@ -1,19 +1,23 @@
 //
-//  UIView+Extension.swift
+//  UIView+Extensions.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 21/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  `UIView+Extension` contains extensions with helper methods for the `UIView` class.
+//  UIView+Extensions provides helper methods and utilities for UIView
+//  including distance calculations, corner radius, first responder finding,
+//  and click tracking logic.
 //
 
 import UIKit
 
-/// Calculates the distance from the bottom edge of a given view to the bottom of the screen.
-/// - Parameter view: The `UIView` for which the distance is to be calculated.
-/// - Returns: A `CGFloat` value representing the distance, or `nil` if the view is not part of a window.
+// MARK: - Global Functions
+
+/// Calculates distance from view bottom edge to screen bottom
+/// - Parameter view: The UIView to measure from
+/// - Returns: Distance in points, or nil if view not in window
 internal func distanceFromViewToScreenBottom(view: UIView) -> CGFloat? {
     guard let window = view.window else { return nil }
     let viewFrameInWindow = view.convert(view.bounds, to: window)
@@ -22,9 +26,9 @@ internal func distanceFromViewToScreenBottom(view: UIView) -> CGFloat? {
     return distance
 }
 
-/// Calculates the distance from the top edge of a given view to the top of the screen.
-/// - Parameter view: The `UIView` for which the distance is to be calculated.
-/// - Returns: A `CGFloat` value representing the distance, or `nil` if the view is not part of a window.
+/// Calculates distance from view top edge to screen top
+/// - Parameter view: The UIView to measure from
+/// - Returns: Distance in points, or nil if view not in window
 internal func distanceFromViewToScreenTop(view: UIView) -> CGFloat? {
     guard let window = view.window else { return nil }
     let viewFrameInWindow = view.convert(view.bounds, to: window)
@@ -32,8 +36,10 @@ internal func distanceFromViewToScreenTop(view: UIView) -> CGFloat? {
     return distance
 }
 
+/// Extension providing corner radius utilities for UIView
 internal extension UIView {
-
+    /// Sets corner radius only on top corners of the view
+    /// - Parameter radius: The corner radius to apply
     func setTopCornerRadius(_ radius: CGFloat) {
         self.clipsToBounds = true
         self.layer.cornerRadius = radius
@@ -42,8 +48,11 @@ internal extension UIView {
 
 }
 
-/// Extension to Find First Responder
+// MARK: - First Responder Extension
+
+/// Extension providing first responder finding functionality
 internal extension UIView {
+    /// Finds the first responder in the view hierarchy
     var firstResponder: UIResponder? {
         if self.isFirstResponder {
             return self
@@ -56,8 +65,75 @@ internal extension UIView {
         return nil
     }
 
+    /// Determines if the app is using right-to-left layout
     var isAppRTL: Bool {
         UIView.userInterfaceLayoutDirection(for: self.semanticContentAttribute) == .rightToLeft
     }
 
+}
+
+// MARK: - Label Extraction Extension
+
+/// Extension providing label extraction utilities for UIView
+internal extension UIView {
+    /// Extracts fallback label text from view or subviews
+    /// - Returns: Extracted label text or nil
+    func extractFallbackLabel() -> String? {
+        if let label = self.subviews.first(where: { $0 is UILabel }) as? UILabel {
+            return label.text
+        }
+
+        if let button = self as? UIButton {
+            return button.currentTitle ?? button.accessibilityLabel
+        }
+
+        for subview in self.subviews {
+            if let label = subview as? UILabel, let text = label.text {
+                return text
+            }
+        }
+
+        return nil
+    }
+}
+
+// MARK: - Click Tracking Extension
+
+/// Extension providing click tracking logic for UIView
+internal extension UIView {
+    /// Determines if a click on the view should be tracked
+    /// - Returns: True if click should be tracked, false otherwise
+    func shouldTrackClick() -> Bool {
+        // 1. ✅ UIControl subclasses are ALWAYS tracked (UIButton, UISwitch, UISlider, etc.)
+        if self is UIControl {
+            return true
+        }
+
+        // 2. ✅ Views with .button accessibility trait
+        //    This is what .userpilotRecognizeClickAnalytics() adds!
+        if self.accessibilityTraits.contains(.button) {
+            return true
+        }
+
+        // 3. ✅ Views explicitly marked with userpilotRecognizeClickAnalytics() (UIKit only)
+        if self.userpilot_isExplicitlyRecognized {
+            return true
+        }
+
+        // 4. ✅ Views with tap gesture recognizers
+        //    Catches custom interactive views with gestures
+        if let gestures = self.gestureRecognizers,
+           gestures.contains(where: { $0 is UITapGestureRecognizer }) {
+            return true
+        }
+
+        // 5. ✅ Views with .link trait (for navigation)
+        if self.accessibilityTraits.contains(.link) {
+            return true
+        }
+
+        // 6. ❌ Everything else is NOT tracked
+        //    This filters out: labels, images, scroll views, background views, etc.
+        return false
+    }
 }

@@ -48,6 +48,13 @@ internal class SlideOutDialogViewController: DialogViewController {
         super.viewDidLoad()
         bindViewModel()
         setContent(content: slideOutContainerView)
+        // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {
