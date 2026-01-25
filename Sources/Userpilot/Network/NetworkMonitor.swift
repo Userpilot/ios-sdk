@@ -130,8 +130,6 @@ internal class NetworkMonitor: NetworkMonitoring {
         self.userpilot = container.owner
         self.config = container.resolve(Userpilot.Config.self)
         self.logger = config.logger
-
-        startMonitoring()
     }
 
     deinit {
