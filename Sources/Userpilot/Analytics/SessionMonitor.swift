@@ -12,11 +12,9 @@
 import Foundation
 import UIKit
 
-/**
-Protocol defining session monitoring behavior.
-Objects that conform to `SessionMonitoring` are expected to handle lifecycle events such as
-app entering the background or foreground.
- */
+/// Protocol defining session monitoring behavior.
+/// Objects that conform to `SessionMonitoring` are expected to handle lifecycle events such as
+/// app entering the background or foreground.
 internal protocol SessionMonitoring: AnyObject {
     /// Starts the session monitoring process, setting up observers for app lifecycle events.
     func reset()
@@ -29,6 +27,9 @@ internal class SessionMonitor: SessionMonitoring {
 
     /// The analytics publisher responsible for flushing and resuming events.
     private let analyticsPublisher: AnalyticsPublishing
+
+    /// Network monitor to pause/resume on lifecycle changes.
+    private let networkMonitor: NetworkMonitoring
 
     /// The storage used to store user-related data.
     private let storage: DataStoring
@@ -43,6 +44,7 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
     init(container: DIContainer) {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
+        self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.storage = container.resolve(DataStoring.self)
 
         // Add observer for when the app enters the background.
@@ -107,6 +109,7 @@ internal class SessionMonitor: SessionMonitoring {
     func didEnterBackground(notification: Notification) {
         _isAppActive = false
         storage.sessionDate = Date()
+        networkMonitor.stopMonitoring()
         analyticsPublisher.flush()
     }
 
@@ -117,6 +120,7 @@ internal class SessionMonitor: SessionMonitoring {
     func didEnterForeground(notification: Notification) {
         _isAppActive = true
         hasInitializedForeground = true
+        networkMonitor.startMonitoring()
         analyticsPublisher.resume()
     }
 }

@@ -142,6 +142,8 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     func startMonitoring() {
         tryCatch {
+            guard pathMonitor == nil else { return }
+
             // Start path monitoring
             pathMonitor = NWPathMonitor()
 
@@ -171,6 +173,7 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     func stopMonitoring() {
         tryCatch {
+            markNotReadyForBackground()
             debounceWorkItem?.cancel()
             debounceWorkItem = nil
 
@@ -358,6 +361,17 @@ internal class NetworkMonitor: NetworkMonitoring {
         if shouldNotify {
             delegate?.networkMonitorDidUpdate(isReady: true, isNetworkAvailable: hasAccess)
         }
+    }
+
+    private func markNotReadyForBackground() {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._isReady = false
+            self?._isNetworkAvailable = false
+            self?._hasInternetAccess = false
+            self?._hasInterfaceConnection = false
+            self?._connectionType = .unknown
+        }
+        delegate?.networkMonitorDidUpdate(isReady: false, isNetworkAvailable: false)
     }
 
     // MARK: - Helper Methods
