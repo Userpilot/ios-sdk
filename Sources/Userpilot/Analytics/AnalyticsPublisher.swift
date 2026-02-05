@@ -350,6 +350,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     private func updateUserIdFromEvent(_ event: Event) {
         // Priority: current event userId > cached identify event userId
+        // When socket is closed then handle user session state
+        if event.isIdentifyEvent {
+            if storage.userId == event.userId {
+                userSessionStateManager.markAwaitingInitialScreen()
+            } else {
+                userSessionStateManager.markUserSwitch()
+            }
+        }
+
         if let userId = event.userId {
             storage.userId = userId
         } else if let cachedUserId = getUserIdFromQueue() {
@@ -445,11 +454,14 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         tryCatch {
             guard let userId = event.userId else { return }
 
-            // If new user ID detected, close socket and clean up
+            // If new user ID detected, close socket and clean up, Socket is connected
             if storage.userId.isNotEmpty && userId != storage.userId {
+                // when user switch this mark it as switch so the fake reload will be false
+                userSessionStateManager.markUserSwitch()
                 userpilot?.clean()
                 logout(clearCachedIdentifyEvent: false)
             } else {
+                // When socket is connected with same user id
                 userSessionStateManager.markAwaitingInitialScreen()
                 var payload: [String: Any] = [
                     Constants.Analytics.metaDataProperty: event.properties ?? [:]
