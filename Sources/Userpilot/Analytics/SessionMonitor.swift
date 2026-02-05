@@ -69,8 +69,7 @@ internal class SessionMonitor: SessionMonitoring {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             if UIApplication.shared.applicationState == .active && !self.hasInitializedForeground {
-                self.hasInitializedForeground = true
-                self.analyticsPublisher.resume()
+                self.onAppStart()
             }
         }
     }
@@ -118,6 +117,10 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterForeground(notification: Notification) {
+        onAppStart()
+    }
+
+    private func onAppStart() {
         _isAppActive = true
         hasInitializedForeground = true
         networkMonitor.startMonitoring()
