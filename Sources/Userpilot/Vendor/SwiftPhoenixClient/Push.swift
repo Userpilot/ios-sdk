@@ -75,7 +75,8 @@ public class Push {
     self.payload = payload
     self.timeout = timeout
     self.receivedMessage = nil
-    self.timeoutTimer = TimerQueue.main
+    // Use the socket's serial queue for push timeouts to ensure thread-safe state access
+    self.timeoutTimer = TimerQueue(dispatchQueue: channel.socketQueue)
     self.receiveHooks = [:]
     self.sent = false
     self.ref = nil

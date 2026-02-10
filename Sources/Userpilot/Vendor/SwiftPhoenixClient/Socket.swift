@@ -151,7 +151,10 @@ public class Socket: PhoenixTransportDelegate {
   let sendBuffer = SynchronizedArray<(ref: String?, callback: () throws -> ())>()
   
   /// Ref counter for messages
-  var ref: UInt64 = UInt64.min // 0 (max: 18,446,744,073,709,551,615)
+  private var ref: UInt64 = UInt64.min // 0 (max: 18,446,744,073,709,551,615)
+  
+  /// Lock protecting the ref counter for thread-safe access from any thread
+  private let refLock = NSLock()
     
   /// Timer that triggers sending new Heartbeat messages
   var heartbeatTimer: HeartbeatTimer?
@@ -165,10 +168,29 @@ public class Socket: PhoenixTransportDelegate {
   /// Close status
   var closeStatus: CloseStatus = .unknown
   
+  /// Lock protecting the connection property for thread-safe reads from any thread
+  private let connectionLock = NSLock()
+  private var _connection: PhoenixTransport? = nil
+  
   /// The connection to the server
-  var connection: PhoenixTransport? = nil
+  var connection: PhoenixTransport? {
+    get {
+      connectionLock.lock()
+      defer { connectionLock.unlock() }
+      return _connection
+    }
+    set {
+      connectionLock.lock()
+      defer { connectionLock.unlock() }
+      _connection = newValue
+    }
+  }
   
-  
+  /// Serial queue that serializes all access to socket state.
+  /// All delegate callbacks, timer callbacks, and public API calls
+  /// are funneled through this queue to prevent data races.
+  internal let queue = DispatchQueue(label: "com.userpilot.socket")
+
   //----------------------------------------------------------------------
   // MARK: - Initialization
   //----------------------------------------------------------------------
@@ -205,15 +227,18 @@ public class Socket: PhoenixTransportDelegate {
     guard let endPointUrl = Socket.buildEndpointUrl(
         endpoint: endPoint,
         paramsClosure: paramsClosure,
-        vsn: vsn) else {
-        self.endPointUrl = URL(string: "about:blank")!
-        self.reconnectTimer = TimeoutTimer()
-        return
+        vsn: vsn)
+    else {
+      self.endPointUrl = URL(string: "about:blank")!
+      self.reconnectTimer = TimeoutTimer()
+      self.reconnectTimer.queue = TimerQueue(dispatchQueue: self.queue)
+      return
     }
     
     self.endPointUrl = endPointUrl
 
     self.reconnectTimer = TimeoutTimer()
+    self.reconnectTimer.queue = TimerQueue(dispatchQueue: self.queue)
     self.reconnectTimer.callback.delegate(to: self) { (self) in
       self.logItems("Socket attempting to reconnect")
       self.teardown(reason: "reconnection") { self.connect() }
@@ -260,46 +285,53 @@ public class Socket: PhoenixTransportDelegate {
   /// will be sent through the connection. If the Socket is already connected,
   /// then this call will be ignored.
   public func connect() {
-    // Do not attempt to reconnect if the socket is currently connected or in the process of connecting
-    guard !isConnected && !isConnecting else { return }
-    
-    // Reset the close status when attempting to connect
-    self.closeStatus = .unknown
-
-    // We need to build this right before attempting to connect as the
-    // parameters could be built upon demand and change over time
-    guard let endPointUrl = Socket.buildEndpointUrl(
-        endpoint: endPoint,
-        paramsClosure: paramsClosure,
-        vsn: vsn) else { return }
-    self.endPointUrl = endPointUrl
+    queue.async { [weak self] in
+      guard let self else { return }
       
-    self.connection = self.transport(self.endPointUrl)
-    self.connection?.delegate = self
-//    self.connection?.disableSSLCertValidation = disableSSLCertValidation
-//
-//    #if os(Linux)
-//    #else
-//    self.connection?.security = security
-//    self.connection?.enabledSSLCipherSuites = enabledSSLCipherSuites
-//    #endif
-    
-    self.connection?.connect(with: self.headers)
+      // Do not attempt to reconnect if the socket is currently connected or in the process of connecting
+      guard !self.isConnected && !self.isConnecting else { return }
+
+      // Reset the close status when attempting to connect
+      self.closeStatus = .unknown
+
+      // We need to build this right before attempting to connect as the
+      // parameters could be built upon demand and change over time
+      guard
+        let endPointUrl = Socket.buildEndpointUrl(
+          endpoint: self.endPoint,
+          paramsClosure: self.paramsClosure,
+          vsn: self.vsn)
+      else { return }
+      self.endPointUrl = endPointUrl
+
+      self.connection = self.transport(self.endPointUrl)
+      // Set the delegate queue so all transport callbacks are serialized on the socket's queue
+      (self.connection as? URLSessionTransport)?.delegateQueue = self.queue
+      self.connection?.delegate = self
+
+      self.connection?.connect(with: self.headers)
+    }
   }
   
   /// Disconnects the socket
   ///
   /// - parameter code: Optional. Closing status code
   /// - parameter callback: Optional. Called when disconnected
-  public func disconnect(code: CloseCode = CloseCode.normal,
-                         reason: String? = nil,
-                         callback: (() -> Void)? = nil) {
-    // The socket was closed cleanly by the User
-    self.closeStatus = CloseStatus(closeCode: code.rawValue)
-    
-    // Reset any reconnects and teardown the socket connection
-    self.reconnectTimer.reset()
-    self.teardown(code: code, reason: reason, callback: callback)
+  public func disconnect(
+    code: CloseCode = CloseCode.normal,
+    reason: String? = nil,
+    callback: (() -> Void)? = nil
+  ) {
+    queue.async { [weak self] in
+      guard let self else { return }
+      
+      // The socket was closed cleanly by the User
+      self.closeStatus = CloseStatus(closeCode: code.rawValue)
+
+      // Reset any reconnects and teardown the socket connection
+      self.reconnectTimer.reset()
+      self.teardown(code: code, reason: reason, callback: callback)
+    }
   }
   
   internal func teardown(code: CloseCode = CloseCode.normal, reason: String? = nil, callback: (() -> Void)? = nil) {
@@ -616,33 +648,40 @@ public class Socket: PhoenixTransportDelegate {
   /// - parameter payload:
   /// - parameter ref: Optional. Defaults to nil
   /// - parameter joinRef: Optional. Defaults to nil
-  internal func push(topic: String,
-                     event: String,
-                     payload: SwiftPhoenixClientPayload,
-                     ref: String? = nil,
-                     joinRef: String? = nil) {
-    
-    let callback: (() throws -> ()) = { [weak self] in
+  internal func push(
+    topic: String,
+    event: String,
+    payload: SwiftPhoenixClientPayload,
+    ref: String? = nil,
+    joinRef: String? = nil
+  ) {
+    queue.async { [weak self] in
       guard let self else { return }
-      let body: [Any?] = [joinRef, ref, topic, event, payload]
-      let data = self.encode(body)
       
-      self.logItems("push", "Sending \(String(data: data, encoding: String.Encoding.utf8) ?? "")" )
-      self.connection?.send(data: data)
-    }
-    
-    /// If the socket is connected, then execute the callback immediately.
-    if isConnected {
-      try? callback()
-    } else {
-      /// If the socket is not connected, add the push to a buffer which will
-      /// be sent immediately upon connection.
-      self.sendBuffer.append((ref: ref, callback: callback))
+      let callback: (() throws -> Void) = { [weak self] in
+        guard let self else { return }
+        let body: [Any?] = [joinRef, ref, topic, event, payload]
+        let data = self.encode(body)
+
+        self.logItems("push", "Sending \(String(data: data, encoding: String.Encoding.utf8) ?? "")")
+        self.connection?.send(data: data)
+      }
+
+      /// If the socket is connected, then execute the callback immediately.
+      if self.isConnected {
+        try? callback()
+      } else {
+        /// If the socket is not connected, add the push to a buffer which will
+        /// be sent immediately upon connection.
+        self.sendBuffer.append((ref: ref, callback: callback))
+      }
     }
   }
   
   /// - return: the next message ref, accounting for overflows
   public func makeRef() -> String {
+    refLock.lock()
+    defer { refLock.unlock() }
     self.ref = (ref == UInt64.max) ? 0 : self.ref + 1
     return String(ref)
   }
@@ -827,7 +866,12 @@ public class Socket: PhoenixTransportDelegate {
 
     self.heartbeatTimer = HeartbeatTimer(timeInterval: heartbeatInterval, leeway: heartbeatLeeway)
     self.heartbeatTimer?.start(eventHandler: { [weak self] in
-      self?.sendHeartbeat()
+      // Dispatch onto the socket's serial queue to prevent data races
+      // with delegate callbacks and other state modifications
+      guard let self = self else { return }
+      self.queue.async { [weak self] in
+        self?.sendHeartbeat()
+      }
     })
   }
   

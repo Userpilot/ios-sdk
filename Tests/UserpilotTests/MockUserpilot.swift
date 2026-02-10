@@ -174,9 +174,9 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         onCancelPendingSurveyContent?()
     }
 
-    var onShowThankYouMessage: ((SurveyContent, SurveyTheme) -> Void)?
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme) {
-        onShowThankYouMessage?(surveyContent, surveyTheme)
+    var onShowThankYouMessage: ((SurveyContent, SurveyTheme, Int64) -> Void)?
+    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme, _ submissionId: Int64) {
+        onShowThankYouMessage?(surveyContent, surveyTheme, submissionId)
     }
 
     var onUpdateSceen: ((String) -> Void)?

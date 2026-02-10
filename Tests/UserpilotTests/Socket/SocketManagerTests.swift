@@ -215,7 +215,7 @@ final class SocketManagerTests: XCTestCase {
         // Delay to allow connect setup before publishing
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             // Act
-            self.socketManager.publish(eventName, payload: payload, shouldCloseSocket: false, socketSubscription: nil)
+            self.socketManager.publish(eventName, payload: payload, socketSubscription: nil)
         }
 
         // Assert
@@ -243,7 +243,7 @@ final class SocketManagerTests: XCTestCase {
         // Delay to allow connect setup before publishing
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             // Act
-            self.socketManager.publish(eventName, payload: payload, shouldCloseSocket: true, socketSubscription: nil)
+            self.socketManager.publish(eventName, payload: payload, socketSubscription: nil)
         }
 
         // Assert
@@ -268,7 +268,6 @@ final class SocketManagerTests: XCTestCase {
         socketManager.publish(
             eventName,
             payload: payload,
-            shouldCloseSocket: false,
             socketSubscription: specificSubscription
         )
 
@@ -297,7 +296,7 @@ final class SocketManagerTests: XCTestCase {
 
         // Act & Assert (should not crash)
         XCTAssertNoThrow(
-            socketManager.publish(eventName, payload: payload, shouldCloseSocket: false, socketSubscription: nil)
+            socketManager.publish(eventName, payload: payload, socketSubscription: nil)
         )
     }
 

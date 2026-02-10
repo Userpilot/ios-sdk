@@ -67,6 +67,7 @@ internal class SessionMonitor: SessionMonitoring {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             if UIApplication.shared.applicationState == .active && !self.hasInitializedForeground {
+                self._isAppActive = true
                 self.hasInitializedForeground = true
                 self.analyticsPublisher.resume()
             }
