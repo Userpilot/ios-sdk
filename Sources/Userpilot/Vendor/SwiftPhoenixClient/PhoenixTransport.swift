@@ -203,8 +203,28 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   
   
   // MARK: - Transport
-  public var readyState: PhoenixTransportReadyState = .closed
+  
+  /// Lock protecting readyState for thread-safe reads from any thread
+  private let readyStateLock = NSLock()
+  private var _readyState: PhoenixTransportReadyState = .closed
+  public var readyState: PhoenixTransportReadyState {
+    get {
+      readyStateLock.lock()
+      defer { readyStateLock.unlock() }
+      return _readyState
+    }
+    set {
+      readyStateLock.lock()
+      defer { readyStateLock.unlock() }
+      _readyState = newValue
+    }
+  }
+  
   public var delegate: PhoenixTransportDelegate? = nil
+  
+  /// Serial queue for dispatching delegate callbacks to ensure thread safety.
+  /// Set by Socket after creating the transport, before calling connect().
+  var delegateQueue: DispatchQueue?
   
   public func connect(with headers: [String : Any]) {
       tryCatch {
@@ -268,21 +288,32 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   open func urlSession(_ session: URLSession,
                        webSocketTask: URLSessionWebSocketTask,
                        didOpenWithProtocol protocol: String?) {
-    // The Websocket is connected. Set Transport state to open and inform delegate
-    self.readyState = .open
-    self.delegate?.onOpen(response: webSocketTask.response)
-    
-    // Start receiving messages
-    self.receive()
+    // Capture response before dispatching to avoid accessing webSocketTask across threads
+    let response = webSocketTask.response
+    dispatchOnDelegateQueue { [weak self] in
+      guard let self else { return }
+      // The Websocket is connected. Set Transport state to open and inform delegate
+      self.readyState = .open
+      self.delegate?.onOpen(response: response)
+      
+      // Start receiving messages
+      self.receive()
+    }
   }
   
   open func urlSession(_ session: URLSession,
                        webSocketTask: URLSessionWebSocketTask,
                        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
                        reason: Data?) {
-    // A close frame was received from the server.
-    self.readyState = .closed
-    self.delegate?.onClose(code: closeCode.rawValue, reason: reason.flatMap { String(data: $0, encoding: .utf8) })
+    // Capture values before dispatching to avoid accessing task across threads
+    let code = closeCode.rawValue
+    let reasonString = reason.flatMap { String(data: $0, encoding: .utf8) }
+    dispatchOnDelegateQueue { [weak self] in
+      guard let self else { return }
+      // A close frame was received from the server.
+      self.readyState = .closed
+      self.delegate?.onClose(code: code, reason: reasonString)
+    }
   }
   
   open func urlSession(_ session: URLSession,
@@ -291,55 +322,79 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
     // The task has terminated. Inform the delegate that the transport has closed abnormally
     // if this was caused by an error.
     guard let err = error else { return }
-    
-    self.abnormalErrorReceived(err, response: task.response)
+    let response = task.response
+    self.abnormalErrorReceived(err, response: response)
   }
   
     
   open func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
     print("Session invalidated: \(error?.localizedDescription ?? "no error")")
+    let errorDesc = error?.localizedDescription
+    dispatchOnDelegateQueue { [weak self] in
+      guard let self else { return }
       self.readyState = .closed
-      self.delegate?.onClose(code: 500, reason: error?.localizedDescription)
+      self.delegate?.onClose(code: 500, reason: errorDesc)
+    }
   }
   
   // MARK: - Private
+  
+  /// Dispatches a block onto the delegate queue for thread-safe callback delivery.
+  /// If no delegate queue is set, executes the block directly (backwards compatible).
+  private func dispatchOnDelegateQueue(_ block: @escaping () -> Void) {
+    if let delegateQueue = delegateQueue {
+      delegateQueue.async(execute: block)
+    } else {
+      block()
+    }
+  }
+  
   private func receive() {
     receiveMessageTask = Task { [weak self] in
       guard let self else { return }
         do {
-            let message = try await task?.receive()
-            switch message {
-            case .data:
-                print("Data received. This method is unsupported by the Client")
-            case .string(let text):
-                delegate?.onMessage(message: text)
-            default:
+            let message = try await self.task?.receive()
+            // Dispatch message handling onto the delegate queue for thread safety
+            self.dispatchOnDelegateQueue { [weak self] in
+              guard let self else { return }
+              switch message {
+              case .data:
+                  print("Data received. This method is unsupported by the Client")
+              case .string(let text):
+                  self.delegate?.onMessage(message: text)
+              default:
 #if DEBUG
-                fatalError("Nil message received.")
+                  fatalError("Nil message received.")
 #endif
+                  break
+              }
+                
+              // Since `.receive()` is only good for a single message, it must
+              // be called again after a message is received in order to
+              // received the next message.
+              self.receive()
             }
-              
-            // Since `.receive()` is only good for a single message, it must
-            // be called again after a message is received in order to
-            // received the next message.
-            receive()
           } catch {
               print("Error when receiving \(error)")
-              abnormalErrorReceived(error, response: nil)
+              self.abnormalErrorReceived(error, response: nil)
           }
       }
   }
   
   private func abnormalErrorReceived(_ error: Error, response: URLResponse?) {
-    // Set the state of the Transport to closed
-    self.readyState = .closed
-    
-    // Inform the Transport's delegate that an error occurred.
-    self.delegate?.onError(error: error, response: response)
-    
-    // An abnormal error is results in an abnormal closure, such as internet getting dropped
-    // so inform the delegate that the Transport has closed abnormally. This will kick off
-    // the reconnect logic.
-    self.delegate?.onClose(code: Socket.CloseCode.abnormal.rawValue, reason: error.localizedDescription)
+    // Dispatch onto delegate queue for thread-safe state modification and callback delivery
+    dispatchOnDelegateQueue { [weak self] in
+      guard let self else { return }
+      // Set the state of the Transport to closed
+      self.readyState = .closed
+      
+      // Inform the Transport's delegate that an error occurred.
+      self.delegate?.onError(error: error, response: response)
+      
+      // An abnormal error results in an abnormal closure, such as internet getting dropped
+      // so inform the delegate that the Transport has closed abnormally. This will kick off
+      // the reconnect logic.
+      self.delegate?.onClose(code: Socket.CloseCode.abnormal.rawValue, reason: error.localizedDescription)
+    }
   }
 }

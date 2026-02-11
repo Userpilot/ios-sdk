@@ -731,7 +731,6 @@ extension ExperiencesPublisher {
                     surveyContent: surveyContent,
                     surveyTheme: surveyTheme
                 )
-
                 thankYouVC.actionButtonClicked = { [weak self] deepLink in
                     self?.publishInternalSDKEvent(
                         ExperienceSurveyCompletedEvent(
@@ -740,14 +739,11 @@ extension ExperiencesPublisher {
                             hasDeepLinkContent: deepLink != nil
                         )
                     )
-
                     if let deepLink, let url = URL(string: deepLink) {
                         self?.triggerDeepLink(url: url)
                     }
-
                     self?.resetProcessingPreviewExperienceStatus()
                 }
-
                 topViewController.presentBottomSheet(viewController: thankYouVC)
             }
         }

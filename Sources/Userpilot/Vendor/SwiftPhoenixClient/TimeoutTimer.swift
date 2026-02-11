@@ -97,11 +97,18 @@ class TimeoutTimer {
 
 
 /// Wrapper class around a DispatchQueue. Allows for providing a fake clock
-/// during tests.
+/// during tests and configuring which queue timer callbacks fire on.
 class TimerQueue {
   
   // Can be overriden in tests
   static var main = TimerQueue()
+  
+  /// The underlying dispatch queue to schedule work on
+  private let dispatchQueue: DispatchQueue
+  
+  init(dispatchQueue: DispatchQueue = .main) {
+    self.dispatchQueue = dispatchQueue
+  }
   
   func queue(timeInterval: TimeInterval, execute: DispatchWorkItem) {
     // TimeInterval is always in seconds. Multiply it by 1000 to convert
@@ -109,7 +116,7 @@ class TimerQueue {
     let dispatchInterval = Int(round(timeInterval * 1000))
     
     let dispatchTime = DispatchTime.now() + .milliseconds(dispatchInterval)
-    DispatchQueue.main.asyncAfter(deadline: dispatchTime, execute: execute)
+    dispatchQueue.asyncAfter(deadline: dispatchTime, execute: execute)
   }
 }
 
