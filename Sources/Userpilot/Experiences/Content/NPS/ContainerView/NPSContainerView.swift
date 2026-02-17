@@ -52,7 +52,9 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
+        let heightConstraint = view.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight)
+        heightConstraint.priority = .defaultHigh
+        heightConstraint.isActive = true
         return view
     }()
 
@@ -68,7 +70,9 @@ internal class NPSContainerView: UIView {
     private lazy var stepsProgressView: UPStepsProgressView = {
         let progressView = UPStepsProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        let heightConstraint = progressView.heightAnchor.constraint(equalToConstant: 20)
+        heightConstraint.priority = .defaultHigh
+        heightConstraint.isActive = true
         return progressView
     }()
 
@@ -123,9 +127,9 @@ internal class NPSContainerView: UIView {
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(
-            equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)
-        ).isActive = true
+        let heightConstraint = view.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions))
+        heightConstraint.priority = .defaultHigh
+        heightConstraint.isActive = true
         return view
     }()
 
@@ -374,9 +378,9 @@ internal class NPSContainerView: UIView {
         stepsProgressView.alpha = 0
         imageContainerView.alpha = 0
 
-        // Remove old views before adding the new one
+        // Remove old dynamic views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach {
-            if $0 is UPExperienceView {
+            if $0 !== imageContainerView {
                 $0.removeFromSuperview()
             }
         }
@@ -669,7 +673,7 @@ extension NPSContainerView {
             stepsProgressView.isHidden = true
             barStepsProgressView.isHidden = true
             if !completedData.button.enabled {
-                footerButtonsStackView.isHidden = true
+                footerButtonsContianer.isHidden = true
                 return
             }
             footerButtonsStackView.clearViews()

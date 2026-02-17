@@ -87,7 +87,7 @@ public class Userpilot: NSObject {
         PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
 
         // Start Auto capture
-        checkAutoCapture()
+        // checkAutoCapture()
 
         // Register SDK Notifications
         registerSDKNotifications()

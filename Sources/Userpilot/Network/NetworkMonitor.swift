@@ -3,12 +3,13 @@
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 13/10/2025.
-//  Updated for performance optimizations on 13/10/2025.
+//  Updated for real internet connectivity detection on 19/01/2026.
 //  © 2025 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  `NetworkMonitor` monitors network connectivity changes and provides real-time network availability status.
-//  It uses NWPathMonitor to detect network state changes with debouncing to prevent rapid successive updates.
+//  `NetworkMonitor` monitors network connectivity changes and validates real internet access.
+//  It uses NWPathMonitor for interface detection and periodic reachability checks to verify actual
+//  internet connectivity.
 //
 
 import Foundation
@@ -26,9 +27,14 @@ internal enum ConnectionType {
 
 // MARK: - Protocols
 
+/// Delegate for network monitor updates.
+internal protocol NetworkMonitoringDelegate: AnyObject {
+    func networkMonitorDidUpdate(isReady: Bool, isNetworkAvailable: Bool)
+}
+
 /// `NetworkMonitoring` defines methods and properties for monitoring network connectivity.
 internal protocol NetworkMonitoring: AnyObject {
-    /// Indicates whether the device has an active network connection.
+    /// Indicates whether the device has an active network connection with real internet access.
     var isNetworkAvailable: Bool { get }
 
     /// Current connection type
@@ -43,6 +49,9 @@ internal protocol NetworkMonitoring: AnyObject {
     /// Indicates whether the monitor has received its first network state update
     var isReady: Bool { get }
 
+    /// Delegate to broadcast network updates
+    var delegate: NetworkMonitoringDelegate? { get set }
+
     /// Starts monitoring network connectivity changes.
     func startMonitoring()
 
@@ -52,8 +61,8 @@ internal protocol NetworkMonitoring: AnyObject {
 
 // MARK: - NetworkMonitor
 
-/// `NetworkMonitor` is responsible for monitoring network connectivity changes and providing
-/// real-time network availability status.
+/// `NetworkMonitor` is responsible for monitoring network connectivity changes and validating
+/// real internet access through reachability checks.
 internal class NetworkMonitor: NetworkMonitoring {
 
     // MARK: - Properties
@@ -61,6 +70,7 @@ internal class NetworkMonitor: NetworkMonitoring {
     private weak var userpilot: Userpilot?
     private let config: Userpilot.Config
     private let logger: Logging
+    weak var delegate: NetworkMonitoringDelegate?
 
     private let networkQueue = DispatchQueue(
         label: Constants.DispatchQueues.networkMonitor,
@@ -72,17 +82,24 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     private var pathMonitor: NWPathMonitor?
     private var debounceWorkItem: DispatchWorkItem?
-    private let debounceDelay: TimeInterval = 1.0
+    private let debounceDelay: TimeInterval = 0.3
+
+    // Reachability check properties
+    // private var reachabilityTimer: DispatchSourceTimer? - Removed
+    // private let reachabilityCheckInterval: TimeInterval = 10.0 - Removed
+    private let reachabilityTimeout: TimeInterval = 5.0
+    private var reachabilityHosts = ["www.google.com", "www.apple.com", "1.1.1.1"]
+    private var currentReachabilityIndex = 0
 
     // Backing state (accessed via concurrent queue)
-    // Start with optimistic assumption of network availability
-    private var _isNetworkAvailable: Bool = true
+    private var _isNetworkAvailable: Bool = false  // Start pessimistic until verified
+    private var _hasInterfaceConnection: Bool = false  // Interface level connectivity
+    private var _hasInternetAccess: Bool = false  // Real internet connectivity
     private var _connectionType: ConnectionType = .unknown
     private var _isReady: Bool = false
+    private var _isCheckingReachability: Bool = false
 
-    /// Indicates whether the device has an active network connection. This property is updated
-    /// automatically as network state changes.
-    /// Initially assumes network is available until first path update is received.
+    /// Indicates whether the device has real internet connectivity
     var isNetworkAvailable: Bool {
         stateQueue.sync { _isNetworkAvailable }
     }
@@ -92,18 +109,17 @@ internal class NetworkMonitor: NetworkMonitoring {
         stateQueue.sync { _connectionType }
     }
 
-    /// Check if connected via WiFi
+    /// Check if connected via WiFi with internet access
     var isConnectedViaWiFi: Bool {
         isNetworkAvailable && connectionType == .wifi
     }
 
-    /// Check if connected via Cellular
+    /// Check if connected via Cellular with internet access
     var isConnectedViaCellular: Bool {
         isNetworkAvailable && connectionType == .cellular
     }
 
     /// Indicates whether the monitor has received its first network state update.
-    /// Returns false during initial setup phase (typically 1-3 seconds).
     var isReady: Bool {
         stateQueue.sync { _isReady }
     }
@@ -114,8 +130,6 @@ internal class NetworkMonitor: NetworkMonitoring {
         self.userpilot = container.owner
         self.config = container.resolve(Userpilot.Config.self)
         self.logger = config.logger
-
-        startMonitoring()
     }
 
     deinit {
@@ -126,36 +140,38 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     func startMonitoring() {
         tryCatch {
+            guard pathMonitor == nil else { return }
+
+            // Start path monitoring
             pathMonitor = NWPathMonitor()
 
             pathMonitor?.pathUpdateHandler = { [weak self] path in
                 guard let self = self else { return }
 
-                // Compute new state
-                let isConnected = path.status == .satisfied
-                let connType: ConnectionType
+                let hasInterface = path.status == .satisfied && path.availableInterfaces.count > 0
+                let connType = self.determineConnectionType(path)
 
-                if path.usesInterfaceType(.wifi) {
-                    connType = .wifi
-                } else if path.usesInterfaceType(.cellular) {
-                    connType = .cellular
-                } else if path.usesInterfaceType(.wiredEthernet) {
-                    connType = .wiredEthernet
-                } else {
-                    connType = .unknown
-                }
+                self.logger.debug(
+                    "🌐 Interface status: %{public}@, Type: %{public}@",
+                    hasInterface ? "Connected" : "Disconnected",
+                    self.connectionTypeString(connType))
 
-                // Debounced state update
-                self.updateNetworkState(isConnected: isConnected, connectionType: connType)
+                // Update interface state
+                self.updateInterfaceState(hasInterface: hasInterface, connectionType: connType)
             }
 
             pathMonitor?.start(queue: networkQueue)
-            logger.debug("🌐 NetworkMonitor started")
+
+            // Trigger initial reachability check
+            self.performReachabilityCheck()
+
+            logger.debug("🌐 NetworkMonitor started with internet validation")
         }
     }
 
     func stopMonitoring() {
         tryCatch {
+            markNotReadyForBackground()
             debounceWorkItem?.cancel()
             debounceWorkItem = nil
 
@@ -166,45 +182,140 @@ internal class NetworkMonitor: NetworkMonitoring {
         }
     }
 
-    // MARK: - Private Methods
+    // MARK: - Reachability Checks
+    // Removed periodic polling to save battery and resources.
+    // We now rely on NWPathMonitor updates to trigger checks.
 
-    /// Updates network state with debouncing to prevent rapid successive updates.
-    private func updateNetworkState(isConnected: Bool, connectionType: ConnectionType) {
-        // Cancel any pending update
+    private func performReachabilityCheck() {
+        // Read current interface state
+        let hasInterface = stateQueue.sync { _hasInterfaceConnection }
+
+        // Skip check if no interface connection
+        guard hasInterface else {
+            return
+        }
+
+        // Skip if already checking
+        let isChecking = stateQueue.sync { _isCheckingReachability }
+        guard !isChecking else { return }
+
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._isCheckingReachability = true
+        }
+
+        // Rotate through reachability hosts for redundancy
+        let host = reachabilityHosts[currentReachabilityIndex]
+        currentReachabilityIndex = (currentReachabilityIndex + 1) % reachabilityHosts.count
+
+        checkInternetReachability(host: host) { [weak self] hasAccess in
+            guard let self = self else { return }
+
+            self.stateQueue.async(flags: .barrier) {
+                self._isCheckingReachability = false
+            }
+
+            self.updateInternetAccessState(hasAccess: hasAccess)
+        }
+    }
+
+    private func checkInternetReachability(host: String, completion: @escaping (Bool) -> Void) {
+        // Use NWConnection for a lightweight reachability check
+        guard let port = NWEndpoint.Port(rawValue: 443) else {
+            completion(false)
+            return
+        }
+
+        let connection = NWConnection(
+            host: NWEndpoint.Host(host),
+            port: port,
+            using: .tcp
+        )
+
+        var didComplete = false
+        let timeoutWorkItem = DispatchWorkItem { [weak connection] in
+            guard !didComplete else { return }
+            didComplete = true
+            connection?.cancel()
+            completion(false)
+        }
+
+        connection.stateUpdateHandler = { [weak self] state in
+            guard !didComplete else { return }
+
+            switch state {
+            case .ready:
+                didComplete = true
+                timeoutWorkItem.cancel()
+                connection.cancel()
+                self?.logger.debug("🌐 Reachability check succeeded: %{public}@", host)
+                completion(true)
+
+            case .failed(let error):
+                didComplete = true
+                timeoutWorkItem.cancel()
+                connection.cancel()
+                self?.logger.debug(
+                    "🌐 Reachability check failed: %{public}@ - %{public}@",
+                    host, error.localizedDescription)
+                completion(false)
+
+            case .cancelled:
+                if !didComplete {
+                    didComplete = true
+                    timeoutWorkItem.cancel()
+                    completion(false)
+                }
+
+            default:
+                break
+            }
+        }
+
+        connection.start(queue: networkQueue)
+        networkQueue.asyncAfter(deadline: .now() + reachabilityTimeout, execute: timeoutWorkItem)
+    }
+
+    // MARK: - State Management
+
+    private func updateInterfaceState(hasInterface: Bool, connectionType: ConnectionType) {
         debounceWorkItem?.cancel()
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
 
-            // Capture old state atomically
-            var oldState: Bool = false
+            var oldInterfaceState = false
             var oldType: ConnectionType = .unknown
-            var wasReady: Bool = false
 
-            stateQueue.sync {
-                oldState = self._isNetworkAvailable
+            self.stateQueue.sync {
+                oldInterfaceState = self._hasInterfaceConnection
                 oldType = self._connectionType
-                wasReady = self._isReady
             }
 
-            let stateChanged = oldState != isConnected || oldType != connectionType
-            let readyStateChanged = !wasReady
+            let interfaceChanged = oldInterfaceState != hasInterface
+            let typeChanged = oldType != connectionType
 
-            // Update only if needed
-            guard stateChanged || readyStateChanged else { return }
+            guard interfaceChanged || typeChanged else {
+                let wasReady = self.stateQueue.sync { self._isReady }
+                if !wasReady && !hasInterface {
+                    self.updateInternetAccessState(hasAccess: false)
+                }
+                return
+            }
 
-            // Write new values with barrier to avoid race
-            stateQueue.async(flags: .barrier) {
-                self._isNetworkAvailable = isConnected
+            self.stateQueue.async(flags: .barrier) {
+                self._hasInterfaceConnection = hasInterface
                 self._connectionType = connectionType
-                self._isReady = true
             }
 
-            // Create log only after verifying state change
-            if stateChanged || readyStateChanged {
-                let message = self.createLogMessage(
-                    isConnected: isConnected, connectionType: connectionType)
-                self.logger.debug("%{public}@", message)
+            if interfaceChanged {
+                if hasInterface {
+                    self.logger.debug("🌐 Network interface connected, checking internet access...")
+                    // Trigger immediate reachability check
+                    self.performReachabilityCheck()
+                } else {
+                    self.logger.debug("🌐 Network interface disconnected")
+                    self.updateInternetAccessState(hasAccess: false)
+                }
             }
         }
 
@@ -212,14 +323,69 @@ internal class NetworkMonitor: NetworkMonitoring {
         networkQueue.asyncAfter(deadline: .now() + debounceDelay, execute: workItem)
     }
 
-    /// Creates a descriptive log message based on network status and connection type.
-    private func createLogMessage(isConnected: Bool, connectionType: ConnectionType) -> String {
-        let status = isConnected ? "Connected" : "Disconnected"
-        let typeString = connectionTypeString(connectionType)
-        return "🌐 Network status: \(status) - Connection type: \(typeString)"
+    private func updateInternetAccessState(hasAccess: Bool) {
+        var oldAccessState = false
+        var oldNetworkState = false
+        var wasReady = false
+        var connType: ConnectionType = .unknown
+        stateQueue.sync {
+            oldAccessState = _hasInternetAccess
+            oldNetworkState = _isNetworkAvailable
+            wasReady = _isReady
+            connType = _connectionType
+        }
+
+        let accessChanged = oldAccessState != hasAccess
+        let networkChanged = oldNetworkState != hasAccess
+
+        guard accessChanged || networkChanged || !wasReady else { return }
+
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._hasInternetAccess = hasAccess
+            self?._isNetworkAvailable = hasAccess
+            self?._isReady = true
+        }
+
+        if accessChanged || !wasReady {
+            let typeString = connectionTypeString(connType)
+            if hasAccess {
+                logger.debug("🌐 ✅ Internet access verified - Connection: %{public}@", typeString)
+            } else {
+                logger.debug("🌐 ❌ No internet access - Connection: %{public}@", typeString)
+            }
+        }
+
+        let shouldNotify = accessChanged || !wasReady
+        if shouldNotify {
+            delegate?.networkMonitorDidUpdate(isReady: true, isNetworkAvailable: hasAccess)
+        }
     }
 
-    /// Converts connection type to a readable string.
+    private func markNotReadyForBackground() {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._isReady = false
+            self?._isNetworkAvailable = false
+            self?._hasInternetAccess = false
+            self?._hasInterfaceConnection = false
+            self?._connectionType = .unknown
+        }
+        delegate?.networkMonitorDidUpdate(isReady: false, isNetworkAvailable: false)
+    }
+
+    // MARK: - Helper Methods
+
+    private func determineConnectionType(_ path: NWPath) -> ConnectionType {
+        if path.usesInterfaceType(.wifi) {
+            return .wifi
+        } else if path.usesInterfaceType(.cellular) {
+            return .cellular
+        } else if path.usesInterfaceType(.wiredEthernet) {
+            return .wiredEthernet
+        } else {
+            return .unknown
+        }
+    }
+
     private func connectionTypeString(_ type: ConnectionType) -> String {
         switch type {
         case .wifi: return "WiFi"

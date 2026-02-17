@@ -217,13 +217,30 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      * - Parameter component: Optional component to close. If nil, will retrieve from state manager
      */
     func endExperience(isInternalEvent: Bool, component: UPExperience? = nil) {
+        endExperience(isInternalEvent: isInternalEvent, component: component, completion: nil)
+    }
+
+    /**
+     * Ends all active experience views with a completion callback.
+     *
+     * - Parameter isInternalEvent: true if the user manually closed the experience, false for automatic closure
+     * - Parameter component: Optional component to close. If nil, will retrieve from state manager
+     * - Parameter completion: Optional callback executed after experience is closed and state is reset
+     */
+    private func endExperience(
+        isInternalEvent: Bool, component: UPExperience? = nil, completion: (() -> Void)?
+    ) {
         performOn(.main) { [weak self] in
-            guard let self else { return }
+            guard let self else {
+                completion?()
+                return
+            }
             let experience = component ?? self.experienceStateManager.getActiveComponent()
             if let experience {
                 experience.triggerCloseExperience(isInternalEvent: isInternalEvent)
             }
             self.resetProcessingPreviewExperienceStatus()
+            completion?()
         }
     }
 
@@ -298,16 +315,13 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     // swiftlint:disable:next cyclomatic_complexity
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
         tryCatch {
-            if case .pendingPreview = experienceStateManager.getCurrentState() { return }
+            // if case .pendingPreview = experienceStateManager.getCurrentState() { return }
             if isPreviewExperienceMode() {
                 if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                     resetProcessingPreviewExperienceStatus()
+                    if socketManager.isSocketOpened { requestFakeScreenReloadEventDate = Date() }
+                    analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true)
                 }
-                if socketManager.isSocketOpened { requestFakeScreenReloadEventDate = Date() }
-                analyticsPublisher.publishFakeReloadScreenEvent(
-                    sdkEvent.getContentType(),
-                    sdkEvent.getContentId()
-                )
                 return
             }
 
@@ -336,7 +350,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             // Trigger fake reload when closing experience that wasn't manually triggered
             if sdkEvent.isEventForCloseExperience() && !experienceStateManager.hasCachedExperience() {
                 analyticsPublisher.publishFakeReloadScreenEvent(
-                    sdkEvent.getContentType(), sdkEvent.getContentId()
+                    sdkEvent.getContentType(), sdkEvent.getContentId(), isFakeReload: true
                 )
             } else {
                 // Process cached experiences
@@ -717,7 +731,6 @@ extension ExperiencesPublisher {
                     surveyContent: surveyContent,
                     surveyTheme: surveyTheme
                 )
-
                 thankYouVC.actionButtonClicked = { [weak self] deepLink in
                     self?.publishInternalSDKEvent(
                         ExperienceSurveyCompletedEvent(
@@ -726,14 +739,11 @@ extension ExperiencesPublisher {
                             hasDeepLinkContent: deepLink != nil
                         )
                     )
-
                     if let deepLink, let url = URL(string: deepLink) {
                         self?.triggerDeepLink(url: url)
                     }
-
                     self?.resetProcessingPreviewExperienceStatus()
                 }
-
                 topViewController.presentBottomSheet(viewController: thankYouVC)
             }
         }
@@ -920,14 +930,32 @@ extension ExperiencesPublisher {
      * becomes invalid from view models.
      */
     func resetState() {
+        resetState(completion: nil)
+    }
+
+    /**
+     * Resets the publisher state with a completion callback.
+     * Ensures proper ordering when state changes need to happen after reset completes.
+     *
+     * - Parameter completion: Optional callback executed after reset operations complete
+     */
+    private func resetState(completion: (() -> Void)?) {
         tryCatch {
-            endExperience(
-                isInternalEvent: true,
-                component: experienceStateManager.getActiveComponent())
+            // Cancel delays and clear pending experiences first (synchronous operations)
             delayUtils.cancelDelay()
             clearPendingExperiences()
-            resetProcessingPreviewExperienceStatus()
             npsTrackedScreen = ""
+
+            // End experience with completion to ensure proper ordering
+            // The completion will be called on main thread after endExperience finishes
+            endExperience(
+                isInternalEvent: true,
+                component: experienceStateManager.getActiveComponent(),
+                completion: { [weak self] in
+                    // After endExperience completes (which calls markIdle), execute the callback
+                    completion?()
+                }
+            )
         }
     }
 
@@ -967,24 +995,27 @@ extension ExperiencesPublisher {
 extension ExperiencesPublisher {
 
     func triggerPreviewExperience(_ experienceId: String, _ queryItems: [URLQueryItem]) {
-        resetState()
-        experienceStateManager.markPreviewMode()
-        userpilotRemoteSource.fetchPreviewExperience(
-            params: PreviewExperienceQueryParams(
-                baseUrl: Constants.RemoteSource.experienceBaseURL,
-                appToken: config.token,
-                contentType: queryItems.first(where: { $0.name == "type" })?.value ?? "",
-                contentId: experienceId),
-            completion: { [weak self] result in
-                guard let self else { return }
-                switch result {
-                case .success(let previewExperience):
-                    self.processPreviewExperience(previewExperience)
-                case .failure(let error):
-                    self.showExperienceTriggeringDebugMessage(error.localizedDescription)
+        // Reset state first, then mark preview mode after reset completes
+        resetState { [weak self] in
+            guard let self else { return }
+            self.experienceStateManager.markPreviewMode()
+            self.userpilotRemoteSource.fetchPreviewExperience(
+                params: PreviewExperienceQueryParams(
+                    baseUrl: Constants.RemoteSource.experienceBaseURL,
+                    appToken: self.config.token,
+                    contentType: queryItems.first(where: { $0.name == "type" })?.value ?? "",
+                    contentId: experienceId),
+                completion: { [weak self] result in
+                    guard let self else { return }
+                    switch result {
+                    case .success(let previewExperience):
+                        self.processPreviewExperience(previewExperience)
+                    case .failure(let error):
+                        self.showExperienceTriggeringDebugMessage(error.localizedDescription)
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     func processPreviewExperience(_ previewExperience: PreviewExperience) {

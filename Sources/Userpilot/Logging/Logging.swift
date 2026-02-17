@@ -87,15 +87,12 @@ extension OSLog: Logging {
         _ args: [CVarArg]
     ) {
         tryCatch {
-            /*
-             Swift doesn't support splatting so unfortunately `args` needs to be manually enumerated.
-             Limiting it to 6 since that seems reasonable.
-             */
             guard args.count <= 6 else {
-                error("Too many log args. 5 are supported, %{public}d passed.", args.count)
+                error("Too many log args. 6 are supported, %{public}d passed.", args.count)
                 return
             }
 
+            // Send to os_log for production
             switch args.count {
             case 1:
                 os_log(message, log: self, type: type, args[0])

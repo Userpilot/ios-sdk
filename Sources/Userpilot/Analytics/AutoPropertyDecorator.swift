@@ -57,7 +57,7 @@ internal class AutoPropertyDecorator {
         Constants.AutoProperty.osKey: "iOS",
         Constants.AutoProperty.osVersionKey: UIDevice.current.systemVersion,
         Constants.AutoProperty.appVersionKey: Bundle.main.version,
-        Constants.AutoProperty.deviceTypeKey: UIDevice.current.modelName,
+        Constants.AutoProperty.deviceTypeKey: UIDevice.current.name,
         Constants.AutoProperty.screenWidthKey: Int(UIScreen.main.bounds.size.width),
         Constants.AutoProperty.screenHeightKey: Int(UIScreen.main.bounds.size.height)
     ]

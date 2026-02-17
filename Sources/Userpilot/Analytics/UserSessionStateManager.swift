@@ -291,7 +291,7 @@ internal class UserSessionStateManager {
     func getPostIdentificationScreenConfig(
         currentStartSession: Bool
     ) -> PostIdentificationScreenConfig {
-        let isUserSwitch = isUserSwitching() || isUserSwitchingAwaitingScreen()
+        let isUserSwitch = isUserSwitching()
 
         return PostIdentificationScreenConfig(
             // For user switch, ensure startSession is true
@@ -311,8 +311,7 @@ internal class UserSessionStateManager {
     func getPostIdentificationStartSessionConfig(
         currentStartSession: Bool
     ) -> Bool {
-        let isUserSwitch = isUserSwitching() || isUserSwitchingAwaitingScreen()
-        return isUserSwitch ? true : currentStartSession
+        return isUserSwitching() ? true : currentStartSession
     }
 
     /**
@@ -321,8 +320,7 @@ internal class UserSessionStateManager {
      * @return true if this is a fake reload (post-identify), false for real screen change
      */
     func getPostIdentificationFakeReloadConfig() -> Bool {
-        let isUserSwitch = isUserSwitching() || isUserSwitchingAwaitingScreen()
-        return !isUserSwitch
+        return !isUserSwitching()
     }
 }
 

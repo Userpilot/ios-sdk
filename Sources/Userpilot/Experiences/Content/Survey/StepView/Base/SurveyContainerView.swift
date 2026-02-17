@@ -360,7 +360,6 @@ internal class SurveyContainerView: UIView {
     private func bindSurveyViews() {
         // stepSectionsStackView.clearViews()
         let contentStep = getCurrentStepSurveyContent()
-        setupActionButton()
 
         var newView: UIView?
         switch contentStep.type {
@@ -423,10 +422,15 @@ internal class SurveyContainerView: UIView {
         animationSubViews: Bool
     ) {
         newView.alpha = 0
+        // Always hide the action button first, so the title updates while hidden
+        actionButton.alpha = 0
         if !animationSubViews {
-            actionButton.alpha = 0
             barStepsProgressView.alpha = 0
         }
+
+        // Update the action button title while it's hidden
+        setupActionButton()
+
         // Remove old views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         stepSectionsStackView.addArrangedSubview(newView)
@@ -477,10 +481,11 @@ internal class SurveyContainerView: UIView {
                 newView.alpha = 1
             }
         }
-        if !animationSubViews {
-            delay(0.2) { [weak self] in
-                UIView.animate(withDuration: 0.5) { [weak self] in
-                    self?.actionButton.alpha = 1
+        // Fade in action button (and progress bar if needed) with the new title
+        delay(0.2) { [weak self] in
+            UIView.animate(withDuration: 0.5) { [weak self] in
+                self?.actionButton.alpha = 1
+                if !animationSubViews {
                     self?.barStepsProgressView.alpha = 1
                 }
             }

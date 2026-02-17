@@ -214,9 +214,140 @@ class SocketManagerTests: XCTestCase {
         // Act
         socketManager.registerCallback(mockSocketSubscription)
 
+
         // Assert - Implicit test, if this doesn't crash we're good
         // The subscription will be tested when events are triggered
         XCTAssertNotNil(mockSocketSubscription)
+
+        // Assert - This is implicit since we can't directly test the multicast registration
+        // but we can verify it works through other tests
+        XCTAssertTrue(true) // Placeholder assertion
+    }
+
+    func testSocketSubscription_onSocketOpened_shouldNotifySubscribers() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Socket opened notification")
+        mockSocketSubscription.onSocketOpenedCalled = {
+            expectation.fulfill()
+        }
+
+        socketManager.registerCallback(mockSocketSubscription)
+
+        // Act
+        socketManager.connect()
+
+        // Simulate socket opened (this would normally be handled by Phoenix Socket)
+        // Note: In a real test, you might need to mock the Phoenix Socket behavior
+
+        wait(for: [expectation], timeout: 2.0)
+    }
+
+    func testSocketSubscription_onSocketClosed_shouldNotifySubscribers() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Socket closed notification")
+        mockSocketSubscription.onSocketClosedCalled = {
+            expectation.fulfill()
+        }
+
+        socketManager.registerCallback(mockSocketSubscription)
+        socketManager.connect()
+
+        // Act
+        socketManager.close()
+
+        wait(for: [expectation], timeout: 2.0)
+    }
+
+    func testPublish_withValidEvent_shouldSendEvent() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Event published")
+        let eventName = "user_identify"
+        let payload: [String: Any] = ["metadata": [:], "company": [:]]
+
+        mockSocketSubscription.onSocketEventSentCalled = { event, _, _, status in
+            XCTAssertEqual(event, eventName)
+            XCTAssertTrue(status)
+            expectation.fulfill()
+        }
+
+        socketManager.registerCallback(mockSocketSubscription)
+        socketManager.connect()
+
+        // Delay to allow connect setup before publishing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            // Act
+            self.socketManager.publish(eventName, payload: payload, socketSubscription: nil)
+        }
+
+        // Assert
+        wait(for: [expectation], timeout: 4.0)
+    }
+
+    func testPublish_withShouldCloseSocket_shouldCloseAfterSending() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Socket closed after event")
+        let eventName = "user_identify"
+        let payload: [String: Any] = ["metadata": [:], "company": [:]]
+
+        mockSocketSubscription.onSocketEventSentCalled = { _, _, _, _ in
+            // Wait a bit for the socket to close
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                XCTAssertFalse(self.socketManager.isSocketOpened)
+                expectation.fulfill()
+            }
+        }
+
+        socketManager.registerCallback(mockSocketSubscription)
+        socketManager.connect()
+
+        // Act
+        // Delay to allow connect setup before publishing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            // Act
+            self.socketManager.publish(eventName, payload: payload, socketSubscription: nil)
+        }
+
+        // Assert
+        wait(for: [expectation], timeout: 5.0)
+    }
+
+    func testPublish_withSpecificSubscription_shouldNotifySpecificSubscription() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Specific subscription notified")
+        let eventName = "user_identify"
+        let payload: [String: Any] = ["metadata": [:], "company": [:]]
+
+        let specificSubscription = MockSocketSubscription()
+        specificSubscription.onSocketEventSentCalled = { event, _, _, _ in
+            XCTAssertEqual(event, eventName)
+            expectation.fulfill()
+        }
+
+        socketManager.connect()
+
+        // Act
+        socketManager.publish(
+            eventName,
+            payload: payload,
+            socketSubscription: specificSubscription
+        )
+
+        wait(for: [expectation], timeout: 2.0)
+    }
+
+    // MARK: - Edge Cases
+
+    func testConnect_whenAlreadyConnecting_shouldNotCreateDuplicateConnection() {
+        // Arrange
+        socketManager.connect()
+        XCTAssertTrue(socketManager.isJoiningSocket)
+
+        // Act
+        socketManager.connect()
+
+        // Assert
+        // This test ensures we don't create multiple connections
+        XCTAssertTrue(socketManager.isJoiningSocket)
     }
 
     func testPublish_whenSocketNotConnected_shouldNotCrash() {

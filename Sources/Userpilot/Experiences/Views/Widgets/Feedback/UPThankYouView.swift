@@ -86,6 +86,5 @@ internal class UPThankYouView: UIView {
             npsTheme: npsTheme,
             isRTL: isRTL
         )
-        // titleDescriptionView.setMargins(bottom = 0.px(context)) // Uncomment if needed
     }
 }

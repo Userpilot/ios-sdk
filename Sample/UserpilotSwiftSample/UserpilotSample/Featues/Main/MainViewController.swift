@@ -29,6 +29,7 @@ class MainViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         UserpilotManager.shared.settings()
+        print("\(UIDevice.current.model) AAAAA")
     }
 
     override func viewWillAppear(_ animated: Bool) {

@@ -457,7 +457,7 @@ class ExperiencesPublisherTests: XCTestCase {
         experiencesPublisher.topViewControllerProvider = { return mockVC }
 
         // Act
-        experiencesPublisher.showThankYouMessage(mockSurveyContent, mockSurveyTheme)
+        experiencesPublisher.showThankYouMessage(mockSurveyContent, mockSurveyTheme, 0)
 
         // Assert
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
