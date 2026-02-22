@@ -22,7 +22,7 @@ class MainViewController: BaseViewController {
     // MARK: - Properties
 
     internal lazy var content: [Content] = [
-        .identify, .screens, .events, .eventsLog, .configurations
+        .identify, .screens, .events, .eventsLog, .autoCapture, .configurations
     ]
 
     // MARK: - Override

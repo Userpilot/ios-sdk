@@ -38,8 +38,8 @@ internal class SwiftUIAutoCaptureEngine {
         self.config = container.resolve(Userpilot.Config.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
 
-        let screenTrackingEnabled = config.swiftUIAutoCaptureScreensEnabled
-        let clickTrackingEnabled = config.swiftUIAutoCaptureClicksEnabled
+        let screenTrackingEnabled = config.enableScreenAutocapture
+        let clickTrackingEnabled = config.enableInteractionAutocapture
 
         if screenTrackingEnabled || clickTrackingEnabled {
             setupAutoCaptureScreens()
@@ -57,35 +57,35 @@ internal class SwiftUIAutoCaptureEngine {
 
     /// Sets up automatic screen tracking by swizzling and adding notification observers
     private func setupAutoCaptureScreens() {
-        UIViewController.updateAutoCaptureScreens(swiftUIEnabled: true)
-        AutoCaptureSwizzler.swizzleSwiftUIScreenTracking()
-        AutoCaptureSwizzler.swizzleTabBarTracking()
-
-        // Listen for screen tracking notifications
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(screenTracked),
-            name: .userpilotTrackedScreen,
-            object: nil
-        )
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(screenTabTracked),
-            name: .userpilotTrackedTab,
-            object: nil
-        )
+//        UIViewController.updateAutoCaptureScreens(swiftUIEnabled: true)
+//        AutoCaptureSwizzler.swizzleSwiftUIScreenTracking()
+//        AutoCaptureSwizzler.swizzleTabBarTracking()
+//
+//        // Listen for screen tracking notifications
+//        NotificationCenter.userpilot.addObserver(
+//            self,
+//            selector: #selector(screenTracked),
+//            name: .userpilotTrackedScreen,
+//            object: nil
+//        )
+//        NotificationCenter.userpilot.addObserver(
+//            self,
+//            selector: #selector(screenTabTracked),
+//            name: .userpilotTrackedTab,
+//            object: nil
+//        )
     }
 
     /// Sets up automatic click tracking by swizzling and adding notification observers
     private func setupAutoCaptureClicks() {
-        UIWindow.updateAutoCaptureClicks(swiftUIEnabled: true)
-        AutoCaptureSwizzler.swizzleClickTracking()
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(clickTracked),
-            name: .userpilotTrackedClick,
-            object: nil
-        )
+//        UIWindow.updateAutoCaptureClicks(swiftUIEnabled: true)
+//        AutoCaptureSwizzler.swizzleClickTracking()
+//        NotificationCenter.userpilot.addObserver(
+//            self,
+//            selector: #selector(clickTracked),
+//            name: .userpilotTrackedClick,
+//            object: nil
+//        )
     }
 
     /// Handles screen tracking notifications and publishes analytics events
@@ -97,7 +97,7 @@ internal class SwiftUIAutoCaptureEngine {
 
         screenNameTracker.updateScreen(screenName)
         lastTrackedScreen = screenName
-        if config.swiftUIAutoCaptureScreensEnabled {
+        if config.enableScreenAutocapture {
             analyticsPublisher.publish(Event(type: .screen(screenName)), isInternalEvent: false)
         }
     }
@@ -137,11 +137,6 @@ internal class SwiftUIAutoCaptureEngine {
             enrichedProperties["tab_name"] = tabInfo.name
             enrichedProperties["tab_index"] = tabInfo.index
         }
-
-        enrichedProperties["event_uid"] = SwiftUIViewResolver.generateEventUID(
-            screenName: currentScreen,
-            properties: enrichedProperties
-        )
 
         analyticsPublisher.publish(
             Event(type: .event("AutoCapture-Click"), properties: enrichedProperties),

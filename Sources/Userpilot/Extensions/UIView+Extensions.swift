@@ -133,7 +133,71 @@ internal extension UIView {
         }
 
         // 6. ❌ Everything else is NOT tracked
-        //    This filters out: labels, images, scroll views, background views, etc.
+        // This filters out: labels, images, scroll views, background views, etc.
         return false
+    }
+}
+
+// MARK: - capture IBOutlet for UIview
+
+internal extension UIView {
+    /// Finds the closest UIViewController in the responder chain
+    func findViewController() -> UIViewController? {
+        var responder: UIResponder? = self
+        while let nextResponder = responder?.next {
+            if let viewController = nextResponder as? UIViewController {
+                return viewController
+            }
+            responder = nextResponder
+        }
+        return nil
+    }
+
+    /// Resolves the IBOutlet property name by inspecting the owning view controller's ivars
+    /// For example, if a VC has `@IBOutlet weak var searchTextField: UITextField!`,
+    /// this returns "searchTextField" when called on that text field instance.
+    func resolveReferenceName() -> String? {
+        guard let viewController = findViewController() else { return nil }
+
+        var vcClass: AnyClass? = type(of: viewController)
+
+        // Walk up the class hierarchy to find the ivar
+        while let currentClass = vcClass {
+            var count: UInt32 = 0
+            guard let ivars = class_copyIvarList(currentClass, &count) else {
+                vcClass = class_getSuperclass(currentClass)
+                continue
+            }
+
+            defer { free(ivars) }
+
+            for index in 0..<Int(count) {
+                let ivar = ivars[index]
+                guard let namePtr = ivar_getName(ivar) else { continue }
+
+                // Only read object-type ivars (type encoding starts with "@")
+                // Reading primitive/struct ivars with object_getIvar causes EXC_BAD_ACCESS
+                guard let typeEncoding = ivar_getTypeEncoding(ivar) else { continue }
+                let encoding = String(cString: typeEncoding)
+                guard encoding.hasPrefix("@") else { continue }
+
+                let name = String(cString: namePtr)
+
+                // Safe to read now — this ivar holds an object reference
+                let value = object_getIvar(viewController, ivar)
+                if let view = value as? UIView, view === self {
+                    return name
+                }
+            }
+
+            vcClass = class_getSuperclass(currentClass)
+
+            // Stop at UIViewController level
+            if vcClass == UIViewController.self {
+                break
+            }
+        }
+
+        return nil
     }
 }

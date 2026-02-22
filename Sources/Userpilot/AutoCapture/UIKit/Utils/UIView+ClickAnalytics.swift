@@ -12,8 +12,8 @@
 
 import UIKit
 
-/// Extension providing click analytics recognition functionality for UIKit views
-extension UIView {
+/// Extension providing click analytics recognition functionality for UIKit views (public API for client)
+public extension UIView {
 
     /// Manually enables analytics collection and tooltip guides display on this UIView.
     ///
@@ -101,7 +101,7 @@ extension UIView {
 private var explicitlyRecognizedKey: UInt8 = 0
 
 /// Extension providing explicit recognition flag for UIView
-extension UIView {
+internal extension UIView {
     // Internal flag to mark views that were explicitly recognized via the API
     // swiftlint:disable:next identifier_name
     var userpilot_isExplicitlyRecognized: Bool {

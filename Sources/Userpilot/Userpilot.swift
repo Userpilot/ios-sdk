@@ -19,6 +19,29 @@ import UIKit
 @objc(Userpilot)
 public class Userpilot: NSObject {
 
+    // MARK: - Shared Instance
+
+    /// Backing storage for the shared instance.
+    private static var _shared: Userpilot?
+
+    /// Returns the shared `Userpilot` instance that was created during initialization.
+    ///
+    /// - Important: You must initialize `Userpilot(config:)` before accessing this property.
+    ///   Accessing `shared` before initialization will trigger a fatal error.
+    @objc
+    public static var shared: Userpilot {
+        guard let instance = _shared else {
+            fatalError("Userpilot SDK has not been initialized. Call Userpilot(config:) first.")
+        }
+        return instance
+    }
+
+    /// Returns `true` if the SDK has been initialized and the shared instance is available.
+    @objc
+    public static var isInitialized: Bool {
+        return _shared != nil
+    }
+
     // MARK: - Properties
 
     /// A dependency injection container that stores and provides necessary services like analytics,
@@ -80,6 +103,9 @@ public class Userpilot: NSObject {
         self.config = config
         super.init()
 
+        // Store as the shared instance for global access (e.g., from swizzled methods)
+        Userpilot._shared = self
+
         // Set up the dependency container and register required services
         initializeContainer()
 
@@ -87,7 +113,7 @@ public class Userpilot: NSObject {
         PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
 
         // Start Auto capture
-        // checkAutoCapture()
+        checkAutoCapture()
 
         // Register SDK Notifications
         registerSDKNotifications()
@@ -413,19 +439,26 @@ extension Userpilot {
 // MARK: - Auto capture
 
 extension Userpilot {
-    /// Check auto capture configuration.
+
+    /// Internal access to the UIKit auto capture engine
+    internal var uiKitAutoCaptureEngine: UIKitAutoCaptureEngine {
+        return container.resolve(UIKitAutoCaptureEngine.self)
+    }
+
+    /// Internal access to the SwiftUI auto capture engine
+    internal var swiftUIAutoCaptureEngine: SwiftUIAutoCaptureEngine {
+        return container.resolve(SwiftUIAutoCaptureEngine.self)
+    }
+
+    /// Check auto capture configuration and initialize engines if enabled.
     public func checkAutoCapture() {
         let config = container.resolve(Userpilot.Config.self)
-        let uiKitScreensEnabled = config.uiKitAutoCaptureScreensEnabled
-        let uiKitClicksEnabled = config.uiKitAutoCaptureClicksEnabled
-        let swiftUIScreenEnabled = config.swiftUIAutoCaptureScreensEnabled
-        let swiftUIClicksEnabled = config.swiftUIAutoCaptureClicksEnabled
+        let screenAutocaptureEnabled = config.enableScreenAutocapture
+        let interactionEnabled = config.enableInteractionAutocapture
 
-        if uiKitScreensEnabled || uiKitClicksEnabled {
-            _ = container.resolve(UIKitAutoCaptureEngine.self)
-        }
-        if swiftUIScreenEnabled || swiftUIClicksEnabled {
-            _ = container.resolve(SwiftUIAutoCaptureEngine.self)
+        if screenAutocaptureEnabled || interactionEnabled {
+            _ = uiKitAutoCaptureEngine
+            _ = swiftUIAutoCaptureEngine
         }
     }
 }

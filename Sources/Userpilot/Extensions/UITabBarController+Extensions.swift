@@ -12,17 +12,6 @@
 
 import UIKit
 
-/// Payload containing tab tracking information
-internal struct TabTrackingPayload {
-    // MARK: - Properties
-
-    /// The tab name or title
-    let name: String
-
-    /// The tab index
-    let index: Int
-}
-
 /// Extension providing automatic tab selection tracking for UITabBarController
 extension UITabBarController {
     // MARK: - Swizzled Methods
@@ -41,17 +30,16 @@ extension UITabBarController {
         trackTabSwitch(in: self)
     }
 
-    /// Tracks tab switch events and posts notifications
+    /// Tracks tab switch events by calling the engine directly
     /// - Parameter tabBarController: The tab bar controller that changed tabs
     func trackTabSwitch(in tabBarController: UITabBarController) {
+        guard Userpilot.isInitialized else { return }
         guard let selectedVC = tabBarController.selectedViewController else { return }
+
         let tabIndex = tabBarController.selectedIndex
         let tabTitle = selectedVC.tabBarItem?.title ?? "Tab \(tabIndex + 1)"
 
-        NotificationCenter.userpilot.post(
-            name: .userpilotTrackedTab,
-            object: tabBarController,
-            value: TabTrackingPayload(name: tabTitle, index: tabIndex)
-        )
+        // Call the engine directly via Userpilot.shared
+        Userpilot.shared.uiKitAutoCaptureEngine.handleTabSelected(name: tabTitle, index: tabIndex)
     }
 }

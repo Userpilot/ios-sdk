@@ -14,37 +14,8 @@ import UIKit
 
 /// Extension providing automatic click tracking for UIWindow
 extension UIWindow {
-    // MARK: - Private Types
-
-    /// Settings for automatic click capture modes
-    private struct AutoCaptureClickSettings {
-        /// Whether UIKit click tracking is enabled
-        var uiKitEnabled: Bool = false
-
-        /// Whether SwiftUI click tracking is enabled
-        var swiftUIEnabled: Bool = false
-    }
-
-    /// Shared settings for auto capture click tracking
-    private static var userpilotClickSettings = AutoCaptureClickSettings()
 
     // MARK: - Static Methods
-
-    /// Updates auto capture click settings
-    /// - Parameters:
-    ///   - uiKitEnabled: Whether UIKit click tracking is enabled
-    ///   - swiftUIEnabled: Whether SwiftUI click tracking is enabled
-    static func updateAutoCaptureClicks(
-        uiKitEnabled: Bool? = nil,
-        swiftUIEnabled: Bool? = nil
-    ) {
-        if let uiKitEnabled = uiKitEnabled {
-            userpilotClickSettings.uiKitEnabled = uiKitEnabled
-        }
-        if let swiftUIEnabled = swiftUIEnabled {
-            userpilotClickSettings.swiftUIEnabled = swiftUIEnabled
-        }
-    }
 
     /// Swizzles sendEvent method to intercept touch events
     static func swizzleSendEvent() {
@@ -62,73 +33,154 @@ extension UIWindow {
     @objc func swizzled_sendEvent(_ event: UIEvent) {
         self.swizzled_sendEvent(event)  // calls original sendEvent
 
-        guard let touches = event.allTouches else { return }
-        for touch in touches {
-            if UIWindow.userpilotClickSettings.swiftUIEnabled,
-               touch.phase == .ended,
-               let view = touch.view { // SwiftUIViewTextResolver.isSwiftUIView(view) {
-                let point = touch.location(in: self)
-                handleSwiftUIClick(at: point, event: event, view: view)
-                continue
-            }
+        // Check if SDK is initialized
+        guard Userpilot.isInitialized else { return }
 
-            if UIWindow.userpilotClickSettings.uiKitEnabled,
-               touch.phase == .began,
-               let view = touch.view {
-                handleUIKitClick(on: view)
-            }
+        guard let touches = event.allTouches else { return }
+        for touch in touches where touch.phase == .began {
+            guard let touchedView = touch.view else { continue }
+
+            // Resolve the deepest subview at the touch point.
+            // UILabel / UIImageView have isUserInteractionEnabled = false,
+            // so touch.view returns their parent. We walk into the hierarchy
+            // ourselves to find the real visual element the user tapped on.
+            let locationInWindow = touch.location(in: self)
+            let resolvedView = deepestSubview(at: locationInWindow, in: touchedView) ?? touchedView
+
+            handleTouchOnView(resolvedView)
         }
     }
 
     // MARK: - Private Methods
 
-    /// Handles UIKit click tracking for the given view
-    /// - Parameter view: The UIView that was clicked
-    private func handleUIKitClick(on view: UIView) {
-        // 🔍 FILTER: Only track clicks on interactive/trackable views
-//        guard shouldTrackClick(on: view) else {
-//            return
-//        }
+    /// Finds the deepest (front-most) subview whose frame contains `point`,
+    /// ignoring `isUserInteractionEnabled` so we can discover UILabel / UIImageView.
+    private func deepestSubview(at point: CGPoint, in root: UIView) -> UIView? {
+        // Convert the point into the root view's coordinate space
+        let localPoint = root.convert(point, from: self)
 
-        let trackingData = UIKitViewResolver.resolveElementData(view: view)
-        var eventProperties = trackingData.toDictionary()
-        eventProperties["type"] = "click"
-        eventProperties["element_tag"] = UIKitViewResolver.elementTag(view: view)
-        eventProperties["path"] = UIKitViewResolver.resolvePath(view: view)
-        eventProperties["text"] = UIKitViewResolver.resolve(view: view) as Any
-        eventProperties["auto_capture_source"] = "uikit"
-        eventProperties.removeValue(forKey: "screen_name")
-        eventProperties.removeValue(forKey: "event_uid")
+        // Walk subviews in reverse (front-most first)
+        for subview in root.subviews.reversed() {
+            // Skip hidden / transparent views
+            guard !subview.isHidden, subview.alpha > 0.01 else { continue }
 
-        NotificationCenter.userpilot.post(
-            name: .userpilotTrackedClick,
-            object: self,
-            userInfo: eventProperties
-        )
+            let subviewPoint = subview.convert(point, from: self)
+            guard subview.bounds.contains(subviewPoint) else { continue }
+
+            // Recurse into this subview
+            if let deeper = deepestSubview(at: point, in: subview) {
+                return deeper
+            }
+
+            // This subview itself is the deepest at this point
+            return subview
+        }
+
+        // No subviews matched — the root itself is the deepest
+        guard root.bounds.contains(localPoint) else { return nil }
+        return root
     }
 
-    /// Handles SwiftUI click tracking at the given point
-    /// - Parameters:
-    ///   - point: The touch point in window coordinates
-    ///   - event: The UI event
-    ///   - view: The UIView that was touched
-    private func handleSwiftUIClick(at point: CGPoint, event: UIEvent, view: UIView) {
-        var eventProperties = SwiftUIViewResolver.resolveClickProperties(
-            window: self,
-            point: point,
-            event: event,
-            fallbackView: view
-        ) ?? [:]
+    /// Routes touch handling based on the view type
+    /// - Parameter view: The UIView that was touched (already resolved to deepest subview)
+    private func handleTouchOnView(_ view: UIView) {
+        let config = Userpilot.shared.config
+        guard config.enableInteractionAutocapture else { return }
 
-        eventProperties["type"] = "click"
-        eventProperties["auto_capture_source"] = "swiftui"
-        eventProperties.removeValue(forKey: "screen_name")
-        eventProperties.removeValue(forKey: "event_uid")
+        // 1. Skip UIControl subclasses (handled by UIControl.sendAction swizzling)
+        //    EXCEPT: don't skip UITextField — text input is handled by notifications
+        if view is UIControl && !(view is UITextField) {
+            return
+        }
 
-        NotificationCenter.userpilot.post(
-            name: .userpilotTrackedClick,
-            object: self,
-            userInfo: eventProperties
-        )
+        // Skip views inside a UIControl (like UIButton's internal UILabel/UIImageView)
+        // But allow views inside UITextField to pass through
+        if let parentControl = findParentControl(for: view),
+           !(parentControl is UITextField) {
+            return
+        }
+
+        // 2. Check for UITableViewCell
+        if let tableCell = findParentTableViewCell(for: view) {
+            tableCell.captureTableViewCellSelection(touchedView: view)
+            return
+        }
+
+        // 3. Check for UICollectionViewCell
+        if let collectionCell = findParentCollectionViewCell(for: view) {
+            collectionCell.captureCollectionViewItemSelection(touchedView: view)
+            return
+        }
+
+        // 4. Handle regular view tap (UILabel, UIImageView, UITextView, plain UIView, etc.)
+        handleRegularViewTap(on: view, config: config)
+    }
+
+    /// Handles tap on regular views (not controls, table cells, or collection cells)
+    private func handleRegularViewTap(on view: UIView, config: Userpilot.Config) {
+        guard !view.shouldIgnoreInteractions() else { return }
+
+        var eventProperties: [String: Any] = [
+            "interaction_type": InteractionType.tap.rawValue,
+            "auto_capture_source": FrameworkType.uiKit.rawValue,
+            "element_type": String(describing: type(of: view)),
+            "element_path": UIKitViewResolver.resolvePath(view: view)
+        ]
+
+        if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
+            eventProperties["accessibility_identifier"] = accessibilityIdentifier
+        }
+
+        if !config.disableInteractionAccessibilityLabelCapture {
+            if let accessibilityLabel = view.getAccessibilityLabelContent() {
+                eventProperties["accessibility_label"] = accessibilityLabel
+            }
+        }
+
+        if !config.disableInteractionTextCapture {
+            if let text = view.getTextContent() {
+                eventProperties["element_text"] = text
+            }
+        }
+
+        Userpilot.shared.uiKitAutoCaptureEngine.handleClickTracked(eventProperties)
+    }
+
+    // MARK: - View Hierarchy Helpers
+
+    /// Finds a parent UIControl in the view hierarchy
+    private func findParentControl(for view: UIView) -> UIControl? {
+        var currentView: UIView? = view.superview
+        while let parent = currentView {
+            if let control = parent as? UIControl {
+                return control
+            }
+            currentView = parent.superview
+        }
+        return nil
+    }
+
+    /// Finds a parent UITableViewCell in the view hierarchy
+    private func findParentTableViewCell(for view: UIView) -> UITableViewCell? {
+        var currentView: UIView? = view
+        while let current = currentView {
+            if let cell = current as? UITableViewCell {
+                return cell
+            }
+            currentView = current.superview
+        }
+        return nil
+    }
+
+    /// Finds a parent UICollectionViewCell in the view hierarchy
+    private func findParentCollectionViewCell(for view: UIView) -> UICollectionViewCell? {
+        var currentView: UIView? = view
+        while let current = currentView {
+            if let cell = current as? UICollectionViewCell {
+                return cell
+            }
+            currentView = current.superview
+        }
+        return nil
     }
 }

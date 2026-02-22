@@ -14,37 +14,6 @@ import UIKit
 
 /// Extension providing automatic screen tracking for UIViewController
 internal extension UIViewController {
-    // MARK: - Private Types
-
-    /// Settings for automatic screen capture modes
-    private struct AutoCaptureScreenSettings {
-        /// Whether UIKit screen tracking is enabled
-        var uiKitEnabled: Bool = false
-
-        /// Whether SwiftUI screen tracking is enabled
-        var swiftUIEnabled: Bool = false
-    }
-
-    /// Shared settings for auto capture screen tracking
-    private static var userpilotScreenSettings = AutoCaptureScreenSettings()
-
-    // MARK: - Static Methods
-
-    /// Updates auto capture screen settings
-    /// - Parameters:
-    ///   - uiKitEnabled: Whether UIKit screen tracking is enabled
-    ///   - swiftUIEnabled: Whether SwiftUI screen tracking is enabled
-    static func updateAutoCaptureScreens(
-        uiKitEnabled: Bool? = nil,
-        swiftUIEnabled: Bool? = nil
-    ) {
-        if let uiKitEnabled = uiKitEnabled {
-            userpilotScreenSettings.uiKitEnabled = uiKitEnabled
-        }
-        if let swiftUIEnabled = swiftUIEnabled {
-            userpilotScreenSettings.swiftUIEnabled = swiftUIEnabled
-        }
-    }
 
     // MARK: - Swizzled Methods
 
@@ -52,48 +21,98 @@ internal extension UIViewController {
     /// - Parameter animated: Whether the appearance is animated
     @objc
     func userpilot__viewWillAppear(animated: Bool) {
-        captureAutoScreenIfNeeded()
-        // this is calling the original implementation of viewDidAppear since it has been swizzled
+        captureScreenIfNeeded()
+        captureAlertPresentedIfNeeded()
+        // This calls the original implementation of viewWillAppear since it has been swizzled
         userpilot__viewWillAppear(animated: animated)
     }
 
     // MARK: - Private Methods
 
-    /// Captures auto screen if tracking is enabled
-    private func captureAutoScreenIfNeeded() {
-        if UIViewController.userpilotScreenSettings.swiftUIEnabled {
-            captureAutoScreen(usingSwiftUIResolver: true)
-        } else if UIViewController.userpilotScreenSettings.uiKitEnabled {
-            captureAutoScreen(usingSwiftUIResolver: false)
-        }
-    }
+    // MARK: - Ignored System View Controllers
 
-    /// Captures auto screen event with appropriate resolver
-    /// - Parameter usingSwiftUIResolver: Whether to use SwiftUI resolver
-    private func captureAutoScreen(usingSwiftUIResolver: Bool) {
-        let untracked: Bool
-        if usingSwiftUIResolver {
-            untracked = objc_getAssociatedObject(
-                self,
-                &ScreenNameTracker.untrackedScreenKey
-            ) as? Bool ?? false
-        } else {
-            untracked = objc_getAssociatedObject(
-                self,
-                &ScreenNameTracker.untrackedScreenKey
-            ) as? Bool ?? false
+    /// System UIKit view controllers that should never be tracked.
+    /// These are internal classes used by the keyboard, input accessories, etc.
+    private static let ignoredScreenClassPrefixes: [String] = [
+        "_UI",                      // _UICursorAccessoryViewController, etc.
+        "UIInput",                  // UIInputWindowController
+        "UISystemKeyboard",         // UISystemKeyboardDockController
+        "UICompatibilityInput",     // UICompatibilityInputViewController
+        "UIEditingOverlay",         // UIEditingOverlayViewController
+        "UIKBVisual",               // UIKBVisualEffectView controllers
+        "UIPrediction",             // UIPredictionViewController
+        "UISystem",                 // UISystemInputAssistantViewController
+        "UIRemoteKeyboard",         // UIRemoteKeyboardWindow controllers
+        "UIKeyboard"                // UIKeyboardImpl controllers
+    ]
+
+    /// Captures screen event if all conditions are met
+    private func captureScreenIfNeeded() {
+        // 1. Check if SDK is initialized and screen autocapture is enabled
+        guard Userpilot.isInitialized,
+              Userpilot.shared.config.enableScreenAutocapture else { return }
+
+        // 2. Skip internal UIKit system view controllers (keyboard, input, etc.)
+        let className = screenClassName
+        for prefix in Self.ignoredScreenClassPrefixes where className.hasPrefix(prefix) {
+            return
         }
+
+        // 3. Check if this VC is marked as untracked via associated object
+        let untracked = objc_getAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey
+        ) as? Bool ?? false
         guard !untracked else { return }
 
-        let screenName = usingSwiftUIResolver
-            ? swiftUIScreenNameResolver()
-            : uiKitScreenNameResolver()
+        // 4. Check if this VC has opted out via userpilotIgnoreScreen
+        guard !userpilotIgnoreScreen else { return }
 
-        NotificationCenter.userpilot.post(
-            name: .userpilotTrackedScreen,
-            object: self,
-            userInfo: Notification.toInfo(screenName)
-        )
+        // 5. Skip container classes - they don't capture, their children do
+        guard !type(of: self).isUserpilotContainerClass else { return }
+
+        // Build and send the screen tracking payload
+        let payload = buildScreenTrackingPayload()
+        Userpilot.shared.uiKitAutoCaptureEngine.handleScreenTracked(payload)
     }
 
+    /// Fires a "view_presented" interaction event when a UIAlertController appears
+    private func captureAlertPresentedIfNeeded() {
+        guard Userpilot.isInitialized else { return }
+        guard Userpilot.shared.config.enableInteractionAutocapture else { return }
+
+        guard let alert = self as? UIAlertController else { return }
+
+        var payload = InteractionPayload(
+            interactionType: .viewPresented,
+            elementType: "UIAlertController"
+        )
+
+        payload.elementText = alert.title
+        payload.stringValue = alert.message
+
+        Userpilot.shared.uiKitAutoCaptureEngine.handleInteraction(payload)
+    }
+
+    /// Builds a screen tracking payload for this view controller
+    /// - Returns: The screen tracking payload
+    private func buildScreenTrackingPayload() -> ScreenTrackingPayload {
+        let config = Userpilot.shared.config
+
+        return ScreenTrackingPayload(
+            autoCaptureSource: FrameworkType.uiKit.rawValue,
+            currentScreen: uiKitScreenNameResolver(),
+            screenClass: screenClassName,
+            screenType: screenType,
+            previousScreen: "",  // Will be filled by UIKitAutoCaptureEngine
+            previousScreenClass: "",  // Will be filled by UIKitAutoCaptureEngine
+            screenPath: buildScreenPath(),
+            navigationTitle: config.disableScreenTitleCapture ? nil : resolveNavigationTitle(),
+            isRootScreen: isRootViewController,
+            timestamp: Date().timeIntervalSince1970,
+            isUserpilotContainerClass: type(of: self).isUserpilotContainerClass,
+            tabName: tabBarController?.selectedViewController?.tabBarItem?.title,
+            tabIndex: tabBarController?.selectedIndex
+        )
+    }
 }

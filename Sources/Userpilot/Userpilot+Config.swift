@@ -32,17 +32,31 @@ public extension Userpilot {
         /// Open external link In-app browser using SFSafariViewController
         var useInAppBrowser: Bool = false
 
-        /// Enable/Disable UIKit automatic screen tracking
-        var uiKitAutoCaptureScreensEnabled: Bool = false
+        // MARK: - Autocapture Configuration Options
 
-        /// Enable/Disable UIKit automatic click tracking
-        var uiKitAutoCaptureClicksEnabled: Bool = false
+        /// Whether or not to enable screen autocapture. Defaults to false.
+        /// If set to true, the SDK will automatically capture screen events.
+        var enableScreenAutocapture: Bool = false
 
-        /// Enable/Disable SwiftUI automatic screen tracking
-        var swiftUIAutoCaptureScreensEnabled: Bool = false
+        /// Whether or not to disable screen title capture. Defaults to false.
+        /// If set, the core SDK will prevent screen titles from being stored or uploaded
+        /// and autocapture libraries will be instructed not to capture them.
+        var disableScreenTitleCapture: Bool = false
 
-        /// Enable/Disable SwiftUI automatic click tracking
-        var swiftUIAutoCaptureClicksEnabled: Bool = false
+        /// Whether or not to enable interaction autocapture. Defaults to false.
+        /// If set to true, the SDK will automatically capture user interactions.
+        var enableInteractionAutocapture: Bool = false
+
+        /// Whether or not to disable user interface text capture. Defaults to false.
+        /// If set, the core SDK will prevent user interface text from being stored or uploaded
+        /// and autocapture libraries will be instructed not to capture them.
+        var disableInteractionTextCapture: Bool = false
+
+        // Whether or not to disable user interface accessibility label capture. Defaults to false.
+        // If set, the core SDK will prevent user interface accessibility labels from being
+        // stored or uploaded and autocapture libraries will be instructed not to capture them.
+        // swiftlint:disable:next identifier_name
+        var disableInteractionAccessibilityLabelCapture: Bool = false
 
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
@@ -66,11 +80,12 @@ public extension Userpilot {
         ///
         /// By default, the SDK may prompt the user to grant push notifications permission.
         /// Calling this method prevents the SDK from showing that prompt automatically.
+        /// - Parameter disabled: A boolean indicating whether request permission is disabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func disableRequestPushNotificationsPermission() -> Self {
-            self.disableRequestPushPermission = true
+        public func disableRequestPushNotificationsPermission(_ disabled: Bool = true) -> Self {
+            self.disableRequestPushPermission = disabled
             return self
         }
 
@@ -80,64 +95,65 @@ public extension Userpilot {
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func enableUseInAppBrowser(enabled isEnabled: Bool) -> Self {
-            useInAppBrowser = isEnabled
+        public func enableUseInAppBrowser(_ enabled: Bool = true) -> Self {
+            useInAppBrowser = enabled
             return self
         }
 
-        /// Sets the autoCaptureEnabled for the configuration.
-        ///
-        /// - Parameter enabled: A boolean to enable auto capture screens and clicks.
+        // MARK: - Autocapture Configuration Options
+
+        /// Enables or disables automatic screen capture.
+        /// If enabled, the SDK will automatically capture screen view events.
+        /// - Parameter enabled: A boolean indicating whether screen autocapture is enabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func enableAutoCaptureForUIKit(enabled isEnabled: Bool) -> Self {
-            uiKitAutoCaptureScreensEnabled = isEnabled
-            uiKitAutoCaptureClicksEnabled = isEnabled
+        public func enableScreenAutocapture(_ enabled: Bool = true) -> Self {
+            enableScreenAutocapture = enabled
             return self
         }
 
-        /// Sets the autoCaptureEnabled for the configuration.
-        ///
-        /// - Parameter enabled: A boolean to enable auto capture screens and clicks.
+        /// Disables screen title capture.
+        /// If set, the SDK will prevent screen titles from being stored or uploaded.
+        /// - Parameter disabled: A boolean indicating whether screen title capture is disabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func enableAutoCaptureForSwiftUI(enabled isEnabled: Bool) -> Self {
-            swiftUIAutoCaptureScreensEnabled = isEnabled
-            swiftUIAutoCaptureClicksEnabled = isEnabled
+        public func disableScreenTitleCapture(_ disabled: Bool = true) -> Self {
+            disableScreenTitleCapture = disabled
             return self
         }
 
-        /// Enables or disables UIKit automatic screen tracking.
+        /// Enables or disables automatic interaction (click) capture.
+        /// If enabled, the SDK will automatically capture user interaction events.
+        /// - Parameter enabled: A boolean indicating whether interaction autocapture is enabled.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func enableUIKitScreenAutoCapture(enabled isEnabled: Bool) -> Self {
-            uiKitAutoCaptureScreensEnabled = isEnabled
+        public func enableInteractionAutocapture(_ enabled: Bool = true) -> Self {
+            enableInteractionAutocapture = enabled
             return self
         }
 
-        /// Enables or disables UIKit automatic click tracking.
+        /// Disables user interface text capture.
+        /// If set, the SDK will prevent user interface text from being stored or uploaded.
+        /// - Parameter disabled: A boolean indicating whether text capture is disabled.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func enableUIKitClickAutoCapture(enabled isEnabled: Bool) -> Self {
-            uiKitAutoCaptureClicksEnabled = isEnabled
+        public func disableInteractionTextCapture(_ disabled: Bool = true) -> Self {
+            disableInteractionTextCapture = disabled
             return self
         }
 
-        /// Enables or disables SwiftUI automatic screen tracking.
+        /// Disables user interface accessibility label capture.
+        /// If set, the SDK will prevent user interface accessibility labels from being stored or uploaded.
+        /// - Parameter disabled: A boolean indicating whether accessibility label capture is disabled.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func enableSwiftUIScreenAutoCapture(enabled isEnabled: Bool) -> Self {
-            swiftUIAutoCaptureScreensEnabled = isEnabled
-            return self
-        }
-
-        /// Enables or disables SwiftUI automatic click tracking.
-        @discardableResult
-        @objc
-        public func enableSwiftUIClickAutoCapture(enabled isEnabled: Bool) -> Self {
-            swiftUIAutoCaptureClicksEnabled = isEnabled
+        public func disableInteractionAccessibilityLabelCapture(_ disabled: Bool = true) -> Self {
+            disableInteractionAccessibilityLabelCapture = disabled
             return self
         }
 

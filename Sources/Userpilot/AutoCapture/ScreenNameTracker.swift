@@ -12,10 +12,130 @@
 
 import Foundation
 
-/// `ScreenNameTracking` defines the interface for tracking screen navigation and tab states.
+// MARK: - Tab Tracking Payload
+
+/// Payload containing tab tracking information (used by SwiftUI engine)
+internal struct TabTrackingPayload {
+    /// The tab name or title
+    let name: String
+
+    /// The tab index
+    let index: Int
+}
+
+// MARK: - Screen Tracking Payload
+
+/// Payload containing comprehensive screen tracking information for auto capture events.
+internal struct ScreenTrackingPayload {
+    // MARK: - Properties
+
+    /// The source of the auto capture (e.g., "UIKit", "SwiftUI")
+    let autoCaptureSource: String
+
+    /// The current screen name
+    let currentScreen: String
+
+    /// The class name of the current screen's view controller
+    let screenClass: String
+
+    /// The type of screen (e.g., "ViewController", "NavigationController")
+    let screenType: String
+
+    /// The previous screen name
+    let previousScreen: String
+
+    /// The class name of the previous screen's view controller
+    let previousScreenClass: String
+
+    /// The navigation path to the current screen
+    let screenPath: String
+
+    /// The navigation title of the screen
+    let navigationTitle: String?
+
+    /// Whether this is a root screen
+    let isRootScreen: Bool
+
+    /// The timestamp of the event
+    let timestamp: TimeInterval
+
+    /// Whether this view controller is a Userpilot container class
+    let isUserpilotContainerClass: Bool
+
+    /// The name of the selected tab (if in a tab bar controller)
+    let tabName: String?
+
+    /// The index of the selected tab (if in a tab bar controller)
+    let tabIndex: Int?
+
+    // MARK: - Enrichment
+
+    /// Creates an enriched copy with previous screen information
+    /// - Parameters:
+    ///   - previousScreen: The previous screen name
+    ///   - previousScreenClass: The previous screen class name
+    /// - Returns: A new payload with the previous screen info filled in
+    func withPreviousScreen(_ previousScreen: String, previousScreenClass: String) -> ScreenTrackingPayload {
+        ScreenTrackingPayload(
+            autoCaptureSource: autoCaptureSource,
+            currentScreen: currentScreen,
+            screenClass: screenClass,
+            screenType: screenType,
+            previousScreen: previousScreen,
+            previousScreenClass: previousScreenClass,
+            screenPath: screenPath,
+            navigationTitle: navigationTitle,
+            isRootScreen: isRootScreen,
+            timestamp: timestamp,
+            isUserpilotContainerClass: isUserpilotContainerClass,
+            tabName: tabName,
+            tabIndex: tabIndex
+        )
+    }
+
+    // MARK: - Conversion
+
+    /// Converts the payload to a dictionary for event properties
+    /// - Returns: Dictionary representation of the payload
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [
+            "auto_capture_source": autoCaptureSource,
+            "current_screen": currentScreen,
+            "screen_class": screenClass,
+            "screen_type": screenType,
+            "previous_screen": previousScreen,
+            "previous_screen_class": previousScreenClass,
+            "screen_path": screenPath,
+            "is_root_screen": isRootScreen,
+            "timestamp": timestamp,
+            "is_userpilot_container_class": isUserpilotContainerClass
+        ]
+
+        if let navigationTitle = navigationTitle {
+            dict["navigation_title"] = navigationTitle
+        }
+
+        if let tabName = tabName {
+            dict["tab_name"] = tabName
+        }
+
+        if let tabIndex = tabIndex {
+            dict["tab_index"] = tabIndex
+        }
+
+        return dict
+    }
+}
+
+// MARK: - Screen Name Tracking Protocol
+
 /// `ScreenNameTracking` defines the interface for tracking screen navigation and tab states.
 internal protocol ScreenNameTracking: AnyObject {
-    /// Updates the current screen and moves current screen to previous
+    /// Updates the current screen with full payload
+    /// - Parameter payload: The screen tracking payload
+    func updateScreen(with payload: ScreenTrackingPayload)
+
+    /// Updates the current screen and moves current screen to previous (legacy support)
     /// - Parameter screen: The new screen name
     func updateScreen(_ screen: String)
 
@@ -26,6 +146,18 @@ internal protocol ScreenNameTracking: AnyObject {
     /// Returns the previous screen name
     /// - Returns: Previous screen name string
     func getPreviousScreen() -> String
+
+    /// Returns the current screen class name
+    /// - Returns: Current screen class string
+    func getCurrentScreenClass() -> String
+
+    /// Returns the previous screen class name
+    /// - Returns: Previous screen class string
+    func getPreviousScreenClass() -> String
+
+    /// Returns the current screen tracking payload
+    /// - Returns: The current screen payload or nil
+    func getCurrentPayload() -> ScreenTrackingPayload?
 
     /// Sets the currently selected tab name
     /// - Parameter tabName: The tab name
@@ -43,18 +175,29 @@ internal protocol ScreenNameTracking: AnyObject {
     func reset()
 }
 
+// MARK: - Screen Name Tracker
+
 /// `ScreenNameTracker` implements screen and tab state tracking for analytics.
 internal final class ScreenNameTracker: ScreenNameTracking {
     // MARK: - Properties
 
     /// Associated object key for storing untracked screen flags
-    public static var untrackedScreenKey: UInt8 = 0
+    internal static var untrackedScreenKey: UInt8 = 0
 
     /// The current screen name
     private var currentScreen: String = ""
 
     /// The previous screen name
     private var previousScreen: String = ""
+
+    /// The current screen class name
+    private var currentScreenClass: String = ""
+
+    /// The previous screen class name
+    private var previousScreenClass: String = ""
+
+    /// The current screen tracking payload
+    private var currentPayload: ScreenTrackingPayload?
 
     /// The currently selected tab name
     private var selectedTab: String?
@@ -71,6 +214,16 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     }
 
     // MARK: - ScreenNameTracking Protocol
+
+    /// Updates the current screen with full payload
+    /// - Parameter payload: The screen tracking payload
+    func updateScreen(with payload: ScreenTrackingPayload) {
+        previousScreen = currentScreen
+        previousScreenClass = currentScreenClass
+        currentScreen = payload.currentScreen
+        currentScreenClass = payload.screenClass
+        currentPayload = payload
+    }
 
     /// Updates the current screen and moves the current screen to previous
     /// - Parameter screen: The new screen name
@@ -89,6 +242,24 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     /// - Returns: Previous screen name string
     func getPreviousScreen() -> String {
         return previousScreen
+    }
+
+    /// Returns the current screen class name
+    /// - Returns: Current screen class string
+    func getCurrentScreenClass() -> String {
+        return currentScreenClass
+    }
+
+    /// Returns the previous screen class name
+    /// - Returns: Previous screen class string
+    func getPreviousScreenClass() -> String {
+        return previousScreenClass
+    }
+
+    /// Returns the current screen tracking payload
+    /// - Returns: The current screen payload or nil
+    func getCurrentPayload() -> ScreenTrackingPayload? {
+        return currentPayload
     }
 
     /// Sets the currently selected tab name
@@ -116,6 +287,9 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     func reset() {
         currentScreen = ""
         previousScreen = ""
+        currentScreenClass = ""
+        previousScreenClass = ""
+        currentPayload = nil
         selectedTab = nil
         selectedTabIndex = nil
     }

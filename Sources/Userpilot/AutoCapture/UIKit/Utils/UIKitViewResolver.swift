@@ -51,9 +51,9 @@ internal struct ElementTrackingData {
     /// - Returns: Dictionary of tracking data
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
+            "element_type": elementType,
             "screen_hierarchy_path": screenHierarchyPath,
-            "position_index": positionIndex,
-            "event_uid": generateEventUID()
+            "position_index": positionIndex
         ]
 
         if let elementLabel = elementLabel {
@@ -104,10 +104,28 @@ internal enum UIKitViewResolver {
     /// - Parameter view: The UIView to extract data from
     /// - Returns: ElementTrackingData with all tracking information
     static func resolveElementData(view: UIView) -> ElementTrackingData {
+        // Get text with redaction support
+        let elementLabel: String?
+        if view.shouldRedactText() {
+            let rawLabel = resolveElementLabel(view: view)
+            elementLabel = rawLabel != nil ? "****" : nil
+        } else {
+            elementLabel = resolveElementLabel(view: view)
+        }
+
+        // Get accessibility ID with redaction support
+        let accessibilityId: String?
+        if view.shouldRedactAccessibilityLabel() {
+            let rawId = resolveAccessibilityId(view: view)
+            accessibilityId = rawId != nil ? "****" : nil
+        } else {
+            accessibilityId = resolveAccessibilityId(view: view)
+        }
+
         return ElementTrackingData(
             elementType: resolveElementType(view: view),
-            elementLabel: resolveElementLabel(view: view),
-            accessibilityId: resolveAccessibilityId(view: view),
+            elementLabel: elementLabel,
+            accessibilityId: accessibilityId,
             screenHierarchyPath: resolveHierarchyPath(view: view),
             positionIndex: resolvePositionIndex(view: view)
         )
@@ -173,35 +191,9 @@ internal enum UIKitViewResolver {
     // Resolves the element type based on UIView class type
     // - Parameter view: The UIView to resolve type for
     // - Returns: Element type string
-    // swiftlint:disable:next cyclomatic_complexity
+    // swiftlint:disable:next cyclomatic_complexity superfluous_disable_command
     private static func resolveElementType(view: UIView) -> String {
-        if view is UIButton {
-            return "button"
-        } else if view is UILabel {
-            return "label"
-        } else if view is UITextField {
-            return "textfield"
-        } else if view is UITextView {
-            return "textview"
-        } else if view is UISwitch {
-            return "switch"
-        } else if view is UISlider {
-            return "slider"
-        } else if view is UISegmentedControl {
-            return "segmented_control"
-        } else if view is UIImageView {
-            return "image"
-        } else if view is UIScrollView {
-            return "scrollview"
-        } else if view is UITableView {
-            return "tableview"
-        } else if view is UICollectionView {
-            return "collectionview"
-        } else if view is UIStackView {
-            return "stackview"
-        }
-
-        return "view"
+        return String(describing: type(of: view))
     }
 
     // MARK: - Element Label Resolution

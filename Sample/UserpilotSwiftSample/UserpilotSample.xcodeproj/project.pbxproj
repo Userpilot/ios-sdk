@@ -54,6 +54,9 @@
 		ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */; };
 		ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */; };
 		ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F682C985E2000004D1C /* CustomEventViewController.swift */; };
+		ABEEA9CA2F44947500146212 /* AutoCaptureTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEEA9C62F44947500146212 /* AutoCaptureTestViewController.swift */; };
+		ABEEA9CB2F44947500146212 /* CollectionViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEEA9C72F44947500146212 /* CollectionViewTestViewController.swift */; };
+		ABEEA9CC2F44947500146212 /* TableViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEEA9C82F44947500146212 /* TableViewTestViewController.swift */; };
 		ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */; };
 		ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C7B2C73688000013F18 /* MainViewController.swift */; };
 		ABF38C812C73719300013F18 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C802C73719300013F18 /* Content.swift */; };
@@ -126,6 +129,9 @@
 		ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIStackView+Extensions.swift"; sourceTree = "<group>"; };
 		ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+TableView.swift"; sourceTree = "<group>"; };
 		ABED3F682C985E2000004D1C /* CustomEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomEventViewController.swift; sourceTree = "<group>"; };
+		ABEEA9C62F44947500146212 /* AutoCaptureTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureTestViewController.swift; sourceTree = "<group>"; };
+		ABEEA9C72F44947500146212 /* CollectionViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViewTestViewController.swift; sourceTree = "<group>"; };
+		ABEEA9C82F44947500146212 /* TableViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Bold.ttf"; sourceTree = "<group>"; };
 		ABF38C7B2C73688000013F18 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		ABF38C802C73719300013F18 /* Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Content.swift; sourceTree = "<group>"; };
@@ -224,6 +230,7 @@
 		AB6DBD352C68CD3B0009BB11 /* Featues */ = {
 			isa = PBXGroup;
 			children = (
+				ABEEA9C92F44947500146212 /* AutoCapture */,
 				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
 				ABFB5FD62C916E410054E142 /* Events */,
@@ -404,6 +411,16 @@
 				AB1942C62CD2624000924844 /* EventsViewController.xib */,
 			);
 			path = Eventslist;
+			sourceTree = "<group>";
+		};
+		ABEEA9C92F44947500146212 /* AutoCapture */ = {
+			isa = PBXGroup;
+			children = (
+				ABEEA9C62F44947500146212 /* AutoCaptureTestViewController.swift */,
+				ABEEA9C72F44947500146212 /* CollectionViewTestViewController.swift */,
+				ABEEA9C82F44947500146212 /* TableViewTestViewController.swift */,
+			);
+			path = AutoCapture;
 			sourceTree = "<group>";
 		};
 		ABF38C7F2C73713100013F18 /* Models */ = {
@@ -626,6 +643,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */,
+				ABEEA9CA2F44947500146212 /* AutoCaptureTestViewController.swift in Sources */,
+				ABEEA9CB2F44947500146212 /* CollectionViewTestViewController.swift in Sources */,
+				ABEEA9CC2F44947500146212 /* TableViewTestViewController.swift in Sources */,
 				ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */,
 				ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,

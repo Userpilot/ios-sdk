@@ -1,19 +1,19 @@
 //
-//  UIKitScreenTracker.swift
+//  UIKitAutoCaptureEngine.swift
 //  Userpilot
 //
 //  Created by Motasem Hamed on 05/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  UIKitScreenTracker manages automatic screen tracking for UIKit applications,
-//  handling screen transitions and click analytics through notification observers.
+//  UIKitAutoCaptureEngine manages automatic screen and interaction tracking for UIKit applications,
+//  handling screen transitions, control interactions, table/collection view selections, and text input.
 //
 
 import Foundation
 import UIKit
 
-/// `UIKitScreenTracker` manages automatic screen and click tracking for UIKit applications.
+/// `UIKitAutoCaptureEngine` manages automatic screen and interaction tracking for UIKit applications.
 internal class UIKitAutoCaptureEngine {
     // MARK: - Properties
 
@@ -31,116 +31,163 @@ internal class UIKitAutoCaptureEngine {
 
     // MARK: - Initialization
 
-    /// Creates a UIKit screen tracker and sets up auto capture if enabled
+    /// Creates a UIKit auto capture engine and sets up tracking if enabled
     /// - Parameter container: Dependency injection container
     init(container: DIContainer) {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.config = container.resolve(Userpilot.Config.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
 
-        let screenTrackingEnabled = config.uiKitAutoCaptureScreensEnabled
-        let clickTrackingEnabled = config.uiKitAutoCaptureClicksEnabled
+        let screenTrackingEnabled = config.enableScreenAutocapture
+        let interactionTrackingEnabled = config.enableInteractionAutocapture
 
-        if screenTrackingEnabled || clickTrackingEnabled {
+        if screenTrackingEnabled || interactionTrackingEnabled {
             setupAutoCaptureScreens()
             if screenTrackingEnabled {
                 config.logger.info("Automatic UIKit screen tracking enabled")
             }
         }
-        if clickTrackingEnabled {
-            setupAutoCaptureClickes()
-            config.logger.info("Automatic UIKit click tracking enabled")
+
+        if interactionTrackingEnabled {
+            setupAutoCaptureInteractions()
+            config.logger.info("Automatic UIKit interaction tracking enabled")
         }
     }
 
-    // MARK: - Private Methods
+    // MARK: - Setup Methods
 
-    /// Sets up automatic screen tracking by swizzling and adding notification observers
+    /// Sets up automatic screen tracking by swizzling
     private func setupAutoCaptureScreens() {
-        UIViewController.updateAutoCaptureScreens(uiKitEnabled: true)
         AutoCaptureSwizzler.swizzleUIKitScreenTracking()
         AutoCaptureSwizzler.swizzleTabBarTracking()
-
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(screenTracked),
-            name: .userpilotTrackedScreen,
-            object: nil)
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(screenTabTracked),
-            name: .userpilotTrackedTab,
-            object: nil)
     }
 
-    /// Sets up automatic click tracking by swizzling and adding notification observers
-    private func setupAutoCaptureClickes() {
-        UIWindow.updateAutoCaptureClicks(uiKitEnabled: true)
+    /// Sets up automatic interaction tracking by swizzling and notifications
+    private func setupAutoCaptureInteractions() {
+        // Touch/click tracking via UIWindow.sendEvent
+        // This also captures table view cell and collection view cell taps
         AutoCaptureSwizzler.swizzleClickTracking()
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(clickTracked),
-            name: .userpilotTrackedClick,
-            object: nil)
+
+        // UIControl interactions (buttons, switches, sliders, etc.) with action names
+        AutoCaptureSwizzler.swizzleControlTracking()
+
+        // Text input tracking via notifications
+        AutoCaptureSwizzler.registerTextFieldNotifications()
+        AutoCaptureSwizzler.registerTextViewNotifications()
     }
 
-    /// Handles screen tracking notifications and publishes analytics events
-    /// - Parameter notification: The notification containing screen name
-    @objc
-    private func screenTracked(notification: Notification) {
-        let title: String? = notification.value()
-        guard let title = title, lastTrackedScreen != title else { return }
+    // MARK: - Screen Tracking Methods
 
-        screenNameTracker.updateScreen(title)
-        lastTrackedScreen = title
-        if config.uiKitAutoCaptureScreensEnabled {
-            analyticsPublisher.publish(Event(type: .screen(title)), isInternalEvent: false)
-        }
+    /// Handles screen tracking and publishes analytics events as track events
+    /// - Parameter payload: The screen tracking payload from the view controller
+    internal func handleScreenTracked(_ payload: ScreenTrackingPayload) {
+        // Filter for UIKit source only
+        guard payload.autoCaptureSource == FrameworkType.uiKit.rawValue else { return }
+
+        // Avoid duplicate events
+        guard lastTrackedScreen != payload.currentScreen else { return }
+
+        // Flush any cached events from the previous screen (text input, slider, etc.)
+        InteractionEventCache.flushAll()
+
+        lastTrackedScreen = payload.currentScreen
+
+        // Enrich payload with previous screen info from tracker
+        let enrichedPayload = payload.withPreviousScreen(
+            screenNameTracker.getCurrentScreen(),
+            previousScreenClass: screenNameTracker.getCurrentScreenClass()
+        )
+
+        screenNameTracker.updateScreen(with: enrichedPayload)
+
+        // Send as track event with title "screen"
+        //        analyticsPublisher.publish(
+        //            Event(type: .event("screen"), properties: enrichedPayload.toDictionary()),
+        //            isInternalEvent: false
+        //        )
+        print("SCREEN")
+        print(enrichedPayload.toDictionary())
     }
 
-    /// Handles tab selection tracking notifications
-    /// - Parameter notification: The notification containing tab information
-    @objc
-    private func screenTabTracked(notification: Notification) {
-        guard let payload: TabTrackingPayload = notification.value() else { return }
-        screenNameTracker.setSelectedTab(payload.name)
-        screenNameTracker.setSelectedTabIndex(payload.index)
+    /// Handles tab selection tracking
+    /// - Parameters:
+    ///   - tabName: The name of the selected tab
+    ///   - tabIndex: The index of the selected tab
+    internal func handleTabSelected(name tabName: String, index tabIndex: Int) {
+        screenNameTracker.setSelectedTab(tabName)
+        screenNameTracker.setSelectedTabIndex(tabIndex)
     }
 
-    /// Handles click tracking notifications and publishes enriched analytics events
-    /// - Parameter notification: The notification containing click properties
-    @objc
-    private func clickTracked(notification: Notification) {
-        guard
-            let userInfo = notification.userInfo,
-            let properties = userInfo as? [String: Any]
-        else {
-            return
-        }
+    // MARK: - Interaction Tracking Methods
 
-        if let source = properties["auto_capture_source"] as? String, source != "uikit" {
+    /// Handles interaction events from UIControl, UITableView, UICollectionView, and text inputs
+    /// - Parameter payload: The interaction payload containing event details
+    internal func handleInteraction(_ payload: InteractionPayload) {
+        guard config.enableInteractionAutocapture else { return }
+        guard payload.autoCaptureSource == FrameworkType.uiKit.rawValue else { return }
+
+        var properties = payload.toDictionary()
+        properties["screen"] = buildScreenDictionary()
+
+        // let eventName = eventNameForInteractionType(payload.interactionType)
+        let eventName = payload.interactionType.rawValue
+
+        //        analyticsPublisher.publish(
+        //            Event(type: .event(eventName), properties: properties),
+        //            isInternalEvent: false
+        //        )
+        print("EVENT")
+        print(properties)
+    }
+
+    /// Handles click tracking from UIWindow.sendEvent (regular view taps)
+    /// - Parameter properties: The click event properties
+    internal func handleClickTracked(_ properties: [String: Any]) {
+        guard config.enableInteractionAutocapture else { return }
+
+        if let source = properties["auto_capture_source"] as? String, source != FrameworkType.uiKit.rawValue {
             return
         }
 
         var enrichedProperties = properties
-        let currentScreen = screenNameTracker.getCurrentScreen()
-        let previousScreen = screenNameTracker.getPreviousScreen()
+        enrichedProperties["screen"] = buildScreenDictionary()
 
-        enrichedProperties["current_screen"] = currentScreen
-        enrichedProperties["previous_screen"] = previousScreen
+        //        analyticsPublisher.publish(
+        //            Event(type: .event("interaction"), properties: enrichedProperties),
+        //            isInternalEvent: false
+        //        )
+        print("EVENT")
+        print(enrichedProperties)
+    }
 
-        if let tabInfo = screenNameTracker.getTabInfo() {
-            enrichedProperties["tab_name"] = tabInfo.name
-            enrichedProperties["tab_index"] = tabInfo.index
+    // MARK: - Screen Context Builder
+
+    /// Builds a screen context dictionary from the screen name tracker
+    private func buildScreenDictionary() -> [String: Any] {
+        guard let payload = screenNameTracker.getCurrentPayload() else {
+            return [:]
         }
 
-        enrichedProperties["event_uid"] = UIKitViewResolver.generateEventUID(
-            screenName: currentScreen,
-            properties: enrichedProperties
-        )
+        var screen: [String: Any] = [
+            "current_screen": payload.currentScreen,
+            "screen_class": payload.screenClass,
+            "screen_type": payload.screenType,
+            "previous_screen": payload.previousScreen,
+            "previous_screen_class": payload.previousScreenClass,
+            "screen_path": payload.screenPath,
+            "is_root_screen": payload.isRootScreen
+        ]
 
-        analyticsPublisher.publish(
-            Event(type: .event("AutoCapture-Click"), properties: enrichedProperties),
-            isInternalEvent: false)
+        if let navTitle = payload.navigationTitle {
+            screen["navigation_title"] = navTitle
+        }
+        if let tabName = payload.tabName {
+            screen["tab_name"] = tabName
+        }
+        if let tabIndex = payload.tabIndex {
+            screen["tab_index"] = tabIndex
+        }
+
+        return screen
     }
 }

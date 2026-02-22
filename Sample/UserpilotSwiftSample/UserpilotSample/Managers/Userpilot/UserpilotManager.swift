@@ -40,8 +40,9 @@ class UserpilotManager {
         else { return }
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(enabled: true)
-            .enableUseInAppBrowser(enabled: true)
-            .enableAutoCaptureForUIKit(enabled: true)
+            .enableUseInAppBrowser()
+            .enableScreenAutocapture()
+            .enableInteractionAutocapture()
         )
         userpilot?.navigationDelegate = self
         userpilot?.analyticsDelegate = self

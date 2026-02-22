@@ -27,7 +27,7 @@ internal extension Bundle {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 
-    var build: String {
+    var buildNumber: String {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
     }
 
@@ -35,6 +35,14 @@ internal extension Bundle {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? ""
     }
 
+    var isSystemBundle: Bool {
+        return bundleURL.lastPathComponent == "UIKitCore.framework" // iOS 12+
+        || bundleURL.lastPathComponent == "UIKit.framework" // iOS 11
+   }
+
+    var isSwiftUI: Bool {
+        return bundleURL.lastPathComponent == "SwiftUI.framework"
+    }
 }
 
 internal extension Userpilot {
