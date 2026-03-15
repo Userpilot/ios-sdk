@@ -98,9 +98,6 @@ public class Channel {
   /// Refs of stateChange hooks
   var stateChangeRefs: [String]
   
-  /// Serial queue from the parent socket for thread-safe state access
-  let socketQueue: DispatchQueue
-  
   /// Initialize a Channel
   ///
   /// - parameter topic: Topic of the Channel
@@ -117,9 +114,7 @@ public class Channel {
     self.joinedOnce = false
     self.pushBuffer = []
     self.stateChangeRefs = []
-    self.socketQueue = socket.queue
     self.rejoinTimer = TimeoutTimer()
-    self.rejoinTimer.queue = TimerQueue(dispatchQueue: socket.queue)
     
     // Setup Timer delgation
     self.rejoinTimer.callback
