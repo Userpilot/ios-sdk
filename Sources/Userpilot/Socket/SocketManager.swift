@@ -312,8 +312,10 @@ extension SocketManager {
     private func closeSocket() {
         performOn(.main) { [weak self] in
             tryCatch {
-                if let channel = self?.phoenixChannel, !channel.isClosed {
-                    channel.leave(timeout: 0.0)
+                if let channel = self?.phoenixChannel {
+                    if channel.canPush && !channel.isClosed {
+                        channel.leave()
+                    }
                     self?.phoenixSocket?.remove(channel)
                 }
                 self?.phoenixSocket?.disconnect()

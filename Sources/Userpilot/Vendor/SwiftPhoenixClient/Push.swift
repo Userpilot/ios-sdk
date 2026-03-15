@@ -46,6 +46,10 @@ public class Push {
   /// WorkItem to be performed when the timeout timer fires
   var timeoutWorkItem: DispatchWorkItem?
   
+  /// Guards timeout work item lifecycle across callbacks and timer queue.
+  private let timeoutLock = NSLock()
+  private var timeoutGeneration: UInt64 = 0
+  
   /// Hooks into a Push. Where .receive("ok", callback(Payload)) are stored
   var receiveHooks: [String: [Delegated<Message, Void>]]
   
@@ -75,8 +79,7 @@ public class Push {
     self.payload = payload
     self.timeout = timeout
     self.receivedMessage = nil
-    // Use the socket's serial queue for push timeouts to ensure thread-safe state access
-    self.timeoutTimer = TimerQueue(dispatchQueue: channel.socketQueue)
+    self.timeoutTimer = TimerQueue.main
     self.receiveHooks = [:]
     self.sent = false
     self.ref = nil
@@ -205,17 +208,20 @@ public class Push {
   
   /// Cancel any ongoing Timeout Timer
   internal func cancelTimeout() {
-    self.timeoutWorkItem?.cancel()
+    timeoutLock.lock()
+    let workItem = self.timeoutWorkItem
     self.timeoutWorkItem = nil
+    self.timeoutGeneration &+= 1
+    timeoutLock.unlock()
+    
+    workItem?.cancel()
   }
   
   /// Starts the Timer which will trigger a timeout after a specific _timeout_
   /// time, in milliseconds, is reached.
   internal func startTimeout() {
     // Cancel any existing timeout before starting a new one
-    if let safeWorkItem = timeoutWorkItem, !safeWorkItem.isCancelled {
-      self.cancelTimeout()
-    }
+    self.cancelTimeout()
     
     guard
       let channel = channel,
@@ -240,12 +246,32 @@ public class Push {
     }
     
     /// Setup and start the Timeout timer.
+    let generation: UInt64 = {
+      timeoutLock.lock()
+      defer { timeoutLock.unlock() }
+      timeoutGeneration &+= 1
+      return timeoutGeneration
+    }()
+    
     let workItem = DispatchWorkItem {
+      guard self.consumeTimeoutIfCurrent(generation) else { return }
       self.trigger("timeout", payload: [:])
     }
     
+    timeoutLock.lock()
     self.timeoutWorkItem = workItem
+    timeoutLock.unlock()
     self.timeoutTimer.queue(timeInterval: timeout, execute: workItem)
+  }
+  
+  private func consumeTimeoutIfCurrent(_ generation: UInt64) -> Bool {
+    timeoutLock.lock()
+    defer { timeoutLock.unlock() }
+    
+    guard timeoutGeneration == generation else { return false }
+    timeoutWorkItem = nil
+    timeoutGeneration &+= 1
+    return true
   }
   
   /// Checks if a status has already been received by the Push.
