@@ -34,6 +34,9 @@ internal class SessionMonitor: SessionMonitoring {
     /// The storage used to store user-related data.
     private let storage: DataStoring
 
+    /// Screen time tracker for foreground-only time per screen.
+    private let screenTimeTracker: ScreenTimeTracking
+
     /// A flag to prevent calling didEnterForeground twice
     private var hasInitializedForeground = false
 
@@ -46,6 +49,7 @@ internal class SessionMonitor: SessionMonitoring {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.storage = container.resolve(DataStoring.self)
+        self.screenTimeTracker = container.resolve(ScreenTimeTracking.self)
 
         // Add observer for when the app enters the background.
         NotificationCenter.default.addObserver(
@@ -107,6 +111,7 @@ internal class SessionMonitor: SessionMonitoring {
     @objc
     func didEnterBackground(notification: Notification) {
         _isAppActive = false
+        screenTimeTracker.onAppBackground()
         storage.sessionDate = Date()
         networkMonitor.stopMonitoring()
         analyticsPublisher.flush()
@@ -123,6 +128,7 @@ internal class SessionMonitor: SessionMonitoring {
     private func onAppStart() {
         _isAppActive = true
         hasInitializedForeground = true
+        screenTimeTracker.onAppForeground()
         networkMonitor.startMonitoring()
         analyticsPublisher.resume()
     }

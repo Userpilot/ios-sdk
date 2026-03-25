@@ -76,56 +76,56 @@ internal enum Constants {
         static let appPropertiesKey = "appProperties"
 
         // ── Platform ──────────────────────────────────────────────────────────────────
-        static let osKey                    = "operating_system"
-        static let osVersionKey             = "operating_system_version"
-        static let libraryVersionKey        = "library_version"
+        static let osKey = "operating_system"
+        static let osVersionKey = "operating_system_version"
+        static let libraryVersionKey = "library_version"
         static let overlayLibraryVersionKey = "overlay_library_version"
-        static let manufacturerKey          = "manufacturer"
-        static let sdkTypeKey               = "sdk_type"
+        static let manufacturerKey = "manufacturer"
+        static let sdkTypeKey = "sdk_type"
 
         // ── Device ────────────────────────────────────────────────────────────────────
-        static let deviceModelKey           = "device_model"
-        static let deviceTypeKey            = "device_type"
-        static let deviceNameKey            = "device_name"
-        static let isiOSOnMacKey            = "is_ios_on_mac"
-        static let isSimulatorKey           = "is_simulator"
-        static let isJailbrokenKey          = "is_jailbroken"
-        static let processorCountKey        = "processor_count"
-        static let totalRAMKey              = "total_ram_bytes"
-        static let totalDiskSpaceKey        = "total_disk_bytes"
-        static let freeDiskSpaceKey         = "free_disk_bytes"
+        static let deviceModelKey = "device_model"
+        static let deviceTypeKey = "device_type"
+        static let deviceNameKey = "device_name"
+        static let isiOSOnMacKey = "is_ios_on_mac"
+        static let isSimulatorKey = "is_simulator"
+        static let isJailbrokenKey = "is_jailbroken"
+        static let processorCountKey = "processor_count"
+        static let totalRAMKey = "total_ram_bytes"
+        static let totalDiskSpaceKey = "total_disk_bytes"
+        static let freeDiskSpaceKey = "free_disk_bytes"
 
         // ── Screen ────────────────────────────────────────────────────────────────────
-        static let screenWidthKey           = "screen_width"
-        static let screenHeightKey          = "screen_height"
-        static let screenScaleKey           = "screen_scale"
+        static let screenWidthKey = "screen_width"
+        static let screenHeightKey = "screen_height"
+        static let screenScaleKey = "screen_scale"
 
         // ── Locale & Region ───────────────────────────────────────────────────────────
-        static let localeKey                = "locale"
-        static let languageKey              = "language"
-        static let countryCodeKey           = "country_code"
-        static let currencyCodeKey          = "currency_code"
-        static let countryNameKey           = "country_name"
+        static let localeKey = "locale"
+        static let languageKey = "language"
+        static let countryCodeKey = "country_code"
+        static let currencyCodeKey = "currency_code"
+        static let countryNameKey = "country_name"
 
         // ── Timezone ──────────────────────────────────────────────────────────────────
-        static let timezoneKey              = "timezone"
+        static let timezoneKey = "timezone"
         static let timezoneOffsetMinutesKey = "timezone_offset_minutes"
-        static let timezoneOffsetHoursKey   = "timezone_offset_hours"
+        static let timezoneOffsetHoursKey = "timezone_offset_hours"
 
         // ── Network ───────────────────────────────────────────────────────────────────
-        static let carrierNameKey           = "carrier_name"
-        static let radioTechnologyKey       = "radio_technology"
+        static let carrierNameKey = "carrier_name"
+        static let radioTechnologyKey = "radio_technology"
 
         // ── Dynamic / Runtime State ───────────────────────────────────────────────────
-        static let isLowPowerModeKey        = "is_low_power_mode"
-        static let isDarkModeKey            = "is_dark_mode"
+        static let isLowPowerModeKey = "is_low_power_mode"
+        static let isDarkModeKey = "is_dark_mode"
 
         // ── App ───────────────────────────────────────────────────────────────────────
-        static let appNameKey               = "app_name"
-        static let appIdentifierKey         = "app_identifier"
-        static let appVersionKey            = "app_version"
-        static let appBuildKey              = "app_build"
-        static let appIsSwiftUIKey          = "app_swift_ui"
+        static let appNameKey = "app_name"
+        static let appIdentifierKey = "app_identifier"
+        static let appVersionKey = "app_version"
+        static let appBuildKey = "app_build"
+        static let appIsSwiftUIKey = "app_swift_ui"
     }
 
     enum Database {
@@ -158,5 +158,10 @@ internal enum Constants {
 
     enum Storage {
         static let userDefaultSuiteName = "com.userpilot.storage."
+    }
+
+    enum AutoCapture {
+        /// Analytics property key for time spent on the previous screen (milliseconds).
+        static let previousScreenDurationMsKey = "previousScreenDurationMs"
     }
 }

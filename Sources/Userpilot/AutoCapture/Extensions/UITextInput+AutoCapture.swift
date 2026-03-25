@@ -20,6 +20,7 @@ internal extension UITextField {
     /// Called on every textDidChangeNotification — caches (upserts) the event
     func cacheTextFieldChanged() {
         guard Userpilot.isInitialized else { return }
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         let config = Userpilot.shared.config
         guard config.enableInteractionAutocapture else { return }
         guard !shouldIgnoreInteractions() else { return }
@@ -33,12 +34,15 @@ internal extension UITextField {
         payload.textLength = text?.count ?? 0
         payload.placeholder = placeholder
 
-        payload.accessibilityIdentifier = accessibilityIdentifier
-        if !config.disableInteractionAccessibilityLabelCapture && !shouldRedactAccessibilityLabel() {
-            payload.accessibilityLabel = accessibilityLabel
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        payload.elementPath = path
+        if effectiveView !== self {
+            payload.elementType = String(describing: type(of: effectiveView))
+        } else {
+            payload.accessibilityIdentifier = accessibilityIdentifier
+            payload.accessibilityLabel = getAccessibilityLabelContent()
+            payload.referenceName = resolveReferenceName()
         }
-        payload.elementPath = UIKitViewResolver.resolvePath(view: self)
-        payload.referenceName = resolveReferenceName()
 
         InteractionEventCache.upsert(payload, for: self)
     }
@@ -51,6 +55,7 @@ internal extension UITextView {
     /// Called on every textDidChangeNotification — caches (upserts) the event
     func cacheTextViewChanged() {
         guard Userpilot.isInitialized else { return }
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         let config = Userpilot.shared.config
         guard config.enableInteractionAutocapture else { return }
         guard !shouldIgnoreInteractions() else { return }
@@ -63,12 +68,15 @@ internal extension UITextView {
         payload.hasText = !text.isEmpty
         payload.textLength = text.count
 
-        payload.accessibilityIdentifier = accessibilityIdentifier
-        if !config.disableInteractionAccessibilityLabelCapture && !shouldRedactAccessibilityLabel() {
-            payload.accessibilityLabel = accessibilityLabel
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        payload.elementPath = path
+        if effectiveView !== self {
+            payload.elementType = String(describing: type(of: effectiveView))
+        } else {
+            payload.accessibilityIdentifier = accessibilityIdentifier
+            payload.accessibilityLabel = getAccessibilityLabelContent()
+            payload.referenceName = resolveReferenceName()
         }
-        payload.elementPath = UIKitViewResolver.resolvePath(view: self)
-        payload.referenceName = resolveReferenceName()
 
         InteractionEventCache.upsert(payload, for: self)
     }

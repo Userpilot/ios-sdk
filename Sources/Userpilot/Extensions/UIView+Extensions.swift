@@ -13,29 +13,6 @@
 
 import UIKit
 
-// MARK: - Global Functions
-
-/// Calculates distance from view bottom edge to screen bottom
-/// - Parameter view: The UIView to measure from
-/// - Returns: Distance in points, or nil if view not in window
-internal func distanceFromViewToScreenBottom(view: UIView) -> CGFloat? {
-    guard let window = view.window else { return nil }
-    let viewFrameInWindow = view.convert(view.bounds, to: window)
-    let screenHeight = UIScreen.main.bounds.height
-    let distance = screenHeight - viewFrameInWindow.maxY
-    return distance
-}
-
-/// Calculates distance from view top edge to screen top
-/// - Parameter view: The UIView to measure from
-/// - Returns: Distance in points, or nil if view not in window
-internal func distanceFromViewToScreenTop(view: UIView) -> CGFloat? {
-    guard let window = view.window else { return nil }
-    let viewFrameInWindow = view.convert(view.bounds, to: window)
-    let distance = viewFrameInWindow.minY
-    return distance
-}
-
 /// Extension providing corner radius utilities for UIView
 internal extension UIView {
     /// Sets corner radius only on top corners of the view
@@ -46,12 +23,8 @@ internal extension UIView {
         self.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
     }
 
-}
+    // MARK: First Responder
 
-// MARK: - First Responder Extension
-
-/// Extension providing first responder finding functionality
-internal extension UIView {
     /// Finds the first responder in the view hierarchy
     var firstResponder: UIResponder? {
         if self.isFirstResponder {
@@ -70,12 +43,8 @@ internal extension UIView {
         UIView.userInterfaceLayoutDirection(for: self.semanticContentAttribute) == .rightToLeft
     }
 
-}
+    // MARK: Label Extraction
 
-// MARK: - Label Extraction Extension
-
-/// Extension providing label extraction utilities for UIView
-internal extension UIView {
     /// Extracts fallback label text from view or subviews
     /// - Returns: Extracted label text or nil
     func extractFallbackLabel() -> String? {
@@ -95,12 +64,9 @@ internal extension UIView {
 
         return nil
     }
-}
 
-// MARK: - Click Tracking Extension
+    // MARK: Click Tracking
 
-/// Extension providing click tracking logic for UIView
-internal extension UIView {
     /// Determines if a click on the view should be tracked
     /// - Returns: True if click should be tracked, false otherwise
     func shouldTrackClick() -> Bool {
@@ -136,11 +102,9 @@ internal extension UIView {
         // This filters out: labels, images, scroll views, background views, etc.
         return false
     }
-}
 
-// MARK: - capture IBOutlet for UIview
+    // MARK: View Controller Resolution
 
-internal extension UIView {
     /// Finds the closest UIViewController in the responder chain
     func findViewController() -> UIViewController? {
         var responder: UIResponder? = self
@@ -200,4 +164,78 @@ internal extension UIView {
 
         return nil
     }
+
+    // MARK: - UIView navigation bar check (used to skip SwiftUI tap when preferring UIKit for nav bar)
+    var isInsideNavigationBar: Bool {
+        var current: UIView? = self
+        while let view = current {
+            if view is UINavigationBar { return true }
+            current = view.superview
+        }
+        return false
+    }
+
+    // MARK: Auto capture parent tableview/collection view
+
+    /// Finds a parent UITableViewCell in the view hierarchy
+    func findParentTableViewCell() -> UITableViewCell? {
+        var currentView: UIView? = self
+        while let current = currentView {
+            if let cell = current as? UITableViewCell {
+                return cell
+            }
+            currentView = current.superview
+        }
+        return nil
+    }
+
+    /// Finds a parent UICollectionViewCell in the view hierarchy
+    func findParentCollectionViewCell() -> UICollectionViewCell? {
+        var currentView: UIView? = self
+        while let current = currentView {
+            if let cell = current as? UICollectionViewCell {
+                return cell
+            }
+            currentView = current.superview
+        }
+        return nil
+    }
+
+    // MARK: Distance Helpers
+
+    /// Calculates distance from view bottom edge to screen bottom
+    /// - Parameter view: The UIView to measure from
+    /// - Returns: Distance in points, or nil if view not in window
+    internal func distanceFromViewToScreenBottom() -> CGFloat? {
+        guard let window = self.window else { return nil }
+        let viewFrameInWindow = self.convert(self.bounds, to: window)
+        let screenHeight = UIScreen.main.bounds.height
+        let distance = screenHeight - viewFrameInWindow.maxY
+        return distance
+    }
+
+    // MARK: Private Helpers
+
+    /// Finds a parent UIControl in the view hierarchy
+    func findParentControl() -> UIControl? {
+        var currentView: UIView? = self.superview
+        while let parent = currentView {
+            if let control = parent as? UIControl {
+                return control
+            }
+            currentView = parent.superview
+        }
+        return nil
+    }
+
+    /// Calculates distance from view top edge to screen top
+    /// - Parameter view: The UIView to measure from
+    /// - Returns: Distance in points, or nil if view not in window
+    internal func distanceFromViewToScreenTop() -> CGFloat? {
+        guard let window = self.window else { return nil }
+        let viewFrameInWindow = self.convert(self.bounds, to: window)
+        let distance = viewFrameInWindow.minY
+        return distance
+    }
+
 }

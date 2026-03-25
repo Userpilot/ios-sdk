@@ -24,7 +24,7 @@ extension UPSingleInputView {
         let textFieldFrame = textField.convert(textField.bounds, to: parentView)
 
         var yPosition = textFieldFrame.maxY + 4
-        if distanceFromViewToScreenBottom(view: textField) ?? 200 < CGFloat(220) {
+        if textField.distanceFromViewToScreenBottom() ?? 200 < CGFloat(220) {
             yPosition = textFieldFrame.maxY - (200 + 50 + 4)
         }
         // Create and configure the country picker popup menu

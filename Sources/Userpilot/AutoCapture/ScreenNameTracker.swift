@@ -68,6 +68,12 @@ internal struct ScreenTrackingPayload {
     /// The index of the selected tab (if in a tab bar controller)
     let tabIndex: Int?
 
+    /// The accessibilityIdentifier of the view controller
+    let vcAccessibilityIdentifier: String?
+
+    /// The accessibilityLabel of the view controller
+    let vcAccessibilityLabel: String?
+
     // MARK: - Enrichment
 
     /// Creates an enriched copy with previous screen information
@@ -89,7 +95,9 @@ internal struct ScreenTrackingPayload {
             timestamp: timestamp,
             isUserpilotContainerClass: isUserpilotContainerClass,
             tabName: tabName,
-            tabIndex: tabIndex
+            tabIndex: tabIndex,
+            vcAccessibilityIdentifier: vcAccessibilityIdentifier,
+            vcAccessibilityLabel: vcAccessibilityLabel
         )
     }
 
@@ -121,6 +129,14 @@ internal struct ScreenTrackingPayload {
 
         if let tabIndex = tabIndex {
             dict["tab_index"] = tabIndex
+        }
+
+        if let vcAccessibilityIdentifier = vcAccessibilityIdentifier {
+            dict["vc_accessibility_identifier"] = vcAccessibilityIdentifier
+        }
+
+        if let vcAccessibilityLabel = vcAccessibilityLabel {
+            dict["vc_accessibility_label"] = vcAccessibilityLabel
         }
 
         return dict
@@ -158,6 +174,10 @@ internal protocol ScreenNameTracking: AnyObject {
     /// Returns the current screen tracking payload
     /// - Returns: The current screen payload or nil
     func getCurrentPayload() -> ScreenTrackingPayload?
+
+    /// Builds a screen context dictionary for event properties
+    /// - Returns: Dictionary with current_screen, screen_class, screen_type, previous_screen, etc.
+    func buildScreenDictionary() -> [String: Any]
 
     /// Sets the currently selected tab name
     /// - Parameter tabName: The tab name
@@ -260,6 +280,41 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     /// - Returns: The current screen payload or nil
     func getCurrentPayload() -> ScreenTrackingPayload? {
         return currentPayload
+    }
+
+    /// Builds a screen context dictionary from the current payload for event properties
+    func buildScreenDictionary() -> [String: Any] {
+        guard let payload = currentPayload else {
+            return [:]
+        }
+
+        var screen: [String: Any] = [
+            "current_screen": payload.currentScreen,
+            "screen_class": payload.screenClass,
+            "screen_type": payload.screenType,
+            "previous_screen": payload.previousScreen,
+            "previous_screen_class": payload.previousScreenClass,
+            "screen_path": payload.screenPath,
+            "is_root_screen": payload.isRootScreen
+        ]
+
+        if let navTitle = payload.navigationTitle {
+            screen["navigation_title"] = navTitle
+        }
+        if let tabName = payload.tabName {
+            screen["tab_name"] = tabName
+        }
+        if let tabIndex = payload.tabIndex {
+            screen["tab_index"] = tabIndex
+        }
+        if let vcAccessibilityIdentifier = payload.vcAccessibilityIdentifier {
+            screen["vc_accessibility_identifier"] = vcAccessibilityIdentifier
+        }
+        if let vcAccessibilityLabel = payload.vcAccessibilityLabel {
+            screen["vc_accessibility_label"] = vcAccessibilityLabel
+        }
+
+        return screen
     }
 
     /// Sets the currently selected tab name

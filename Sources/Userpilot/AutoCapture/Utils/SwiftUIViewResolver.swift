@@ -21,7 +21,7 @@ internal enum SwiftUIViewResolver {
     ///   - window: The window where the event occurred
     ///   - point: The touch point in window coordinates
     ///   - event: The UI event
-    ///   - fallbackView: Fallback view if hit testing fails
+    ///   - fallbackView: Fallback view if hit testing fails (also used for checking redaction flags)
     /// - Returns: Dictionary of click properties or nil
     static func resolveClickProperties(
         window: UIWindow,
@@ -31,7 +31,7 @@ internal enum SwiftUIViewResolver {
     ) -> [String: Any]? {
         if #available(iOS 18.0, *) {
             if let element = window.accessibilityHitTest(point, event: event) as? NSObject {
-                return buildProperties(from: element)
+                return buildProperties(from: element, fallbackView: fallbackView)
             }
         }
 
@@ -62,10 +62,19 @@ internal enum SwiftUIViewResolver {
     }
 
     /// Builds click properties from an NSObject element
-    /// - Parameter element: The NSObject to extract properties from
+    /// - Parameters:
+    ///   - element: The NSObject to extract properties from
+    ///   - fallbackView: The UIView to use for checking redaction flags (since NSObject doesn't have those)
     /// - Returns: Dictionary of element properties
-    private static func buildProperties(from element: NSObject) -> [String: Any] {
-        let label = element.accessibilityLabel
+    private static func buildProperties(from element: NSObject, fallbackView: UIView) -> [String: Any] {
+        // If the element is a UIView, use the UIView-specific method with redaction support
+        if let view = element as? UIView {
+            return buildProperties(from: view)
+        }
+
+        // For non-UIView accessibility elements (like SwiftUI.AccessibilityNode on iOS 18+),
+        // we extract data from the accessibility element but check redaction flags on the fallback UIView
+        let rawLabel = element.accessibilityLabel
         let identifier = element.value(forKey: "accessibilityIdentifier") as? String
         let traits = element.accessibilityTraits
         let isButton = traits.contains(.button)
@@ -75,11 +84,16 @@ internal enum SwiftUIViewResolver {
             "element_type": elementType
         ]
 
-        if let label, !label.isEmpty {
+        // Apply redaction using the fallback view's settings
+        if let rawLabel, !rawLabel.isEmpty {
+            let label = fallbackView.shouldRedactText() ? "****" : rawLabel
             properties["element_label"] = label
         }
+
+        // Apply accessibility identifier redaction using the fallback view's settings
         if let identifier, !identifier.isEmpty {
-            properties["accessibility_id"] = identifier
+            let redactedIdentifier = fallbackView.shouldRedactAccessibilityLabel() ? "****" : identifier
+            properties["accessibility_id"] = redactedIdentifier
         }
 
         return properties
@@ -89,7 +103,7 @@ internal enum SwiftUIViewResolver {
     /// - Parameter view: The UIView to extract properties from
     /// - Returns: Dictionary of element properties
     private static func buildProperties(from view: UIView) -> [String: Any] {
-        let label = view.accessibilityLabel ?? view.extractFallbackLabel()
+        let rawLabel = view.accessibilityLabel ?? view.extractFallbackLabel()
         let identifier = view.accessibilityIdentifier
         let traits = view.accessibilityTraits
         let isButton = traits.contains(.button)
@@ -99,11 +113,16 @@ internal enum SwiftUIViewResolver {
             "element_type": elementType
         ]
 
-        if let label, !label.isEmpty {
+        // Apply redaction if needed
+        if let rawLabel, !rawLabel.isEmpty {
+            let label = view.shouldRedactText() ? "****" : rawLabel
             properties["element_label"] = label
         }
+
+        // Apply accessibility label redaction if needed
         if let identifier, !identifier.isEmpty {
-            properties["accessibility_id"] = identifier
+            let redactedIdentifier = view.shouldRedactAccessibilityLabel() ? "****" : identifier
+            properties["accessibility_id"] = redactedIdentifier
         }
 
         return properties

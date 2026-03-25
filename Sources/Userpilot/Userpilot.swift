@@ -12,6 +12,7 @@
 //
 
 // swiftlint:disable file_length
+import ObjectiveC
 import UIKit
 
 /// `Userpilot` manages the lifecycle of the Userpilot SDK and tracks user activity, enabling
@@ -116,7 +117,7 @@ public class Userpilot: NSObject {
         checkAutoCapture()
 
         // Register SDK Notifications
-        registerSDKNotifications()
+        // registerSDKNotifications()
 
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
@@ -143,8 +144,9 @@ public class Userpilot: NSObject {
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
-        container.registerLazy(UIKitAutoCaptureEngine.self, initializer: UIKitAutoCaptureEngine.init)
-        container.registerLazy(SwiftUIAutoCaptureEngine.self, initializer: SwiftUIAutoCaptureEngine.init)
+        container.registerLazy(ScreenTimeTracking.self, initializer: ScreenTimeTracker.init)
+        container.registerLazy(AutoCaptureEngine.self, initializer: AutoCaptureEngine.init)
+        // container.registerLazy(SwiftUIAutoCaptureEngine.self, initializer: SwiftUIAutoCaptureEngine.init)
         container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateManager.init)
         container.registerEager(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
         container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
@@ -441,13 +443,8 @@ extension Userpilot {
 extension Userpilot {
 
     /// Internal access to the UIKit auto capture engine
-    internal var uiKitAutoCaptureEngine: UIKitAutoCaptureEngine {
-        return container.resolve(UIKitAutoCaptureEngine.self)
-    }
-
-    /// Internal access to the SwiftUI auto capture engine
-    internal var swiftUIAutoCaptureEngine: SwiftUIAutoCaptureEngine {
-        return container.resolve(SwiftUIAutoCaptureEngine.self)
+    internal var uiKitAutoCaptureEngine: AutoCaptureEngine {
+        return container.resolve(AutoCaptureEngine.self)
     }
 
     /// Check auto capture configuration and initialize engines if enabled.
@@ -458,28 +455,59 @@ extension Userpilot {
 
         if screenAutocaptureEnabled || interactionEnabled {
             _ = uiKitAutoCaptureEngine
-            _ = swiftUIAutoCaptureEngine
         }
     }
 }
 
-// MARK: - SwiftUI Track screen API
+// MARK: - Autocapture Stop / Resume (thin facade; implementation in AutocaptureStopResume)
 
 extension Userpilot {
 
-    private func registerSDKNotifications() {
-        NotificationCenter.userpilot.addObserver(
-            self,
-            selector: #selector(screenTracked),
-            name: .userpilotTrackedScreenEvent,
-            object: nil)
+    /// Stops automatic screen and interaction capture. No events are recorded until `resumeAutoCapture()` is called.
+    @objc
+    public static func stopAutoCapture() {
+        AutocaptureViewConfiguration.stopAutoCapture()
+    }
+
+    /// Resumes automatic screen and interaction capture after a previous `stopAutoCapture()`.
+    @objc
+    public static func resumeAutoCapture() {
+        AutocaptureViewConfiguration.resumeAutoCapture()
+    }
+}
+
+// MARK: - Autocapture View Configuration (thin facade; implementation in AutocaptureViewConfiguration)
+
+extension Userpilot {
+
+    @objc
+    public static func userpilotSetIgnoreInteractions(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setIgnoreInteractions(value, for: responder)
     }
 
     @objc
-    private func screenTracked(notification: Notification) {
-        let title: String? = notification.value()
-        guard let title = title else { return }
-        screen(title)
+    public static func userpilotSetIgnoreInnerHierarchy(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setIgnoreInnerHierarchy(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetRedactText(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setRedactText(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetRedactAccessibilityLabel(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setRedactAccessibilityLabel(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetIgnoreInteractionsDefault(_ value: Bool, for responderType: UIResponder.Type) {
+        AutocaptureViewConfiguration.setIgnoreInteractionsDefault(value, for: responderType)
+    }
+
+    @objc
+    public static func userpilotSetIgnoreInnerHierarchyDefault(_ value: Bool, for responderType: UIResponder.Type) {
+        AutocaptureViewConfiguration.setIgnoreInnerHierarchyDefault(value, for: responderType)
     }
 }
 // swiftlint:enable file_length

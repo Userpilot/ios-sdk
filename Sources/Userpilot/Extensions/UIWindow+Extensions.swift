@@ -12,10 +12,12 @@
 
 import UIKit
 
+// MARK: - Internal
+
 /// Extension providing automatic click tracking for UIWindow
 extension UIWindow {
 
-    // MARK: - Static Methods
+    // MARK: Setup
 
     /// Swizzles sendEvent method to intercept touch events
     static func swizzleSendEvent() {
@@ -28,30 +30,62 @@ extension UIWindow {
         )
     }
 
+    // MARK: Event Handling
+
     /// Swizzled sendEvent that intercepts and processes touch events
     /// - Parameter event: The UI event to process
     @objc func swizzled_sendEvent(_ event: UIEvent) {
         self.swizzled_sendEvent(event)  // calls original sendEvent
 
-        // Check if SDK is initialized
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         guard Userpilot.isInitialized else { return }
 
         guard let touches = event.allTouches else { return }
         for touch in touches where touch.phase == .began {
-            guard let touchedView = touch.view else { continue }
-
-            // Resolve the deepest subview at the touch point.
-            // UILabel / UIImageView have isUserInteractionEnabled = false,
-            // so touch.view returns their parent. We walk into the hierarchy
-            // ourselves to find the real visual element the user tapped on.
             let locationInWindow = touch.location(in: self)
-            let resolvedView = deepestSubview(at: locationInWindow, in: touchedView) ?? touchedView
+            // SwiftUI often leaves touch.view nil; fall back to hit-testing the window.
+            let touchedView = touch.view ?? self.hitTest(locationInWindow, with: event)
+            guard let view = touchedView else { continue }
 
-            handleTouchOnView(resolvedView)
+            let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
+
+            if Userpilot.shared.config.appFramework == .swiftUI {
+                handleSwiftUIClick(at: locationInWindow, event: event, view: resolvedView)
+            } else {
+                handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
+            }
         }
     }
 
-    // MARK: - Private Methods
+    // MARK: SwiftUI Click
+
+    /// Handles SwiftUI click tracking at the given point; sends event through the UIKit engine pipeline.
+    /// - Parameters:
+    ///   - point: The touch point in window coordinates
+    ///   - event: The UI event
+    ///   - view: The UIView that was touched (resolved to deepest subview)
+    private func handleSwiftUIClick(at point: CGPoint, event: UIEvent, view: UIView) {
+        let config = Userpilot.shared.config
+        guard config.enableInteractionAutocapture else { return }
+        guard !view.shouldIgnoreInteractions() else { return }
+        // Prefer UIKit event for navigation bar (e.g. back button) to avoid duplicate SwiftUI + UIKit events
+        if config.preferUIKitOverSwiftUIForNavigationBar, view.isInsideNavigationBar {
+            return
+        }
+
+        let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
+            window: self,
+            point: point,
+            event: event,
+            fallbackView: view
+        ) ?? [:]
+        var eventProperties = swiftUIProperties
+        eventProperties["interaction_type"] = InteractionType.tap.rawValue
+        eventProperties["auto_capture_source"] = FrameworkType.swiftUI.rawValue
+        Userpilot.shared.uiKitAutoCaptureEngine.handleClickTracked(eventProperties)
+    }
+
+    // MARK: Touch Routing
 
     /// Finds the deepest (front-most) subview whose frame contains `point`,
     /// ignoring `isUserInteractionEnabled` so we can discover UILabel / UIImageView.
@@ -81,9 +115,13 @@ extension UIWindow {
         return root
     }
 
-    /// Routes touch handling based on the view type
-    /// - Parameter view: The UIView that was touched (already resolved to deepest subview)
-    private func handleTouchOnView(_ view: UIView) {
+    /// Routes touch handling based on the view type (table/collection cells, controls, or regular tap)
+    /// - Parameters:
+    ///   - view: The UIView that was touched (already resolved to deepest subview)
+    ///   - window: The window where the touch occurred
+    ///   - point: Touch location in window coordinates
+    ///   - event: The UI event
+    private func handleTouchOnView(_ view: UIView, window: UIWindow, point: CGPoint, event: UIEvent) {
         let config = Userpilot.shared.config
         guard config.enableInteractionAutocapture else { return }
 
@@ -95,49 +133,73 @@ extension UIWindow {
 
         // Skip views inside a UIControl (like UIButton's internal UILabel/UIImageView)
         // But allow views inside UITextField to pass through
-        if let parentControl = findParentControl(for: view),
+        if let parentControl = view.findParentControl(),
            !(parentControl is UITextField) {
             return
         }
 
         // 2. Check for UITableViewCell
-        if let tableCell = findParentTableViewCell(for: view) {
+        if let tableCell = view.findParentTableViewCell() {
             tableCell.captureTableViewCellSelection(touchedView: view)
             return
         }
 
         // 3. Check for UICollectionViewCell
-        if let collectionCell = findParentCollectionViewCell(for: view) {
+        if let collectionCell = view.findParentCollectionViewCell() {
             collectionCell.captureCollectionViewItemSelection(touchedView: view)
             return
         }
 
         // 4. Handle regular view tap (UILabel, UIImageView, UITextView, plain UIView, etc.)
-        handleRegularViewTap(on: view, config: config)
+        handleRegularViewTap(on: view, config: config, window: window, point: point, event: event)
     }
 
+    // MARK: View Tap Handling
+
     /// Handles tap on regular views (not controls, table cells, or collection cells)
-    private func handleRegularViewTap(on view: UIView, config: Userpilot.Config) {
+    private func handleRegularViewTap(
+        on view: UIView,
+        config: Userpilot.Config,
+        window: UIWindow,
+        point: CGPoint,
+        event: UIEvent
+    ) {
         guard !view.shouldIgnoreInteractions() else { return }
+
+        if config.appFramework == .swiftUI,
+           let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
+               window: window,
+               point: point,
+               event: event,
+               fallbackView: view
+           ) {
+            var eventProperties = swiftUIProperties
+            eventProperties["interaction_type"] = InteractionType.tap.rawValue
+            eventProperties["auto_capture_source"] = FrameworkType.swiftUI.rawValue
+            Userpilot.shared.uiKitAutoCaptureEngine.handleClickTracked(eventProperties)
+            return
+        }
+
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
+        let useRedactedInner = (effectiveView !== view)
 
         var eventProperties: [String: Any] = [
             "interaction_type": InteractionType.tap.rawValue,
             "auto_capture_source": FrameworkType.uiKit.rawValue,
-            "element_type": String(describing: type(of: view)),
-            "element_path": UIKitViewResolver.resolvePath(view: view)
+            "element_type": String(describing: type(of: effectiveView)),
+            "element_path": path,
+            "is_long_press": false
         ]
 
-        if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
-            eventProperties["accessibility_identifier"] = accessibilityIdentifier
-        }
-
-        if !config.disableInteractionAccessibilityLabelCapture {
+        if useRedactedInner {
+            eventProperties["element_text"] = "****"
+        } else {
+            if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
+                eventProperties["accessibility_identifier"] = accessibilityIdentifier
+            }
             if let accessibilityLabel = view.getAccessibilityLabelContent() {
                 eventProperties["accessibility_label"] = accessibilityLabel
             }
-        }
-
-        if !config.disableInteractionTextCapture {
             if let text = view.getTextContent() {
                 eventProperties["element_text"] = text
             }
@@ -146,41 +208,4 @@ extension UIWindow {
         Userpilot.shared.uiKitAutoCaptureEngine.handleClickTracked(eventProperties)
     }
 
-    // MARK: - View Hierarchy Helpers
-
-    /// Finds a parent UIControl in the view hierarchy
-    private func findParentControl(for view: UIView) -> UIControl? {
-        var currentView: UIView? = view.superview
-        while let parent = currentView {
-            if let control = parent as? UIControl {
-                return control
-            }
-            currentView = parent.superview
-        }
-        return nil
-    }
-
-    /// Finds a parent UITableViewCell in the view hierarchy
-    private func findParentTableViewCell(for view: UIView) -> UITableViewCell? {
-        var currentView: UIView? = view
-        while let current = currentView {
-            if let cell = current as? UITableViewCell {
-                return cell
-            }
-            currentView = current.superview
-        }
-        return nil
-    }
-
-    /// Finds a parent UICollectionViewCell in the view hierarchy
-    private func findParentCollectionViewCell(for view: UIView) -> UICollectionViewCell? {
-        var currentView: UIView? = view
-        while let current = currentView {
-            if let cell = current as? UICollectionViewCell {
-                return cell
-            }
-            currentView = current.superview
-        }
-        return nil
-    }
 }

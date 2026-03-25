@@ -13,6 +13,8 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Public API
+
 /// Extension providing screen tracking functionality for SwiftUI views
 public extension View {
     /// Marks a SwiftUI View to be tracked as a screen event when it appears
@@ -24,7 +26,9 @@ public extension View {
     }
 }
 
-/// Internal modifier that tracks screen events when views appear
+// MARK: - Private
+
+/// Modifier that tracks screen events when views appear
 private struct UserpilotSwiftUIViewModifier: ViewModifier {
     // MARK: - Properties
 

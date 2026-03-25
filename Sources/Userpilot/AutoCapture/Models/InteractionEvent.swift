@@ -72,7 +72,7 @@ internal struct InteractionPayload {
     let autoCaptureSource: String
 
     /// The element type (e.g., "button", "switch", "slider")
-    let elementType: String
+    var elementType: String
 
     /// The timestamp of the event
     let timestamp: TimeInterval
@@ -138,6 +138,11 @@ internal struct InteractionPayload {
 
     /// The length of the text (privacy-safe)
     var textLength: Int?
+
+    // MARK: - Gesture Properties
+
+    /// Whether the interaction was triggered by a long press (vs. a tap)
+    var isLongPress: Bool?
 
     // MARK: - Initialization
 
@@ -226,6 +231,11 @@ internal struct InteractionPayload {
         }
         if let textLength = textLength {
             dict["text_length"] = textLength
+        }
+
+        // Gesture properties
+        if let isLongPress = isLongPress {
+            dict["is_long_press"] = isLongPress
         }
 
         return dict

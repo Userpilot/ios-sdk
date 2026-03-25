@@ -12,6 +12,8 @@
 
 import SwiftUI
 
+// MARK: - Public API
+
 /// Extension providing click analytics recognition functionality for SwiftUI views
 extension View {
 
@@ -102,7 +104,9 @@ extension View {
     }
 }
 
-/// Internal modifier that applies accessibility traits to make views recognizable as clickable elements
+// MARK: - Private
+
+/// Modifier that applies accessibility traits to make views recognizable as clickable elements
 private struct UserpilotClickRecognitionModifier: ViewModifier {
     // MARK: - Properties
 

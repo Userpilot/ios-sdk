@@ -26,14 +26,22 @@ internal extension UIControl {
         captureControlInteraction(action: action, target: target, event: event)
     }
 
-    // MARK: - Private Methods
+    // MARK: - Internal (used by UIApplication.sendAction swizzle to avoid duplicate capture)
 
-    /// Captures control interaction based on control type
-    private func captureControlInteraction(action: Selector, target: Any?, event: UIEvent?) {
-        // Check if SDK is initialized and interaction capture is enabled
+    /// Captures control interaction based on control type.
+    /// Called from UIApplication.sendAction swizzle when sender is a UIControl.
+    internal func captureControlInteraction(action: Selector, target: Any?, event: UIEvent?) {
         guard Userpilot.isInitialized else { return }
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         let config = Userpilot.shared.config
         guard config.enableInteractionAutocapture else { return }
+
+        // Skip tap for text field/text view editing actions when configured;
+        // keep only text_field_changed / text_view_changed
+        if config.ignoreTapForTextInputEditingActions, self is UITextField || self is UITextView,
+           Self.isTextEditingAction(action) {
+            return
+        }
 
         // Check if this control should be ignored
         guard !shouldIgnoreInteractions() else { return }
@@ -71,36 +79,35 @@ internal extension UIControl {
                 interactionType: .tap,
                 elementType: elementType
             )
-            if !config.disableInteractionTextCapture && !shouldRedactText() {
-                payload.elementText = button.title(for: .normal)
-                    ?? button.currentTitle
-                    ?? button.titleLabel?.text
-            }
+            payload.elementText = getTextContent()
 
         case let switchControl as UISwitch:
             payload = InteractionPayload(
                 interactionType: .switchChanged,
                 elementType: elementType
             )
-            payload.boolValue = switchControl.isOn
+            if config.enableInteractionValueCapture {
+                payload.boolValue = switchControl.isOn
+            }
 
         case let slider as UISlider:
             payload = InteractionPayload(
                 interactionType: .sliderChanged,
                 elementType: elementType
             )
-            payload.floatValue = slider.value
+            if config.enableInteractionValueCapture {
+                payload.floatValue = slider.value
+            }
 
         case let segmentedControl as UISegmentedControl:
             payload = InteractionPayload(
                 interactionType: .segmentChanged,
                 elementType: elementType
             )
-            payload.intValue = segmentedControl.selectedSegmentIndex
-            if !config.disableInteractionTextCapture && !shouldRedactText() {
-                payload.stringValue = segmentedControl.titleForSegment(
-                    at: segmentedControl.selectedSegmentIndex
-                )
+            if config.enableInteractionValueCapture {
+                payload.intValue = segmentedControl.selectedSegmentIndex
+                let raw = segmentedControl.titleForSegment(at: segmentedControl.selectedSegmentIndex)
+                payload.stringValue = shouldRedactText() ? (raw != nil ? "****" : nil) : raw
             }
 
         case let stepper as UIStepper:
@@ -108,42 +115,58 @@ internal extension UIControl {
                 interactionType: .stepperChanged,
                 elementType: elementType
             )
-            payload.doubleValue = stepper.value
+            if config.enableInteractionValueCapture {
+                payload.doubleValue = stepper.value
+            }
 
         case let datePicker as UIDatePicker:
             payload = InteractionPayload(
                 interactionType: .datePickerChanged,
                 elementType: elementType
             )
-            payload.dateValue = datePicker.date
+            if config.enableInteractionValueCapture {
+                payload.dateValue = datePicker.date
+            }
 
         case let pageControl as UIPageControl:
             payload = InteractionPayload(
                 interactionType: .pageControlChanged,
                 elementType: elementType
             )
-            payload.intValue = pageControl.currentPage
+            if config.enableInteractionValueCapture {
+                payload.intValue = pageControl.currentPage
+            }
 
         default:
             payload = InteractionPayload(
                 interactionType: .tap,
                 elementType: elementType
             )
-            if !config.disableInteractionTextCapture && !shouldRedactText() {
-                payload.elementText = getTextContent()
-            }
+            payload.elementText = getTextContent()
         }
 
-        // Add common properties
+        // Add common properties (getters return "****" when redaction/config disables capture)
         payload.accessibilityIdentifier = accessibilityIdentifier
-        if !config.disableInteractionAccessibilityLabelCapture && !shouldRedactAccessibilityLabel() {
-            payload.accessibilityLabel = accessibilityLabel
+        payload.accessibilityLabel = getAccessibilityLabelContent()
+
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        payload.elementPath = path
+        if effectiveView !== self {
+            payload.elementType = String(describing: type(of: effectiveView))
+            payload.elementText = "****"
         }
-        payload.elementPath = UIKitViewResolver.resolvePath(view: self)
 
         // IBOutlet reference name (e.g., "submitButton", "searchTextField")
         payload.referenceName = resolveReferenceName()
 
+        payload.isLongPress = false
+
         return payload
+    }
+
+    /// Selectors that indicate text-editing (we send text_field_changed / text_view_changed separately; skip tap).
+    private static func isTextEditingAction(_ action: Selector) -> Bool {
+        let name = NSStringFromSelector(action)
+        return name == "textChanged:" || name == "editingChanged:" || name.hasSuffix("editingChanged:")
     }
 }

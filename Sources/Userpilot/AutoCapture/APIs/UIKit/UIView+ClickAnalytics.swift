@@ -12,7 +12,9 @@
 
 import UIKit
 
-/// Extension providing click analytics recognition functionality for UIKit views (public API for client)
+// MARK: - Public API
+
+/// Extension providing click analytics recognition functionality for UIKit views
 public extension UIView {
 
     /// Manually enables analytics collection and tooltip guides display on this UIView.
@@ -63,7 +65,7 @@ public extension UIView {
     ///
     /// Enables click analytics recognition for UIKit views
     /// - Important: Call after view is configured and before adding to hierarchy
-    public func userpilotRecognizeClickAnalytics() {
+    func userpilotRecognizeClickAnalytics() {
         // 1. Enable user interaction (required for touch events)
         self.isUserInteractionEnabled = true
 
@@ -95,10 +97,11 @@ public extension UIView {
     }
 }
 
-// MARK: - Associated Object for Explicit Recognition Flag
+// MARK: - Private
 
-/// Associated object key for explicit recognition flag
 private var explicitlyRecognizedKey: UInt8 = 0
+
+// MARK: - Internal
 
 /// Extension providing explicit recognition flag for UIView
 internal extension UIView {

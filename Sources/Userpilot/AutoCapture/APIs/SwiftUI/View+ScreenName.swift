@@ -13,6 +13,20 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Public API
+
+/// Extension providing screen name functionality for SwiftUI views
+extension View {
+    /// Sets a custom screen name for automatic screen tracking
+    /// - Parameter name: The screen name to use for tracking
+    /// - Returns: A view with the screen name set
+    public func userpilotScreenName(_ name: String) -> some View {
+        modifier(ScreenNameModifier(name: name))
+    }
+}
+
+// MARK: - Private
+
 /// PreferenceKey for passing screen names up the SwiftUI view hierarchy
 private struct ScreenNamePreferenceKey: PreferenceKey {
     // MARK: - PreferenceKey Protocol
@@ -45,7 +59,8 @@ private struct ScreenNameBridge: UIViewRepresentable {
         view.isUserInteractionEnabled = false
         view.frame = .zero
         if let screenName = screenName {
-            view.up_screenName = screenName
+            view.userpilotScreenNameTag = screenName
+            propagateScreenNameToHostingView(screenName, from: view)
         }
         return view
     }
@@ -56,8 +71,16 @@ private struct ScreenNameBridge: UIViewRepresentable {
     ///   - context: The context for the view
     func updateUIView(_ uiView: UIView, context: Context) {
         if let screenName = screenName {
-            uiView.up_screenName = screenName
+            uiView.userpilotScreenNameTag = screenName
+            propagateScreenNameToHostingView(screenName, from: uiView)
         }
+    }
+
+    /// Propagates screen name to the hosting controller so resolvedScreenNameForCapture uses it (highest priority).
+    private func propagateScreenNameToHostingView(_ screenName: String, from bridgeView: UIView) {
+        guard let viewController = bridgeView.closestViewController() else { return }
+        viewController.view.userpilotScreenNameTag = screenName
+        viewController.userpilotSwiftUIScreenName = screenName
     }
 }
 
@@ -82,15 +105,5 @@ private struct ScreenNameModifier: ViewModifier {
                         .frame(width: 0, height: 0)
                 }
             )
-    }
-}
-
-/// Extension providing screen name functionality for SwiftUI views
-extension View {
-    /// Sets a custom screen name for automatic screen tracking
-    /// - Parameter name: The screen name to use for tracking
-    /// - Returns: A view with the screen name set
-    public func userpilotScreenName(_ name: String) -> some View {
-        modifier(ScreenNameModifier(name: name))
     }
 }

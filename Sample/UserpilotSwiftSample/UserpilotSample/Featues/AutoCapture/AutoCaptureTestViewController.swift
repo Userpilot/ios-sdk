@@ -32,6 +32,7 @@ class AutoCaptureTestViewController: UIViewController {
     private let normalButton = UIButton(type: .system)
     private let tableViewButton = UIButton(type: .system)
     private let collectionViewButton = UIButton(type: .system)
+    private let menuButton = UIButton(type: .system)
 
     // Labels for displaying values
     private let stepperValueLabel = UILabel()
@@ -57,9 +58,10 @@ class AutoCaptureTestViewController: UIViewController {
         view.addSubview(backButton)
 
         NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            backButton.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
+            backButton.heightAnchor.constraint(equalToConstant: 32),
         ])
     }
 
@@ -98,7 +100,8 @@ class AutoCaptureTestViewController: UIViewController {
         scrollView.addSubview(contentView)
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            scrollView.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -107,7 +110,7 @@ class AutoCaptureTestViewController: UIViewController {
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
         ])
     }
 
@@ -122,7 +125,7 @@ class AutoCaptureTestViewController: UIViewController {
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
         ])
     }
 
@@ -139,7 +142,6 @@ class AutoCaptureTestViewController: UIViewController {
         normalButton.setTitleColor(.white, for: .normal)
         normalButton.layer.cornerRadius = 8
         normalButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        normalButton.userpilotIgnoreInteractions = true
         stackView.addArrangedSubview(normalButton)
 
         // UISwitch
@@ -166,7 +168,8 @@ class AutoCaptureTestViewController: UIViewController {
         // UIStepper
         addSectionHeader("5. UIStepper (stepper_changed)")
         // swiftlint:disable:next line_length
-        let stepperContainer = createLabeledControl(label: "Quantity: ", control: stepper, valueLabel: stepperValueLabel)
+        let stepperContainer = createLabeledControl(
+            label: "Quantity: ", control: stepper, valueLabel: stepperValueLabel)
         stepper.value = 1
         stepper.minimumValue = 0
         stepper.maximumValue = 10
@@ -208,7 +211,8 @@ class AutoCaptureTestViewController: UIViewController {
         // TableView Button
         addSectionHeader("10. UITableView Cell Selection")
         tableViewButton.setTitle("Open TableView Test", for: .normal)
-        tableViewButton.addTarget(self, action: #selector(onTableViewButtonTapped), for: .touchUpInside)
+        tableViewButton.addTarget(
+            self, action: #selector(onTableViewButtonTapped), for: .touchUpInside)
         tableViewButton.backgroundColor = .systemGreen
         tableViewButton.setTitleColor(.white, for: .normal)
         tableViewButton.layer.cornerRadius = 8
@@ -218,12 +222,54 @@ class AutoCaptureTestViewController: UIViewController {
         // CollectionView Button
         addSectionHeader("11. UICollectionView Item Selection")
         collectionViewButton.setTitle("Open CollectionView Test", for: .normal)
-        collectionViewButton.addTarget(self, action: #selector(onCollectionViewButtonTapped), for: .touchUpInside)
+        collectionViewButton.addTarget(
+            self, action: #selector(onCollectionViewButtonTapped), for: .touchUpInside)
         collectionViewButton.backgroundColor = .systemOrange
         collectionViewButton.setTitleColor(.white, for: .normal)
         collectionViewButton.layer.cornerRadius = 8
         collectionViewButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
         stackView.addArrangedSubview(collectionViewButton)
+
+        // UIMenu Button
+        addSectionHeader("12. UIMenu (menu item tap)")
+        setupMenuButton()
+        stackView.addArrangedSubview(menuButton)
+    }
+
+    private func setupMenuButton() {
+        menuButton.setTitle("Show Menu ▼", for: .normal)
+        menuButton.backgroundColor = .systemPurple
+        menuButton.setTitleColor(.white, for: .normal)
+        menuButton.layer.cornerRadius = 8
+        menuButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
+
+        let menuItems = UIMenu(
+            title: "Options",
+            identifier: UIMenu.Identifier("autocapture_options_menu"),
+            options: .displayInline,
+            children: [
+                UIAction(
+                    title: "Option A",
+                    identifier: UIAction.Identifier("optionA")
+                ) { [weak self] _ in
+                    self?.showAlert("Menu", "Option A selected – check autocapture event")
+                },
+                UIAction(
+                    title: "Option B",
+                    identifier: UIAction.Identifier("optionB")
+                ) { [weak self] _ in
+                    self?.showAlert("Menu", "Option B selected – check autocapture event")
+                },
+                UIAction(
+                    title: "Option C",
+                    identifier: UIAction.Identifier("optionC")
+                ) { [weak self] _ in
+                    self?.showAlert("Menu", "Option C selected – check autocapture event")
+                },
+            ]
+        )
+        menuButton.menu = menuItems
+        menuButton.showsMenuAsPrimaryAction = true
     }
 
     // MARK: - Helper Methods
@@ -244,7 +290,9 @@ class AutoCaptureTestViewController: UIViewController {
         stackView.addArrangedSubview(label)
     }
 
-    private func createLabeledControl(label text: String, control: UIView, valueLabel: UILabel? = nil) -> UIView {
+    private func createLabeledControl(
+        label text: String, control: UIView, valueLabel: UILabel? = nil
+    ) -> UIView {
         let container = UIView()
         let label = UILabel()
         label.text = text
@@ -259,7 +307,7 @@ class AutoCaptureTestViewController: UIViewController {
             label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             control.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             control.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            container.heightAnchor.constraint(equalToConstant: 44)
+            container.heightAnchor.constraint(equalToConstant: 44),
         ]
 
         if let valueLabel = valueLabel {
@@ -268,7 +316,7 @@ class AutoCaptureTestViewController: UIViewController {
             container.addSubview(valueLabel)
             constraints.append(contentsOf: [
                 valueLabel.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 8),
-                valueLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+                valueLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             ])
         }
 
@@ -315,6 +363,37 @@ class AutoCaptureTestViewController: UIViewController {
     @IBAction func onCollectionViewButtonTapped(_ sender: UIButton) {
         let collectionVC = CollectionViewTestViewController()
         navigationController?.pushViewController(collectionVC, animated: true)
+    }
+
+    // MARK: - Text Config Demo Button
+
+    private let textConfigDemoButton = UIButton(type: .system)
+
+    @IBAction func onTextConfigDemoButtonTapped(_ sender: UIButton) {
+        let textConfigVC = TextConfigDemoViewController()
+        navigationController?.pushViewController(textConfigVC, animated: true)
+    }
+
+    // MARK: - Update addAllControls to include the new button
+
+    private func addAllControls() {
+        // ... existing code ...
+
+        // UIMenu Button
+        addSectionHeader("12. UIMenu (menu item tap)")
+        setupMenuButton()
+        stackView.addArrangedSubview(menuButton)
+
+        // Text Config Demo Button
+        addSectionHeader("13. Text Config Demo")
+        textConfigDemoButton.setTitle("Open Text Config Demo", for: .normal)
+        textConfigDemoButton.addTarget(
+            self, action: #selector(onTextConfigDemoButtonTapped), for: .touchUpInside)
+        textConfigDemoButton.backgroundColor = .systemIndigo
+        textConfigDemoButton.setTitleColor(.white, for: .normal)
+        textConfigDemoButton.layer.cornerRadius = 8
+        textConfigDemoButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        stackView.addArrangedSubview(textConfigDemoButton)
     }
 
     private func showAlert(_ title: String, _ message: String) {

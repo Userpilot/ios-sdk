@@ -41,8 +41,3 @@ internal enum InteractionEventCache {
         }
     }
 }
-
-enum FrameworkType: String {
-    case uiKit   = "UIKit"
-    case swiftUI = "SwiftUI"
-}

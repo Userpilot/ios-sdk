@@ -32,8 +32,10 @@ class UserpilotManager {
     func initialize() {
         userpilot = Userpilot(config: Userpilot.Config(token: "NX-b83a34b8")
             .logging(enabled: true)
-            .enableUseInAppBrowser(enabled: true)
-            .enableAutoCaptureForUIKit(enabled: true)
+            .enableUseInAppBrowser()
+            .enableScreenAutocapture()
+            .enableInteractionAutocapture()
+            .appFramework(.swiftUI)
         )
     }
     

@@ -13,18 +13,28 @@ import Foundation
 import UIKit
 import os.log
 
-public extension Userpilot {
+extension Userpilot {
+
+    /// The app framework used by the client application.
+    /// Used by the SDK for autocapture and lifecycle behavior.
+    public enum AppFramework {
+        case uiKit
+        case swiftUI
+    }
 
     // Note: `Config` is a class so that it can be initialized inline with the chained setters. E.g:
     // `Config(token: "TOKEN").logging(true)`. A struct would require initializing as a var first.
     @objc
-    class Config: NSObject {
+    public class Config: NSObject {
 
         /// Customer token
         let token: String
 
         /// Userpilot SDK logger
         var logger: Logging = OSLog.disabled
+
+        /// The app framework (UIKit or SwiftUI). Defaults to UIKit.
+        var appFramework: AppFramework = .uiKit
 
         /// Disable request push notifications permission by SDK.
         var disableRequestPushPermission: Bool = false
@@ -58,6 +68,27 @@ public extension Userpilot {
         // swiftlint:disable:next identifier_name
         var disableInteractionAccessibilityLabelCapture: Bool = false
 
+        /// Whether or not to enable capturing control values. Defaults to true.
+        /// If set to true, the SDK will capture values from controls such as:
+        /// - UISwitch: captures the on/off state
+        /// - UISegmentedControl: captures the selected segment value
+        /// - UISlider: captures the selected value
+        /// - UIStepper: captures the selected step value
+        /// - UIPickerView: captures the selected value
+        /// - UIDatePicker: captures the selected date/time value
+        var enableInteractionValueCapture: Bool = true
+
+        /// When true (default), a tap event is not sent for UITextField/UITextView when the action is
+        /// a text-editing action (e.g. textChanged:, editingChanged:). Only the text_field_changed /
+        /// text_view_changed event is sent. Use this to avoid duplicate events when
+        /// typing in SwiftUI or UIKit text fields.
+        var ignoreTapForTextInputEditingActions: Bool = true
+
+        /// When true (default), SwiftUI tap events are not sent for views inside a UINavigationBar
+        /// (e.g. back button), so only the UIKit sendAction event is recorded. Use this to avoid
+        /// duplicate events when tapping navigation bar buttons in SwiftUI.
+        var preferUIKitOverSwiftUIForNavigationBar: Bool = true
+
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
         @objc
@@ -72,7 +103,18 @@ public extension Userpilot {
         @discardableResult
         @objc
         public func logging(enabled isEnabled: Bool) -> Self {
-            logger = isEnabled ? OSLog(userpilotCategory: Constants.General.userpilotLoggingCategory) : .disabled
+            logger =
+                isEnabled
+                ? OSLog(userpilotCategory: Constants.General.userpilotLoggingCategory) : .disabled
+            return self
+        }
+
+        /// Sets the app framework (UIKit or SwiftUI).
+        /// - Parameter framework: The framework used by the client app.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        public func appFramework(_ framework: AppFramework) -> Self {
+            appFramework = framework
             return self
         }
 
@@ -154,6 +196,41 @@ public extension Userpilot {
         @objc
         public func disableInteractionAccessibilityLabelCapture(_ disabled: Bool = true) -> Self {
             disableInteractionAccessibilityLabelCapture = disabled
+            return self
+        }
+
+        /// Enables or disables capturing control values during interaction tracking.
+        /// When enabled (default), the SDK will capture values from controls such as:
+        /// - UISwitch: on/off state
+        /// - UISegmentedControl: selected segment value
+        /// - UISlider: selected value
+        /// - UIStepper: selected step value
+        /// - UIPickerView: selected value
+        /// - UIDatePicker: selected date/time value
+        /// - Parameter enabled: A boolean indicating whether control value capture is enabled.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableInteractionValueCapture(_ enabled: Bool = true) -> Self {
+            enableInteractionValueCapture = enabled
+            return self
+        }
+
+        /// When true (default), tap is not sent for text field/text view editing actions;
+        /// only text_field_changed / text_view_changed is sent.
+        @discardableResult
+        @objc
+        public func ignoreTapForTextInputEditingActions(_ ignore: Bool = true) -> Self {
+            ignoreTapForTextInputEditingActions = ignore
+            return self
+        }
+
+        /// When true (default), SwiftUI tap is not sent for navigation bar (e.g. back button);
+        /// only the UIKit event is sent.
+        @discardableResult
+        @objc
+        public func preferUIKitOverSwiftUIForNavigationBar(_ prefer: Bool = true) -> Self {
+            preferUIKitOverSwiftUIForNavigationBar = prefer
             return self
         }
 

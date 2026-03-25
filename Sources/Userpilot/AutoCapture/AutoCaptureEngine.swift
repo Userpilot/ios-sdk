@@ -14,7 +14,7 @@ import Foundation
 import UIKit
 
 /// `UIKitAutoCaptureEngine` manages automatic screen and interaction tracking for UIKit applications.
-internal class UIKitAutoCaptureEngine {
+internal class AutoCaptureEngine {
     // MARK: - Properties
 
     /// The last screen name that was tracked to avoid duplicate events
@@ -29,6 +29,9 @@ internal class UIKitAutoCaptureEngine {
     /// Screen name tracker for managing navigation state
     private let screenNameTracker: ScreenNameTracking
 
+    /// Screen time tracker for foreground-only time per screen
+    private let screenTimeTracker: ScreenTimeTracking
+
     // MARK: - Initialization
 
     /// Creates a UIKit auto capture engine and sets up tracking if enabled
@@ -37,6 +40,7 @@ internal class UIKitAutoCaptureEngine {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.config = container.resolve(Userpilot.Config.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
+        self.screenTimeTracker = container.resolve(ScreenTimeTracking.self)
 
         let screenTrackingEnabled = config.enableScreenAutocapture
         let interactionTrackingEnabled = config.enableInteractionAutocapture
@@ -68,8 +72,11 @@ internal class UIKitAutoCaptureEngine {
         // This also captures table view cell and collection view cell taps
         AutoCaptureSwizzler.swizzleClickTracking()
 
-        // UIControl interactions (buttons, switches, sliders, etc.) with action names
-        AutoCaptureSwizzler.swizzleControlTracking()
+        // All target–action interactions via UIApplication.sendAction (UIControl, UIBarButtonItem, UIMenu, etc.)
+        AutoCaptureSwizzler.swizzleApplicationSendAction()
+
+        // UIPickerView row selections via delegate hooking
+        AutoCaptureSwizzler.swizzlePickerViewDelegate()
 
         // Text input tracking via notifications
         AutoCaptureSwizzler.registerTextFieldNotifications()
@@ -81,11 +88,14 @@ internal class UIKitAutoCaptureEngine {
     /// Handles screen tracking and publishes analytics events as track events
     /// - Parameter payload: The screen tracking payload from the view controller
     internal func handleScreenTracked(_ payload: ScreenTrackingPayload) {
-        // Filter for UIKit source only
-        guard payload.autoCaptureSource == FrameworkType.uiKit.rawValue else { return }
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
+        let acceptedSources = [FrameworkType.uiKit.rawValue, FrameworkType.swiftUI.rawValue]
+        guard acceptedSources.contains(payload.autoCaptureSource) else { return }
 
         // Avoid duplicate events
         guard lastTrackedScreen != payload.currentScreen else { return }
+
+        let previousDurationMs = screenTimeTracker.onScreenChanged(payload)
 
         // Flush any cached events from the previous screen (text input, slider, etc.)
         InteractionEventCache.flushAll()
@@ -100,13 +110,17 @@ internal class UIKitAutoCaptureEngine {
 
         screenNameTracker.updateScreen(with: enrichedPayload)
 
-        // Send as track event with title "screen"
-        //        analyticsPublisher.publish(
-        //            Event(type: .event("screen"), properties: enrichedPayload.toDictionary()),
-        //            isInternalEvent: false
-        //        )
-        print("SCREEN")
-        print(enrichedPayload.toDictionary())
+        var properties = enrichedPayload.toDictionary()
+        if let previousDurationMs = previousDurationMs {
+            properties[Constants.AutoCapture.previousScreenDurationMsKey] = previousDurationMs
+        }
+        let event = Event(
+            type: .event("screen-auto-capture"),
+            properties: properties
+        )
+        debugPrint("---------------")
+        debugPrint(event)
+        // analyticsPublisher.publish(event, isInternalEvent: false)
     }
 
     /// Handles tab selection tracking
@@ -123,71 +137,50 @@ internal class UIKitAutoCaptureEngine {
     /// Handles interaction events from UIControl, UITableView, UICollectionView, and text inputs
     /// - Parameter payload: The interaction payload containing event details
     internal func handleInteraction(_ payload: InteractionPayload) {
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         guard config.enableInteractionAutocapture else { return }
         guard payload.autoCaptureSource == FrameworkType.uiKit.rawValue else { return }
 
         var properties = payload.toDictionary()
-        properties["screen"] = buildScreenDictionary()
+        properties["screen"] = screenNameTracker.buildScreenDictionary()
 
         // let eventName = eventNameForInteractionType(payload.interactionType)
         let eventName = payload.interactionType.rawValue
 
-        //        analyticsPublisher.publish(
-        //            Event(type: .event(eventName), properties: properties),
-        //            isInternalEvent: false
-        //        )
-        print("EVENT")
-        print(properties)
+        debugPrint("---------------")
+        debugPrint(properties)
+        print("AAAA \(properties)")
+//        analyticsPublisher.publish(
+//            Event(type: .event(eventName), properties: properties),
+//            isInternalEvent: false
+//        )
     }
 
     /// Handles click tracking from UIWindow.sendEvent (regular view taps)
     /// - Parameter properties: The click event properties
     internal func handleClickTracked(_ properties: [String: Any]) {
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         guard config.enableInteractionAutocapture else { return }
 
-        if let source = properties["auto_capture_source"] as? String, source != FrameworkType.uiKit.rawValue {
+        let acceptedSources = [FrameworkType.uiKit.rawValue, FrameworkType.swiftUI.rawValue]
+        if let source = properties["auto_capture_source"] as? String, !acceptedSources.contains(source) {
             return
         }
 
         var enrichedProperties = properties
-        enrichedProperties["screen"] = buildScreenDictionary()
+        enrichedProperties["screen"] = screenNameTracker.buildScreenDictionary()
 
-        //        analyticsPublisher.publish(
-        //            Event(type: .event("interaction"), properties: enrichedProperties),
-        //            isInternalEvent: false
-        //        )
-        print("EVENT")
-        print(enrichedProperties)
+        debugPrint("---------------")
+        debugPrint(enrichedProperties)
+        print("AAAA \(enrichedProperties)")
+//        analyticsPublisher.publish(
+//            Event(type: .event("interaction"), properties: enrichedProperties),
+//            isInternalEvent: false
+//        )
     }
+}
 
-    // MARK: - Screen Context Builder
-
-    /// Builds a screen context dictionary from the screen name tracker
-    private func buildScreenDictionary() -> [String: Any] {
-        guard let payload = screenNameTracker.getCurrentPayload() else {
-            return [:]
-        }
-
-        var screen: [String: Any] = [
-            "current_screen": payload.currentScreen,
-            "screen_class": payload.screenClass,
-            "screen_type": payload.screenType,
-            "previous_screen": payload.previousScreen,
-            "previous_screen_class": payload.previousScreenClass,
-            "screen_path": payload.screenPath,
-            "is_root_screen": payload.isRootScreen
-        ]
-
-        if let navTitle = payload.navigationTitle {
-            screen["navigation_title"] = navTitle
-        }
-        if let tabName = payload.tabName {
-            screen["tab_name"] = tabName
-        }
-        if let tabIndex = payload.tabIndex {
-            screen["tab_index"] = tabIndex
-        }
-
-        return screen
-    }
+enum FrameworkType: String {
+    case uiKit   = "UIKit"
+    case swiftUI = "SwiftUI"
 }

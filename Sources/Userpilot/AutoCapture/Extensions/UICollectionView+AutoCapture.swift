@@ -19,12 +19,10 @@ internal extension UICollectionViewCell {
     /// Captures a collection view item selection interaction
     /// - Parameter touchedView: The specific view that was touched within the cell
     func captureCollectionViewItemSelection(touchedView: UIView?) {
-        // Check if SDK is initialized and interaction capture is enabled
         guard Userpilot.isInitialized else { return }
+        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         let config = Userpilot.shared.config
         guard config.enableInteractionAutocapture else { return }
-
-        // Check if this cell should be ignored
         guard !shouldIgnoreInteractions() else { return }
 
         var payload = InteractionPayload(
@@ -39,18 +37,16 @@ internal extension UICollectionViewCell {
             payload.row = indexPath.item
         }
 
-        // Get cell text from touched view or content view
-        if !config.disableInteractionTextCapture && !shouldRedactText() {
-            payload.elementText = resolveTextContent(touchedView: touchedView)
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        payload.elementPath = path
+        if effectiveView !== self {
+            payload.elementType = String(describing: type(of: effectiveView))
+            payload.elementText = "****"
+        } else {
+            payload.elementText = touchedView?.getTextContent()
+            payload.accessibilityIdentifier = accessibilityIdentifier
+            payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
         }
-
-        // Get accessibility info
-        payload.accessibilityIdentifier = accessibilityIdentifier
-        if !config.disableInteractionAccessibilityLabelCapture && !shouldRedactAccessibilityLabel() {
-            payload.accessibilityLabel = accessibilityLabel
-        }
-
-        payload.elementPath = UIKitViewResolver.resolvePath(view: self)
 
         // Send to the engine
         Userpilot.shared.uiKitAutoCaptureEngine.handleInteraction(payload)

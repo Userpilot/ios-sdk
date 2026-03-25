@@ -31,13 +31,20 @@ internal enum AutoCaptureSwizzler {
     private static var didSwizzleSendEvent = false
 
     /// Flag to track if UIControl.sendAction swizzling has been performed
+    /// (commented out; we use UIApplication.sendAction instead)
     private static var didSwizzleControlSendAction = false
+
+    /// Flag to track if UIApplication.sendAction swizzling has been performed
+    private static var didSwizzleApplicationSendAction = false
 
     /// Flag to track if text field notifications have been registered
     private static var didRegisterTextFieldNotifications = false
 
     /// Flag to track if text view notifications have been registered
     private static var didRegisterTextViewNotifications = false
+
+    /// Flag to track if UIPickerView delegate swizzling has been performed
+    private static var didSwizzlePickerViewDelegate = false
 
     // MARK: - Screen Tracking Methods
 
@@ -85,16 +92,31 @@ internal enum AutoCaptureSwizzler {
         UIWindow.swizzleSendEvent()
     }
 
-    /// Swizzles UIControl.sendAction to enable automatic control interaction tracking
-    /// This captures: button taps, switch changes, slider changes, etc. with action names
-    static func swizzleControlTracking() {
-        guard !didSwizzleControlSendAction else { return }
-        didSwizzleControlSendAction = true
-        Swizzler.swapInstanceMethods(
-            on: UIControl.self,
-            original: #selector(UIControl.sendAction(_:to:for:)),
-            swizzled: #selector(UIControl.userpilot__sendAction(_:to:for:))
-        )
+    // UIControl.sendAction swizzling disabled in favor of UIApplication.sendAction so we capture
+    // UIBarButtonItem, UIMenu, and other responder-chain actions in one place without duplicate events.
+    // static func swizzleControlTracking() {
+    //     guard !didSwizzleControlSendAction else { return }
+    //     didSwizzleControlSendAction = true
+    //     Swizzler.swapInstanceMethods(
+    //         on: UIControl.self,
+    //         original: #selector(UIControl.sendAction(_:to:for:)),
+    //         swizzled: #selector(UIControl.userpilot__sendAction(_:to:for:))
+    //     )
+    // }
+
+    /// Swizzles UIApplication.sendAction to enable automatic action tracking for all senders.
+    /// Captures: UIControl (buttons, switches, etc.), UIBarButtonItem, and other responder-chain actions.
+    static func swizzleApplicationSendAction() {
+        guard !didSwizzleApplicationSendAction else { return }
+        didSwizzleApplicationSendAction = true
+        UIApplication.swizzleSendAction()
+    }
+
+    /// Swizzles UIPickerView.setDelegate(_:) to capture row selections via delegate hooking
+    static func swizzlePickerViewDelegate() {
+        guard !didSwizzlePickerViewDelegate else { return }
+        didSwizzlePickerViewDelegate = true
+        UIPickerView.swizzleSetDelegate()
     }
 
     /// Registers notification for UITextField text changes (cached, flushed on screen change)
@@ -133,8 +155,10 @@ internal enum AutoCaptureSwizzler {
     static func setupAllInteractionTracking() {
         // UIWindow.sendEvent captures: regular views, table cells, collection cells
         swizzleClickTracking()
-        // UIControl.sendAction captures: buttons, switches, sliders, etc. with action names
-        swizzleControlTracking()
+        // UIApplication.sendAction captures: UIControl, UIBarButtonItem, UIMenu, etc. (single path, no duplicates)
+        swizzleApplicationSendAction()
+        // UIPickerView delegate hooking captures row selections
+        swizzlePickerViewDelegate()
         // Text input notifications
         registerTextFieldNotifications()
         registerTextViewNotifications()
