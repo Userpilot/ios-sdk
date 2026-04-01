@@ -190,7 +190,7 @@ userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
         .logging(true) // Enable or disable logging.
         .enableUseInAppBrowser(enabled: true) // Enable Open external link In-app browser using SFSafariViewController.
-        .disableRequestPushNotificationsPermission() // Disable request push notifications permission by SDK.
+        .disableRequestPushNotificationsPermission() // Disable SDK push permission request flow (default false).
 )
 userpilot.navigationDelegate = self
 userpilot.analyticsDelegate = self

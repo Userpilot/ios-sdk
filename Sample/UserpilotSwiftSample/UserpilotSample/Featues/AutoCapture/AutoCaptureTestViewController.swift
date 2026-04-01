@@ -9,6 +9,7 @@
 //
 
 import UIKit
+import Userpilot
 
 // swiftlint:disable all
 
@@ -37,6 +38,7 @@ class AutoCaptureTestViewController: UIViewController {
     private let menuButton = UIButton(type: .system)
     private let pickerTestButton = UIButton(type: .system)
     private let tabsTestButton = UIButton(type: .system)
+    private let gestureTestView = UIView()
 
     // Labels for displaying values
     private let stepperValueLabel = UILabel()
@@ -45,7 +47,7 @@ class AutoCaptureTestViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Auto Capture Test"
+        title = "Auto Capture TITLE Test"
         view.backgroundColor = .systemBackground
         setupBackButton()
         setupUI()
@@ -53,6 +55,10 @@ class AutoCaptureTestViewController: UIViewController {
 
     open override var userpilotScreenName: String? {
         "Main Signup Flow"
+    }
+    
+    override var userpilotScreenTitle: String? {
+        "BADDDER"
     }
 
     private func setupBackButton() {
@@ -148,6 +154,8 @@ class AutoCaptureTestViewController: UIViewController {
         normalButton.addTarget(self, action: #selector(onNormalButtonTapped), for: .touchUpInside)
         normalButton.backgroundColor = .systemBlue
         normalButton.setTitleColor(.white, for: .normal)
+        normalButton.accessibilityLabel = "Test accessibilityLabel"
+        normalButton.accessibilityIdentifier = "testAccessibilityIdentifier"
         normalButton.layer.cornerRadius = 8
         normalButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
         stackView.addArrangedSubview(normalButton)
@@ -254,8 +262,14 @@ class AutoCaptureTestViewController: UIViewController {
         setupMenuButton()
         stackView.addArrangedSubview(menuButton)
 
+        // GestureRecognizer Demo (UIApplication.sendAction -> captureGestureAction)
+        addSectionHeader("14. Gesture Recognizers (tap / long press)")
+        addLabel("Tap or long-press this view to test captureGestureAction.")
+        setupGestureTestView()
+        stackView.addArrangedSubview(gestureTestView)
+
         // Text Config Demo Button
-        addSectionHeader("14. Text Config Demo")
+        addSectionHeader("15. Text Config Demo")
         textConfigDemoButton.setTitle("Open Text Config Demo", for: .normal)
         textConfigDemoButton.addTarget(
             self, action: #selector(onTextConfigDemoButtonTapped), for: .touchUpInside)
@@ -266,7 +280,7 @@ class AutoCaptureTestViewController: UIViewController {
         stackView.addArrangedSubview(textConfigDemoButton)
 
         // Tabs Demo Button
-        addSectionHeader("15. Tabs Demo")
+        addSectionHeader("16. Tabs Demo")
         tabsTestButton.setTitle("Open Tabs Test", for: .normal)
         tabsTestButton.addTarget(
             self, action: #selector(onTabsTestButtonTapped), for: .touchUpInside)
@@ -275,6 +289,34 @@ class AutoCaptureTestViewController: UIViewController {
         tabsTestButton.layer.cornerRadius = 8
         tabsTestButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
         stackView.addArrangedSubview(tabsTestButton)
+    }
+
+    private func setupGestureTestView() {
+        gestureTestView.backgroundColor = .systemMint
+        gestureTestView.layer.cornerRadius = 10
+        gestureTestView.heightAnchor.constraint(equalToConstant: 80).isActive = true
+
+        let label = UILabel()
+        label.text = "Gesture Target View\n(Tap / Long Press)"
+        label.numberOfLines = 2
+        label.textAlignment = .center
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        gestureTestView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: gestureTestView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: gestureTestView.centerYAnchor)
+        ])
+
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(onGestureTap(_:)))
+        let longPressGesture = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(onGestureLongPress(_:))
+        )
+        gestureTestView.addGestureRecognizer(tapGesture)
+        gestureTestView.addGestureRecognizer(longPressGesture)
+        gestureTestView.isUserInteractionEnabled = true
     }
 
     private func setupMenuButton() {
@@ -409,6 +451,15 @@ class AutoCaptureTestViewController: UIViewController {
     @IBAction func onPickerTestButtonTapped(_ sender: UIButton) {
         let pickerVC = PickerViewTestViewController()
         navigationController?.pushViewController(pickerVC, animated: true)
+    }
+
+    @objc private func onGestureTap(_ sender: UITapGestureRecognizer) {
+        showAlert("Gesture Tap", "Tap gesture action fired")
+    }
+
+    @objc private func onGestureLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard sender.state == .began else { return }
+        showAlert("Gesture Long Press", "Long press gesture action fired")
     }
 
     // MARK: - Text Config Demo Button

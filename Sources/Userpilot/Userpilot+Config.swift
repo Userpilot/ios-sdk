@@ -49,25 +49,25 @@ extension Userpilot {
         /// If set to true, the SDK will automatically capture screen events.
         var enableScreenAutoCapture: Bool = false
 
-        /// Whether or not to disable screen title capture. Defaults to false.
-        /// If set, the core SDK will prevent screen titles from being stored or uploaded
+        /// Whether or not to enable screen title capture. Defaults to true.
+        /// If false, the core SDK will prevent screen titles from being stored or uploaded
         /// and autocapture libraries will be instructed not to capture them.
-        var disableScreenTitleCapture: Bool = false
+        var enableScreenTitleCapture: Bool = true
 
         /// Whether or not to enable interaction autocapture. Defaults to false.
         /// If set to true, the SDK will automatically capture user interactions.
         var enableInteractionAutoCapture: Bool = false
 
-        /// Whether or not to disable user interface text capture. Defaults to false.
-        /// If set, the core SDK will prevent user interface text from being stored or uploaded
+        /// Whether or not to enable user interface text capture. Defaults to true.
+        /// If false, the core SDK will prevent user interface text from being stored or uploaded
         /// and autocapture libraries will be instructed not to capture them.
-        var disableInteractionTextCapture: Bool = false
+        var enableInteractionTextCapture: Bool = true
 
-        // Whether or not to disable user interface accessibility label capture. Defaults to false.
-        // If set, the core SDK will prevent user interface accessibility labels from being
+        // Whether or not to enable user interface accessibility label capture. Defaults to true.
+        // If false, the core SDK will prevent user interface accessibility labels from being
         // stored or uploaded and autocapture libraries will be instructed not to capture them.
         // swiftlint:disable:next identifier_name
-        var disableInteractionAccessibilityLabelCapture: Bool = false
+        var enableInteractionAccessibilityLabelCapture: Bool = true
 
         /// Whether or not to enable capturing control values. Defaults to true.
         /// If set to true, the SDK will capture values from controls such as:
@@ -77,7 +77,7 @@ extension Userpilot {
         /// - UIStepper: captures the selected step value
         /// - UIPickerView: captures the selected value
         /// - UIDatePicker: captures the selected date/time value
-        var enableInteractionValueCapture: Bool = true
+        var enableInteractionValueCapture: Bool = false
 
         /// When true (default), a tap event is not sent for UITextField/UITextView when the action is
         /// a text-editing action (e.g. textChanged:, editingChanged:). Only the text_field_changed /
@@ -117,10 +117,10 @@ extension Userpilot {
             return self
         }
 
-        /// Disables the automatic request for push notifications permission.
+        /// Disables or enables the automatic request for push notifications permission.
         ///
         /// By default, the SDK may prompt the user to grant push notifications permission.
-        /// Calling this method prevents the SDK from showing that prompt automatically.
+        /// Set to true to prevent the SDK from showing that prompt automatically.
         /// - Parameter disabled: A boolean indicating whether request permission is disabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
@@ -154,15 +154,23 @@ extension Userpilot {
             return self
         }
 
-        /// Disables screen title capture.
-        /// If set, the SDK will prevent screen titles from being stored or uploaded.
-        /// - Parameter disabled: A boolean indicating whether screen title capture is disabled.
+        /// Enables or disables screen title capture.
+        /// Set to false to prevent screen titles from being stored or uploaded.
+        /// - Parameter enabled: A boolean indicating whether screen title capture is enabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func disableScreenTitleCapture(_ disabled: Bool = true) -> Self {
-            disableScreenTitleCapture = disabled
+        public func enableScreenTitleCapture(_ enabled: Bool = true) -> Self {
+            enableScreenTitleCapture = enabled
             return self
+        }
+
+        /// Deprecated alias for `enableScreenTitleCapture(_:)`.
+        @available(*, deprecated, renamed: "enableScreenTitleCapture(_:)")
+        @discardableResult
+        @objc(disableScreenTitleCapture:)
+        public func disableScreenTitleCapture(_ disabled: Bool = true) -> Self {
+            enableScreenTitleCapture(!disabled)
         }
 
         /// Enables or disables automatic interaction (click) capture.
@@ -176,26 +184,42 @@ extension Userpilot {
             return self
         }
 
-        /// Disables user interface text capture.
-        /// If set, the SDK will prevent user interface text from being stored or uploaded.
-        /// - Parameter disabled: A boolean indicating whether text capture is disabled.
+        /// Enables or disables user interface text capture.
+        /// Set to false to prevent user interface text from being stored or uploaded.
+        /// - Parameter enabled: A boolean indicating whether text capture is enabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func disableInteractionTextCapture(_ disabled: Bool = true) -> Self {
-            disableInteractionTextCapture = disabled
+        public func enableInteractionTextCapture(_ enabled: Bool = true) -> Self {
+            enableInteractionTextCapture = enabled
             return self
         }
 
-        /// Disables user interface accessibility label capture.
-        /// If set, the SDK will prevent user interface accessibility labels from being stored or uploaded.
-        /// - Parameter disabled: A boolean indicating whether accessibility label capture is disabled.
+        /// Deprecated alias for `enableInteractionTextCapture(_:)`.
+        @available(*, deprecated, renamed: "enableInteractionTextCapture(_:)")
+        @discardableResult
+        @objc(disableInteractionTextCapture:)
+        public func disableInteractionTextCapture(_ disabled: Bool = true) -> Self {
+            enableInteractionTextCapture(!disabled)
+        }
+
+        /// Enables or disables user interface accessibility label capture.
+        /// Set to false to prevent accessibility labels from being stored or uploaded.
+        /// - Parameter enabled: A boolean indicating whether accessibility label capture is enabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
-        public func disableInteractionAccessibilityLabelCapture(_ disabled: Bool = true) -> Self {
-            disableInteractionAccessibilityLabelCapture = disabled
+        public func enableInteractionAccessibilityLabelCapture(_ enabled: Bool = true) -> Self {
+            enableInteractionAccessibilityLabelCapture = enabled
             return self
+        }
+
+        /// Deprecated alias for `enableInteractionAccessibilityLabelCapture(_:)`.
+        @available(*, deprecated, renamed: "enableInteractionAccessibilityLabelCapture(_:)")
+        @discardableResult
+        @objc(disableInteractionAccessibilityLabelCapture:)
+        public func disableInteractionAccessibilityLabelCapture(_ disabled: Bool = true) -> Self {
+            enableInteractionAccessibilityLabelCapture(!disabled)
         }
 
         /// Enables or disables capturing control values during interaction tracking.

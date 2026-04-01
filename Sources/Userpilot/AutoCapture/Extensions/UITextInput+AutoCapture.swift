@@ -41,7 +41,7 @@ internal extension UITextField {
         } else {
             payload.accessibilityIdentifier = accessibilityIdentifier
             payload.accessibilityLabel = getAccessibilityLabelContent()
-            payload.referenceName = resolveReferenceName()
+            payload.targetViewName = resolveReferenceName()
         }
 
         InteractionEventCache.sendDebouncedInteraction(payload, for: self)
@@ -75,7 +75,7 @@ internal extension UITextView {
         } else {
             payload.accessibilityIdentifier = accessibilityIdentifier
             payload.accessibilityLabel = getAccessibilityLabelContent()
-            payload.referenceName = resolveReferenceName()
+            payload.targetViewName = resolveReferenceName()
         }
 
         InteractionEventCache.sendDebouncedInteraction(payload, for: self)

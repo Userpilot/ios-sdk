@@ -46,7 +46,7 @@ internal struct ScreenTrackingPayload {
     /// - Returns: Dictionary representation of the payload
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
-            AutoCaptureConstants.currentScreen: currentScreen,
+            AutoCaptureConstants.screenName: currentScreen,
             AutoCaptureConstants.screenClass: screenClass,
             AutoCaptureConstants.screenType: screenType,
             AutoCaptureConstants.isUserpilotContainerClass: isUserpilotContainerClass,

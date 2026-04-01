@@ -50,7 +50,7 @@ extension UIResponder {
             if let value = objc_getAssociatedObject(self, &userpilotIgnoreInteractionsKey) as? Bool {
                 return value
             }
-            return AutocaptureViewConfiguration.ignoreInteractionsDefault(for: type(of: self))
+            return type(of: self).userpilotIgnoreInteractionsDefault
         }
         set {
             objc_setAssociatedObject(
@@ -60,6 +60,13 @@ extension UIResponder {
                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC
             )
         }
+    }
+
+    /// Class-level default for `userpilotIgnoreInteractions`.
+    /// Subclasses can override this to apply ignore-interactions by default.
+    @objc
+    open class var userpilotIgnoreInteractionsDefault: Bool {
+        false
     }
 
     // MARK: - Ignore Inner Hierarchy
@@ -73,7 +80,7 @@ extension UIResponder {
             if let value = objc_getAssociatedObject(self, &userpilotIgnoreInnerHierarchyKey) as? Bool {
                 return value
             }
-            return AutocaptureViewConfiguration.ignoreInnerHierarchyDefault(for: type(of: self))
+            return type(of: self).userpilotIgnoreInnerHierarchyDefault
         }
         set {
             objc_setAssociatedObject(
@@ -83,6 +90,13 @@ extension UIResponder {
                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC
             )
         }
+    }
+
+    /// Class-level default for `userpilotIgnoreInnerHierarchy`.
+    /// Subclasses can override this to apply ignore-inner-hierarchy by default.
+    @objc
+    open class var userpilotIgnoreInnerHierarchyDefault: Bool {
+        false
     }
 
     // MARK: - Redact Text

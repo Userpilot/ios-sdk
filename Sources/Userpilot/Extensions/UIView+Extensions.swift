@@ -117,49 +117,54 @@ internal extension UIView {
         return nil
     }
 
-    /// Resolves the IBOutlet property name by inspecting the owning view controller's ivars
-    /// For example, if a VC has `@IBOutlet weak var searchTextField: UITextField!`,
-    /// this returns "searchTextField" when called on that text field instance.
+    // Resolves the IBOutlet property name by inspecting the owning view controller's ivars
+    // For example, if a VC has `@IBOutlet weak var searchTextField: UITextField!`,
+    // this returns "searchTextField" when called on that text field instance.
+    // swiftlint:disable:next cyclomatic_complexity
     func resolveReferenceName() -> String? {
         guard let viewController = findViewController() else { return nil }
 
         var vcClass: AnyClass? = type(of: viewController)
 
-        // Walk up the class hierarchy to find the ivar
         while let currentClass = vcClass {
+            guard currentClass != UIViewController.self else { break }
+
             var count: UInt32 = 0
             guard let ivars = class_copyIvarList(currentClass, &count) else {
                 vcClass = class_getSuperclass(currentClass)
                 continue
             }
-
             defer { free(ivars) }
 
             for index in 0..<Int(count) {
                 let ivar = ivars[index]
                 guard let namePtr = ivar_getName(ivar) else { continue }
 
-                // Only read object-type ivars (type encoding starts with "@")
-                // Reading primitive/struct ivars with object_getIvar causes EXC_BAD_ACCESS
-                guard let typeEncoding = ivar_getTypeEncoding(ivar) else { continue }
-                let encoding = String(cString: typeEncoding)
-                guard encoding.hasPrefix("@") else { continue }
+                let rawName = String(cString: namePtr)
+                let propertyName = rawName.hasPrefix("_") ? String(rawName.dropFirst()) : rawName
 
-                let name = String(cString: namePtr)
+                // Skip non-object encodings only when encoding is actually known
+                // Swift ivars report "?" — don't filter those out
+                if let typeEncoding = ivar_getTypeEncoding(ivar) {
+                    let encoding = String(cString: typeEncoding)
+                    // Only skip if we know for sure it's a primitive (not "?" or "@")
+                    if !encoding.isEmpty && encoding != "?" && !encoding.hasPrefix("@") {
+                        continue
+                    }
+                }
 
-                // Safe to read now — this ivar holds an object reference
-                let value = object_getIvar(viewController, ivar)
-                if let view = value as? UIView, view === self {
-                    return name
+                // Guard against KVC exceptions for unknown keys
+                let sel = NSSelectorFromString(propertyName)
+                guard viewController.responds(to: sel) else { continue }
+
+                guard let view = viewController.value(forKey: propertyName) as? UIView else { continue }
+
+                if view === self {
+                    return propertyName
                 }
             }
 
             vcClass = class_getSuperclass(currentClass)
-
-            // Stop at UIViewController level
-            if vcClass == UIViewController.self {
-                break
-            }
         }
 
         return nil

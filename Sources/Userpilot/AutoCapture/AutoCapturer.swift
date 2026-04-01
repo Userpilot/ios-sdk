@@ -258,7 +258,6 @@ private extension AutoCapturer {
             payload.accessibilityIdentifier = swiftUIId
         }
         payload.elementPath = properties[AutoCaptureConstants.hierarchy] as? String
-        payload.isLongPress = properties[AutoCaptureConstants.isLongPress] as? Bool
         return payload
     }
 

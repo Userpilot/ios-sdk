@@ -74,24 +74,7 @@ internal final class ScreenNameTracker: ScreenNameTracking {
         guard let payload = currentPayload else {
             return [:]
         }
-
-        var screen: [String: Any] = [
-            AutoCaptureConstants.screenName: payload.currentScreen,
-            AutoCaptureConstants.screenClass: payload.screenClass,
-            AutoCaptureConstants.screenType: payload.screenType
-        ]
-
-        if let navTitle = payload.navigationTitle {
-            screen[AutoCaptureConstants.navigationTitle] = navTitle
-        }
-        if let vcAccessibilityIdentifier = payload.vcAccessibilityIdentifier {
-            screen[AutoCaptureConstants.vcAccessibilityIdentifier] = vcAccessibilityIdentifier
-        }
-        if let vcAccessibilityLabel = payload.vcAccessibilityLabel {
-            screen[AutoCaptureConstants.vcAccessibilityLabel] = vcAccessibilityLabel
-        }
-
-        return screen
+        return payload.toDictionary()
     }
 
     /// Builds a screen context dictionary from the current payload for event properties

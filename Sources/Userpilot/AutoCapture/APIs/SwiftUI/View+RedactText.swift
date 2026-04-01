@@ -62,7 +62,7 @@ public extension View {
     ///
     /// - This modifier is recursive - if applied to a container view, all text in child views will be redacted
     /// - The actual displayed text remains unchanged; only the captured analytics data is affected
-    /// - You can also use the global config option `disableInteractionTextCapture(true)` to redact all text
+    /// - You can also use the global config option `enableInteractionTextCapture(false)` to redact all text
     ///
     /// - Parameter redact: Whether to redact text content (defaults to true)
     /// - Returns: A view with text redaction applied

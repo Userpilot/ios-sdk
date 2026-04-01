@@ -14,7 +14,7 @@ import UIKit
 
 // MARK: - UIApplication SendAction Swizzling
 
-internal extension UIApplication {
+extension UIApplication {
 
     /// Swizzles sendAction to intercept all target–action invocations (UIBarButtonItem, UIMenu, UIControl, etc.)
     static func swizzleSendAction() {
@@ -29,7 +29,9 @@ internal extension UIApplication {
 
     /// Swizzled sendAction: captures the action then forwards to the original implementation.
     @objc
-    func userpilot__sendAction(_ action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?) -> Bool {
+    func userpilot__sendAction(
+        _ action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?
+    ) -> Bool {
         // Call original first so app behavior is unchanged
         let result = userpilot__sendAction(action, to: target, from: sender, for: event)
 
@@ -40,7 +42,9 @@ internal extension UIApplication {
 
     // MARK: - Private Capture
 
-    private func captureSendAction(action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?) {
+    private func captureSendAction(
+        action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?
+    ) {
         guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         guard Userpilot.isInitialized else { return }
         let config = Userpilot.shared.config
@@ -62,12 +66,14 @@ internal extension UIApplication {
         }
 
         if let barButtonItem = sender as? UIBarButtonItem {
-            captureBarButtonItemAction(barButtonItem, action: action, target: target, config: config)
+            captureBarButtonItemAction(
+                barButtonItem, action: action, target: target, config: config)
             return
         }
 
         if let menuAction = sender as? UIAction {
-            captureMenuAction(menuAction: menuAction, action: action, target: target, config: config)
+            captureMenuAction(
+                menuAction: menuAction, action: action, target: target, config: config)
             return
         }
 
@@ -81,7 +87,9 @@ internal extension UIApplication {
     }
 
     /// Captures UIAction (menu item) selection. Config only (no view/responder chain for menu items).
-    private func captureMenuAction(menuAction: UIAction, action: Selector, target: Any?, config: Userpilot.Config) {
+    private func captureMenuAction(
+        menuAction: UIAction, action: Selector, target: Any?, config: Userpilot.Config
+    ) {
         var payload = InteractionPayload(
             interactionType: .tap,
             elementType: "UIAction"
@@ -90,7 +98,7 @@ internal extension UIApplication {
         if let target = target {
             payload.targetClass = String(describing: type(of: target))
         }
-        if !config.disableInteractionTextCapture {
+        if !config.enableInteractionTextCapture {
             payload.elementText = menuAction.title
         }
         payload.accessibilityIdentifier = menuAction.identifier.rawValue
@@ -98,7 +106,9 @@ internal extension UIApplication {
     }
 
     /// Captures UIMenu selection (when sender is the menu itself). Config only (no view/responder chain).
-    private func captureMenuAction(menu: UIMenu, action: Selector, target: Any?, config: Userpilot.Config) {
+    private func captureMenuAction(
+        menu: UIMenu, action: Selector, target: Any?, config: Userpilot.Config
+    ) {
         var payload = InteractionPayload(
             interactionType: .tap,
             elementType: "UIMenu"
@@ -107,7 +117,7 @@ internal extension UIApplication {
         if let target = target {
             payload.targetClass = String(describing: type(of: target))
         }
-        if !config.disableInteractionTextCapture {
+        if !config.enableInteractionTextCapture {
             payload.elementText = menu.title
         }
         payload.accessibilityIdentifier = menu.identifier.rawValue
@@ -116,7 +126,9 @@ internal extension UIApplication {
 
     /// Builds a full interaction payload for a UIView
     /// (same properties as UIControl: path, accessibility, text, reference name).
-    private func captureViewAction(view: UIView, action: Selector, target: Any?, config: Userpilot.Config) {
+    private func captureViewAction(
+        view: UIView, action: Selector, target: Any?, config: Userpilot.Config
+    ) {
         guard !view.shouldIgnoreInteractions() else { return }
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
@@ -138,7 +150,7 @@ internal extension UIApplication {
             payload.elementText = view.getTextContent()
             payload.accessibilityIdentifier = view.accessibilityIdentifier
             payload.accessibilityLabel = view.getAccessibilityLabelContent()
-            payload.referenceName = view.resolveReferenceName()
+            payload.targetViewName = view.resolveReferenceName()
         }
 
         Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
@@ -159,10 +171,10 @@ internal extension UIApplication {
         if let target = target {
             payload.targetClass = String(describing: type(of: target))
         }
-        if !config.disableInteractionTextCapture {
+        if !config.enableInteractionTextCapture {
             payload.elementText = item.title
         }
-        if !config.disableInteractionAccessibilityLabelCapture {
+        if !config.enableInteractionAccessibilityLabelCapture {
             payload.accessibilityLabel = item.accessibilityLabel
         }
         payload.accessibilityIdentifier = item.accessibilityIdentifier
@@ -171,7 +183,7 @@ internal extension UIApplication {
 
     /// Captures any sender that isn’t a UIControl, UIView, or UIBarButtonItem (e.g. UIMenu element, custom object).
 
-    /// Captures a gesture recognizer action, flagging long presses via `is_long_press`.
+    /// Captures a gesture recognizer action.
     /// Only fires on `.began` to avoid duplicate events for multi-state recognizers (.changed, .ended).
     private func captureGestureAction(
         _ gestureRecognizer: UIGestureRecognizer,
@@ -183,16 +195,13 @@ internal extension UIApplication {
         guard let view = gestureRecognizer.view else { return }
         guard !view.shouldIgnoreInteractions() else { return }
 
-        let isLongPress = gestureRecognizer is UILongPressGestureRecognizer
-
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
         let useRedactedInner = (effectiveView !== view)
 
         var payload = InteractionPayload(
-            interactionType: isLongPress ? .gesture : .tap,
+            interactionType: .tap,
             elementType: String(describing: type(of: effectiveView))
         )
-        payload.isLongPress = isLongPress
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
             payload.targetClass = String(describing: type(of: target))
@@ -205,7 +214,7 @@ internal extension UIApplication {
             payload.elementText = view.getTextContent()
             payload.accessibilityIdentifier = view.accessibilityIdentifier
             payload.accessibilityLabel = view.getAccessibilityLabelContent()
-            payload.referenceName = view.resolveReferenceName()
+            payload.targetViewName = view.resolveReferenceName()
         }
 
         Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
@@ -213,7 +222,9 @@ internal extension UIApplication {
 
     /// Captures any sender that isn’t a UIControl, UIGestureRecognizer, UIView,
     /// or UIBarButtonItem (e.g. UIMenu element, custom object).
-    private func captureUnknownSenderAction(sender: Any?, action: Selector, target: Any?, config: Userpilot.Config) {
+    private func captureUnknownSenderAction(
+        sender: Any?, action: Selector, target: Any?, config: Userpilot.Config
+    ) {
         let elementType: String
         if let sender = sender {
             elementType = String(describing: type(of: sender))

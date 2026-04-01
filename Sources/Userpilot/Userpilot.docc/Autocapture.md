@@ -65,7 +65,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 | Property | Method | Description | Default |
 |----------|--------|-------------|--------|
 | ``enableScreenAutoCapture`` | ``enableScreenAutoCapture(_:)`` | Turn automatic screen capture on or off. | `false` |
-| ``disableScreenTitleCapture`` | ``disableScreenTitleCapture(_:)`` | When set, screen titles (e.g. navigation title, tab title) are not stored or uploaded. | `false` |
+| ``enableScreenTitleCapture`` | ``enableScreenTitleCapture(_:)`` | When enabled, screen titles (e.g. navigation title, tab title) may be captured. Set to `false` to disable title capture globally. | `true` |
 | ``appFramework`` | ``appFramework(_:)`` | Specify whether your app uses UIKit or SwiftUI (affects autocapture behavior). | `.uiKit` |
 
 ### Interaction options
@@ -73,8 +73,8 @@ Configure global capture and privacy via ``Userpilot/Config``.
 | Property | Method | Description | Default |
 |----------|--------|-------------|--------|
 | ``enableInteractionAutoCapture`` | ``enableInteractionAutoCapture(_:)`` | Turn automatic interaction capture on or off. | `false` |
-| ``disableInteractionTextCapture`` | ``disableInteractionTextCapture(_:)`` | When set, user-visible text (labels, button titles, etc.) is not stored or uploaded. | `false` |
-| ``disableInteractionAccessibilityLabelCapture`` | ``disableInteractionAccessibilityLabelCapture(_:)`` | When set, accessibility labels are not stored or uploaded. Use with `disableInteractionTextCapture` when accessibility may mirror on-screen text. | `false` |
+| ``enableInteractionTextCapture`` | ``enableInteractionTextCapture(_:)`` | When enabled, user-visible text (labels, button titles, etc.) may be captured. Set to `false` to disable globally. | `true` |
+| ``enableInteractionAccessibilityLabelCapture`` | ``enableInteractionAccessibilityLabelCapture(_:)`` | When enabled, accessibility labels may be captured. Set to `false` to disable globally. Use with `enableInteractionTextCapture(false)` when accessibility may mirror on-screen text. | `true` |
 | ``enableInteractionValueCapture`` | ``enableInteractionValueCapture(_:)`` | When enabled, captures values from controls like switches, sliders, and pickers. | `true` |
 | ``ignoreTapForTextInputEditingActions`` | ``ignoreTapForTextInputEditingActions(_:)`` | When true, prevents duplicate events by not sending tap events for text input editing actions. | `true` |
 | ``preferUIKitOverSwiftUIForNavigationBar`` | ``preferUIKitOverSwiftUIForNavigationBar(_:)`` | When true, prefers UIKit events over SwiftUI for navigation bar interactions to avoid duplicates. | `true` |
@@ -86,8 +86,8 @@ Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.uiKit)  // Specify UIKit framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
-    .disableInteractionTextCapture(true)
-    .disableInteractionAccessibilityLabelCapture(true)
+    .enableInteractionTextCapture(false)
+    .enableInteractionAccessibilityLabelCapture(false)
 )
 ```
 
@@ -153,11 +153,11 @@ You can hide or redact sensitive data in three ways: disable capture globally, r
 
 Use ``Userpilot/Config`` to disable text or accessibility label capture for all autocaptured events:
 
-- ``disableInteractionTextCapture`` — no user-visible text stored or uploaded  
-- ``disableInteractionAccessibilityLabelCapture`` — no accessibility labels stored or uploaded  
-- ``disableScreenTitleCapture`` — no screen titles (navigation/tab titles) stored or uploaded  
+- ``enableInteractionTextCapture(false)`` — no user-visible text stored or uploaded  
+- ``enableInteractionAccessibilityLabelCapture(false)`` — no accessibility labels stored or uploaded  
+- ``enableScreenTitleCapture(false)`` — no screen titles (navigation/tab titles) stored or uploaded  
 
-Because accessibility labels can mirror on-screen text when accessibility features are on, it’s good practice to set `disableInteractionAccessibilityLabelCapture` when using `disableInteractionTextCapture`.
+Because accessibility labels can mirror on-screen text when accessibility features are on, it’s good practice to set `enableInteractionAccessibilityLabelCapture(false)` when using `enableInteractionTextCapture(false)`.
 
 ### Redacting text for specific views
 
@@ -216,37 +216,28 @@ While stopped, **no** screen or interaction events are recorded regardless of an
 
 ## Programmatic API
 
-The properties above (`userpilotIgnoreInteractions`, `userpilotRedactText`, etc.) can be set directly in Swift. For Swift callers or cases where you have a `UIResponder` reference but no concrete type, Userpilot exposes equivalent **static methods** on the `Userpilot` class:
+Use responder properties directly for ignore/redact behavior:
 
-### Per-instance setters
+| Property | Effect |
+|----------|--------|
+| `userpilotIgnoreInteractions` | Skip interaction capture for this responder subtree |
+| `userpilotIgnoreInnerHierarchy` | Attribute child taps to parent container and hide inner details |
+| `userpilotRedactText` | Replace captured text with `****` |
+| `userpilotRedactAccessibilityLabel` | Replace captured accessibility labels with `****` |
 
-| Swift property | Equivalent static method |
-|----------------|--------------------------|
-| `view.userpilotIgnoreInteractions = true` | `Userpilot.userpilotSetIgnoreInteractions(true, for: view)` |
-| `view.userpilotIgnoreInnerHierarchy = true` | `Userpilot.userpilotSetIgnoreInnerHierarchy(true, for: view)` |
-| `view.userpilotRedactText = true` | `Userpilot.userpilotSetRedactText(true, for: view)` |
-| `view.userpilotRedactAccessibilityLabel = true` | `Userpilot.userpilotSetRedactAccessibilityLabel(true, for: view)` |
-
-These are direct pass-throughs — they set the associated-object property on the responder, exactly as the Swift property setter does.
-
-### Class-level defaults
-
-Instead of setting a property on every instance, you can configure a **default** for an entire class (and all its subclasses). The default is looked up by walking the superclass chain, so setting it on a base class covers all subclasses unless overridden on a more specific type.
+Class-level defaults are available via overridable class vars:
 
 ```swift
-// Every instance of PaymentCellView will ignore interactions by default
-Userpilot.userpilotSetIgnoreInteractionsDefault(true, for: PaymentCellView.self)
+class PaymentCellView: UIView {
+    override class var userpilotIgnoreInteractionsDefault: Bool { true }
+}
 
-// Every instance of SensitiveContainerView will hide its inner hierarchy by default
-Userpilot.userpilotSetIgnoreInnerHierarchyDefault(true, for: SensitiveContainerView.self)
+class SensitiveContainerView: UIView {
+    override class var userpilotIgnoreInnerHierarchyDefault: Bool { true }
+}
 ```
 
-A per-instance value (set via the property or the instance setter) always takes precedence over the class default.
-
-| Method | What it controls |
-|--------|-----------------|
-| `userpilotSetIgnoreInteractionsDefault(_:for:)` | Ignore interactions for all instances of a type |
-| `userpilotSetIgnoreInnerHierarchyDefault(_:for:)` | Hide inner hierarchy for all instances of a type |
+A per-instance value always takes precedence over the class default.
 
 ---
 
@@ -376,7 +367,7 @@ Button("Debug Action", action: debugAction)
 | Goal | Approach |
 |------|----------|
 | Turn on screen + interaction capture | ``enableScreenAutoCapture(_:)``, ``enableInteractionAutoCapture(_:)`` |
-| No text/labels in events (global) | ``disableInteractionTextCapture(_:)``, ``disableInteractionAccessibilityLabelCapture(_:)`` |
+| No text/labels in events (global) | ``enableInteractionTextCapture(false)``, ``enableInteractionAccessibilityLabelCapture(false)`` |
 | Custom screen name | Override `userpilotScreenName` on `UIViewController` |
 | Custom container for screens | Override `isUserpilotContainerClass` on your container class |
 | Don’t record a screen | Override `userpilotIgnoreScreen` on `UIViewController` |
@@ -384,8 +375,8 @@ Button("Debug Action", action: debugAction)
 | Don’t record any taps in a region | Set `userpilotIgnoreInteractions = true` on the container view |
 | Hide inner structure of a container | Set `userpilotIgnoreInnerHierarchy = true` on the container view |
 | Pause all capture temporarily | `Userpilot.stopAutoCapture()` / `Userpilot.resumeAutoCapture()` |
-| Set ignore/redact on a responder from Swift | `Userpilot.userpilotSetIgnoreInteractions(_:for:)` and related static methods |
-| Apply a default to every instance of a type | `Userpilot.userpilotSetIgnoreInteractionsDefault(_:for:)` and related static methods |
+| Set ignore/redact on a responder from Swift | Set `userpilotIgnore*` / `userpilotRedact*` properties directly |
+| Apply a default to every instance of a type | Override `userpilotIgnoreInteractionsDefault` / `userpilotIgnoreInnerHierarchyDefault` |
 | Make a custom view tappable for autocapture | Call `userpilotRecognizeClickAnalytics()` on the view |
 
 For manual tracking (e.g. custom events or screens), continue to use ``Userpilot/track(_:properties:)`` and ``Userpilot/screen(_:)`` as described in the [iOS SDK installation](https://userpilot-feature-mobile-revamped.mintlify.app/developer/installation/mobile/ios/installation) guide.

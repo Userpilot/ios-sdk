@@ -72,13 +72,12 @@ internal struct AutoCaptureConstants {
     static let accessibilityIdentifier = "accessibility_identifier"
     static let targetAction = "target_action"
     static let targetClass = "target_class"
-    static let referenceName = "reference_name"
+    static let targetViewName = "target_View_name"
     static let placeholder = "placeholder"
     static let dialogTitle = "title"
     static let dialogMessage = "message"
     static let section = "section"
     static let row = "row"
-    static let isLongPress = "is_long_press"
 
     // MARK: - Interaction (source / internal_properties)
 

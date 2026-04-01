@@ -52,16 +52,7 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         super.viewDidLoad()
         title = "Text Config Demo"
         view.backgroundColor = .systemBackground
-        configureDefaultAPIExamples()
         setupUI()
-    }
-
-    private func configureDefaultAPIExamples() {
-        Userpilot.userpilotSetIgnoreInteractionsDefault(true, for: DefaultIgnoredTapView.self)
-        Userpilot.userpilotSetIgnoreInnerHierarchyDefault(
-            true,
-            for: DefaultIgnoreInnerHierarchyContainerView.self
-        )
     }
 
     private func setupUI() {
@@ -175,19 +166,19 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         stackView.addArrangedSubview(customTappableView)
 
         addSectionHeader("5. Ignored Interactions")
-        addLabel("This view uses Userpilot.userpilotSetIgnoreInteractions(_:for:), so taps should not create events.")
+        addLabel("This view uses userpilotIgnoreInteractions = true, so taps should not create events.")
         setupIgnoredView()
         stackView.addArrangedSubview(ignoredView)
 
         addSectionHeader("6. Ignore Inner Hierarchy")
         addLabel("""
-        Tap the child button below. Analytics should attribute the interaction to the parent container because Userpilot.userpilotSetIgnoreInnerHierarchy(_:for:) is applied to the parent.
+        Tap the child button below. Analytics should attribute the interaction to the parent container because userpilotIgnoreInnerHierarchy = true is applied to the parent.
         """)
         setupIgnoreInnerHierarchyDemo()
         stackView.addArrangedSubview(ignoreInnerHierarchyContainer)
 
         addSectionHeader("7. Class Default Helpers")
-        addLabel("These two views test Userpilot.userpilotSetIgnoreInteractionsDefault and Userpilot.userpilotSetIgnoreInnerHierarchyDefault.")
+        addLabel("These two views test class defaults: userpilotIgnoreInteractionsDefault and userpilotIgnoreInnerHierarchyDefault.")
         setupDefaultIgnoredView()
         stackView.addArrangedSubview(defaultIgnoredView)
         setupDefaultIgnoreInnerHierarchyDemo()
@@ -234,10 +225,10 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         isUserpilotContainerClass -> use the container screen demo to inspect the payload flag.
         Userpilot.userpilotSetRedactText -> text becomes \"****\" in events.
         Userpilot.userpilotSetRedactAccessibilityLabel -> accessibility labels are redacted.
-        Userpilot.userpilotSetIgnoreInteractions -> interaction events are skipped.
-        Userpilot.userpilotSetIgnoreInnerHierarchy -> inner path details collapse to the parent container.
-        Userpilot.userpilotSetIgnoreInteractionsDefault -> all instances of the demo subclass ignore taps.
-        Userpilot.userpilotSetIgnoreInnerHierarchyDefault -> all instances of the demo subclass collapse inner details.
+        userpilotIgnoreInteractions -> interaction events are skipped.
+        userpilotIgnoreInnerHierarchy -> inner path details collapse to the parent container.
+        userpilotIgnoreInteractionsDefault -> all instances of the demo subclass ignore taps.
+        userpilotIgnoreInnerHierarchyDefault -> all instances of the demo subclass collapse inner details.
         Userpilot.stopAutoCapture / resumeAutoCapture -> globally disable and re-enable autocapture.
         userpilotRecognizeClickAnalytics() -> makes custom UIViews trackable as taps.
         """)
@@ -286,13 +277,13 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(onIgnoredViewTapped))
         ignoredView.addGestureRecognizer(tapGesture)
         ignoredView.isUserInteractionEnabled = true
-        Userpilot.userpilotSetIgnoreInteractions(true, for: ignoredView)
+        ignoredView.userpilotIgnoreInteractions = true
     }
 
     private func setupIgnoreInnerHierarchyDemo() {
         ignoreInnerHierarchyContainer.backgroundColor = .secondarySystemBackground
         ignoreInnerHierarchyContainer.layer.cornerRadius = 12
-        Userpilot.userpilotSetIgnoreInnerHierarchy(true, for: ignoreInnerHierarchyContainer)
+        ignoreInnerHierarchyContainer.userpilotIgnoreInnerHierarchy = true
         ignoreInnerHierarchyContainer.translatesAutoresizingMaskIntoConstraints = false
 
         let titleLabel = UILabel()
@@ -421,14 +412,14 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
     @objc private func onDefaultIgnoredViewTapped() {
         showAlert(
             "Default Ignore Interactions",
-            "This subclass uses Userpilot.userpilotSetIgnoreInteractionsDefault(true, for:)."
+            "This subclass uses override class var userpilotIgnoreInteractionsDefault: Bool { true }."
         )
     }
 
     @objc private func onDefaultIgnoreInnerHierarchyTapped() {
         showAlert(
             "Default Ignore Inner Hierarchy",
-            "This subclass uses Userpilot.userpilotSetIgnoreInnerHierarchyDefault(true, for:)."
+            "This subclass uses override class var userpilotIgnoreInnerHierarchyDefault: Bool { true }."
         )
     }
 
@@ -590,9 +581,13 @@ private final class ScreenAPIContainerDemoViewController: DemoBackButtonViewCont
     }
 }
 
-internal final class DefaultIgnoredTapView: UIView {}
+internal final class DefaultIgnoredTapView: UIView {
+    override class var userpilotIgnoreInteractionsDefault: Bool { true }
+}
 
-internal final class DefaultIgnoreInnerHierarchyContainerView: UIView {}
+internal final class DefaultIgnoreInnerHierarchyContainerView: UIView {
+    override class var userpilotIgnoreInnerHierarchyDefault: Bool { true }
+}
 
 internal extension UIButton {
 

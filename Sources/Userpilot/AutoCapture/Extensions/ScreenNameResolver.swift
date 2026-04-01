@@ -17,21 +17,32 @@ import UIKit
 internal final class ScreenNameResolver {
 
     /// Single entry point: resolved screen name for the given view controller.
-    /// Respects Config (disableScreenTitleCapture) for navigation/title fallbacks.
+    /// Respects Config (`enableScreenTitleCapture`) for navigation/title fallbacks.
+    /**
+     viewController.userpilotSwiftUIScreenName (if non-empty)
+     viewController.userpilotScreenName (if non-empty)
+     findScreenName(in: viewController.view) (if non-empty)
+     viewController.navigationItem.title (if non-empty, and enableScreenTitleCapture == true)
+     extractTabBarTitle(viewController)
+     swiftUIRootViewType(viewController)
+     viewController.title (if non-empty, and enableScreenTitleCapture == true)
+     navigationStackTitlesString(viewController) (if non-empty)
+     Fallback: displayName(viewController)
+     */
     static func resolvedName(for viewController: UIViewController) -> String {
         let config = Userpilot.isInitialized ? Userpilot.shared.config : nil
-        let titleCaptureDisabled = config?.disableScreenTitleCapture ?? false
+        let titleCaptureEnabled = config?.enableScreenTitleCapture ?? true
 
         if let name = viewController.userpilotSwiftUIScreenName, !name.isEmpty { return name }
         if let name = viewController.userpilotScreenName, !name.isEmpty { return name }
         if let name = findScreenName(in: viewController.view), !name.isEmpty { return name }
 
-        if !titleCaptureDisabled, let title = viewController.navigationItem.title, !title.isEmpty {
+        if titleCaptureEnabled, let title = viewController.navigationItem.title, !title.isEmpty {
             return title
         }
         if let tabBarTitle = extractTabBarTitle(viewController) { return tabBarTitle }
         if let rootViewType = swiftUIRootViewType(viewController) { return rootViewType }
-        if !titleCaptureDisabled, let title = viewController.title, !title.isEmpty { return title }
+        if titleCaptureEnabled, let title = viewController.title, !title.isEmpty { return title }
         if let stackTitles = navigationStackTitlesString(viewController), !stackTitles.isEmpty {
             return stackTitles
         }
@@ -127,8 +138,7 @@ internal final class ScreenNameResolver {
     }
 
     static func getViewControllerName(_ viewController: UIViewController) -> String? {
-        var title = String(describing: viewController.classForCoder).replacingOccurrences(
-            of: "ViewController", with: "")
+        var title = String(describing: viewController.classForCoder)
         if title.isEmpty { title = viewController.title ?? "" }
         return title.isEmpty ? nil : title
     }
@@ -159,7 +169,7 @@ extension UIViewController {
 
     func resolveNavigationTitle() -> String? {
         guard let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-            !config.disableScreenTitleCapture
+            config.enableScreenTitleCapture
         else { return nil }
         return userpilotScreenTitle
     }

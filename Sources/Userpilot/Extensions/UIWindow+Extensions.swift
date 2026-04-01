@@ -73,12 +73,13 @@ extension UIWindow {
             return
         }
 
-        let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
-            window: self,
-            point: point,
-            event: event,
-            fallbackView: view
-        ) ?? [:]
+        let swiftUIProperties =
+            SwiftUIViewResolver.resolveClickProperties(
+                window: self,
+                point: point,
+                event: event,
+                fallbackView: view
+            ) ?? [:]
         Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
     }
 
@@ -179,8 +180,7 @@ extension UIWindow {
 
         var eventProperties: [String: Any] = [
             AutoCaptureConstants.elementType: String(describing: type(of: effectiveView)),
-            AutoCaptureConstants.hierarchy: path,
-            AutoCaptureConstants.isLongPress: false
+            AutoCaptureConstants.hierarchy: path
         ]
 
         if useRedactedInner {

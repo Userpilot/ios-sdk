@@ -24,6 +24,7 @@ class ScreenAPIContainerChildViewController: UIViewController {
         setupBody()
     }
 
+    // swiftlint:disable:next function_body_length
     private func setupBody() {
         let titleLabel = UILabel()
         titleLabel.text = "Embedded Child Screen"
@@ -38,6 +39,29 @@ class ScreenAPIContainerChildViewController: UIViewController {
         bodyLabel.textColor = .secondaryLabel
         bodyLabel.numberOfLines = 0
         bodyLabel.translatesAutoresizingMaskIntoConstraints = false
+        let normalScenarioLabel = UILabel()
+        normalScenarioLabel.text = """
+        Normal scenario:
+        - Taps on this button create interaction events.
+        - Screen name is resolved from child screen APIs first.
+        """
+        normalScenarioLabel.textColor = .label
+        normalScenarioLabel.numberOfLines = 0
+        normalScenarioLabel.font = .systemFont(ofSize: 14)
+        normalScenarioLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        let expectedWithConfigsLabel = UILabel()
+        expectedWithConfigsLabel.text = """
+        Expected with configs:
+        - userpilotIgnoreInteractions = true: no interaction events from this subtree.
+        - userpilotIgnoreInnerHierarchy = true on parent: child tap is attributed to parent container.
+        - userpilotIgnoreInteractionsDefault / userpilotIgnoreInnerHierarchyDefault:
+          same behavior as class-level defaults.
+        """
+        expectedWithConfigsLabel.textColor = .secondaryLabel
+        expectedWithConfigsLabel.numberOfLines = 0
+        expectedWithConfigsLabel.font = .systemFont(ofSize: 13)
+        expectedWithConfigsLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let button = UIButton(type: .system)
         button.setTitle("Tap Embedded Child Button", for: .normal)
@@ -47,6 +71,8 @@ class ScreenAPIContainerChildViewController: UIViewController {
 
         view.addSubview(titleLabel)
         view.addSubview(bodyLabel)
+        view.addSubview(normalScenarioLabel)
+        view.addSubview(expectedWithConfigsLabel)
         view.addSubview(button)
 
         NSLayoutConstraint.activate([
@@ -58,7 +84,18 @@ class ScreenAPIContainerChildViewController: UIViewController {
             bodyLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             bodyLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
 
-            button.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: 20),
+            normalScenarioLabel.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: 14),
+            normalScenarioLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            normalScenarioLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+
+            expectedWithConfigsLabel.topAnchor.constraint(
+                equalTo: normalScenarioLabel.bottomAnchor,
+                constant: 10
+            ),
+            expectedWithConfigsLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            expectedWithConfigsLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+
+            button.topAnchor.constraint(equalTo: expectedWithConfigsLabel.bottomAnchor, constant: 20),
             button.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             button.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor)
         ])

@@ -486,36 +486,36 @@ extension ExperiencesPublisher {
      * Handles flows (carousel, slide-out), surveys (list, step), and NPS experiences.
      */
     private func openExperienceFlow() {
-        if let experienceContent = pendingExperiences.first {
-            switch experienceContent {
-            case .flow(let content):
-                switch content.type {
-                case .carousel:
-                    self.openCarouselExperience()
-                case .slideout:
-                    if self.isBottomSheetContent(content) {
-                        self.openSlideOutBottomSheetExperience()
-                    } else {
-                        self.openSlideOutDialogExperience()
-                    }
-                }
-
-            case .survey(let content):
-                switch content.type {
-                case .list:
-                    self.openSurveyListExperience()
-                case .step:
-                    if self.isBottomSheetSurveyContent(content) {
-                        self.openSurveyBottomSheetExperience()
-                    } else {
-                        self.openSurveyDialogExperience()
-                    }
-                }
-
-            case .nps:
-                openNPSBottomSheetExperience()
-            }
-        }
+//        if let experienceContent = pendingExperiences.first {
+//            switch experienceContent {
+//            case .flow(let content):
+//                switch content.type {
+//                case .carousel:
+//                    self.openCarouselExperience()
+//                case .slideout:
+//                    if self.isBottomSheetContent(content) {
+//                        self.openSlideOutBottomSheetExperience()
+//                    } else {
+//                        self.openSlideOutDialogExperience()
+//                    }
+//                }
+//
+//            case .survey(let content):
+//                switch content.type {
+//                case .list:
+//                    self.openSurveyListExperience()
+//                case .step:
+//                    if self.isBottomSheetSurveyContent(content) {
+//                        self.openSurveyBottomSheetExperience()
+//                    } else {
+//                        self.openSurveyDialogExperience()
+//                    }
+//                }
+//
+//            case .nps:
+//                openNPSBottomSheetExperience()
+//            }
+//        }
     }
 
     /**

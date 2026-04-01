@@ -15,7 +15,7 @@ import UIKit
 /// `UIKitViewResolver` provides utilities for UIKit view element identification and tracking.
 /// Redaction: the SDK uses UIView.getTextContent() and getAccessibilityLabelContent() (below)
 /// which return "****" when shouldRedactText/shouldRedactAccessibilityLabel is true. Both
-/// Config (disableInteractionTextCapture, disableInteractionAccessibilityLabelCapture) and
+/// Config (enableInteractionTextCapture, enableInteractionAccessibilityLabelCapture) and
 /// API properties (userpilotRedactText, userpilotRedactAccessibilityLabel on responder chain)
 /// are checked and applied. resolve(view:) and resolveElementData(view:) implement the same
 /// semantics and are available for a single unified path if needed.
@@ -250,7 +250,10 @@ internal extension UIView {
         return self
     }
 
-    /// Checks if interactions should be ignored (API: userpilotIgnoreInteractions on responder chain).
+    /// Checks if interactions should be ignored.
+    /// Honors both:
+    /// - `userpilotIgnoreInteractions` on the responder chain
+    /// - screen-level untracked flag (`ScreenNameTracker.untrackedScreenKey`) on any UIViewController
     /// - Returns: True if interactions should be ignored
     func shouldIgnoreInteractions() -> Bool {
         var responder: UIResponder? = self
@@ -259,18 +262,27 @@ internal extension UIView {
             if current.userpilotIgnoreInteractions {
                 return true
             }
+            if let viewController = current as? UIViewController {
+                let isUntracked = (objc_getAssociatedObject(
+                    viewController,
+                    &ScreenNameTracker.untrackedScreenKey
+                ) as? Bool) ?? false
+                if isUntracked {
+                    return true
+                }
+            }
             responder = current.next
         }
 
         return false
     }
 
-    /// Checks if text should be redacted: Config (disableInteractionTextCapture)
+    /// Checks if text should be redacted: Config (`enableInteractionTextCapture`)
     /// and API (userpilotRedactText on responder chain).
     /// - Returns: True if text should be redacted
     func shouldRedactText() -> Bool {
         if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-           config.disableInteractionTextCapture {
+           !config.enableInteractionTextCapture {
             return true
         }
         var responder: UIResponder? = self
@@ -282,12 +294,12 @@ internal extension UIView {
     }
 
     /// Checks if accessibility labels should be redacted:
-    /// Config (disableInteractionAccessibilityLabelCapture) and API
+    /// Config (`enableInteractionAccessibilityLabelCapture`) and API
     /// (userpilotRedactAccessibilityLabel on responder chain).
     /// - Returns: True if accessibility labels should be redacted
     func shouldRedactAccessibilityLabel() -> Bool {
         if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-           config.disableInteractionAccessibilityLabelCapture {
+           !config.enableInteractionAccessibilityLabelCapture {
             return true
         }
         var responder: UIResponder? = self

@@ -36,7 +36,8 @@ internal extension UIViewController {
         "UIActivityViewController",
         "UIDocumentMenuViewController",
         "UIDocumentPickerViewController",
-        "UISearchController"
+        "UISearchController",
+        "UITrackingElementWindowController"
     ]
 
     /// System UIKit view controllers that should never be tracked.
@@ -103,7 +104,7 @@ internal extension UIViewController {
                 currentScreen: resolvedScreenNameForCapture(),
                 screenClass: screenClassName,
                 screenType: screenType,
-                navigationTitle: config.disableScreenTitleCapture ? nil : resolveNavigationTitle(),
+                navigationTitle: config.enableScreenTitleCapture ? resolveNavigationTitle() : nil,
                 isUserpilotContainerClass: type(of: self).isUserpilotContainerClass,
                 vcAccessibilityIdentifier: view.accessibilityIdentifier,
                 vcAccessibilityLabel: view.accessibilityLabel,
@@ -117,7 +118,7 @@ internal extension UIViewController {
             currentScreen: resolvedScreenNameForCapture(),
             screenClass: screenClassName,
             screenType: screenType,
-            navigationTitle: config.disableScreenTitleCapture ? nil : resolveNavigationTitle(),
+            navigationTitle: config.enableScreenTitleCapture ? resolveNavigationTitle() : nil,
             isUserpilotContainerClass: type(of: self).isUserpilotContainerClass,
             vcAccessibilityIdentifier: view.accessibilityIdentifier,
             vcAccessibilityLabel: view.accessibilityLabel

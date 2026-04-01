@@ -157,9 +157,7 @@ internal extension UIControl {
         }
 
         // IBOutlet reference name (e.g., "submitButton", "searchTextField")
-        payload.referenceName = resolveReferenceName()
-
-        payload.isLongPress = false
+        payload.targetViewName = resolveReferenceName()
 
         return payload
     }

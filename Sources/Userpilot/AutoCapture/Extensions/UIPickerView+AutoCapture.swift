@@ -111,7 +111,7 @@ internal extension UIPickerView {
         payload.elementPath = path
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
-        payload.referenceName = resolveReferenceName()
+        payload.targetViewName = resolveReferenceName()
 
         Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
     }

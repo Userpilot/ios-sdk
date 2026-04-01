@@ -45,7 +45,7 @@ internal struct InteractionPayload {
     var targetClass: String?
 
     /// The IBOutlet property name (e.g., "searchTextField")
-    var referenceName: String?
+    var targetViewName: String?
 
     /// The placeholder text (for text fields and text views)
     var placeholder: String?
@@ -92,11 +92,6 @@ internal struct InteractionPayload {
     /// The length of the text (privacy-safe)
     var textLength: Int?
 
-    // MARK: - Gesture Properties
-
-    /// Whether the interaction was triggered by a long press (vs. a tap)
-    var isLongPress: Bool?
-
     // MARK: - Initialization
 
     /// Creates an interaction payload with required properties
@@ -136,8 +131,8 @@ internal struct InteractionPayload {
         if let targetClass = targetClass {
             dict[AutoCaptureConstants.targetClass] = targetClass
         }
-        if let referenceName = referenceName {
-            dict[AutoCaptureConstants.referenceName] = referenceName
+        if let targetViewName = targetViewName {
+            dict[AutoCaptureConstants.targetViewName] = targetViewName
         }
         if let placeholder = placeholder {
             dict[AutoCaptureConstants.placeholder] = placeholder
@@ -155,11 +150,6 @@ internal struct InteractionPayload {
         }
         if let row = row {
             dict[AutoCaptureConstants.row] = row
-        }
-
-        // Gesture properties
-        if let isLongPress = isLongPress {
-            dict[AutoCaptureConstants.isLongPress] = isLongPress
         }
 
         return dict
