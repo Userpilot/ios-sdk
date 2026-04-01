@@ -188,7 +188,9 @@ If you have additional configuration needs, you can pass a custom configuration 
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
-        .logging(true) // Enable or disable logging
+        .logging(true) // Enable or disable logging.
+        .enableUseInAppBrowser(enabled: true) // Enable Open external link In-app browser using SFSafariViewController.
+        .disableRequestPushNotificationsPermission() // Disable request push notifications permission by SDK.
 )
 userpilot.navigationDelegate = self
 userpilot.analyticsDelegate = self
@@ -287,11 +289,11 @@ public protocol UserpilotExperienceDelegate: AnyObject {
 
 ### Push Notification
 
-Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app).
+Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/developer/installation/mobile/ios/push-notifications).
 
 ## 📝 Documentation
 
-Full documentation is available at [Userpilot Documentation](https://docs.userpilot.com/)
+Full documentation is available at [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation)
 
 ## 🎬 Samples
 

@@ -68,6 +68,14 @@ internal class CarouselExperienceViewController: UIViewController {
         if experienceViewModel.isRTL {
             appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
         }
+
+        // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {

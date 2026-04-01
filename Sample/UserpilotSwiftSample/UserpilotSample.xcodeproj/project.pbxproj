@@ -41,14 +41,23 @@
 		ABACA85D2C96D5B7006C9B77 /* PropertyView.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABACA85C2C96D5B7006C9B77 /* PropertyView.xib */; };
 		ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */; };
 		ABACA8652C96E3F5006C9B77 /* DialogManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA8642C96E3F5006C9B77 /* DialogManager.swift */; };
+		ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABAD7ABF2F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift */; };
 		ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */; };
 		ABB390042D0713AE0091FE7A /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABB390032D0713AE0091FE7A /* Userpilot */; };
 		ABB390082D07140A0091FE7A /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABB390072D07140A0091FE7A /* Userpilot */; };
 		ABC0AE182C7205CE00BB9F62 /* UserpilotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */; };
 		ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */; };
 		ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */; };
+		ABCD472C2F793C5300D71EA8 /* DemoBackButtonViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD472B2F793C5200D71EA8 /* DemoBackButtonViewController.swift */; };
+		ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD472D2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift */; };
+		ABCD47302F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD472F2F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift */; };
 		ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */; };
 		ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */; };
+		ABEB31752F73F58400E1789D /* TextConfigDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31732F73F58400E1789D /* TextConfigDemoViewController.swift */; };
+		ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */; };
+		ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */; };
+		ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */; };
+		ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB317B2F73F58400E1789D /* PickerViewTestViewController.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
 		ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */; };
@@ -114,13 +123,22 @@
 		ABACA85C2C96D5B7006C9B77 /* PropertyView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = PropertyView.xib; sourceTree = "<group>"; };
 		ABACA85F2C96E0DD006C9B77 /* AddPropertyDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPropertyDialogViewController.swift; sourceTree = "<group>"; };
 		ABACA8642C96E3F5006C9B77 /* DialogManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogManager.swift; sourceTree = "<group>"; };
+		ABAD7ABF2F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureTabsTestViewController.swift; sourceTree = "<group>"; };
 		ABADA1AC2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-BoldItalic.ttf"; sourceTree = "<group>"; };
 		ABC0AE172C7205CE00BB9F62 /* UserpilotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserpilotManager.swift; sourceTree = "<group>"; };
 		ABC0B5112CB3CBB200139174 /* Merriweather-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Regular.ttf"; sourceTree = "<group>"; };
 		ABC0B5122CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwitcher-Grypen-Regular.ttf"; sourceTree = "<group>"; };
+		ABCD472B2F793C5200D71EA8 /* DemoBackButtonViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoBackButtonViewController.swift; sourceTree = "<group>"; };
+		ABCD472D2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IgnoredScreenDemoViewController.swift; sourceTree = "<group>"; };
+		ABCD472F2F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAPIContainerChildViewController.swift; sourceTree = "<group>"; };
 		ABCDBF3F2CAEAB970083DF1D /* DeepLinkViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkViewController.swift; sourceTree = "<group>"; };
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABD07B272D6C4ED000619C47 /* Prod.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Prod.xcconfig; sourceTree = "<group>"; };
+		ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureTestViewController.swift; sourceTree = "<group>"; };
+		ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViewTestViewController.swift; sourceTree = "<group>"; };
+		ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableViewTestViewController.swift; sourceTree = "<group>"; };
+		ABEB31732F73F58400E1789D /* TextConfigDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextConfigDemoViewController.swift; sourceTree = "<group>"; };
+		ABEB317B2F73F58400E1789D /* PickerViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerViewTestViewController.swift; sourceTree = "<group>"; };
 		ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+UserProperties.swift"; sourceTree = "<group>"; };
 		ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+CompanyProperties.swift"; sourceTree = "<group>"; };
 		ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIStackView+Extensions.swift"; sourceTree = "<group>"; };
@@ -224,6 +242,7 @@
 		AB6DBD352C68CD3B0009BB11 /* Featues */ = {
 			isa = PBXGroup;
 			children = (
+				ABEB31742F73F58400E1789D /* AutoCapture */,
 				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
 				ABFB5FD62C916E410054E142 /* Events */,
@@ -368,6 +387,22 @@
 				AB1942B62CD260CA00924844 /* DeepLinkViewController.xib */,
 			);
 			path = DeepLink;
+			sourceTree = "<group>";
+		};
+		ABEB31742F73F58400E1789D /* AutoCapture */ = {
+			isa = PBXGroup;
+			children = (
+				ABAD7ABF2F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift */,
+				ABCD472F2F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift */,
+				ABCD472D2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift */,
+				ABCD472B2F793C5200D71EA8 /* DemoBackButtonViewController.swift */,
+				ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */,
+				ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */,
+				ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */,
+				ABEB317B2F73F58400E1789D /* PickerViewTestViewController.swift */,
+				ABEB31732F73F58400E1789D /* TextConfigDemoViewController.swift */,
+			);
+			path = AutoCapture;
 			sourceTree = "<group>";
 		};
 		ABED3F5C2C9803AD00004D1C /* Extensions */ = {
@@ -539,7 +574,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1520;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					C5C897B42C5CFFFA0083928E = {
 						CreatedOnToolsVersion = 15.2;
@@ -629,6 +664,7 @@
 				ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */,
 				ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,
+				ABCD472C2F793C5300D71EA8 /* DemoBackButtonViewController.swift in Sources */,
 				AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */,
 				ABC0AE182C7205CE00BB9F62 /* UserpilotManager.swift in Sources */,
 				ABF38C8B2C7388AA00013F18 /* ScreenTwoViewController.swift in Sources */,
@@ -636,6 +672,8 @@
 				ABF38C812C73719300013F18 /* Content.swift in Sources */,
 				ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */,
 				AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */,
+				ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */,
+				ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
 				ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */,
 				ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */,
@@ -657,7 +695,13 @@
 				ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */,
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
+				ABCD47302F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift in Sources */,
 				AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */,
+				ABEB31752F73F58400E1789D /* TextConfigDemoViewController.swift in Sources */,
+				ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */,
+				ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */,
+				ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */,
+				ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */,
 				AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -812,6 +856,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = YXTPH2TH3D;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -835,6 +880,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -877,6 +923,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = YXTPH2TH3D;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -893,6 +940,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -908,7 +956,6 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;
@@ -943,7 +990,6 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YXTPH2TH3D;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UserPilotSample/Info.plist;

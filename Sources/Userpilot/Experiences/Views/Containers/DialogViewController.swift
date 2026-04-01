@@ -55,6 +55,13 @@ internal class DialogViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
+        // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {

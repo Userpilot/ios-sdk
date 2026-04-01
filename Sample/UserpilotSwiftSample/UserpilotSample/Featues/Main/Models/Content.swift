@@ -13,6 +13,7 @@ enum Content {
     case events
     case configurations
     case eventsLog
+    case autoCapture
 
     var title: String {
         switch self {
@@ -26,6 +27,8 @@ enum Content {
             return "configurations_title".localized
         case .eventsLog:
             return "logs".localized
+        case .autoCapture:
+            return "Auto Capture Test"
         }
     }
 }

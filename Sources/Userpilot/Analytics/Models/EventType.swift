@@ -27,6 +27,9 @@ internal enum EventType: Equatable {
     /// Custom event for tracking a user action (e.g., a button click).
     case event(String)
 
+    /// AutoCapture event for tracking a user action (e.g., a button click).
+    case autoCaptureEvent
+
     /// Event for tracking when a screen is opened (e.g., a specific view or page).
     case screen(String)
 
@@ -43,6 +46,8 @@ internal enum EventType: Equatable {
         switch self {
         case .event:
             return EventType.trackEvent
+        case .autoCaptureEvent:
+            return EventType.trackAutoCaptureEvent
         case .screen:
             return EventType.screenEvent
         case .identify:
@@ -61,6 +66,8 @@ internal enum EventType: Equatable {
         switch self {
         case .event:
             return EventType.trackEvent
+        case .autoCaptureEvent:
+            return EventType.trackAutoCaptureEvent
         case .screen:
             return EventType.screenEvent
         case .identify:
@@ -131,4 +138,5 @@ internal extension EventType {
     private static let identifyCaseEvent = "identify"
     static let screenEvent = "screen"
     private static let trackEvent = "track"
+    private static let trackAutoCaptureEvent = "mobile_autocapture"
 }

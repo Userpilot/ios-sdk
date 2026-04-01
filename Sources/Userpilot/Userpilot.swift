@@ -11,12 +11,38 @@
 //  allowing you to deliver personalized, context-aware content based on user actions and data.
 //
 
+import ObjectiveC
 import UIKit
+
+// swiftlint:disable file_length
 
 /// `Userpilot` manages the lifecycle of the Userpilot SDK and tracks user activity, enabling
 /// personalized content delivery.
 @objc(Userpilot)
 public class Userpilot: NSObject {
+
+    // MARK: - Shared Instance
+
+    /// Backing storage for the shared instance.
+    private static var _shared: Userpilot?
+
+    /// Returns the shared `Userpilot` instance that was created during initialization.
+    ///
+    /// - Important: You must initialize `Userpilot(config:)` before accessing this property.
+    ///   Accessing `shared` before initialization will trigger a fatal error.
+    @objc
+    public static var shared: Userpilot {
+        guard let instance = _shared else {
+            fatalError("Userpilot SDK has not been initialized. Call Userpilot(config:) first.")
+        }
+        return instance
+    }
+
+    /// Returns `true` if the SDK has been initialized and the shared instance is available.
+    @objc
+    public static var isInitialized: Bool {
+        return _shared != nil
+    }
 
     // MARK: - Properties
 
@@ -79,11 +105,17 @@ public class Userpilot: NSObject {
         self.config = config
         super.init()
 
+        // Store as the shared instance for global access (e.g., from swizzled methods)
+        Userpilot._shared = self
+
         // Set up the dependency container and register required services
         initializeContainer()
 
-        // register pushNotificationMonitoring for push notification auto config
+        // Register pushNotificationMonitoring for push notification auto config
         PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
+
+        // Start Auto capture
+        checkAutoCapture()
 
         // Log the initialization of the SDK with the current version
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
@@ -106,11 +138,14 @@ public class Userpilot: NSObject {
         container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
+        container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
+        container.registerLazy(ScreenTimeTracking.self, initializer: ScreenTimeTracker.init)
+        container.registerLazy(AutoCapturing.self, initializer: AutoCapturer.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
-        container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
         container.registerEager(PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
         container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
+        container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
     }
 }
 
@@ -196,6 +231,10 @@ extension Userpilot {
      */
     @objc
     public func screen(_ title: String) {
+        guard !config.enableScreenAutoCapture else {
+            config.logger.error("Manual screen tracking is disabled when enableScreenAutocapture is enabled")
+            return
+        }
         guard title.trim().isNotEmpty else {
             config.logger.error("Invalid screen title - empty string")
             return
@@ -375,3 +414,78 @@ extension Userpilot {
     }
 
 }
+
+// MARK: - Auto capture
+
+extension Userpilot {
+
+    /// Internal access to the automatic capture engine (screen + interaction hooks).
+    internal var autoCaptureEngine: AutoCapturing {
+        return container.resolve(AutoCapturing.self)
+    }
+
+    /// Check auto capture configuration and initialize engines if enabled.
+    public func checkAutoCapture() {
+        let config = container.resolve(Userpilot.Config.self)
+        let screenAutocaptureEnabled = config.enableScreenAutoCapture
+        let interactionEnabled = config.enableInteractionAutoCapture
+
+        if screenAutocaptureEnabled || interactionEnabled {
+            _ = autoCaptureEngine
+        }
+    }
+}
+
+// MARK: - Autocapture Stop / Resume (thin facade; implementation in AutocaptureStopResume)
+
+extension Userpilot {
+
+    /// Stops automatic screen and interaction capture. No events are recorded until `resumeAutoCapture()` is called.
+    @objc
+    public static func stopAutoCapture() {
+        AutocaptureViewConfiguration.stopAutoCapture()
+    }
+
+    /// Resumes automatic screen and interaction capture after a previous `stopAutoCapture()`.
+    @objc
+    public static func resumeAutoCapture() {
+        AutocaptureViewConfiguration.resumeAutoCapture()
+    }
+}
+
+// MARK: - Autocapture View Configuration (thin facade; implementation in AutocaptureViewConfiguration)
+
+extension Userpilot {
+
+    @objc
+    public static func userpilotSetIgnoreInteractions(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setIgnoreInteractions(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetIgnoreInnerHierarchy(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setIgnoreInnerHierarchy(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetRedactText(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setRedactText(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetRedactAccessibilityLabel(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setRedactAccessibilityLabel(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetIgnoreInteractionsDefault(_ value: Bool, for responderType: UIResponder.Type) {
+        AutocaptureViewConfiguration.setIgnoreInteractionsDefault(value, for: responderType)
+    }
+
+    @objc
+    public static func userpilotSetIgnoreInnerHierarchyDefault(_ value: Bool, for responderType: UIResponder.Type) {
+        AutocaptureViewConfiguration.setIgnoreInnerHierarchyDefault(value, for: responderType)
+    }
+}
+
+// swiftlint:enable file_length

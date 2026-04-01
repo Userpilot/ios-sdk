@@ -83,8 +83,11 @@ internal class AnalyticsPublisher {
     /** Property key for event metadata */
     static let metaDataProperty = "metadata"
 
+    /** Property key for event screen */
+    static let screen = "screen"
+
     /** Property key for company information in identify events */
-    private static let identifyCompanyProperty = "company"
+    static let identifyCompanyProperty = "company"
 
     /** Property key for screen title in screen events */
     static let screenTitleProperty = "title"
@@ -134,6 +137,9 @@ internal class AnalyticsPublisher {
     /// Decorator used to modify event properties before sending.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
 
+    /// The screen name tracker.
+    private let screenNameTracker: ScreenNameTracking
+
     /// Manages socket connections and event publishing over web socket.
     private let socketManager: SocketEvents
 
@@ -178,6 +184,7 @@ internal class AnalyticsPublisher {
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.socketManager = container.resolve(SocketEvents.self)
+        self.screenNameTracker = container.resolve(ScreenNameTracking.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
 
         // Register socket event callback
@@ -389,7 +396,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             identify(event)
         case .screen:
             screen(event)
-        case .event:
+        case .event, .autoCaptureEvent:
             trackEvent(event)
         }
     }
@@ -406,7 +413,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             cachedIdentifyEvent = event
         case .screen:
             setupScreenEvent(event)
-        case .event:
+        case .event, .autoCaptureEvent:
             cachedEvent = event
         }
     }
@@ -457,6 +464,53 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
+     * Stable key for event throttling. Mirrors Android `trackEventThrottleKey`:
+     * non-AutoCapture events use `eventTitle`, or `eventName` when
+     * the title is empty; autocapture uses screen + interaction/tab context.
+     */
+    private func trackEventThrottleKey(_ event: Event) -> String {
+        guard case .autoCaptureEvent = event.type else {
+            let eventTitle = event.eventTitle
+            return eventTitle.isEmpty ? event.eventName : eventTitle
+        }
+
+        let trackTitle = event.eventName
+
+        guard let properties = event.properties else { return trackTitle }
+
+        let screenName = trackEventThrottleScreenName(from: event.screen)
+        if screenName.isEmpty { return trackTitle }
+
+        let tabName = trackEventThrottleString(from: properties[AutoCaptureConstants.tabName])
+        if tabName.isEmpty {
+            let hierarchy = trackEventThrottleString(from: properties[AutoCaptureConstants.hierarchy])
+            let row = trackEventThrottleString(from: properties[AutoCaptureConstants.row])
+            let interaction = trackEventThrottleString(from: event.interactionEventName)
+            return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)"
+        } else {
+            let itemId = trackEventThrottleString(from: properties[AutoCaptureConstants.itemId])
+            return "\(screenName)|\(trackTitle)|\(tabName)|\(itemId)"
+        }
+    }
+
+    /// Resolves a display class for throttling from `Event.screen` (set on autocapture events via `makeEvent`).
+    private func trackEventThrottleScreenName(from screen: Payload) -> String {
+        guard let screen, !screen.isEmpty else { return "" }
+        if let name = screen[AutoCaptureConstants.classSimpleName] as? String, !name.isEmpty { return name }
+        if let name = screen[AutoCaptureConstants.screenClass] as? String, !name.isEmpty { return name }
+        if let name = screen[AutoCaptureConstants.screenTitle] as? String, !name.isEmpty { return name }
+        if let name = screen[AutoCaptureConstants.screenName] as? String, !name.isEmpty { return name }
+        return ""
+    }
+
+    private func trackEventThrottleString(from value: Any?) -> String {
+        guard let value else { return "" }
+        if let string = value as? String { return string }
+        if let number = value as? NSNumber { return number.stringValue }
+        return String(describing: value)
+    }
+
+    /**
      * Tracks general user events by adding them to the flush queue.
      * Events are throttled to prevent spam.
      *
@@ -466,7 +520,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         tryCatch {
             readWriteLock.write { [weak self] in
                 guard let self else { return }
-                if self.eventThrottle.shouldThrottle(eventTitle: event.eventTitle) { return }
+                let throttleKey = trackEventThrottleKey(event)
+                if self.eventThrottle.shouldThrottle(eventTitle: throttleKey) { return }
                 self.eventsToFlush.append(event)
                 if self.eventsToFlush.count == 1 {
                     flushQueue()
@@ -530,7 +585,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
 extension AnalyticsPublisher {
 
-    /**
+    /*
      * Flushes high-priority events, such as identify or screen events, through the socket.
      * These are events that open the socket or are critical for user tracking.
      *
@@ -541,6 +596,7 @@ extension AnalyticsPublisher {
      * - Parameter fakeReloadScreenEvent: When from identify (update user properties), request
      *        identify with fake reload true, otherwise false.
      */
+    // swiftlint:disable:next cyclomatic_complexity
     private func flushPriorityEvents(
         isRequestIdentify: Bool = true,
         canRequestScreenEvent: Bool = true,
@@ -572,19 +628,30 @@ extension AnalyticsPublisher {
 
             // Handle screen event
             if let screenViewEntity, canRequestScreenEvent {
-                if let screenTitle = screenViewEntity.event.screenTitle {
+                let screenEvent = screenViewEntity.event
+                if let screenTitle = screenEvent.screenTitle {
+                    if !config.enableScreenAutoCapture {
+                        screenNameTracker.updateScreen(with: ScreenTrackingPayload(screenTitle: screenTitle))
+                    }
                     experiencesPublisher?.updateSceen(screenTitle)
                 }
                 var payload: [String: Any] = [:]
-                payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
-                payload[AnalyticsPublisher.metaDataProperty] = [
+                payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.screenTitle ?? ""
+
+                let existingMetadata = screenEvent.properties ?? [:]
+                if existingMetadata.isEmpty {
+                    payload[AutoCaptureConstants.source] = AutoCaptureConstants.manualCaptureSourceValue
+                }
+                let newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: fakeReloadScreenEvent,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
                     AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
-                socketManager.publish(screenViewEntity.event.eventName, payload: payload)
-                broadcastEvent(screenViewEntity.event, screenViewEntity.event.screenTitle ?? "", properties: nil)
+                payload[AnalyticsPublisher.metaDataProperty] = existingMetadata.merging(newMetadata) { _, new in new }
+
+                socketManager.publish(screenEvent.eventName, payload: payload)
+                broadcastEvent(screenEvent, screenEvent.screenTitle ?? "", properties: nil)
             }
 
             // Handle cached track event
@@ -594,7 +661,7 @@ extension AnalyticsPublisher {
         }
     }
 
-    /**
+    /*
      * Flushes the event queue by sending events one by one through the socket.
      *
      * - Parameter shouldCloseSocket: When move app to background
@@ -616,8 +683,18 @@ extension AnalyticsPublisher {
                     self.eventsToFlush.removeFirst()
 
                     var payload: [String: Any] = [:]
-                    payload[AnalyticsPublisher.eventNameProperty] = eventToSend.eventTitle
+                    payload[AnalyticsPublisher.eventNameProperty] =
+                        eventToSend.type == .autoCaptureEvent
+                        ? eventToSend.interactionEventName
+                        : eventToSend.eventTitle
                     payload[AnalyticsPublisher.metaDataProperty] = eventToSend.properties ?? [:]
+                    if let screen = eventToSend.screen {
+                        payload[AnalyticsPublisher.screen] = screen
+                    }
+                    if eventToSend.type == .autoCaptureEvent && eventToSend.screen == nil {
+                        self.logger.error("❗ Event Error, Auto capture event must have screen")
+                        return
+                    }
 
                     self.broadcastEvent(eventToSend, eventToSend.eventTitle, properties: payload)
                     self.socketManager.publish(eventToSend.eventName, payload: payload)

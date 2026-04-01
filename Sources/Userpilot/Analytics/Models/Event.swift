@@ -28,6 +28,13 @@ internal struct Event {
     /// used to track events related to specific organizations or entities.
     var company: Payload = nil
 
+    /// A dictionary of optional properties that provide screen
+    var screen: Payload = nil
+
+    /// For automatic interaction capture (`mobile_autocapture`), the backend-facing interaction category
+    /// (e.g. tap, text change). Sent on the track payload as `InteractionEventName` when present.
+    var interactionEventName: String?
+
     // MARK: - Variables from `EventType`
 
     var caseName: String {
@@ -64,7 +71,7 @@ internal struct Event {
             return .identify
         case .screen:
             return .screen
-        case .event:
+        case .event, .autoCaptureEvent:
             return .event
         }
     }

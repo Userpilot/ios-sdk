@@ -70,6 +70,13 @@ internal class BottomSheetViewController: UIViewController {
         appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
         setupViews()
         // setupGestures()
+        // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {

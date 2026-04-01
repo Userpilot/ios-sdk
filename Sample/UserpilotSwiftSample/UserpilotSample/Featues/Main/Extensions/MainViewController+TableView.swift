@@ -36,6 +36,8 @@ extension MainViewController: UITableViewDelegate, UITableViewDataSource {
             showConfigurationDialog()
         case .eventsLog:
             FlowRoutingManager.shared.openViewController(SDKEventsViewController.newInstance())
+        case .autoCapture:
+            FlowRoutingManager.shared.openViewController(AutoCaptureTestViewController())
         }
     }
 
