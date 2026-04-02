@@ -23,7 +23,6 @@ internal extension UIViewController {
     /// - Parameter animated: Whether the appearance is animated
     @objc
     func userpilot__viewWillAppear(animated: Bool) {
-        // Call original first (swizzled, so this invokes the real viewWillAppear)
         userpilot__viewWillAppear(animated: animated)
         guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
         captureScreenIfNeeded()
@@ -31,101 +30,53 @@ internal extension UIViewController {
 
     // MARK: Screen Capture
 
-    /// View controller types that are not "screens" (alerts, share sheets, etc.) — skip screen capture.
-    private static let nonScreenViewControllerClassNames: Set<String> = [
-        "UIActivityViewController",
-        "UIDocumentMenuViewController",
-        "UIDocumentPickerViewController",
-        "UISearchController",
-        "UITrackingElementWindowController",
-        "UIPressAndHoldPopoverController"
-    ]
-
-    /// System UIKit view controllers that should never be tracked.
-    /// These are internal classes used by the keyboard, input accessories, etc.
-    private static let ignoredScreenClassPrefixes: [String] = [
-        "_UI",  // _UICursorAccessoryViewController, etc.
-        "UIInput",  // UIInputWindowController
-        "UISystemKeyboard",  // UISystemKeyboardDockController
-        "UICompatibilityInput",  // UICompatibilityInputViewController
-        "UIEditingOverlay",  // UIEditingOverlayViewController
-        "UIKBVisual",  // UIKBVisualEffectView controllers
-        "UIPrediction",  // UIPredictionViewController
-        "UISystem",  // UISystemInputAssistantViewController
-        "UIRemoteKeyboard",  // UIRemoteKeyboardWindow controllers
-        "UIKeyboard"  // UIKeyboardImpl controllers
-    ]
-
-    /// UIKit framework bundle (same module as `UIViewController`).
-    private static let uikitBundle = Bundle(for: UIViewController.self)
-
-    /// `true` when this instance’s class is implemented inside UIKit (system chrome, popovers, etc.).
-    /// App-defined `UIViewController` subclasses live in the host app (or other) bundle and are **not** skipped.
-    /// `UIAlertController` is the only UIKit-defined controller we still record (as `dialog_presented`).
-    private static func isUIKitConcreteViewControllerToSkip(_ viewController: UIViewController) -> Bool {
-        if viewController is UIAlertController { return false }
-        return Bundle(for: type(of: viewController)) === uikitBundle
+    /// `true` when the bundle that defines `cls` is an Apple system framework (`com.apple.*`).
+    private static func isAppleSystemFrameworkBundle(_ bundle: Bundle) -> Bool {
+        guard let id = bundle.bundleIdentifier?.lowercased() else { return false }
+        return id.hasPrefix("com.apple.")
     }
 
-    /// System UIKit container controllers (not overridable — kept internal so the public
-    /// `isUserpilotContainerClass` API stays for **custom** containers only).
+    /// Skip screen capture for classes implemented in Apple OS frameworks (UIKit, SwiftUI, SpringBoard, …).
+    /// Exception: `UIAlertController` (`dialog_presented`).
+    private static func isOSProvidedViewControllerToSkip(_ viewController: UIViewController) -> Bool {
+        if viewController is UIAlertController { return false }
+        return isAppleSystemFrameworkBundle(Bundle(for: type(of: viewController)))
+    }
+
+    /// Built-in UIKit container types (also skips app subclasses, e.g. `class MyNav: UINavigationController`).
     private static func isUIKitSystemContainerViewController(_ viewController: UIViewController) -> Bool {
         viewController is UINavigationController
-        || viewController is UITabBarController
-        || viewController is UISplitViewController
-        || viewController is UIPageViewController
+            || viewController is UITabBarController
+            || viewController is UISplitViewController
+            || viewController is UIPageViewController
     }
 
     // MARK: Private
 
-    /// Captures screen event if all conditions are met
     private func captureScreenIfNeeded() {
-        // 1. Check if SDK is initialized and screen autocapture is enabled
         guard Userpilot.isInitialized,
               Userpilot.shared.config.enableScreenAutoCapture
         else { return }
 
-        // 2. Skip container classes (UIKit system + `isUserpilotContainerClass` overrides)
         // guard !type(of: self).isUserpilotContainerClass else { return }
         guard !Self.isUIKitSystemContainerViewController(self) else { return }
 
-        // 3. Skip view controllers that are not screens (alerts, share sheets, etc.)
-        let className = screenClassName
-        if Self.nonScreenViewControllerClassNames.contains(className) {
+        if Self.isOSProvidedViewControllerToSkip(self) {
             return
         }
 
-        // 4. Skip internal UIKit system view controllers (keyboard, input, etc.)
-        for prefix in Self.ignoredScreenClassPrefixes where className.hasPrefix(prefix) {
-            return
-        }
-
-        // 5. Skip Apple UIKit-defined controllers (e.g. `UIPressAndHoldPopoverController`);
-        //     only app-bundle subclasses and `UIAlertController` are captured.
-        if Self.isUIKitConcreteViewControllerToSkip(self) {
-            return
-        }
-
-        // 6. Check if this VC is marked as untracked via associated object
         let untracked =
-        objc_getAssociatedObject(
-            self,
-            &ScreenNameTracker.untrackedScreenKey
-        ) as? Bool ?? false
+            objc_getAssociatedObject(self, &ScreenNameTracker.untrackedScreenKey) as? Bool ?? false
         guard !untracked else { return }
 
-        // 7. Check if this VC has opted out via userpilotIgnoreScreen
         guard !userpilotIgnoreScreen else { return }
 
-        // Build and send the screen tracking payload
         let payload = buildScreenTrackingPayload()
         Userpilot.shared.autoCaptureEngine.trackScreen(payload)
     }
 
     // MARK: Payload Building
 
-    /// Builds a screen tracking payload for this view controller
-    /// - Returns: The screen tracking payload
     private func buildScreenTrackingPayload() -> ScreenTrackingPayload {
         let config = Userpilot.shared.config
 

@@ -203,6 +203,13 @@ private extension AutoCapturer {
         AutoCaptureConstants.swiftUIView
     ]
 
+    /// Private / internal UIKit view class names (e.g. `_UITextLayoutCanvasView`) — never publish as window taps.
+    private func windowTouchIsPrivateUIKitElementType(_ elementType: String) -> Bool {
+        if elementType.hasPrefix("_UI") { return true }
+        if elementType.hasPrefix("_NS") { return true }
+        return false
+    }
+
     /// True when any identifying string is present (including redacted placeholder).
     private func windowTouchHasMetadata(_ properties: [String: Any]) -> Bool {
         let keys: [String] = [
@@ -221,9 +228,12 @@ private extension AutoCapturer {
         return false
     }
 
-    /// Drops taps on structural containers and bare SwiftUI views when there is no text or accessibility signal.
+    /// Drops taps on structural containers, private `_UI…` internals, and bare SwiftUI views when there is no signal.
     private func shouldPublishWindowLevelTouch(_ properties: [String: Any]) -> Bool {
         guard let elementType = properties[AutoCaptureConstants.elementType] as? String else {
+            return false
+        }
+        if windowTouchIsPrivateUIKitElementType(elementType) {
             return false
         }
         if windowTouchHasMetadata(properties) {
