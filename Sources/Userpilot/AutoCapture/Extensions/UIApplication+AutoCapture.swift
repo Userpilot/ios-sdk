@@ -49,6 +49,7 @@ extension UIApplication {
         guard Userpilot.isInitialized else { return }
         let config = Userpilot.shared.config
         guard config.enableInteractionAutoCapture else { return }
+        guard !shouldIgnoreInternalTextSelectionAction(action: action, target: target) else { return }
 
         if let control = sender as? UIControl {
             control.captureControlInteraction(action: action, target: target, event: event)
@@ -84,6 +85,21 @@ extension UIApplication {
 
         // Any other sender (e.g. custom object)
         captureUnknownSenderAction(sender: sender, action: action, target: target, config: config)
+    }
+
+    /// Drops UIKit text-selection internals (e.g. copy/paste caret gestures on UITextView)
+    /// because they can include sensitive editor text in a generic tap payload.
+    private func shouldIgnoreInternalTextSelectionAction(action: Selector, target: Any?) -> Bool {
+        let actionName = NSStringFromSelector(action)
+        if actionName == "_handleMultiTapGesture:" {
+            return true
+        }
+        guard let target else { return false }
+        let targetClass = String(describing: type(of: target))
+        if targetClass.contains("UITextSelectionInteraction") {
+            return true
+        }
+        return false
     }
 
     /// Captures UIAction (menu item) selection. Config only (no view/responder chain for menu items).
