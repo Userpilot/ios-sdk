@@ -22,8 +22,10 @@ internal final class ScreenNameResolver {
      viewController.userpilotSwiftUIScreenName (if non-empty)
      viewController.userpilotScreenName (if non-empty)
      findScreenName(in: viewController.view) (if non-empty)
+     tabBarControllerPreferredTitle(viewController) — when embedded in a tab bar, the tab bar
+       controller’s title / navigation title (e.g. “Tabs Test”) before the selected tab’s label
      viewController.navigationItem.title (if non-empty, and enableScreenTitleCapture == true)
-     extractTabBarTitle(viewController)
+     extractTabBarTitle(viewController) (tab item title, e.g. “Home”)
      swiftUIRootViewType(viewController)
      viewController.title (if non-empty, and enableScreenTitleCapture == true)
      navigationStackTitlesString(viewController) (if non-empty)
@@ -36,6 +38,12 @@ internal final class ScreenNameResolver {
         if let name = viewController.userpilotSwiftUIScreenName, !name.isEmpty { return name }
         if let name = viewController.userpilotScreenName, !name.isEmpty { return name }
         if let name = findScreenName(in: viewController.view), !name.isEmpty { return name }
+
+        if let containerTitle = tabBarControllerPreferredTitle(
+            viewController, titleCaptureEnabled: titleCaptureEnabled
+        ) {
+            return containerTitle
+        }
 
         if titleCaptureEnabled, let title = viewController.navigationItem.title, !title.isEmpty {
             return title
@@ -72,6 +80,23 @@ internal final class ScreenNameResolver {
     }
 
     // MARK: Private helpers
+
+    /// When `viewController` is inside a `UITabBarController` (but is not the tab bar itself),
+    /// prefer the tab bar controller’s explicit titles so screen name and navigation title reflect
+    /// the container (e.g. “Tabs Test”) rather than the selected tab’s item title (e.g. “Home”).
+    /// Shared by `resolvedName(for:)` and `UIViewController.userpilotScreenTitle`.
+    static func tabBarControllerPreferredTitle(
+        _ viewController: UIViewController,
+        titleCaptureEnabled: Bool
+    ) -> String? {
+        guard let tab = viewController.tabBarController, tab !== viewController else { return nil }
+        if let name = tab.userpilotSwiftUIScreenName, !name.isEmpty { return name }
+        if let name = tab.userpilotScreenName, !name.isEmpty { return name }
+        guard titleCaptureEnabled else { return nil }
+        if let title = tab.navigationItem.title, !title.isEmpty { return title }
+        if let title = tab.title, !title.isEmpty { return title }
+        return nil
+    }
 
     private static func extractTabBarTitle(_ viewController: UIViewController) -> String? {
         if let item = viewController.tabBarItem, let title = item.title, !title.isEmpty { return title }

@@ -37,7 +37,8 @@ internal extension UIViewController {
         "UIDocumentMenuViewController",
         "UIDocumentPickerViewController",
         "UISearchController",
-        "UITrackingElementWindowController"
+        "UITrackingElementWindowController",
+        "UIPressAndHoldPopoverController"
     ]
 
     /// System UIKit view controllers that should never be tracked.
@@ -55,6 +56,17 @@ internal extension UIViewController {
         "UIKeyboard"                // UIKeyboardImpl controllers
     ]
 
+    /// UIKit framework bundle (same module as `UIViewController`).
+    private static let uikitBundle = Bundle(for: UIViewController.self)
+
+    /// `true` when this instance’s class is implemented inside UIKit (system chrome, popovers, etc.).
+    /// App-defined `UIViewController` subclasses live in the host app (or other) bundle and are **not** skipped.
+    /// `UIAlertController` is the only UIKit-defined controller we still record (as `dialog_presented`).
+    private static func isUIKitConcreteViewControllerToSkip(_ viewController: UIViewController) -> Bool {
+        if viewController is UIAlertController { return false }
+        return Bundle(for: type(of: viewController)) === uikitBundle
+    }
+
     // MARK: Private
 
     /// Captures screen event if all conditions are met
@@ -71,6 +83,12 @@ internal extension UIViewController {
 
         // 3. Skip internal UIKit system view controllers (keyboard, input, etc.)
         for prefix in Self.ignoredScreenClassPrefixes where className.hasPrefix(prefix) {
+            return
+        }
+
+        // 3b. Skip Apple UIKit-defined controllers (e.g. `UIPressAndHoldPopoverController`);
+        //     only app-bundle subclasses and `UIAlertController` are captured.
+        if Self.isUIKitConcreteViewControllerToSkip(self) {
             return
         }
 

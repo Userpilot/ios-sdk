@@ -9,6 +9,7 @@
 //  UITextInput+AutoCapture provides automatic interaction tracking for UITextField
 //  and UITextView text editing events using NotificationCenter observers.
 //  Debounces per view: after typing pauses for `interactionDebounceInterval`, send once with latest state.
+//  Ignores a new notification when `text_length` matches the last delivered event for that field.
 //
 
 import UIKit
@@ -44,7 +45,8 @@ internal extension UITextField {
             payload.targetViewName = resolveReferenceName()
         }
 
-        InteractionEventCache.sendDebouncedInteraction(payload, for: self)
+        InteractionEventCache.sendDebouncedInteraction(
+            payload, for: self, textLengthForDedupe: payload.textLength)
     }
 }
 
@@ -78,6 +80,7 @@ internal extension UITextView {
             payload.targetViewName = resolveReferenceName()
         }
 
-        InteractionEventCache.sendDebouncedInteraction(payload, for: self)
+        InteractionEventCache.sendDebouncedInteraction(
+            payload, for: self, textLengthForDedupe: payload.textLength)
     }
 }

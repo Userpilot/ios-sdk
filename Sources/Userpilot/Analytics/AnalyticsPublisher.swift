@@ -639,15 +639,15 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.screenTitle ?? ""
 
                 let existingMetadata = screenEvent.properties ?? [:]
-                if existingMetadata.isEmpty {
-                    payload[AutoCaptureConstants.source] = AutoCaptureConstants.manualCaptureSourceValue
-                }
-                let newMetadata: [String: Any] = [
+                var newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: fakeReloadScreenEvent,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
                     AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
+                if existingMetadata.isEmpty {
+                    newMetadata[AutoCaptureConstants.source] = AutoCaptureConstants.manualCaptureSourceValue
+                }
                 payload[AnalyticsPublisher.metaDataProperty] = existingMetadata.merging(newMetadata) { _, new in new }
 
                 socketManager.publish(screenEvent.eventName, payload: payload)

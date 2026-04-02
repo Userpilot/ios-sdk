@@ -34,6 +34,13 @@ extension UIViewController {
     /// The custom screen title to use for screen events. Override or return nil to disable.
     @objc
     open var userpilotScreenTitle: String? {
+        let titleCaptureEnabled =
+            Userpilot.isInitialized ? Userpilot.shared.config.enableScreenTitleCapture : true
+        if let containerTitle = ScreenNameResolver.tabBarControllerPreferredTitle(
+            self, titleCaptureEnabled: titleCaptureEnabled
+        ) {
+            return containerTitle
+        }
         if let title = navigationItem.title, !title.isEmpty { return title }
         if let tabBarItem = tabBarItem, let title = tabBarItem.title, !title.isEmpty {
             return title

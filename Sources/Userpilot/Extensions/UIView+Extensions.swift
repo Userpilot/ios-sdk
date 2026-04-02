@@ -206,6 +206,46 @@ internal extension UIView {
         return nil
     }
 
+    /// Nearest enclosing `UITableView`, if any.
+    func findAncestorUITableView() -> UITableView? {
+        var current: UIView? = self
+        while let view = current {
+            if let table = view as? UITableView { return table }
+            current = view.superview
+        }
+        return nil
+    }
+
+    /// Nearest enclosing `UICollectionView`, if any.
+    func findAncestorUICollectionView() -> UICollectionView? {
+        var current: UIView? = self
+        while let view = current {
+            if let collection = view as? UICollectionView { return collection }
+            current = view.superview
+        }
+        return nil
+    }
+
+    /// Section / table header-footer views (not row cells).
+    func findParentTableViewHeaderFooter() -> UITableViewHeaderFooterView? {
+        var current: UIView? = self
+        while let view = current {
+            if let headerFooter = view as? UITableViewHeaderFooterView { return headerFooter }
+            current = view.superview
+        }
+        return nil
+    }
+
+    /// Collection supplementary views (headers, footers) and decoration-reusable types.
+    func findParentCollectionReusableView() -> UICollectionReusableView? {
+        var current: UIView? = self
+        while let view = current {
+            if let reusable = view as? UICollectionReusableView { return reusable }
+            current = view.superview
+        }
+        return nil
+    }
+
     // MARK: Distance Helpers
 
     /// Calculates distance from view bottom edge to screen bottom

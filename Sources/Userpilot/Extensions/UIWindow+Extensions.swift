@@ -113,6 +113,28 @@ extension UIWindow {
         return root
     }
 
+    /// `true` when the touch is on scrollable list “background” (not a row/item), e.g. empty space
+    /// below the last `UITableView` row. Cells and section/table header/footer are excluded.
+    private func isTouchOnScrollableListEmptyChrome(_ view: UIView) -> Bool {
+        isTouchOnTableViewEmptyChrome(view) || isTouchOnCollectionViewEmptyChrome(view)
+    }
+
+    private func isTouchOnTableViewEmptyChrome(_ view: UIView) -> Bool {
+        guard let tableView = view.findAncestorUITableView() else { return false }
+        if view.findParentTableViewCell() != nil { return false }
+        if view.findParentTableViewHeaderFooter() != nil { return false }
+        if let header = tableView.tableHeaderView, view.isDescendant(of: header) { return false }
+        if let footer = tableView.tableFooterView, view.isDescendant(of: footer) { return false }
+        return true
+    }
+
+    private func isTouchOnCollectionViewEmptyChrome(_ view: UIView) -> Bool {
+        guard view.findAncestorUICollectionView() != nil else { return false }
+        if view.findParentCollectionViewCell() != nil { return false }
+        if view.findParentCollectionReusableView() != nil { return false }
+        return true
+    }
+
     /// Routes touch handling based on the view type (table/collection cells, controls, or regular tap)
     /// - Parameters:
     ///   - view: The UIView that was touched (already resolved to deepest subview)
@@ -145,6 +167,16 @@ extension UIWindow {
         // 3. Check for UICollectionViewCell
         if let collectionCell = view.findParentCollectionViewCell() {
             collectionCell.captureCollectionViewItemSelection(touchedView: view)
+            return
+        }
+
+        // 3b. Skip empty chrome of table/collection scroll areas (below last row, wrapper, etc.).
+        if isTouchOnScrollableListEmptyChrome(view) {
+            return
+        }
+
+        // 3c. Direct hit on a plain `UIScrollView` (not table/collection) — usually chrome, not content.
+        if type(of: view) == UIScrollView.self {
             return
         }
 
