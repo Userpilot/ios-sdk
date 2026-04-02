@@ -44,16 +44,16 @@ internal extension UIViewController {
     /// System UIKit view controllers that should never be tracked.
     /// These are internal classes used by the keyboard, input accessories, etc.
     private static let ignoredScreenClassPrefixes: [String] = [
-        "_UI",                      // _UICursorAccessoryViewController, etc.
-        "UIInput",                  // UIInputWindowController
-        "UISystemKeyboard",         // UISystemKeyboardDockController
-        "UICompatibilityInput",     // UICompatibilityInputViewController
-        "UIEditingOverlay",         // UIEditingOverlayViewController
-        "UIKBVisual",               // UIKBVisualEffectView controllers
-        "UIPrediction",             // UIPredictionViewController
-        "UISystem",                 // UISystemInputAssistantViewController
-        "UIRemoteKeyboard",         // UIRemoteKeyboardWindow controllers
-        "UIKeyboard"                // UIKeyboardImpl controllers
+        "_UI",  // _UICursorAccessoryViewController, etc.
+        "UIInput",  // UIInputWindowController
+        "UISystemKeyboard",  // UISystemKeyboardDockController
+        "UICompatibilityInput",  // UICompatibilityInputViewController
+        "UIEditingOverlay",  // UIEditingOverlayViewController
+        "UIKBVisual",  // UIKBVisualEffectView controllers
+        "UIPrediction",  // UIPredictionViewController
+        "UISystem",  // UISystemInputAssistantViewController
+        "UIRemoteKeyboard",  // UIRemoteKeyboardWindow controllers
+        "UIKeyboard"  // UIKeyboardImpl controllers
     ]
 
     /// UIKit framework bundle (same module as `UIViewController`).
@@ -67,43 +67,55 @@ internal extension UIViewController {
         return Bundle(for: type(of: viewController)) === uikitBundle
     }
 
+    /// System UIKit container controllers (not overridable — kept internal so the public
+    /// `isUserpilotContainerClass` API stays for **custom** containers only).
+    private static func isUIKitSystemContainerViewController(_ viewController: UIViewController) -> Bool {
+        viewController is UINavigationController
+        || viewController is UITabBarController
+        || viewController is UISplitViewController
+        || viewController is UIPageViewController
+    }
+
     // MARK: Private
 
     /// Captures screen event if all conditions are met
     private func captureScreenIfNeeded() {
         // 1. Check if SDK is initialized and screen autocapture is enabled
         guard Userpilot.isInitialized,
-              Userpilot.shared.config.enableScreenAutoCapture else { return }
+              Userpilot.shared.config.enableScreenAutoCapture
+        else { return }
 
-        // 2. Skip view controllers that are not screens (alerts, share sheets, etc.)
+        // 2. Skip container classes (UIKit system + `isUserpilotContainerClass` overrides)
+        // guard !type(of: self).isUserpilotContainerClass else { return }
+        guard !Self.isUIKitSystemContainerViewController(self) else { return }
+
+        // 3. Skip view controllers that are not screens (alerts, share sheets, etc.)
         let className = screenClassName
         if Self.nonScreenViewControllerClassNames.contains(className) {
             return
         }
 
-        // 3. Skip internal UIKit system view controllers (keyboard, input, etc.)
+        // 4. Skip internal UIKit system view controllers (keyboard, input, etc.)
         for prefix in Self.ignoredScreenClassPrefixes where className.hasPrefix(prefix) {
             return
         }
 
-        // 3b. Skip Apple UIKit-defined controllers (e.g. `UIPressAndHoldPopoverController`);
+        // 5. Skip Apple UIKit-defined controllers (e.g. `UIPressAndHoldPopoverController`);
         //     only app-bundle subclasses and `UIAlertController` are captured.
         if Self.isUIKitConcreteViewControllerToSkip(self) {
             return
         }
 
-        // 4. Check if this VC is marked as untracked via associated object
-        let untracked = objc_getAssociatedObject(
+        // 6. Check if this VC is marked as untracked via associated object
+        let untracked =
+        objc_getAssociatedObject(
             self,
             &ScreenNameTracker.untrackedScreenKey
         ) as? Bool ?? false
         guard !untracked else { return }
 
-        // 5. Check if this VC has opted out via userpilotIgnoreScreen
+        // 7. Check if this VC has opted out via userpilotIgnoreScreen
         guard !userpilotIgnoreScreen else { return }
-
-//        // 6. Skip container classes - they don't capture, their children do
-//        guard !type(of: self).isUserpilotContainerClass else { return }
 
         // Build and send the screen tracking payload
         let payload = buildScreenTrackingPayload()

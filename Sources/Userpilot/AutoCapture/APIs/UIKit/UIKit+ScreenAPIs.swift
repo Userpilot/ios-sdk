@@ -14,15 +14,12 @@ import UIKit
 /// to customize how Userpilot captures screen events.
 extension UIViewController {
 
-    /// Indicates whether this view controller class should be treated as a container
-    /// for screens (similar to UINavigationController, UITabBarController, etc.).
+    /// Override to `true` on a **custom** container so child view controllers are treated as screens
+    /// (same idea as `UINavigationController` / `UITabBarController`). Built-in UIKit containers are
+    /// detected inside the SDK; the default is `false` for normal view controllers.
     @objc
     open class var isUserpilotContainerClass: Bool {
-        if self is UINavigationController.Type || self is UITabBarController.Type
-            || self is UISplitViewController.Type || self is UIPageViewController.Type {
-            return true
-        }
-        return false
+        false
     }
 
     /// The custom screen name to use for screen events. Override to provide a custom name.
