@@ -10,6 +10,8 @@
 //  handling screen transitions, control interactions, table/collection view selections, and text input.
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 import UIKit
 
@@ -51,9 +53,6 @@ internal class AutoCapturer {
     /// Tracks the current screen name/class and navigation history.
     private let screenNameTracker: ScreenNameTracking
 
-    /// Tracks foreground-only time spent on each screen.
-    private let screenTimeTracker: ScreenTimeTracking
-
     // MARK: - Computed Helpers
 
     /// Reusable internal properties shared across all events.
@@ -82,7 +81,6 @@ internal class AutoCapturer {
         self.config = container.resolve(Userpilot.Config.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
-        self.screenTimeTracker = container.resolve(ScreenTimeTracking.self)
 
         // Screen swizzles are required for both features (interaction tracking
         // needs to know which screen an event occurred on).
@@ -210,6 +208,26 @@ private extension AutoCapturer {
         return false
     }
 
+    /// System keyboard chrome (`UIKBKeyView`, `TUIKBKeyView`, `UIKeyboardImpl`, …).
+    private func windowTouchIsSystemKeyboardChrome(
+        elementType: String,
+        hierarchy: String?
+    ) -> Bool {
+        if elementType.hasPrefix("UIKB") { return true }
+        if elementType.hasPrefix("TUIKB") { return true }
+        if elementType.contains("TUIKeyplane") || elementType.contains("TUIKeyboard") { return true }
+        if elementType.contains("UIKeyboardImpl") || elementType.contains("UIKeyboardLayout") {
+            return true
+        }
+        if elementType.contains("UIKeyboardAutomatic") { return true }
+        if elementType.contains("UIInputSet") || elementType.contains("_UIKB") { return true }
+        if elementType.contains("UICompatibilityInputView") { return true }
+        guard let hierarchy else { return false }
+        if hierarchy.contains("UIKeyboardImpl") || hierarchy.contains("UIKBKeyView") { return true }
+        if hierarchy.contains("TUIKB") || hierarchy.contains("UIInputSet") { return true }
+        return false
+    }
+
     /// True when any identifying string is present (including redacted placeholder).
     private func windowTouchHasMetadata(_ properties: [String: Any]) -> Bool {
         let keys: [String] = [
@@ -234,6 +252,10 @@ private extension AutoCapturer {
             return false
         }
         if windowTouchIsPrivateUIKitElementType(elementType) {
+            return false
+        }
+        let hierarchy = properties[AutoCaptureConstants.hierarchy] as? String
+        if windowTouchIsSystemKeyboardChrome(elementType: elementType, hierarchy: hierarchy) {
             return false
         }
         if windowTouchHasMetadata(properties) {
@@ -289,6 +311,28 @@ private extension AutoCapturer {
         properties[AutoCaptureConstants.hierarchy] = hierarchy
     }
 
+    /// Appends `;SCREEN_NAME` to the view hierarchy using `screenNameTracker`.
+    private func appendScreenNameSegmentToHierarchy(_ properties: inout [String: Any]) {
+        guard var hierarchy = properties[AutoCaptureConstants.hierarchy] as? String,
+              !hierarchy.isEmpty else { return }
+
+        guard let payload = screenNameTracker.getCurrentPayload() else { return }
+
+        let trimmedName = payload.currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name: String
+        if trimmedName.isEmpty {
+            let klass = payload.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !klass.isEmpty else { return }
+            name = klass
+        } else {
+            name = trimmedName
+        }
+
+        let escaped = name.replacingOccurrences(of: "\"", with: "\\\"")
+        hierarchy += ";\(escaped)"
+        properties[AutoCaptureConstants.hierarchy] = hierarchy
+    }
+
     /// Shared `mobile_autocapture` merge and publish. `publishInteractionPayload`
     /// applies the interaction guard first; dialog events call this directly.
     private func publishAutoCaptureInteractionPayload(_ payload: InteractionPayload) {
@@ -298,6 +342,7 @@ private extension AutoCapturer {
         internalProps.merge(payload.toSourceDictionary()) { _, new in new }
         properties.merge(internalProps) { _, new in new }
         replaceUnknownScreenPlaceholderInHierarchy(&properties)
+        appendScreenNameSegmentToHierarchy(&properties)
 
         let event = makeEvent(
             type: EventType.autoCaptureEvent,
@@ -374,3 +419,5 @@ private extension AutoCapturer {
     }
 
 }
+
+// swiftlint:enable file_length

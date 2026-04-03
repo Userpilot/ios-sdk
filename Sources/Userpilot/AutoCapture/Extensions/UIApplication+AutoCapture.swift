@@ -42,6 +42,7 @@ extension UIApplication {
 
     // MARK: - Private Capture
 
+    // swiftlint:disable:next cyclomatic_complexity
     private func captureSendAction(
         action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?
     ) {
@@ -49,19 +50,26 @@ extension UIApplication {
         guard Userpilot.isInitialized else { return }
         let config = Userpilot.shared.config
         guard config.enableInteractionAutoCapture else { return }
-        guard !shouldIgnoreInternalTextSelectionAction(action: action, target: target) else { return }
+        guard !shouldIgnoreInternalTextSelectionAction(action: action, target: target) else {
+            return
+        }
 
         if let control = sender as? UIControl {
+            guard !Self.viewIsWithinSystemKeyboardChrome(control) else { return }
             control.captureControlInteraction(action: action, target: target, event: event)
             return
         }
 
         if let gestureRecognizer = sender as? UIGestureRecognizer {
+            if let host = gestureRecognizer.view, Self.viewIsWithinSystemKeyboardChrome(host) {
+                return
+            }
             captureGestureAction(gestureRecognizer, action: action, target: target, config: config)
             return
         }
 
         if let view = sender as? UIView {
+            guard !Self.viewIsWithinSystemKeyboardChrome(view) else { return }
             captureViewAction(view: view, action: action, target: target, config: config)
             return
         }
@@ -98,6 +106,29 @@ extension UIApplication {
         let targetClass = String(describing: type(of: target))
         if targetClass.contains("UITextSelectionInteraction") {
             return true
+        }
+        return false
+    }
+
+    /// System keyboard / input-accessory view hierarchy (keys, keyplanes, `UIKeyboardImpl`, …).
+    private static func typeNameIndicatesSystemKeyboardChrome(_ name: String) -> Bool {
+        if name.hasPrefix("UIKB") { return true }
+        if name.hasPrefix("TUIKB") { return true }
+        if name.contains("TUIKeyplane") || name.contains("TUIKeyboard") { return true }
+        if name.contains("UIKeyboardImpl") || name.contains("UIKeyboardLayout") { return true }
+        if name.contains("UIKeyboardAutomatic") { return true }
+        if name.contains("UIInputSet") || name.contains("_UIKB") { return true }
+        if name.contains("UICompatibilityInputView") { return true }
+        return false
+    }
+
+    private static func viewIsWithinSystemKeyboardChrome(_ view: UIView) -> Bool {
+        var current: UIView? = view
+        while let currentView = current {
+            if typeNameIndicatesSystemKeyboardChrome(String(describing: type(of: currentView))) {
+                return true
+            }
+            current = currentView.superview
         }
         return false
     }

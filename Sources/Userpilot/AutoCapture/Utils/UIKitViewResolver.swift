@@ -10,6 +10,8 @@
 //  unique identifiers for UIKit view elements in automatic analytics capture.
 //
 
+// swiftlint:disable file_length
+
 import UIKit
 
 /// `UIKitViewResolver` provides utilities for UIKit view element identification and tracking.
@@ -80,12 +82,24 @@ internal enum UIKitViewResolver {
         )
     }
 
-    /// Resolves the hierarchical path of a view in the view tree.
-    /// Each node is identified by: accessibilityIdentifier > accessibilityLabel > index in parent.
-    /// The root segment is replaced with the resolved screen name (e.g. "HomeScreen").
-    /// - Parameter view: The UIView to resolve path for
-    /// - Returns: Hierarchical path string, example:
-    /// "HomeScreen > UIView[index:0] > UIView[accessibilityLabel:0] > UIButton[id:login_button]"
+    /// Resolves the hierarchy path of a view from leaf to root, joined by `;`.
+    ///
+    /// Each segment follows the pattern:
+    /// `SimpleName:attr__accessibility_label="...",attr__id="...",attr__index="..."`
+    ///
+    /// Attribute selection priority is:
+    /// 1. `id`                  — accessibility identifier (highest fidelity)
+    /// 2. `accessibility_label` — accessibility label
+    /// 3. `index`               — position in parent (stable fallback)
+    ///
+    /// Note: Attributes are always emitted in alphabetical order:
+    /// `attr__accessibility_label`, `attr__id`, `attr__index`.
+    ///
+    /// A `;SCREEN_NAME:…` segment from `screenNameTracker` is appended when publishing
+    /// interaction events in `AutoCapturer`, not here.
+    ///
+    /// - Parameter view: The UIView to resolve the path for.
+    /// - Returns: Hierarchical path string in leaf-to-root order.
     static func resolvePath(view: UIView) -> String {
         var path = [String]()
         var currentView: UIView? = view
@@ -93,48 +107,64 @@ internal enum UIKitViewResolver {
         while let node = currentView {
             let parent = node.superview
             var desc = "\(type(of: node))"
+            var hasAttribute = false
 
-            if let id = node.accessibilityIdentifier, !id.isEmpty {
-                desc += "[id:\(id)]"
-            } else if let label = node.accessibilityLabel, !label.isEmpty {
-                desc += "[accessibilityLabel:\(label)]"
-            } else if let parent = parent,
-                      let index = parent.subviews.firstIndex(of: node) {
-                desc += "[index:\(index)]"
+            let accessibilityLabel = node.accessibilityLabel?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if let label = accessibilityLabel, !label.isEmpty {
+                desc +=
+                    ":attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
+                hasAttribute = true
             }
 
-            path.append(desc) // ✅ changed here
+            if let id = node.accessibilityIdentifier?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !id.isEmpty {
+                if hasAttribute { desc += "," } else { desc += ":" }
+                desc += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
+                hasAttribute = true
+            }
+
+            let indexInParent: Int
+            if let parent = parent,
+                let index = parent.subviews.firstIndex(of: node) {
+                indexInParent = index
+            } else {
+                indexInParent = 0
+            }
+
+            if hasAttribute { desc += "," } else { desc += ":" }
+            desc += "attr__index=\"\(indexInParent)\""
+
+            path.append(desc)
             currentView = parent
         }
 
-        // replace LAST element (root) with screen name
-        if !path.isEmpty {
-            path[path.count - 1] = view.userpilotResolvedScreenName()
-        }
-
-        return path.joined(separator: " > ")
+        return path.joined(separator: ";")
     }
-//    static func resolvePath(view: UIView) -> String {
-//        var path = [String]()
-//        var currentView: UIView? = view
-//        while let node = currentView {
-//            let parent = node.superview
-//            var desc = "\(type(of: node))"
-//            if let id = node.accessibilityIdentifier, !id.isEmpty {
-//                desc += "[id:\(id)]"
-//            } else if let label = node.accessibilityLabel, !label.isEmpty {
-//                desc += "[accessibilityLabel:\(label)]"
-//            } else if let parent = parent, let index = parent.subviews.firstIndex(of: node) {
-//                desc += "[index:\(index)]"
-//            }
-//            path.insert(desc, at: 0)
-//            currentView = parent
-//        }
-//        if !path.isEmpty {
-//            path[0] = view.userpilotResolvedScreenName()
-//        }
-//        return path.joined(separator: " > ")
-//    }
+
+    //    static func resolvePath(view: UIView) -> String {
+    //        var path = [String]()
+    //        var currentView: UIView? = view
+    //        while let node = currentView {
+    //            let parent = node.superview
+    //            var desc = "\(type(of: node))"
+    //            if let id = node.accessibilityIdentifier, !id.isEmpty {
+    //                desc += "[id:\(id)]"
+    //            } else if let label = node.accessibilityLabel, !label.isEmpty {
+    //                desc += "[accessibilityLabel:\(label)]"
+    //            } else if let parent = parent, let index = parent.subviews.firstIndex(of: node) {
+    //                desc += "[index:\(index)]"
+    //            }
+    //            path.insert(desc, at: 0)
+    //            currentView = parent
+    //        }
+    //        if !path.isEmpty {
+    //            path[0] = view.userpilotResolvedScreenName()
+    //        }
+    //        return path.joined(separator: " > ")
+    //    }
 
     /// Resolves the view and path to use for capture, respecting userpilotIgnoreInnerHierarchy.
     /// When a view or any ancestor has ignore inner hierarchy, that view is the "effective" view:
@@ -235,7 +265,7 @@ internal enum UIKitViewResolver {
 // MARK: - Internal
 
 /// Internal extension providing helper methods for checking autocapture properties
-internal extension UIView {
+extension UIView {
 
     /// Returns the view to use for path/type when capturing: the first self or ancestor that has
     /// userpilotIgnoreInnerHierarchy == true. If none, returns self.
@@ -263,10 +293,11 @@ internal extension UIView {
                 return true
             }
             if let viewController = current as? UIViewController {
-                let isUntracked = (objc_getAssociatedObject(
-                    viewController,
-                    &ScreenNameTracker.untrackedScreenKey
-                ) as? Bool) ?? false
+                let isUntracked =
+                    (objc_getAssociatedObject(
+                        viewController,
+                        &ScreenNameTracker.untrackedScreenKey
+                    ) as? Bool) ?? false
                 if isUntracked {
                     return true
                 }
@@ -281,8 +312,7 @@ internal extension UIView {
     /// and API (userpilotRedactText on responder chain).
     /// - Returns: True if text should be redacted
     func shouldRedactText() -> Bool {
-        if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-           !config.enableInteractionTextCapture {
+        if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil, !config.enableInteractionTextCapture {
             return true
         }
         var responder: UIResponder? = self
@@ -299,7 +329,7 @@ internal extension UIView {
     /// - Returns: True if accessibility labels should be redacted
     func shouldRedactAccessibilityLabel() -> Bool {
         if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-           !config.enableInteractionAccessibilityLabelCapture {
+            !config.enableInteractionAccessibilityLabelCapture {
             return true
         }
         var responder: UIResponder? = self
@@ -324,7 +354,8 @@ internal extension UIView {
         if let label = self as? UILabel {
             text = label.text
         } else if let button = self as? UIButton {
-            text = button.title(for: .normal)
+            text =
+                button.title(for: .normal)
                 ?? button.currentTitle
                 ?? button.titleLabel?.text
         } else if let textField = self as? UITextField {
@@ -370,3 +401,5 @@ internal extension UIView {
         return label
     }
 }
+
+// swiftlint:enable file_length
