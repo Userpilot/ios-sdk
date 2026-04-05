@@ -70,7 +70,6 @@ internal extension UIViewController {
         guard !untracked else { return }
 
         guard !userpilotIgnoreScreen else { return }
-        guard !type(of: self).isUserpilotChildClass else { return }
 
         let payload = buildScreenTrackingPayload()
         Userpilot.shared.autoCaptureEngine.trackScreen(payload)

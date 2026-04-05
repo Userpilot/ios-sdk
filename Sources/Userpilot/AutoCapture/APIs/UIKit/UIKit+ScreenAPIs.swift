@@ -22,14 +22,6 @@ extension UIViewController {
         false
     }
 
-    /// Override to `true` on view controller classes that are **embedded/auxiliary children** of another screen
-    /// (e.g. child view controllers inside a container) so they do **not** emit their own screen events.
-    /// The parent or visible screen remains the tracked screen.
-    @objc
-    open class var isUserpilotChildClass: Bool {
-        false
-    }
-
     /// The custom screen name to use for screen events. Override to provide a custom name.
     @objc
     open var userpilotScreenName: String? {
