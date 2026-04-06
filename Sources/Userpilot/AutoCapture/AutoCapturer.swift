@@ -314,21 +314,13 @@ private extension AutoCapturer {
     /// Appends `;SCREEN_NAME` to the view hierarchy using `screenNameTracker`.
     private func appendScreenNameSegmentToHierarchy(_ properties: inout [String: Any]) {
         guard var hierarchy = properties[AutoCaptureConstants.hierarchy] as? String,
-              !hierarchy.isEmpty else { return }
+              !hierarchy.isEmpty,
+              let payload = screenNameTracker.getCurrentPayload() else { return }
 
-        guard let payload = screenNameTracker.getCurrentPayload() else { return }
+        let screenClass = payload.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !screenClass.isEmpty else { return }
 
-        let trimmedName = payload.currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name: String
-        if trimmedName.isEmpty {
-            let klass = payload.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !klass.isEmpty else { return }
-            name = klass
-        } else {
-            name = trimmedName
-        }
-
-        let escaped = name.replacingOccurrences(of: "\"", with: "\\\"")
+        let escaped = screenClass.replacingOccurrences(of: "\"", with: "\\\"")
         hierarchy += ";\(escaped)"
         properties[AutoCaptureConstants.hierarchy] = hierarchy
     }
