@@ -98,12 +98,13 @@ internal extension UIPickerView {
 
         // Row and component indexes
         payload.row = row
-        payload.intValue = component
+        payload.sourceProperties[AutoCaptureConstants.selectedIndex] = component
 
         // Selected title from the data source (requires UIPickerViewDelegate to implement titleForRow)
         if config.enableInteractionValueCapture,
            let title = delegate?.pickerView?(self, titleForRow: row, forComponent: component) {
-            payload.stringValue = shouldRedactText() ? AutoCaptureConstants.reductText : title
+            payload.sourceProperties[AutoCaptureConstants.selectedValue] =
+                shouldRedactText() ? AutoCaptureConstants.reductText : title
         }
 
         // View path and accessibility

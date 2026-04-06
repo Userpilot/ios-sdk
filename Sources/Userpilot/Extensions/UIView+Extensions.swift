@@ -45,7 +45,8 @@ internal extension UIView {
 
     // MARK: Label Extraction
 
-    /// Extracts fallback label text from view or subviews
+    /// Shallow fallback: first direct-subview `UILabel`, or `UIButton` title (used e.g. by SwiftUI bridge).
+    /// For unknown/private view types, autocapture resolves text with a deeper recursive label search.
     /// - Returns: Extracted label text or nil
     func extractFallbackLabel() -> String? {
         if let label = self.subviews.first(where: { $0 is UILabel }) as? UILabel {

@@ -87,7 +87,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.boolValue = switchControl.isOn
+                payload.sourceProperties[AutoCaptureConstants.isChecked] = switchControl.isOn
             }
 
         case let slider as UISlider:
@@ -96,7 +96,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.floatValue = slider.value
+                payload.sourceProperties[AutoCaptureConstants.value] = slider.value
             }
 
         case let segmentedControl as UISegmentedControl:
@@ -105,9 +105,12 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.intValue = segmentedControl.selectedSegmentIndex
+                payload.sourceProperties[AutoCaptureConstants.selectedIndex] = segmentedControl.selectedSegmentIndex
                 let raw = segmentedControl.titleForSegment(at: segmentedControl.selectedSegmentIndex)
-                payload.stringValue = shouldRedactText() ? (raw != nil ? AutoCaptureConstants.reductText : nil) : raw
+                let title: String? = shouldRedactText() ? (raw != nil ? AutoCaptureConstants.reductText : nil) : raw
+                if let title {
+                    payload.sourceProperties[AutoCaptureConstants.selectedValue] = title
+                }
             }
 
         case let stepper as UIStepper:
@@ -116,7 +119,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.doubleValue = stepper.value
+                payload.sourceProperties[AutoCaptureConstants.value] = stepper.value
             }
 
         case let datePicker as UIDatePicker:
@@ -125,7 +128,8 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.dateValue = datePicker.date
+                payload.sourceProperties[AutoCaptureConstants.selectedDate] =
+                    ISO8601DateFormatter().string(from: datePicker.date)
             }
 
         case let pageControl as UIPageControl:
@@ -134,7 +138,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.intValue = pageControl.currentPage
+                payload.sourceProperties[AutoCaptureConstants.selectedIndex] = pageControl.currentPage
             }
 
         default:

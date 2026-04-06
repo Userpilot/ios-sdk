@@ -56,26 +56,6 @@ internal struct InteractionPayload {
     /// The dialog message
     var dialogMessage: String?
 
-    // MARK: - Value Properties (for controls with values)
-
-    /// Boolean value for switches
-    var boolValue: Bool?
-
-    /// Float value for sliders
-    var floatValue: Float?
-
-    /// Double value for steppers
-    var doubleValue: Double?
-
-    /// Integer value for segment index, page index, etc.
-    var intValue: Int?
-
-    /// String value for selected segment title, picker selection, etc.
-    var stringValue: String?
-
-    /// Date value for date pickers
-    var dateValue: Date?
-
     // MARK: - Index Path Properties (for table/collection views)
 
     /// Section index for table/collection view selections
@@ -84,13 +64,9 @@ internal struct InteractionPayload {
     /// Row/item index for table/collection view selections
     var row: Int?
 
-    // MARK: - Text Input Properties
-
-    /// Whether the text field/view has text (privacy-safe)
-    var hasText: Bool?
-
-    /// The length of the text (privacy-safe)
-    var textLength: Int?
+    /// Control-specific and privacy-safe values (switch on/off, slider value, selected index, text length, etc.).
+    /// Prefer keys from `AutoCaptureConstants`; merged into the published payload by `toSourceDictionary()`.
+    var sourceProperties: [String: Any] = [:]
 
     // MARK: - Initialization
 
@@ -155,40 +131,9 @@ internal struct InteractionPayload {
         return dict
     }
 
-    // Converts the payload to a dictionary for event properties
-    // swiftlint:disable:next function_body_length cyclomatic_complexity superfluous_disable_command
+    /// Values merged into the autocapture event (same keys as before: `is_checked`, `value`, `selected_index`, …).
     func toSourceDictionary() -> [String: Any] {
-        var dict: [String: Any] = [:]
-
-        // Value properties
-        if let boolValue = boolValue {
-            dict[AutoCaptureConstants.isChecked] = boolValue
-        }
-        if let floatValue = floatValue {
-            dict[AutoCaptureConstants.value] = floatValue
-        }
-        if let doubleValue = doubleValue {
-            dict[AutoCaptureConstants.value] = doubleValue
-        }
-        if let intValue = intValue {
-            dict[AutoCaptureConstants.selectedIndex] = intValue
-        }
-        if let stringValue = stringValue {
-            dict[AutoCaptureConstants.selectedValue] = stringValue
-        }
-        if let dateValue = dateValue {
-            dict[AutoCaptureConstants.selectedDate] = ISO8601DateFormatter().string(from: dateValue)
-        }
-
-        // Text input properties
-        if let hasText = hasText {
-            dict[AutoCaptureConstants.hasText] = hasText
-        }
-        if let textLength = textLength {
-            dict[AutoCaptureConstants.textLength] = textLength
-        }
-
-        return dict
+        sourceProperties
     }
 
 }

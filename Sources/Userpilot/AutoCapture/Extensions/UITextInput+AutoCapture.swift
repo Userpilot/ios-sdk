@@ -31,8 +31,8 @@ internal extension UITextField {
             elementType: "UITextField"
         )
 
-        payload.hasText = !(text?.isEmpty ?? true)
-        payload.textLength = text?.count ?? 0
+        payload.sourceProperties[AutoCaptureConstants.hasText] = !(text?.isEmpty ?? true)
+        payload.sourceProperties[AutoCaptureConstants.textLength] = text?.count ?? 0
         payload.placeholder = placeholder
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
@@ -46,7 +46,10 @@ internal extension UITextField {
         }
 
         InteractionEventCache.sendDebouncedInteraction(
-            payload, for: self, textLengthForDedupe: payload.textLength)
+            payload,
+            for: self,
+            textLengthForDedupe: payload.sourceProperties[AutoCaptureConstants.textLength] as? Int
+        )
     }
 }
 
@@ -67,8 +70,8 @@ internal extension UITextView {
             elementType: "UITextView"
         )
 
-        payload.hasText = !text.isEmpty
-        payload.textLength = text.count
+        payload.sourceProperties[AutoCaptureConstants.hasText] = !text.isEmpty
+        payload.sourceProperties[AutoCaptureConstants.textLength] = text.count
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
         payload.elementPath = path
@@ -81,6 +84,9 @@ internal extension UITextView {
         }
 
         InteractionEventCache.sendDebouncedInteraction(
-            payload, for: self, textLengthForDedupe: payload.textLength)
+            payload,
+            for: self,
+            textLengthForDedupe: payload.sourceProperties[AutoCaptureConstants.textLength] as? Int
+        )
     }
 }

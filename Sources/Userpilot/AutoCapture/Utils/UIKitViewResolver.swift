@@ -10,77 +10,13 @@
 //  unique identifiers for UIKit view elements in automatic analytics capture.
 //
 
-// swiftlint:disable file_length
-
 import UIKit
 
 /// `UIKitViewResolver` provides utilities for UIKit view element identification and tracking.
-/// Redaction: the SDK uses UIView.getTextContent() and getAccessibilityLabelContent() (below)
-/// which return "****" when shouldRedactText/shouldRedactAccessibilityLabel is true. Both
-/// Config (enableInteractionTextCapture, enableInteractionAccessibilityLabelCapture) and
-/// API properties (userpilotRedactText, userpilotRedactAccessibilityLabel on responder chain)
-/// are checked and applied. resolve(view:) and resolveElementData(view:) implement the same
-/// semantics and are available for a single unified path if needed.
+///
+/// Text for published events uses ``UIView/getTextContent()`` and ``UIView/getAccessibilityLabelContent()``
+/// (see extension below), which apply Config flags and `userpilotRedact*` on the responder chain.
 internal enum UIKitViewResolver {
-    // MARK: - Static Methods
-
-    /// Resolves raw text content from UIKit views (no redaction).
-    /// Prefer view.getTextContent() for capture so redaction is applied.
-    static func resolve(view: UIView) -> String? {
-        if let label = view as? UILabel {
-            return label.text
-        }
-
-        if let button = view as? UIButton {
-            return button.title(for: .normal)
-                ?? button.currentTitle
-                ?? button.titleLabel?.text
-        }
-
-        if let textField = view as? UITextField {
-            return textField.text
-        }
-
-        if let textView = view as? UITextView {
-            return textView.text
-        }
-
-        if let accessibilityLabel = view.accessibilityLabel, !accessibilityLabel.isEmpty {
-            return accessibilityLabel
-        }
-
-        return nil
-    }
-
-    /// Extracts element tracking data with redaction (returns "****" when shouldRedact*).
-    /// Currently unused; capture paths use view.getTextContent() / getAccessibilityLabelContent() instead.
-    static func resolveElementData(view: UIView) -> ElementTrackingPayload {
-        // Get text with redaction support
-        let elementLabel: String?
-        if view.shouldRedactText() {
-            let rawLabel = resolveElementLabel(view: view)
-            elementLabel = rawLabel != nil ? AutoCaptureConstants.reductText : nil
-        } else {
-            elementLabel = resolveElementLabel(view: view)
-        }
-
-        // Get accessibility ID with redaction support
-        let accessibilityId: String?
-        if view.shouldRedactAccessibilityLabel() {
-            let rawId = resolveAccessibilityId(view: view)
-            accessibilityId = rawId != nil ? AutoCaptureConstants.reductText : nil
-        } else {
-            accessibilityId = resolveAccessibilityId(view: view)
-        }
-
-        return ElementTrackingPayload(
-            elementType: resolveElementType(view: view),
-            elementLabel: elementLabel,
-            accessibilityId: accessibilityId,
-            screenHierarchyPath: resolveHierarchyPath(view: view),
-            positionIndex: resolvePositionIndex(view: view)
-        )
-    }
 
     /// Resolves the hierarchy path of a view from leaf to root, joined by `;`.
     ///
@@ -144,28 +80,6 @@ internal enum UIKitViewResolver {
         return path.joined(separator: ";")
     }
 
-    //    static func resolvePath(view: UIView) -> String {
-    //        var path = [String]()
-    //        var currentView: UIView? = view
-    //        while let node = currentView {
-    //            let parent = node.superview
-    //            var desc = "\(type(of: node))"
-    //            if let id = node.accessibilityIdentifier, !id.isEmpty {
-    //                desc += "[id:\(id)]"
-    //            } else if let label = node.accessibilityLabel, !label.isEmpty {
-    //                desc += "[accessibilityLabel:\(label)]"
-    //            } else if let parent = parent, let index = parent.subviews.firstIndex(of: node) {
-    //                desc += "[index:\(index)]"
-    //            }
-    //            path.insert(desc, at: 0)
-    //            currentView = parent
-    //        }
-    //        if !path.isEmpty {
-    //            path[0] = view.userpilotResolvedScreenName()
-    //        }
-    //        return path.joined(separator: " > ")
-    //    }
-
     /// Resolves the view and path to use for capture, respecting userpilotIgnoreInnerHierarchy.
     /// When a view or any ancestor has ignore inner hierarchy, that view is the "effective" view:
     /// path and element type come from it, and text is redacted as "****" when effective view ≠ touched view.
@@ -176,96 +90,12 @@ internal enum UIKitViewResolver {
         let path = resolvePath(view: effectiveView)
         return (effectiveView, path)
     }
-
-    /// Gets a unique tag or identifier for the element
-    /// - Parameter view: The UIView to get tag for
-    /// - Returns: Element tag string
-    static func elementTag(view: UIView) -> String {
-        if let tag = view.accessibilityIdentifier {
-            return tag
-        } else if view.tag != 0 {
-            return "\(view.tag)"
-        } else {
-            return resolvePath(view: view)
-        }
-    }
-
-    // MARK: - Element Type Resolution
-
-    // Resolves the element type based on UIView class type
-    // - Parameter view: The UIView to resolve type for
-    // - Returns: Element type string
-    // swiftlint:disable:next cyclomatic_complexity superfluous_disable_command
-    private static func resolveElementType(view: UIView) -> String {
-        return String(describing: type(of: view))
-    }
-
-    // MARK: - Element Label Resolution
-
-    /// Resolves the element label or text content
-    /// - Parameter view: The UIView to resolve label for
-    /// - Returns: Element label string or nil
-    private static func resolveElementLabel(view: UIView) -> String? {
-        if let label = view as? UILabel {
-            return label.text
-        }
-
-        if let button = view as? UIButton {
-            return button.title(for: .normal)
-                ?? button.currentTitle
-                ?? button.titleLabel?.text
-        }
-
-        if let textField = view as? UITextField {
-            return textField.placeholder ?? textField.text
-        }
-
-        if let textView = view as? UITextView {
-            return textView.text
-        }
-
-        if let accessibilityLabel = view.accessibilityLabel, !accessibilityLabel.isEmpty {
-            return accessibilityLabel
-        }
-
-        return nil
-    }
-
-    // MARK: - Accessibility ID Resolution
-
-    /// Resolves the accessibility identifier of the view
-    /// - Parameter view: The UIView to resolve accessibility ID for
-    /// - Returns: Accessibility identifier string or nil
-    private static func resolveAccessibilityId(view: UIView) -> String? {
-        return view.accessibilityIdentifier
-    }
-
-    // MARK: - Hierarchy Path Resolution
-
-    /// Resolves the hierarchical path of the view in the view tree.
-    /// Each node is identified by: accessibilityIdentifier > accessibilityLabel > index in parent.
-    /// The root segment is replaced with the resolved screen name.
-    /// - Parameter view: The UIView to resolve hierarchy path for
-    /// - Returns: Hierarchical path string, e.g. "HomeScreen > UIView[0] > UIButton[login_button]"
-    private static func resolveHierarchyPath(view: UIView) -> String {
-        return resolvePath(view: view)
-    }
-
-    // MARK: - Position Index Resolution
-
-    /// Resolves the position index of the view within its parent
-    /// - Parameter view: The UIView to resolve position for
-    /// - Returns: Position index integer
-    private static func resolvePositionIndex(view: UIView) -> Int {
-        guard let superview = view.superview else { return 0 }
-        return superview.subviews.firstIndex(of: view) ?? 0
-    }
 }
 
 // MARK: - Internal
 
 /// Internal extension providing helper methods for checking autocapture properties
-extension UIView {
+internal extension UIView {
 
     /// Returns the view to use for path/type when capturing: the first self or ancestor that has
     /// userpilotIgnoreInnerHierarchy == true. If none, returns self.
@@ -340,6 +170,46 @@ extension UIView {
         return false
     }
 
+    /// Direct text from `UILabel`, `UIButton`, `UITextField`, and `UITextView` only (no redaction, no subview crawl).
+    /// - Parameters:
+    ///   - textFieldPreferPlaceholder: When true, `UITextField` uses placeholder before `text` (capture UX).
+    ///   - includeAccessibilityFallback: When true and no control text is found, uses non-empty `accessibilityLabel`.
+    /// - Returns: First non-empty match, or nil
+    fileprivate func userpilotRawDirectText(
+        textFieldPreferPlaceholder: Bool,
+        includeAccessibilityFallback: Bool
+    ) -> String? {
+        if let label = self as? UILabel {
+            guard let text = label.text, !text.isEmpty else { return nil }
+            return text
+        }
+        if let button = self as? UIButton {
+            let text =
+                button.title(for: .normal)
+                ?? button.currentTitle
+                ?? button.titleLabel?.text
+            guard let text, !text.isEmpty else { return nil }
+            return text
+        }
+        if let textField = self as? UITextField {
+            let text = textFieldPreferPlaceholder
+                ? (textField.placeholder ?? textField.text)
+                : textField.text
+            guard let text, !text.isEmpty else { return nil }
+            return text
+        }
+        if let textView = self as? UITextView {
+            guard let text = textView.text, !text.isEmpty else { return nil }
+            return text
+        }
+        if includeAccessibilityFallback,
+            let label = accessibilityLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !label.isEmpty {
+            return label
+        }
+        return nil
+    }
+
     /// Returns the text content of this view, redacted if necessary.
     /// Falls back to searching subviews for a UILabel when the view itself
     /// is a private/unknown type (e.g., _UIAlertControllerActionView).
@@ -349,29 +219,18 @@ extension UIView {
             return AutoCaptureConstants.reductText
         }
 
-        var text: String?
-
-        if let label = self as? UILabel {
-            text = label.text
-        } else if let button = self as? UIButton {
-            text =
-                button.title(for: .normal)
-                ?? button.currentTitle
-                ?? button.titleLabel?.text
-        } else if let textField = self as? UITextField {
-            text = textField.placeholder ?? textField.text
-        } else if let textView = self as? UITextView {
-            text = textView.text
-        } else {
-            // Fallback: search subviews for the first UILabel with text
-            text = findLabelText(in: self)
+        if let direct = userpilotRawDirectText(
+            textFieldPreferPlaceholder: true,
+            includeAccessibilityFallback: false
+        ) {
+            return direct
         }
 
-        guard let content = text, !content.isEmpty else {
-            return nil
+        if let nested = findLabelText(in: self) {
+            return nested
         }
 
-        return content
+        return nil
     }
 
     /// Recursively searches subviews for the first UILabel with non-empty text
@@ -401,5 +260,3 @@ extension UIView {
         return label
     }
 }
-
-// swiftlint:enable file_length
