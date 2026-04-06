@@ -43,35 +43,33 @@ internal enum UIKitViewResolver {
         while let node = currentView {
             let parent = node.superview
             var desc = "\(type(of: node))"
-            var hasAttribute = false
+            var attributes = ""
 
-            let accessibilityLabel = node.accessibilityLabel?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if let label = accessibilityLabel, !label.isEmpty {
-                desc +=
-                    ":attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
-                hasAttribute = true
+            if let label = node.accessibilityLabel?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !label.isEmpty {
+                attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
-                !id.isEmpty {
-                if hasAttribute { desc += "," } else { desc += ":" }
-                desc += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
-                hasAttribute = true
+               !id.isEmpty {
+                attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
             let indexInParent: Int
             if let parent = parent,
-                let index = parent.subviews.firstIndex(of: node) {
+               let index = parent.subviews.firstIndex(of: node) {
                 indexInParent = index
             } else {
                 indexInParent = 0
             }
 
-            if hasAttribute { desc += "," } else { desc += ":" }
-            desc += "attr__index=\"\(indexInParent)\""
+            attributes += "attr__index=\"\(indexInParent)\""
+
+            if !attributes.isEmpty {
+                desc += ":\(attributes)"
+            }
 
             path.append(desc)
             currentView = parent
