@@ -40,6 +40,7 @@ class UserpilotManager {
         else { return }
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(enabled: true)
+            .enableUseInAppBrowser()
         )
         userpilot?.navigationDelegate = self
         userpilot?.analyticsDelegate = self

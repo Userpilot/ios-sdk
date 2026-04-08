@@ -14,6 +14,24 @@
 import UIKit
 
 internal enum Swizzler {
+
+    /// Exchanges two instance method implementations on the given class.
+    /// Returns false when either method cannot be found.
+    @discardableResult
+    static func swapInstanceMethods(
+        on cls: AnyClass,
+        original: Selector,
+        swizzled: Selector
+    ) -> Bool {
+        guard
+            let originalMethod = class_getInstanceMethod(cls, original),
+            let swizzledMethod = class_getInstanceMethod(cls, swizzled)
+        else { return false }
+
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+        return true
+    }
+
     /// Swizzling for delegate objects.
     ///
     /// This is unique because,
@@ -47,7 +65,10 @@ internal enum Swizzler {
         if originalMethod == nil {
             // this is the case where the existing delegate does not have an implementation for the target selector
 
-            guard let placeholderMethod = class_getInstanceMethod(replacementOwner, placeholderSelector) else {
+            guard
+                let placeholderMethod = class_getInstanceMethod(
+                    replacementOwner, placeholderSelector)
+            else {
                 // this should never be nil as it would be a developer error, but we must nil check this call
                 return
             }
@@ -62,17 +83,22 @@ internal enum Swizzler {
         }
 
         // this should never be nil since the method gets added above
-        guard let originalMethod =
-            originalMethod ?? class_getInstanceMethod(targetClass, targetSelector) else { return }
+        guard
+            let originalMethod =
+                originalMethod ?? class_getInstanceMethod(targetClass, targetSelector)
+        else { return }
 
         // swizzle the new implementation to inject our own custom logic
 
         // this should never be nil as it would be a developer error, but we must nil check this call
-        guard let swizzleMethod = class_getInstanceMethod(replacementOwner, swizzleSelector) else { return }
+        guard let swizzleMethod = class_getInstanceMethod(replacementOwner, swizzleSelector) else {
+            return
+        }
 
         // implementations must be different (otherwise the target selector already has the implementation we want) and
         // without this check we would add the implementation again which will cause an infinite loop
-        guard method_getImplementation(originalMethod) != method_getImplementation(swizzleMethod) else { return }
+        guard method_getImplementation(originalMethod) != method_getImplementation(swizzleMethod)
+        else { return }
 
         // add the swizzled version - this will only succeed once for this instance, if its already there, we've already
         // swizzled, and we can exit early in the next guard
@@ -84,7 +110,8 @@ internal enum Swizzler {
         )
 
         guard addMethodResult,
-              let swizzledMethod = class_getInstanceMethod(targetClass, swizzleSelector) else {
+            let swizzledMethod = class_getInstanceMethod(targetClass, swizzleSelector)
+        else {
             return
         }
 
