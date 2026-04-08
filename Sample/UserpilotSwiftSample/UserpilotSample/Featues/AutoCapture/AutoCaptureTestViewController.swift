@@ -58,7 +58,7 @@ class AutoCaptureTestViewController: UIViewController {
     }
     
     override var userpilotScreenTitle: String? {
-        "BADDDER"
+        "Demo title"
     }
 
     private func setupBackButton() {

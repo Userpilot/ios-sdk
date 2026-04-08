@@ -270,9 +270,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
                        didOpenWithProtocol protocol: String?) {
     self.readyState = .open
     let response = webSocketTask.response
-    DispatchQueue.main.async { [weak self] in
-      self?.delegate?.onOpen(response: response)
-    }
+    notifyDelegate { $0.onOpen(response: response) }
     self.receive()
   }
   
@@ -281,34 +279,40 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
                        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
                        reason: Data?) {
     self.readyState = .closed
-    let code = closeCode.rawValue
     let reasonString = reason.flatMap { String(data: $0, encoding: .utf8) }
-    DispatchQueue.main.async { [weak self] in
-      self?.delegate?.onClose(code: code, reason: reasonString)
-    }
+    notifyDelegate { $0.onClose(code: closeCode.rawValue, reason: reasonString) }
   }
   
   open func urlSession(_ session: URLSession,
                        task: URLSessionTask,
                        didCompleteWithError error: Error?) {
     guard let err = error else { return }
-    let response = task.response
-    self.readyState = .closed
-    DispatchQueue.main.async { [weak self] in
-      self?.delegate?.onError(error: err, response: response)
-      self?.delegate?.onClose(code: Socket.CloseCode.abnormal.rawValue, reason: err.localizedDescription)
-    }
+    print("Error when receiving didCompleteWithError")
+    abnormalErrorReceived(err, response: task.response)
   }
-  
-    
-  open func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
-    self.readyState = .closed
-    DispatchQueue.main.async { [weak self] in
-      self?.delegate?.onClose(code: 500, reason: error?.localizedDescription)
-    }
-  }
-  
+
   // MARK: - Private
+
+  /// Captures `delegate` on the calling thread (while `self` is still valid), then runs `block` on the main queue.
+  ///
+  /// Avoids `DispatchQueue.main.async { [weak self] in self?.delegate?... }`: when `URLSessionTransport` deallocates
+  /// while that closure is pending (common during WebSocket teardown + `receive()` concurrency), resolving
+  /// `[weak self]` can crash in `objc_loadWeakRetained`. Holding the delegate strongly for this hop only fixes that.
+  private func notifyDelegate(_ block: @escaping (PhoenixTransportDelegate) -> Void) {
+    guard let delegate = self.delegate else { return }
+    DispatchQueue.main.async {
+      block(delegate)
+    }
+  }
+
+  private func abnormalErrorReceived(_ error: Error, response: URLResponse?) {
+    self.readyState = .closed
+    notifyDelegate { delegate in
+      delegate.onError(error: error, response: response)
+      delegate.onClose(code: Socket.CloseCode.abnormal.rawValue, reason: error.localizedDescription)
+    }
+  }
+
   private func receive() {
     receiveMessageTask = Task { [weak self] in
       guard let self else { return }
@@ -318,9 +322,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
             case .data:
                 print("Data received. This method is unsupported by the Client")
             case .string(let text):
-                DispatchQueue.main.async { [weak self] in
-                  self?.delegate?.onMessage(message: text)
-                }
+                notifyDelegate { $0.onMessage(message: text) }
             default:
 #if DEBUG
                 fatalError("Nil message received.")
@@ -330,11 +332,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
             receive()
           } catch {
               print("Error when receiving \(error)")
-              self.readyState = .closed
-              DispatchQueue.main.async { [weak self] in
-                self?.delegate?.onError(error: error, response: nil)
-                self?.delegate?.onClose(code: Socket.CloseCode.abnormal.rawValue, reason: error.localizedDescription)
-              }
+              abnormalErrorReceived(error, response: nil)
           }
       }
   }

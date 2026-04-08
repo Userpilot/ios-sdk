@@ -964,9 +964,9 @@ extension Socket {
     
     var shouldReconnect: Bool {
       switch self {
-      case .unknown, .abnormal:
+      case .unknown:
         return true
-      case .clean, .temporary:
+      case .clean, .temporary, .abnormal:
         return false
       }
     }

@@ -671,7 +671,11 @@ extension AnalyticsPublisher {
             readWriteLock.write { [weak self] in
                 guard let self else { return }
                 if !self.socketManager.isSocketOpened || self.socketManager.isJoiningSocket {
-                    self.checkFallbackState()
+                    if shouldCloseSocket {
+                        self.socketManager.close()
+                    } else {
+                        self.checkFallbackState()
+                    }
                     return
                 }
                 if self.eventsToFlush.isEmpty {
