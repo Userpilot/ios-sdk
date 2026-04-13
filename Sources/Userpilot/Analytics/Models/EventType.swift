@@ -118,6 +118,15 @@ internal enum EventType: Equatable {
         }
     }
 
+//    /// Auto-capture screen metadata when the event is a `screen` event with an associated payload.
+//    var screenTrackingPayload: ScreenTrackingPayload? {
+//        if case let .screen(_, payload) = self {
+//            return payload
+//        } else {
+//            return nil
+//        }
+//    }
+
     /**
      Returns the screen name if the event is a `screen` event. If the event type is not `screen`, it returns `nil`.
      This helps in identifying the screen associated with a screen-view event.

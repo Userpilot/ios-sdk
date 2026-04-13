@@ -6,7 +6,7 @@
 //
 
 /// Payload containing comprehensive screen tracking information for auto capture events.
-internal struct ScreenTrackingPayload {
+internal struct ScreenTrackingPayload: Equatable {
     // MARK: - Properties
 
     /// The current screen name

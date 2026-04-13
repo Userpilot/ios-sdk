@@ -61,8 +61,10 @@ internal extension UIViewController {
         // guard !type(of: self).isUserpilotContainerClass else { return }
         guard !Self.isUIKitSystemContainerViewController(self) else { return }
 
-        if Self.isOSProvidedViewControllerToSkip(self) {
-            return
+        if Userpilot.shared.config.appFramework == .UIKit {
+            if Self.isOSProvidedViewControllerToSkip(self) {
+                return
+            }
         }
 
         let untracked =
@@ -71,8 +73,22 @@ internal extension UIViewController {
 
         guard !userpilotIgnoreScreen else { return }
 
-        let payload = buildScreenTrackingPayload()
-        Userpilot.shared.autoCaptureEngine.trackScreen(payload)
+        // SwiftUI hosting controllers: defer capture to the next run loop so
+        // ScreenNameBridge (UIViewRepresentable) has time to mount and propagate
+        // the screen name set via .userpilotScreenName(). Without this,
+        // viewWillAppear fires before the bridge UIView is created, causing the
+        // first screen event to miss the custom name.
+        if Userpilot.shared.config.appFramework == .SwiftUI,
+           screenClassName.contains("HostingController") {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let payload = self.buildScreenTrackingPayload()
+                Userpilot.shared.autoCaptureEngine.trackScreen(payload)
+            }
+        } else {
+            let payload = buildScreenTrackingPayload()
+            Userpilot.shared.autoCaptureEngine.trackScreen(payload)
+        }
     }
 
     // MARK: Payload Building

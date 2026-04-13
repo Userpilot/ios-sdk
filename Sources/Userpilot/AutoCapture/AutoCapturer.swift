@@ -57,9 +57,6 @@ internal class AutoCapturer {
 
     /// Reusable internal properties shared across all events.
     /// Provides UIFramework tagging for every event without repetition.
-    private var baseInternalProperties: [String: Any] {
-        [AutoCaptureConstants.uiFramework: config.appFramework.rawValue]
-    }
 
     /// Returns the current screen dictionary, or nil if screen context is unavailable.
     /// Centralises the nil-check so call sites stay clean.
@@ -138,8 +135,10 @@ extension AutoCapturer: AutoCapturing {
             // Bail out if the tracker hasn't resolved a valid screen class yet.
             guard let screenClass = screenNameTracker.getCurrentPayload()?.screenClass else { return }
 
-            let properties = buildScreenEventProperties()
-            let event = makeEvent(type: EventType.screen(screenClass), properties: properties)
+            let event = makeEvent(
+                type: EventType.screen(screenEventIdentity(screenClass: screenClass, payload: payload)),
+                properties: screenNameTracker.buildScreenDictionary()
+            )
 
             analyticsPublisher.publish(event)
         }
@@ -358,19 +357,6 @@ private extension AutoCapturer {
 
     // MARK: Dictionary Builders
 
-    /// Builds the properties dictionary for a screen event.
-    func buildScreenEventProperties() -> [String: Any] {
-        var properties: [String: Any] = [:]
-
-        // flatten screen properties
-        properties.merge(screenNameTracker.buildScreenDictionary()) { _, new in new }
-
-        // flatten internal properties
-        properties[AutoCaptureConstants.appSource] = config.appFramework.rawValue
-
-        return properties
-    }
-
     /// Builds the properties dictionary for a tab-selection event.
     func buildTabProperties(name: String, index: Int) -> [String: Any] {
         var props: [String: Any] = [
@@ -383,9 +369,7 @@ private extension AutoCapturer {
     /// Builds the `internalProperties` dictionary for an interaction event.
     /// Always includes the raw interaction type and the UI framework tag.
     func buildInternalProperties(for interactionType: InteractionType) -> [String: Any] {
-        var props = baseInternalProperties
-        props[AutoCaptureConstants.rawInteractionType] = interactionType.rawValue
-        return props
+        return [AutoCaptureConstants.rawInteractionType: interactionType.rawValue]
     }
 
     // MARK: Event Factory
@@ -408,6 +392,15 @@ private extension AutoCapturer {
             screen: currentScreenDictionary,
             interactionEventName: interactionEventName
         )
+    }
+
+    /// UIKit production behavior is preserved: screen events keep using the controller class.
+    /// SwiftUI uses the resolved logical screen name when available so initial screen capture,
+    /// fake reload, and dedupe all key off the same screen identity.
+    func screenEventIdentity(screenClass: String, payload: ScreenTrackingPayload) -> String {
+        guard config.appFramework == .SwiftUI else { return screenClass }
+        let logicalName = payload.currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
+        return logicalName.isEmpty ? screenClass : logicalName
     }
 
 }
