@@ -60,14 +60,14 @@ class UserpilotManager {
         userpilot?.logout()
     }
     
-    /// Track screens
+    /// Track screens (manual). When `enableScreenAutoCapture` is on, the SDK ignores manual `screen` calls.
     func screen(_ screenTitle: String) {
-        //userpilot?.screen(screenTitle)
+        userpilot?.screen(screenTitle)
     }
-    
+
     /// Track user events
     func track(eventName: String, properties: [String: Any]? = nil) {
-        //userpilot?.track(eventName: eventName, properties: properties)
+        userpilot?.track(eventName: eventName, properties: properties)
     }
     
     func triggerExperience(experienceId: String) {
