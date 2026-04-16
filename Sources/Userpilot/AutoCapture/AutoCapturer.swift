@@ -62,7 +62,7 @@ internal class AutoCapturer {
     /// Centralises the nil-check so call sites stay clean.
     private var currentScreenDictionary: [String: Any]? {
         guard screenNameTracker.getCurrentPayload() != nil else { return nil }
-        return screenNameTracker.buildScreenDictionaryForEvent()
+        return screenNameTracker.buildScreenDictionaryForEvent(isSwiftUI: config.appFramework == .SwiftUI)
     }
 
     // MARK: - Initialization

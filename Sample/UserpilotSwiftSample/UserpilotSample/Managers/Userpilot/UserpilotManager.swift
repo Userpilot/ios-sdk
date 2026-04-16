@@ -41,6 +41,7 @@ class UserpilotManager {
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(enabled: true)
             .enableUseInAppBrowser()
+            .enableScreenAutoCapture()
         )
         userpilot?.navigationDelegate = self
         userpilot?.analyticsDelegate = self

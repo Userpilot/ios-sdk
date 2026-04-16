@@ -110,6 +110,7 @@ private struct UserpilotRedactTextRepresentable: UIViewRepresentable {
 /// Internal UIView that applies the redaction property to its parent view
 private class UserpilotRedactTextView: UIView {
     private var redact: Bool
+    private weak var appliedToView: UIView?
 
     init(redact: Bool) {
         self.redact = redact
@@ -132,16 +133,33 @@ private class UserpilotRedactTextView: UIView {
         applyRedactTextToParent()
     }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        applyRedactTextToParent()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        applyRedactTextToParent()
+    }
+
+    override func removeFromSuperview() {
+        super.removeFromSuperview()
+        appliedToView?.userpilotRedactText = false
+        appliedToView = nil
+    }
+
     private func applyRedactTextToParent() {
-        // Find the parent view that contains our SwiftUI content
-        var parent = superview
-        while parent != nil {
-            // Apply to the parent view
-            if let parentView = parent {
-                parentView.userpilotRedactText = redact
-                break
-            }
-            parent = parent?.superview
+        guard let parent = superview else {
+            appliedToView?.userpilotRedactText = false
+            appliedToView = nil
+            return
         }
+
+        if appliedToView !== parent {
+            appliedToView?.userpilotRedactText = false
+            appliedToView = parent
+        }
+        parent.userpilotRedactText = redact
     }
 }

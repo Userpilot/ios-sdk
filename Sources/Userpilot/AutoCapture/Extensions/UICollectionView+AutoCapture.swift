@@ -40,7 +40,14 @@ internal extension UICollectionViewCell {
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
         payload.elementPath = path
-        if effectiveView !== self {
+        if let userpilotLabel = (touchedView ?? self).resolveUserpilotLabel() {
+            if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
+                payload.elementType = labelViewType
+            }
+            payload.elementText = (touchedView ?? self).shouldRedactText()
+                ? AutoCaptureConstants.reductText
+                : userpilotLabel
+        } else if effectiveView !== self {
             payload.elementType = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText
         } else {

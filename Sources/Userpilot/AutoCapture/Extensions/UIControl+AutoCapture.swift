@@ -160,6 +160,15 @@ internal extension UIControl {
             payload.elementText = AutoCaptureConstants.reductText
         }
 
+        if let userpilotLabel = resolveUserpilotLabel() {
+            if let labelViewType = resolveUserpilotLabelViewType() {
+                payload.elementType = labelViewType
+            }
+            payload.elementText = shouldRedactText()
+                ? AutoCaptureConstants.reductText
+                : userpilotLabel
+        }
+
         // IBOutlet reference name (e.g., "submitButton", "searchTextField")
         payload.targetViewName = resolveReferenceName()
 

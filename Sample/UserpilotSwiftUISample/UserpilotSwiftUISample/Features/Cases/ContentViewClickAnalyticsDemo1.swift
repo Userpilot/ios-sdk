@@ -69,8 +69,6 @@ struct ContentViewClickAnalyticsDemo1: View {
                     .onTapGesture {
                         likeCount += 1
                     }
-                    // ✅ Ensures the entire HStack is tracked as one click event
-                    .userpilotRecognizeClickAnalytics()
                 }
                 .padding(.horizontal)
                 
@@ -163,12 +161,20 @@ struct ContentViewClickAnalyticsDemo1: View {
                     }
                 }
                 .padding(.horizontal)
+                .userpilotLabel("Example 5: Custom Reusable Component")
                 
                 // MARK: - Example 6: When NOT to use the API
                 GroupBox("Example 6: Standard Buttons (No API Needed)") {
                     VStack(spacing: 10) {
                         // ❌ Don't use the API here - Button is automatically tracked
-                        Button(action: {}) {
+                        Button("Confirm Ordereee") {
+                            print("Logged")
+                        }
+                        .userpilotLabel("Confirm Ordereee")
+                        
+                        Button(action: {
+                            print("Logged")
+                        }) {
                             Text("Standard Button")
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -176,6 +182,7 @@ struct ContentViewClickAnalyticsDemo1: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
+                        .userpilotLabel("Standard Button")
                         
                         // ❌ Don't use the API here - NavigationLink is automatically tracked
                         NavigationLink(destination: Text("Detail View")) {

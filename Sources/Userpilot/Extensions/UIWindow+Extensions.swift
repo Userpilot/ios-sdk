@@ -49,11 +49,7 @@ extension UIWindow {
 
             let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
 
-            if Userpilot.shared.config.appFramework == .SwiftUI {
-                handleSwiftUIClick(at: locationInWindow, event: event, view: resolvedView)
-            } else {
-                handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
-            }
+            handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
         }
     }
 
@@ -196,16 +192,16 @@ extension UIWindow {
     ) {
         guard !view.shouldIgnoreInteractions() else { return }
 
-        if config.appFramework == .SwiftUI,
-           let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
-               window: window,
-               point: point,
-               event: event,
-               fallbackView: view
-           ) {
-            Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
-            return
-        }
+//        if config.appFramework == .SwiftUI,
+//           let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
+//               window: window,
+//               point: point,
+//               event: event,
+//               fallbackView: view
+//           ) {
+//            Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
+//            return
+//        }
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
         let useRedactedInner = (effectiveView !== view)
@@ -215,7 +211,14 @@ extension UIWindow {
             AutoCaptureConstants.hierarchy: path
         ]
 
-        if useRedactedInner {
+        if let capture = view.resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
+            if let labelViewType = capture.viewType {
+                eventProperties[AutoCaptureConstants.elementType] = labelViewType
+            }
+            eventProperties[AutoCaptureConstants.elementText] = capture.labeledView.shouldRedactText()
+                ? AutoCaptureConstants.reductText
+                : capture.label
+        } else if useRedactedInner {
             eventProperties[AutoCaptureConstants.elementText] = AutoCaptureConstants.reductText
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
