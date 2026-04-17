@@ -4,7 +4,7 @@
 //
 //  Created by Motasem Hamed on 13/01/2026.
 //
-//  This file demonstrates various use cases for the userpilotRecognizeClickAnalytics() API
+//  This file demonstrates click analytics labels with userpilotLabel(_:)
 
 import SwiftUI
 import Userpilot
@@ -23,6 +23,39 @@ struct ContentViewClickAnalyticsDemo1: View {
                     .fontWeight(.bold)
                     .padding(.top)
                 
+                GroupBox("Start Here: Button Examples") {
+                    VStack(spacing: 12) {
+                        Button("Confirm Order") {
+                            print("Confirm order tapped")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .userpilotLabel("Confirm Order")
+                        
+                        Button(action: {
+                            print("Standard button tapped")
+                        }) {
+                            Text("Standard Button")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                        .userpilotLabel("Standard Button")
+                        
+                        NavigationLink(destination: Text("Detail View")) {
+                            Text("Navigation Link")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                        .userpilotLabel("Navigation Link")
+                    }
+                }
+                .padding(.horizontal)
+
                 // MARK: - Example 1: VStack with onTapGesture
                 GroupBox("Example 1: VStack with Tap Gesture") {
                     VStack(spacing: 12) {
@@ -44,11 +77,12 @@ struct ContentViewClickAnalyticsDemo1: View {
                     .onTapGesture {
                         favoriteCount += 1
                     }
+                    .userpilotLabel("Favorite Tile")
                 }
                 .padding(.horizontal)
                 
                 // MARK: - Example 2: HStack Container Button
-                GroupBox("Example 2: HStack Container Button") {
+                GroupBox("Example 2: HStack Container Tap Area") {
                     HStack {
                         Image(systemName: "heart.fill")
                             .foregroundColor(.red)
@@ -69,6 +103,7 @@ struct ContentViewClickAnalyticsDemo1: View {
                     .onTapGesture {
                         likeCount += 1
                     }
+                    .userpilotLabel("Like Row")
                 }
                 .padding(.horizontal)
                 
@@ -97,8 +132,7 @@ struct ContentViewClickAnalyticsDemo1: View {
                             .onTapGesture {
                                 selectedCard = tech
                             }
-                            // ✅ Makes each card trackable as a separate element
-                            .userpilotRecognizeClickAnalytics()
+                            .userpilotLabel("Tech Card \(tech)")
                         }
                     }
                 }
@@ -133,8 +167,7 @@ struct ContentViewClickAnalyticsDemo1: View {
                                 print("Tapped item \(index)")
                                 showAlert = true
                             }
-                            // ✅ Critical for list items with custom gestures
-                            .userpilotRecognizeClickAnalytics()
+                            .userpilotLabel("List Item \(index)")
                         }
                     }
                 }
@@ -163,45 +196,11 @@ struct ContentViewClickAnalyticsDemo1: View {
                 .padding(.horizontal)
                 .userpilotLabel("Example 5: Custom Reusable Component")
                 
-                // MARK: - Example 6: When NOT to use the API
-                GroupBox("Example 6: Standard Buttons (No API Needed)") {
-                    VStack(spacing: 10) {
-                        // ❌ Don't use the API here - Button is automatically tracked
-                        Button("Confirm Ordereee") {
-                            print("Logged")
-                        }
-                        .userpilotLabel("Confirm Ordereee")
-                        
-                        Button(action: {
-                            print("Logged")
-                        }) {
-                            Text("Standard Button")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                        .userpilotLabel("Standard Button")
-                        
-                        // ❌ Don't use the API here - NavigationLink is automatically tracked
-                        NavigationLink(destination: Text("Detail View")) {
-                            Text("Navigation Link")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                
                 // MARK: - Comparison Section
-                GroupBox("Comparison: With vs Without API") {
+                GroupBox("Comparison: With vs Without Label") {
                     HStack(spacing: 15) {
                         VStack {
-                            Text("Without API")
+                            Text("Without Label")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
@@ -217,11 +216,11 @@ struct ContentViewClickAnalyticsDemo1: View {
                             .onTapGesture {
                                 print("This might not be tracked")
                             }
-                            // ❌ Not using the API
+                            // No Userpilot label
                         }
                         
                         VStack {
-                            Text("With API")
+                            Text("With Label")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
@@ -237,8 +236,7 @@ struct ContentViewClickAnalyticsDemo1: View {
                             .onTapGesture {
                                 print("This will be tracked")
                             }
-                            // ✅ Using the API
-                            .userpilotRecognizeClickAnalytics()
+                            .userpilotLabel("Tracked Comparison Tile")
                         }
                     }
                 }
@@ -255,7 +253,7 @@ struct ContentViewClickAnalyticsDemo1: View {
 
 // MARK: - Custom Reusable Component Example
 
-/// Custom component that uses userpilotRecognizeClickAnalytics()
+/// Custom component that uses userpilotLabel(_:)
 struct CustomActionCard: View {
     let icon: String
     let title: String
@@ -280,8 +278,7 @@ struct CustomActionCard: View {
         .background(color.opacity(0.1))
         .cornerRadius(12)
         .onTapGesture(perform: action)
-        // ✅ Essential for custom components with gestures
-        .userpilotRecognizeClickAnalytics()
+        .userpilotLabel(title)
     }
 }
 

@@ -13,7 +13,6 @@ struct ContentView: View {
     @State private var showScreensFlow = false
     @State private var showAutocaptureConfig = false
     @State private var showClickAnalyticsDemo1 = false
-    @State private var showClickAnalyticsDemo2 = false
     @State private var showTabDemo1 = false
     @State private var showTabDemo2 = false
     @State private var showUIComponent = false
@@ -48,23 +47,16 @@ struct ContentView: View {
 
                     sampleSection(
                         title: "Click analytics",
-                        description: "Demos for gesture-heavy SwiftUI and accessibility-driven click capture.",
+                        description: "Single click analytics demo with practical label-based examples.",
                         sectionIcon: "hand.tap.fill",
                         sectionTint: .orange
                     ) {
                         sampleRow(
-                            title: "Click analytics demo 1",
-                            subtitle: "First set of patterns for recognized vs unrecognized taps.",
-                            icon: "1.circle.fill",
-                            gradient: [.orange, .yellow],
-                            action: { showClickAnalyticsDemo1 = true }
-                        )
-                        sampleRow(
-                            title: "Click analytics demo 2",
-                            subtitle: "Additional layouts and edge cases for click analytics.",
-                            icon: "2.circle.fill",
+                            title: "Click analytics demo",
+                            subtitle: "Buttons first, then gesture and custom component patterns.",
+                            icon: "hand.tap.fill",
                             gradient: [.pink, .orange],
-                            action: { showClickAnalyticsDemo2 = true }
+                            action: { showClickAnalyticsDemo1 = true }
                         )
                     }
 
@@ -127,9 +119,6 @@ struct ContentView: View {
             }
             .navigationDestination(isPresented: $showClickAnalyticsDemo1) {
                 ContentViewClickAnalyticsDemo1()
-            }
-            .navigationDestination(isPresented: $showClickAnalyticsDemo2) {
-                ContentViewClickAnalyticsDemo2()
             }
             .navigationDestination(isPresented: $showTabDemo1) {
                 ContentViewTabDemo1()

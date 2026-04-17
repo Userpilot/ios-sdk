@@ -34,11 +34,11 @@ struct SwiftUIAutocaptureConfigTestView: View {
                 )
 
                 modifierCard(
-                    title: "Click analytics recognition",
+                    title: "Click analytics label",
                     symbol: "hand.tap.fill",
                     tint: .orange,
-                    api: ".userpilotRecognizeClickAnalytics(_:)",
-                    detail: "Marks gesture-driven or composite views as a single accessibility button so taps are captured. Try the tile below and verify events in your analytics pipeline."
+                    api: ".userpilotLabel(_:)",
+                    detail: "Adds explicit capture text and view type metadata to gesture-driven or composite views. Try the tile below and verify named events in your analytics pipeline."
                 )
 
                 recognizeClickDemo
@@ -164,7 +164,7 @@ struct SwiftUIAutocaptureConfigTestView: View {
 
             HStack {
                 Image(systemName: "sparkles")
-                Text("Tap — uses .onTapGesture + .userpilotRecognizeClickAnalytics()")
+                Text("Tap — uses .onTapGesture + .userpilotLabel()")
                     .font(.subheadline)
             }
             .frame(maxWidth: .infinity)
@@ -182,7 +182,7 @@ struct SwiftUIAutocaptureConfigTestView: View {
             .onTapGesture {
                 tapRecognizedCount += 1
             }
-            .userpilotRecognizeClickAnalytics("AutocaptureConfigTapTile")
+            .userpilotLabel("AutocaptureConfigTapTile")
         }
         .padding(16)
         .background(
