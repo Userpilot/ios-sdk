@@ -242,7 +242,11 @@ extension Userpilot {
             config.logger.error("Invalid screen title - empty string")
             return
         }
-        analyticsPublisher.publish(Event(type: .screen(title)))
+        let event = Event(
+            type: .screen(title),
+            properties: [AutoCaptureConstants.source: AutoCaptureConstants.manualCaptureSourceValue]
+        )
+        analyticsPublisher.publish(event)
     }
 
     /**

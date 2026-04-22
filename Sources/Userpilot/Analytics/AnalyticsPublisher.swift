@@ -596,7 +596,6 @@ extension AnalyticsPublisher {
      * - Parameter fakeReloadScreenEvent: When from identify (update user properties), request
      *        identify with fake reload true, otherwise false.
      */
-    // swiftlint:disable:next cyclomatic_complexity
     private func flushPriorityEvents(
         isRequestIdentify: Bool = true,
         canRequestScreenEvent: Bool = true,
@@ -630,7 +629,7 @@ extension AnalyticsPublisher {
             if let screenViewEntity, canRequestScreenEvent {
                 let screenEvent = screenViewEntity.event
                 if let screenTitle = screenEvent.screenTitle {
-                    if !config.enableScreenAutoCapture {
+                    if !config.enableScreenAutoCapture && config.enableInteractionAutoCapture {
                         screenNameTracker.updateScreen(with: ScreenTrackingPayload(screenTitle: screenTitle))
                     }
                     experiencesPublisher?.updateSceen(screenTitle)
@@ -638,16 +637,13 @@ extension AnalyticsPublisher {
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.screenTitle ?? ""
 
-                let existingMetadata = screenEvent.properties ?? [:]
+                let existingMetadata = screenViewEntity.event.properties ?? [:]
                 var newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: fakeReloadScreenEvent,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
                     AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
-                if existingMetadata.isEmpty {
-                    newMetadata[AutoCaptureConstants.source] = AutoCaptureConstants.manualCaptureSourceValue
-                }
                 payload[AnalyticsPublisher.metaDataProperty] = existingMetadata.merging(newMetadata) { _, new in new }
 
                 socketManager.publish(screenEvent.eventName, payload: payload)
@@ -907,12 +903,16 @@ extension AnalyticsPublisher {
                 }
                 var payload: [String: Any] = [:]
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
-                payload[AnalyticsPublisher.metaDataProperty] = [
+
+                let existingMetadata = screenViewEntity.event.properties ?? [:]
+                var newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: true,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
                     AnalyticsPublisher.seenSurveys: Array(screenViewEntity.seenSurveys)
                 ]
+                payload[AnalyticsPublisher.metaDataProperty] = existingMetadata.merging(newMetadata) { _, new in new }
+
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
             }
         }
