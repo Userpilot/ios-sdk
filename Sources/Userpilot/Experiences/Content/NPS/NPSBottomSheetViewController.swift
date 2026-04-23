@@ -42,6 +42,7 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
         bindViewModel()
         setContent(content: npsContainerView, withoutMargin: true)
         registerKeyboardNotifications()
+        ExternalKeyboardManagerCompat.disableIQKeyboardManager(for: [NPSBottomSheetViewController.self])
     }
 
     override func viewDidAppear(_ animated: Bool) {

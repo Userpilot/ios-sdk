@@ -81,6 +81,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		397C2CAEE027D0B234669718 /* Pods-UserpilotSample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-UserpilotSample.release.xcconfig"; path = "Target Support Files/Pods-UserpilotSample/Pods-UserpilotSample.release.xcconfig"; sourceTree = "<group>"; };
+		881A2E55D066CA69E0189FF6 /* Pods_UserpilotSample.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_UserpilotSample.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB1942A72CD25CD700924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainViewController.xib; sourceTree = "<group>"; };
 		AB1942AA2CD25CD700924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/MainViewController.xcstrings; sourceTree = "<group>"; };
 		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -115,6 +117,23 @@
 		AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseNavigationController.swift; sourceTree = "<group>"; };
 		AB6DBD442C68D8560009BB11 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Exensions.swift"; sourceTree = "<group>"; };
+		AB8616182F99E5F5009E2C79 /* IQKeyboardCore.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardCore.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616192F99E5F5009E2C79 /* IQKeyboardCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB86161A2F99E5F5009E2C79 /* IQKeyboardManagerSwift.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardManagerSwift.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB86161B2F99E5F5009E2C79 /* IQKeyboardManagerSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardManagerSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB86161C2F99E5F5009E2C79 /* IQKeyboardNotification.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardNotification.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB86161D2F99E5F5009E2C79 /* IQKeyboardNotification.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardNotification.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB86161E2F99E5F5009E2C79 /* IQKeyboardReturnManager.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardReturnManager.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB86161F2F99E5F5009E2C79 /* IQKeyboardReturnManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardReturnManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616202F99E5F5009E2C79 /* IQKeyboardToolbar.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardToolbar.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616212F99E5F5009E2C79 /* IQKeyboardToolbar.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardToolbar.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616222F99E5F5009E2C79 /* IQKeyboardToolbarManager.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardToolbarManager.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616232F99E5F5009E2C79 /* IQKeyboardToolbarManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardToolbarManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616242F99E5F5009E2C79 /* IQTextInputViewNotification.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQTextInputViewNotification.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616252F99E5F5009E2C79 /* IQTextInputViewNotification.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQTextInputViewNotification.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616262F99E5F5009E2C79 /* IQTextView.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQTextView.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616272F99E5F5009E2C79 /* IQTextView.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQTextView.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8616282F99E5F5009E2C79 /* Pods_UserpilotSample.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Pods_UserpilotSample.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		ABAC8E682CE9CF21005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventsViewController.xib; sourceTree = "<group>"; };
 		ABAC8E6B2CE9CF21005EEC9D /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/SDKEventsViewController.xcstrings; sourceTree = "<group>"; };
 		ABAC8E6C2CE9E9D0005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventTableViewCell.xib; sourceTree = "<group>"; };
@@ -154,6 +173,7 @@
 		ABFB5FE32C9173D60054E142 /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		ABFB5FE52C91743B0054E142 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
 		ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITableReusableView+Extension.swift"; sourceTree = "<group>"; };
+		B9207E302CCA40D377FD3595 /* Pods-UserpilotSample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-UserpilotSample.debug.xcconfig"; path = "Target Support Files/Pods-UserpilotSample/Pods-UserpilotSample.debug.xcconfig"; sourceTree = "<group>"; };
 		C5C897B52C5CFFFA0083928E /* UserpilotSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserpilotSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5C897B82C5CFFFA0083928E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -181,6 +201,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		115E9C834D3FA25A463B9DBA /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				B9207E302CCA40D377FD3595 /* Pods-UserpilotSample.debug.xcconfig */,
+				397C2CAEE027D0B234669718 /* Pods-UserpilotSample.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		AB585F5F2CD79C0400E2A66D /* Properties */ = {
 			isa = PBXGroup;
 			children = (
@@ -357,6 +386,24 @@
 		ABB390052D0713C50091FE7A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				AB8616182F99E5F5009E2C79 /* IQKeyboardCore.bundle */,
+				AB8616192F99E5F5009E2C79 /* IQKeyboardCore.framework */,
+				AB86161A2F99E5F5009E2C79 /* IQKeyboardManagerSwift.bundle */,
+				AB86161B2F99E5F5009E2C79 /* IQKeyboardManagerSwift.framework */,
+				AB86161C2F99E5F5009E2C79 /* IQKeyboardNotification.bundle */,
+				AB86161D2F99E5F5009E2C79 /* IQKeyboardNotification.framework */,
+				AB86161E2F99E5F5009E2C79 /* IQKeyboardReturnManager.bundle */,
+				AB86161F2F99E5F5009E2C79 /* IQKeyboardReturnManager.framework */,
+				AB8616202F99E5F5009E2C79 /* IQKeyboardToolbar.bundle */,
+				AB8616212F99E5F5009E2C79 /* IQKeyboardToolbar.framework */,
+				AB8616222F99E5F5009E2C79 /* IQKeyboardToolbarManager.bundle */,
+				AB8616232F99E5F5009E2C79 /* IQKeyboardToolbarManager.framework */,
+				AB8616242F99E5F5009E2C79 /* IQTextInputViewNotification.bundle */,
+				AB8616252F99E5F5009E2C79 /* IQTextInputViewNotification.framework */,
+				AB8616262F99E5F5009E2C79 /* IQTextView.bundle */,
+				AB8616272F99E5F5009E2C79 /* IQTextView.framework */,
+				AB8616282F99E5F5009E2C79 /* Pods_UserpilotSample.framework */,
+				881A2E55D066CA69E0189FF6 /* Pods_UserpilotSample.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -500,6 +547,7 @@
 				C5C897B72C5CFFFA0083928E /* UserpilotSample */,
 				ABB390052D0713C50091FE7A /* Frameworks */,
 				C5C897B62C5CFFFA0083928E /* Products */,
+				115E9C834D3FA25A463B9DBA /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -542,10 +590,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C5C897C92C5CFFFB0083928E /* Build configuration list for PBXNativeTarget "UserpilotSample" */;
 			buildPhases = (
+				9DAC4DA8F86BF83CFE9757D6 /* [CP] Check Pods Manifest.lock */,
 				C5C897B12C5CFFFA0083928E /* Sources */,
 				C5C897B22C5CFFFA0083928E /* Frameworks */,
 				C5C897B32C5CFFFA0083928E /* Resources */,
 				ABA40A512DA55C8300C68251 /* Swiftlint */,
+				83CA7DA53BECC141BA8E649D /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -634,6 +684,49 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		83CA7DA53BECC141BA8E649D /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-UserpilotSample/Pods-UserpilotSample-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-UserpilotSample/Pods-UserpilotSample-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-UserpilotSample/Pods-UserpilotSample-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		9DAC4DA8F86BF83CFE9757D6 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-UserpilotSample-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 		ABA40A512DA55C8300C68251 /* Swiftlint */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
