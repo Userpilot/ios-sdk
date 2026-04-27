@@ -51,11 +51,10 @@ internal extension UIViewController {
             || self is UIPageViewController
     }
 
-    /// Filters out noisy Apple system VCs in SwiftUI mode (keyboard, menus, cursors, etc.)
-    /// while intentionally KEEPING HostingControllers and any app-owned VC that represents a real screen.
+    /// Filters out Apple system VCs in SwiftUI mode unless they are the SwiftUI hosting screen boundary.
     ///
     /// Unlike `isOSProvidedViewControllerToSkip()` (which skips ALL Apple-bundle VCs),
-    /// this method only skips VCs whose class names are known system noise.
+    /// this method keeps real SwiftUI HostingControllers and any app-owned VC that represents a real screen.
     private func isSwiftUISystemNoisyViewController() -> Bool {
         let cls = type(of: self)
         let className = NSStringFromClass(cls)
@@ -64,35 +63,27 @@ internal extension UIViewController {
         // 1. Always KEEP app-bundle VCs — they are user screens regardless of name.
         guard isAppleSystemFrameworkBundle(bundle) else { return false }
 
-        // 2. Always KEEP HostingControllers — they are the SwiftUI screen boundary.
+        // 2. Always KEEP UIAlertController — tracked as `dialog_presented`.
+        if self is UIAlertController { return false }
+
+        // 3. Some Apple internals include "HostingController" in their class name,
+        //    but are keyboard/emoji/secure scene noise rather than app screen boundaries.
+        let noisyHostingControllerFragments: [String] = [
+            "_UISceneHostingViewController",
+            "SecureHostingController"
+        ]
+
+        if noisyHostingControllerFragments.contains(where: { className.contains($0) }) {
+            return true
+        }
+
+        // 4. KEEP normal HostingControllers — they are the SwiftUI screen boundary.
         //    Covers: UIHostingController, _UIHostingController, SwiftUI.AnyHostingController, etc.
         if className.contains("HostingController") { return false }
 
-        // 3. Always KEEP UIAlertController — tracked as `dialog_presented`.
-        if self is UIAlertController { return false }
-
-        // 4. Skip known noisy Apple-internal system VCs by name fragment.
-        //    Add to this list as you discover new noisy classes in the wild.
-        let noisyFragments: [String] = [
-            "UICursorAccessory",         // _UICursorAccessoryViewController
-            "UIInputWindowController",   // keyboard host window
-            "UISystemKeyboardDock",      // keyboard dock
-            "UIKeyboardCamera",          // keyboard camera integration
-            "PrewarmingViewController",  // system prewarming
-            "SecureHostingController",   // system-internal secure host (e.g. Genmoji)
-            "UIMultiscriptCandidate",    // multiscript keyboard candidate VC
-            "UICompatibilityInput",      // legacy input VC
-            "_UIContextMenuActionsOnly", // context menu action sheet
-            "UIKeyboardHUD",             // keyboard HUD overlays
-            "UIEditMenu",                // edit menu (copy/paste)
-            "UISystemInputAssistant",    // input assistant bar
-            "UITextEffects",             // text effect overlays
-            "UIApplicationRotation",     // rotation placeholder VC
-            "UIRemoteKeyboard",          // remote keyboard extension
-            "UISearchSuggestion"        // search suggestion overlay
-        ]
-
-        return noisyFragments.contains { className.contains($0) }
+        // 5. Everything else from Apple in SwiftUI mode is system chrome/noise
+        //    (keyboard, emoji/sticker search, edit overlays, context menus, etc.).
+        return true
     }
 
     // MARK: Private

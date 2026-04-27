@@ -21,10 +21,13 @@ import UIKit
 
  Concrete implementations enrich payloads and publish via `AnalyticsPublishing`.
  */
-internal protocol AutoCapturing: AnyObject {
+internal protocol AutoCaptureCoordinating: AnyObject {
 
     /// Records a screen transition and publishes a `.screen` analytics event when allowed.
     func trackScreen(_ payload: ScreenTrackingPayload)
+
+    /// Temporarily suppresses automatic screen events caused by SDK-owned UI dismissal.
+    func suppressScreenAutoCaptureAfterSDKContent()
 
     /// Publishes a `mobile_autocapture` event for tab-bar selection.
     func handleTabSelected(name tabName: String, index tabIndex: Int)
@@ -40,7 +43,7 @@ internal protocol AutoCapturing: AnyObject {
 // in UIKit-based apps. Works via method swizzling and notification observation.
 // All captured events are enriched with screen context and app metadata before publishing.
 
-internal class AutoCapturer {
+internal class AutoCaptureCoordinater {
 
     // MARK: - Dependencies
 
@@ -52,6 +55,24 @@ internal class AutoCapturer {
 
     /// Tracks the current screen name/class and navigation history.
     private let screenNameTracker: ScreenNameTracking
+
+    /// Protects pending SwiftUI screen state and SDK-content dismissal suppression.
+    private let screenCaptureStateLock = NSLock()
+
+    /// Pending SwiftUI hosting screen payload used to coalesce parent/child hosting appearances.
+    private var pendingSwiftUIScreenPayload: ScreenTrackingPayload?
+
+    /// Work item for delayed SwiftUI screen publication.
+    private var pendingSwiftUIScreenWorkItem: DispatchWorkItem?
+
+    /// Ignore automatic screen events until this date, used after SDK content fake reloads.
+    private var suppressScreenCaptureUntil: Date?
+
+    /// Small delay that lets SwiftUI emit nested hosting controller appearances before we publish.
+    private let swiftUIScreenCoalescingDelay: TimeInterval = 0.08
+
+    /// Dismissing SDK content can re-fire the underlying app's viewWillAppear chain.
+    private let sdkContentDismissalSuppressionInterval: TimeInterval = 0.8
 
     // MARK: - Computed Helpers
 
@@ -117,31 +138,52 @@ internal class AutoCapturer {
 
 // MARK: - AutoCapturing
 
-extension AutoCapturer: AutoCapturing {
+extension AutoCaptureCoordinater: AutoCaptureCoordinating {
 
     // MARK: - Screen Tracking
 
+    /// Handles a resolved screen payload from the swizzled view-controller lifecycle.
+    ///
+    /// This is the main gate for automatic screen capture. It drops events while global autocapture
+    /// is stopped, ignores the short SDK-content dismissal window, routes dialogs to dialog capture,
+    /// and coalesces SwiftUI hosting-controller appearances before publishing a screen event.
+    ///
+    /// - Parameter payload: The resolved screen payload for the appearing view controller.
     func trackScreen(_ payload: ScreenTrackingPayload) {
         tryCatch {
             guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
+            guard !shouldSuppressScreenAutoCapture else { return }
 
             if payload.isDialogPresentation {
                 publishDialogPresentedAutocapture(from: payload)
                 return
             }
 
-            screenNameTracker.updateScreen(with: payload)
+            if shouldCoalesceSwiftUIScreen(payload) {
+                coalesceSwiftUIScreen(payload)
+                return
+            }
 
-            // Bail out if the tracker hasn't resolved a valid screen class yet.
-            guard let screenClass = screenNameTracker.getCurrentPayload()?.screenClass else { return }
-
-            let event = makeEvent(
-                type: EventType.screen(screenEventIdentity(screenClass: screenClass, payload: payload)),
-                properties: screenNameTracker.buildScreenDictionary()
-            )
-
-            analyticsPublisher.publish(event)
+            publishScreen(payload)
         }
+    }
+
+    /// Starts a short suppression window after SDK-owned content has been dismissed.
+    ///
+    /// Closing Userpilot content can cause the underlying app view-controller tree to receive fresh
+    /// `viewWillAppear` callbacks. Those callbacks do not represent client navigation, so this method
+    /// cancels any pending SwiftUI coalesced screen event and suppresses automatic screen capture
+    /// briefly while UIKit/SwiftUI settles back to the already tracked screen.
+    func suppressScreenAutoCaptureAfterSDKContent() {
+        screenCaptureStateLock.lock()
+        let workItem = pendingSwiftUIScreenWorkItem
+        pendingSwiftUIScreenWorkItem?.cancel()
+        pendingSwiftUIScreenWorkItem = nil
+        pendingSwiftUIScreenPayload = nil
+        suppressScreenCaptureUntil = Date().addingTimeInterval(sdkContentDismissalSuppressionInterval)
+        screenCaptureStateLock.unlock()
+
+        workItem?.cancel()
     }
 
     // MARK: - Tab Tracking
@@ -179,13 +221,153 @@ extension AutoCapturer: AutoCapturing {
 
 // MARK: - Private Helpers
 
-private extension AutoCapturer {
+private extension AutoCaptureCoordinater {
 
     // MARK: Guard Helpers
+
+    /// Whether automatic screen capture should currently be ignored.
+    ///
+    /// The suppression window is set by `suppressScreenAutoCaptureAfterSDKContent()` after a fake
+    /// reload event. When the window expires this property clears the stored date and allows normal
+    /// screen capture to resume.
+    var shouldSuppressScreenAutoCapture: Bool {
+        screenCaptureStateLock.lock()
+        defer { screenCaptureStateLock.unlock() }
+
+        guard let suppressScreenCaptureUntil else { return false }
+
+        if Date() < suppressScreenCaptureUntil {
+            return true
+        }
+
+        self.suppressScreenCaptureUntil = nil
+        return false
+    }
 
     /// `true` when interaction tracking is both globally enabled and not paused at runtime.
     var isInteractionTrackingActive: Bool {
         !AutocaptureViewConfiguration.isAutoCaptureStopped && config.enableInteractionAutoCapture
+    }
+
+    /// Returns `true` when a screen payload should be delayed and coalesced for SwiftUI.
+    ///
+    /// SwiftUI can emit multiple hosting-controller appearances for one visible screen, such as a
+    /// `NavigationStackHostingController` followed immediately by a `TabHostingController`.
+    /// Delaying these briefly lets the deepest/latest hosting controller win.
+    ///
+    /// - Parameter payload: The screen payload being considered for immediate publication.
+    /// - Returns: `true` when the payload is a SwiftUI hosting-controller screen.
+    func shouldCoalesceSwiftUIScreen(_ payload: ScreenTrackingPayload) -> Bool {
+        config.appFramework == .SwiftUI && payload.screenClass.contains("HostingController")
+    }
+
+    /// Delays publication of a SwiftUI hosting screen so duplicate parent/child appearances collapse.
+    ///
+    /// Each new SwiftUI hosting payload replaces the previous pending payload and cancels the previous
+    /// work item. After `swiftUIScreenCoalescingDelay`, the latest payload is published unless SDK
+    /// dismissal suppression became active meanwhile.
+    ///
+    /// - Parameter payload: The latest SwiftUI hosting-controller screen payload.
+    func coalesceSwiftUIScreen(_ payload: ScreenTrackingPayload) {
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.publishPendingSwiftUIScreenIfAllowed()
+        }
+
+        screenCaptureStateLock.lock()
+        let previousWorkItem = pendingSwiftUIScreenWorkItem
+        pendingSwiftUIScreenPayload = payload
+        pendingSwiftUIScreenWorkItem = workItem
+        screenCaptureStateLock.unlock()
+
+        previousWorkItem?.cancel()
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + swiftUIScreenCoalescingDelay,
+            execute: workItem
+        )
+    }
+
+    /// Publishes the latest coalesced SwiftUI hosting payload if suppression is not active.
+    ///
+    /// This method runs from the delayed coalescing work item and owns the lock while it reads and
+    /// clears pending state. The actual publish happens after unlocking to avoid holding state lock
+    /// while analytics callbacks run.
+    func publishPendingSwiftUIScreenIfAllowed() {
+        screenCaptureStateLock.lock()
+
+        if let suppressScreenCaptureUntil {
+            if Date() < suppressScreenCaptureUntil {
+                screenCaptureStateLock.unlock()
+                return
+            }
+            self.suppressScreenCaptureUntil = nil
+        }
+
+        guard let payload = pendingSwiftUIScreenPayload else {
+            screenCaptureStateLock.unlock()
+            return
+        }
+
+        pendingSwiftUIScreenPayload = nil
+        pendingSwiftUIScreenWorkItem = nil
+        screenCaptureStateLock.unlock()
+
+        publishScreen(payload)
+    }
+
+    /// Publishes a screen event immediately after updating the current screen context.
+    ///
+    /// This method is the shared publication path for UIKit screens and coalesced SwiftUI screens.
+    /// It updates `ScreenNameTracker`, builds the backend event identity, attaches the full screen
+    /// dictionary, and forwards the event to `AnalyticsPublishing`.
+    ///
+    /// - Parameter payload: The screen payload to persist and publish.
+    func publishScreen(_ payload: ScreenTrackingPayload) {
+        let previousPayload = screenNameTracker.getCurrentPayload()
+        var payload = payload
+        if config.appFramework == .SwiftUI {
+            payload.screenNameMatchesPreviousScreen = screenNameMatchesPreviousScreen(
+                payload,
+                previousPayload: previousPayload
+            )
+        }
+
+        screenNameTracker.updateScreen(with: payload)
+
+        // Bail out if the tracker hasn't resolved a valid screen class yet.
+        guard let screenClass = screenNameTracker.getCurrentPayload()?.screenClass else { return }
+
+        let event = makeEvent(
+            type: EventType.screen(screenEventIdentity(screenClass: screenClass, payload: payload)),
+            properties: screenNameTracker.buildScreenDictionary()
+        )
+
+        analyticsPublisher.publish(event)
+    }
+
+    /// Returns whether the SwiftUI screen name/title matches the previous screen context.
+    ///
+    /// This is diagnostic metadata for cases where SwiftUI/NavigationStack exposes a stale UIKit
+    /// title. For example, a destination without its own `.navigationTitle` may resolve to the
+    /// previous screen's navigation title.
+    func screenNameMatchesPreviousScreen(
+        _ payload: ScreenTrackingPayload,
+        previousPayload: ScreenTrackingPayload?
+    ) -> Bool {
+        guard config.appFramework == .SwiftUI,
+              let previousPayload
+        else { return false }
+
+        let currentScreen = payload.currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !currentScreen.isEmpty else { return false }
+
+        let previousValues = [
+            previousPayload.currentScreen,
+            previousPayload.navigationTitle
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+
+        return previousValues.contains(currentScreen)
     }
 
     // MARK: Window-level touch filtering

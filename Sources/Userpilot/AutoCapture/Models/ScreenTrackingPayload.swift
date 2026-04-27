@@ -30,6 +30,9 @@ internal struct ScreenTrackingPayload: Equatable {
     /// The accessibilityLabel of the view controller
     let vcAccessibilityLabel: String?
 
+    /// True when SwiftUI resolved this screen to the same name/title as the previous screen context.
+    var screenNameMatchesPreviousScreen: Bool?
+
     /// True when this payload represents a `UIAlertController`
     /// (including subclasses) — dialog autocapture instead of a screen event.
     var isDialogPresentation: Bool = false
@@ -63,6 +66,10 @@ internal struct ScreenTrackingPayload: Equatable {
 
         if let vcAccessibilityLabel = vcAccessibilityLabel {
             dict[AutoCaptureConstants.vcAccessibilityLabel] = vcAccessibilityLabel
+        }
+
+        if let screenNameMatchesPreviousScreen {
+            dict[AutoCaptureConstants.screenNameMatchesPreviousScreen] = screenNameMatchesPreviousScreen
         }
 
         return dict

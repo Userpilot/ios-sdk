@@ -914,8 +914,22 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.metaDataProperty] = existingMetadata.merging(newMetadata) { _, new in new }
 
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
+                suppressScreenAutocaptureAfterFakeReload()
             }
         }
+    }
+
+    /// Suppresses automatic screen capture after sending a fake reload screen event.
+    ///
+    /// Fake reload is an SDK-generated screen event used to send `seen_contents` / `seen_surveys`
+    /// without treating the close of SDK UI as real client navigation. After the fake reload is
+    /// published, UIKit/SwiftUI may re-fire `viewWillAppear` for the underlying app screen hierarchy.
+    /// This hook asks the autocapture coordinator to ignore that short lifecycle burst.
+    private func suppressScreenAutocaptureAfterFakeReload() {
+        guard config.enableScreenAutoCapture,
+              config.appFramework == .SwiftUI
+        else { return }
+        container?.resolve(AutoCaptureCoordinating.self).suppressScreenAutoCaptureAfterSDKContent()
     }
 
     /**

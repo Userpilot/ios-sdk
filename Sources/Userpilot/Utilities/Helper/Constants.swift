@@ -63,6 +63,20 @@ internal struct AutoCaptureConstants {
     static let autoCaptureSourceValue = "auto"
     static let manualCaptureSourceValue = "manual"
 
+    /// `true` when the screen name was set via `.userpilotScreenName(...)` (SwiftUI),
+    /// `userpilotScreenName` override (UIKit), or a `userpilotScreenNameTag` on a child view.
+    /// `false` means the resolver fell back to navigation title / view type / class name.
+    static let screenNameExplicit = "screen_name_explicit"
+
+    /// `true` when `navigationItem.title` on this view controller is also set on another VC
+    /// in the same navigation stack — a strong signal of SwiftUI `NavigationStack` propagating
+    /// the root `.navigationTitle` to a pushed destination that didn't set its own.
+    static let navigationTitleInherited = "navigation_title_inherited"
+
+    /// `true` when a SwiftUI autocaptured screen resolved to the same name/title as the
+    /// previous screen context, usually because UIKit exposed a stale navigation title.
+    static let screenNameMatchesPreviousScreen = "screen_name_matches_previous_screen"
+
     // MARK: - Interaction (public properties)
 
     static let interactionType = "interaction_type"
@@ -117,10 +131,6 @@ internal struct AutoCaptureConstants {
 
     /// Quiet period after the last change before emitting a debounced `mobile_autocapture` event.
     static let interactionDebounceInterval: TimeInterval = 1.0
-
-    // MARK: - Screen time
-
-    static let previousScreenDurationMs = "previousScreenDurationMs"
 
     // MARK: - Values
 
