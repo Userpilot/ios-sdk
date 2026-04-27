@@ -131,6 +131,9 @@ struct ContentView: View {
             }
             .navigationTitle("Userpilot sample")
             .userpilotScreenName("HomeScreen")
+            .onReceive(NotificationCenter.default.publisher(for: UserpilotManager.openScreenOneNotification)) { _ in
+                showScreensFlow = true
+            }
         }
     }
 

@@ -6,12 +6,14 @@
 //
 
 import Userpilot
+import UIKit
 
 class UserpilotManager {
     
     // MARK: - Public Properties
     
     static let shared = UserpilotManager()
+    static let openScreenOneNotification = Notification.Name("UserpilotManager.openScreenOne")
     
     // MARK: - Private Properties
     
@@ -37,6 +39,7 @@ class UserpilotManager {
             .enableInteractionAutoCapture()
             .appFramework(.SwiftUI)
         )
+        userpilot?.navigationDelegate = self
     }
     
     /// Userpilot Settings
@@ -69,9 +72,29 @@ class UserpilotManager {
     func track(eventName: String, properties: [String: Any]? = nil) {
         userpilot?.track(eventName: eventName, properties: properties)
     }
-    
+
     func triggerExperience(experienceId: String) {
-        //userpilot?.triggerExperience(experienceId)
+        userpilot?.triggerExperience(experienceId)
+    }
+
+}
+
+extension UserpilotManager: UserpilotNavigationDelegate {
+
+    func navigate(to url: URL) {
+        if url.scheme == "userpilot-example" {
+            guard let destination = url.host else {
+                return
+            }
+            if destination == "demo" {
+                NotificationCenter.default.post(
+                    name: UserpilotManager.openScreenOneNotification,
+                    object: nil
+                )
+            }
+        } else if url.scheme?.contains("http") == true || url.scheme?.contains("https") == true {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
     }
     
 }
