@@ -14,7 +14,7 @@ extension SurveyBottomSheetViewController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(keyboardNotification(notification:)),
-            name: UIResponder.keyboardWillShowNotification,
+            name: UIResponder.keyboardWillChangeFrameNotification,
             object: nil)
         NotificationCenter.default.addObserver(
             self,
@@ -24,8 +24,10 @@ extension SurveyBottomSheetViewController {
     }
 
     func removeKeyboardNotifications() {
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(
+            self, name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+        NotificationCenter.default.removeObserver(
+            self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 
     @objc private func keyboardNotification(notification: Notification) {
@@ -35,18 +37,21 @@ extension SurveyBottomSheetViewController {
             let animationDuration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval
         else { return }
 
-        let keyboardHeight = keyboardFrame.height
-        let bottomSafeAreaInset = view.safeAreaInsets.bottom
-        let adjustmentHeight = keyboardHeight - bottomSafeAreaInset + 20 // 70 is action button with its margin
+        let isHiding = notification.name == UIResponder.keyboardWillHideNotification
+        // Only react when the first responder belongs to our presented hierarchy.
+        // Without this, host-app keyboards (including IQKeyboardManager's toolbar "Done") trigger a reset.
+        if !isHiding && view.firstResponder == nil { return }
 
-        if notification.name == UIResponder.keyboardWillShowNotification {
-            UIView.animate(withDuration: animationDuration, delay: 0, options: .curveEaseInOut) { [weak self] in
-                self?.view.transform = CGAffineTransform(translationX: 0, y: -adjustmentHeight)
-            }
-        } else if notification.name == UIResponder.keyboardWillHideNotification {
-            UIView.animate(withDuration: animationDuration, delay: 0, options: .curveEaseInOut) { [weak self] in
-                self?.view.transform = .identity
-            }
+        let keyboardFrameInView = view.convert(keyboardFrame, from: nil)
+        let rawOverlap = max(0, view.bounds.maxY - keyboardFrameInView.minY)
+        let structuralBottomInset = max(0, view.safeAreaInsets.bottom - additionalSafeAreaInsets.bottom)
+        let padding: CGFloat = 20
+        let adjustment = isHiding ? 0 : max(0, rawOverlap - structuralBottomInset + padding)
+
+        UIView.animate(withDuration: animationDuration, delay: 0, options: .curveEaseInOut) { [weak self] in
+            guard let self else { return }
+            self.additionalSafeAreaInsets.bottom = adjustment
+            self.view.layoutIfNeeded()
         }
     }
 

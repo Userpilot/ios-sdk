@@ -14,7 +14,7 @@ extension SurveyListViewController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(keyboardNotification(notification:)),
-            name: UIResponder.keyboardWillShowNotification,
+            name: UIResponder.keyboardWillChangeFrameNotification,
             object: nil)
         NotificationCenter.default.addObserver(
             self,
@@ -25,7 +25,8 @@ extension SurveyListViewController {
 
     func removeKeyboardNotifications() {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(
+            self, name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
     }
 
     @objc private func keyboardNotification(notification: Notification) {
@@ -34,11 +35,15 @@ extension SurveyListViewController {
             let keyboardFrame = (userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
         else { return }
 
+        let isHiding = notification.name == UIResponder.keyboardWillHideNotification
+        // Only react when the first responder belongs to our presented hierarchy.
+        if !isHiding && view.firstResponder == nil { return }
+
         let keyboardHeight = keyboardFrame.height
         let bottomSafeAreaInset = view.safeAreaInsets.bottom
         let adjustmentHeight = keyboardHeight - bottomSafeAreaInset - 70 // 70 is action button with its margin
 
-        if notification.name == UIResponder.keyboardWillShowNotification {
+        if !isHiding {
             // Return if the keyboard is already visible
             if scrollView.contentInset.bottom > 0 { return }
 
@@ -74,7 +79,7 @@ extension SurveyListViewController {
             // Only adjust content inset if no scrolling is needed
             scrollView.contentInset.bottom = adjustmentHeight
             scrollView.verticalScrollIndicatorInsets.bottom = adjustmentHeight
-        } else if notification.name == UIResponder.keyboardWillHideNotification {
+        } else {
             UIView.animate(withDuration: 0.2) { [weak self] in
                 self?.scrollView.contentInset.bottom = 0
                 self?.scrollView.verticalScrollIndicatorInsets.bottom = 0

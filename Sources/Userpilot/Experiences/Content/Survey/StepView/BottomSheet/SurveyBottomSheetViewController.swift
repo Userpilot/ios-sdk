@@ -50,6 +50,7 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
         bindViewModel()
         setContent(content: surveyContainerView, withoutMargin: true)
         registerKeyboardNotifications()
+        ExternalKeyboardManagerCompat.disableIQKeyboardManager(for: [SurveyBottomSheetViewController.self])
     }
 
     override func viewDidAppear(_ animated: Bool) {
