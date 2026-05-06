@@ -56,6 +56,7 @@ internal class SurveyListViewController: UIViewController {
         setupViews()
         bindViewModel()
         registerKeyboardNotifications()
+        ExternalKeyboardManagerCompat.disableIQKeyboardManager(for: [SurveyListViewController.self])
 
         appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
 
