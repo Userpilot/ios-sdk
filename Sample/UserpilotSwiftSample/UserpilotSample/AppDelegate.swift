@@ -7,7 +7,6 @@
 
 import UIKit
 import Userpilot
-import IQKeyboardManagerSwift
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -20,8 +19,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // setupPush(application: application)
         // Automatically configure for push notifications by Userpilot SDK
         Userpilot.enableAutomaticPushConfig()
-
-        IQKeyboardManager.shared.isEnabled = true
 
         return true
     }
