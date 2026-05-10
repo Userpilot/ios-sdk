@@ -754,27 +754,7 @@ extension ExperiencesPublisher {
             // Already have an active rendered experience
             !hasActiveExperience
         else { return false }
-
-        let isForAllScreens: Bool
-        let screens: [String]
-
-        // Extract properties based on the enum case
-        switch experienceContent {
-        case .flow(let content):
-            isForAllScreens = content.isForAllScreens
-            screens = content.screens
-        case .survey(let content):
-            isForAllScreens = content.isForAllScreens
-            screens = content.screens
-        case .nps(let content):
-            isForAllScreens = content.isForAllScreens
-            screens = content.screens
-        }
-
-        return isTriggerManualExperience ||
-        analyticsPublisher.isStartSession ||
-        isForAllScreens ||
-        screens.contains(currentScreen)
+        return true
     }
 
     /** Removes all cached/pending experiences from the queue */

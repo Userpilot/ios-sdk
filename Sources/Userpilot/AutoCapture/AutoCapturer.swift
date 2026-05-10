@@ -347,6 +347,7 @@ private extension AutoCapturer {
     /// `UIAlertController` is not emitted as a screen view; send
     /// `dialog_presented` with title/message when screen autocapture runs.
     private func publishDialogPresentedAutocapture(from screenPayload: ScreenTrackingPayload) {
+        guard config.enableInteractionAutoCapture else { return }
         var payload = InteractionPayload(
             interactionType: .viewPresented,
             elementType: AutoCaptureConstants.elementTypeUIAlertController

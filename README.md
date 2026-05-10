@@ -25,6 +25,7 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
+    - [Auto Capture](#auto-capture)
     - [Push Notification](#push-notification)
  - [📝 Documentation](#-documentation)
  - [🎬 Samples](#-samples)
@@ -286,6 +287,10 @@ public protocol UserpilotExperienceDelegate: AnyObject {
     func onExperienceStepStateChanged(id: Int, experienceToken: String, step: Int, totalSteps: Int)
 }
 ```
+
+### Auto Capture
+
+Userpilot SDK supports automatic screen tracking to help you capture mobile screen views without manually sending screen events. please refer to the [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation).
 
 ### Push Notification
 
