@@ -552,7 +552,13 @@ private extension AutoCaptureCoordinater {
     /// Builds the `internalProperties` dictionary for an interaction event.
     /// Always includes the raw interaction type and the UI framework tag.
     func buildInternalProperties(for interactionType: InteractionType) -> [String: Any] {
-        return [AutoCaptureConstants.rawInteractionType: interactionType.rawValue]
+        var result: [String: String] = [
+            AutoCaptureConstants.rawInteractionType: interactionType.rawValue
+        ]
+        if let framework = config.appFramework?.rawValue {
+            result[AutoCaptureConstants.appSource] = framework
+        }
+        return result
     }
 
     // MARK: Event Factory

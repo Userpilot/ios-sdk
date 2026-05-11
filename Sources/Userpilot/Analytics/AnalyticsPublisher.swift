@@ -496,7 +496,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /// Resolves a display class for throttling from `Event.screen` (set on autocapture events via `makeEvent`).
     private func trackEventThrottleScreenName(from screen: Payload) -> String {
         guard let screen, !screen.isEmpty else { return "" }
-        if let name = screen[AutoCaptureConstants.classSimpleName] as? String, !name.isEmpty { return name }
         if let name = screen[AutoCaptureConstants.screenClass] as? String, !name.isEmpty { return name }
         if let name = screen[AutoCaptureConstants.screenTitle] as? String, !name.isEmpty { return name }
         if let name = screen[AutoCaptureConstants.screenName] as? String, !name.isEmpty { return name }

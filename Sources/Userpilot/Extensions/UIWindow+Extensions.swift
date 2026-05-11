@@ -192,17 +192,6 @@ extension UIWindow {
     ) {
         guard !view.shouldIgnoreInteractions() else { return }
 
-//        if config.appFramework == .SwiftUI,
-//           let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
-//               window: window,
-//               point: point,
-//               event: event,
-//               fallbackView: view
-//           ) {
-//            Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
-//            return
-//        }
-
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
         let useRedactedInner = (effectiveView !== view)
 

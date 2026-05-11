@@ -95,14 +95,14 @@ internal extension UIViewController {
 
         guard !isUIKitSystemContainerViewController() else { return }
 
-        if Userpilot.shared.config.appFramework == .UIKit {
-            // ✅ UIKit path unchanged — prod, don't touch
-            if isOSProvidedViewControllerToSkip() {
+        if Userpilot.shared.config.appFramework == .SwiftUI {
+            // ✅ SwiftUI path: filter noisy system VCs, keep HostingControllers
+            if isSwiftUISystemNoisyViewController() {
                 return
             }
         } else {
-            // ✅ SwiftUI path: filter noisy system VCs, keep HostingControllers
-            if isSwiftUISystemNoisyViewController() {
+            // ✅ UIKit path (also used when framework is not yet detected)
+            if isOSProvidedViewControllerToSkip() {
                 return
             }
         }

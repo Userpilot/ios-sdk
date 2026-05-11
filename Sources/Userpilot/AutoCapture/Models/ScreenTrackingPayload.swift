@@ -72,6 +72,9 @@ internal struct ScreenTrackingPayload: Equatable {
             dict[AutoCaptureConstants.screenNameMatchesPreviousScreen] = screenNameMatchesPreviousScreen
         }
 
+        if Userpilot.isInitialized, let appFramework = Userpilot.shared.config.appFramework {
+            dict[AutoCaptureConstants.appSource] = appFramework.rawValue
+        }
         return dict
     }
 }

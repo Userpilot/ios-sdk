@@ -34,8 +34,13 @@ extension Userpilot {
         /// Userpilot SDK logger
         var logger: Logging = OSLog.disabled
 
-        /// The app framework (UIKit or SwiftUI). Defaults to UIKit.
-        var appFramework: AppFramework = .UIKit
+        /// The app framework (UIKit or SwiftUI).
+        ///
+        /// `nil` means the SDK will auto-detect the framework once the key window
+        /// is attached. Set explicitly via `appFramework(_:)` to override
+        /// auto-detection (recommended when you want deterministic tagging
+        /// from the very first event).
+        var appFramework: AppFramework?
 
         /// Disable request push notifications permission by SDK.
         var disableRequestPushPermission: Bool = false
@@ -109,6 +114,12 @@ extension Userpilot {
         }
 
         /// Sets the app framework (UIKit or SwiftUI).
+        ///
+        /// When set explicitly, this disables runtime auto-detection.
+        /// Use this to guarantee correct framework tagging from the first
+        /// event, especially in apps that send events before the key window
+        /// is attached (e.g. from `application:didFinishLaunchingWithOptions:`).
+        ///
         /// - Parameter framework: The framework used by the client app.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult

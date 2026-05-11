@@ -147,6 +147,13 @@ public class Userpilot: NSObject {
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
         container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
+
+        // Only spin up the auto-detector when the host app didn't set the
+        // framework explicitly via `Config.appFramework(_:)`.
+        if config.appFramework == nil {
+            container.registerEager(
+                AppFrameworkDetector.self, initializer: AppFrameworkDetector.init)
+        }
     }
 }
 
