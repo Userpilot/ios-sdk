@@ -21,7 +21,7 @@ public extension View {
     /// Sets a custom screen name for automatic screen tracking
     /// - Parameter name: The screen name to use for tracking
     /// - Returns: A view with the screen name set
-    public func userpilotScreenName(_ name: String) -> some View {
+    func userpilotScreenName(_ name: String) -> some View {
         modifier(ScreenNameModifier(name: name))
     }
 }

@@ -638,7 +638,7 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.screenTitle ?? ""
 
                 let existingMetadata = screenViewEntity.event.properties ?? [:]
-                var newMetadata: [String: Any] = [
+                let newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: fakeReloadScreenEvent,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
@@ -905,7 +905,7 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
 
                 let existingMetadata = screenViewEntity.event.properties ?? [:]
-                var newMetadata: [String: Any] = [
+                let newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: true,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),

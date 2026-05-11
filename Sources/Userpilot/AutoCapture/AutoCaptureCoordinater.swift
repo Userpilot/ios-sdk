@@ -542,7 +542,7 @@ private extension AutoCaptureCoordinater {
 
     /// Builds the properties dictionary for a tab-selection event.
     func buildTabProperties(name: String, index: Int) -> [String: Any] {
-        var props: [String: Any] = [
+        let props: [String: Any] = [
             AutoCaptureConstants.tabName: name,
             AutoCaptureConstants.tabIndex: index
         ]

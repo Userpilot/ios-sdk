@@ -68,11 +68,6 @@ internal struct AutoCaptureConstants {
     /// `false` means the resolver fell back to navigation title / view type / class name.
     static let screenNameExplicit = "screen_name_explicit"
 
-    /// `true` when `navigationItem.title` on this view controller is also set on another VC
-    /// in the same navigation stack — a strong signal of SwiftUI `NavigationStack` propagating
-    /// the root `.navigationTitle` to a pushed destination that didn't set its own.
-    static let navigationTitleInherited = "navigation_title_inherited"
-
     /// `true` when a SwiftUI autocaptured screen resolved to the same name/title as the
     /// previous screen context, usually because UIKit exposed a stale navigation title.
     static let screenNameMatchesPreviousScreen = "screen_name_matches_previous_screen"
@@ -109,7 +104,6 @@ internal struct AutoCaptureConstants {
     static let unknownScreenHierarchyPlaceholder = "UnknownScreen"
 
     static let hierarchy = "hierarchy"
-    static let positionIndex = "position_index"
     static let accessibilityId = "accessibility_id"
     static let elementLabel = "element_label"
 

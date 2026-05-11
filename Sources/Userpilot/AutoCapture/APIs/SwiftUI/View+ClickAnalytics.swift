@@ -100,7 +100,7 @@ public extension View {
     /// Enables click analytics recognition for SwiftUI views
     /// - Parameter label: Optional accessibility label for the view
     /// - Returns: A view with enhanced accessibility traits for click analytics recognition
-    public func userpilotRecognizeClickAnalytics(_ label: String? = nil) -> some View {
+    func userpilotRecognizeClickAnalytics(_ label: String? = nil) -> some View {
         self.modifier(UserpilotClickRecognitionModifier(label: label))
     }
 }
