@@ -227,6 +227,18 @@ internal extension UIView {
         return nil
     }
 
+    /// Nearest enclosing `UIPickerView`, if any. Used to detect SwiftUI's wheel-picker
+    /// internals (`UIKitPickerView → UIPickerView → UIPickerTableView`) so we can suppress
+    /// the duplicate `table_view_cell_selected` event that the inner table produces.
+    func findAncestorUIPickerView() -> UIPickerView? {
+        var current: UIView? = self
+        while let view = current {
+            if let picker = view as? UIPickerView { return picker }
+            current = view.superview
+        }
+        return nil
+    }
+
     /// Section / table header-footer views (not row cells).
     func findParentTableViewHeaderFooter() -> UITableViewHeaderFooterView? {
         var current: UIView? = self

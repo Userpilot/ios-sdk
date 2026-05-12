@@ -241,9 +241,9 @@ A per-instance value always takes precedence over the class default.
 
 ---
 
-## Custom clickable views
+## Custom clickable views (UIKit)
 
-Standard controls (`UIButton`, `UIControl` subclasses, table/collection cells) and tappable views that participate in the normal touch chain are captured automatically. For **custom views** that act as buttons but are not recognized (e.g. plain `UIView` with a gesture or custom hit-testing), call:
+Standard controls (`UIButton`, `UIControl` subclasses, table/collection cells) and tappable views that participate in the normal touch chain are captured automatically. For **custom UIKit views** that act as buttons but are not recognized (e.g. plain `UIView` with a gesture or custom hit-testing), call:
 
 ```swift
 customButtonView.userpilotRecognizeClickAnalytics()
@@ -255,6 +255,9 @@ You do **not** need to use this for:
 
 - `UIButton` or other `UIControl` subclasses  
 - Views that already receive touches and are in the responder chain  
+
+For SwiftUI, this API is **not** provided — use Apple's native `.accessibilityElement(children: .combine)` + `.accessibilityAddTraits(.isButton)` instead (see *SwiftUI Autocapture* below).
+
 
 ---
 
@@ -321,11 +324,13 @@ struct CheckoutView: View {
 When interaction autocapture is enabled, the SDK automatically captures:
 - SwiftUI `Button` taps
 - `NavigationLink` activations
-- Custom views with tap gestures (when properly configured)
+- `Toggle`, `Slider`, `Stepper`, `Picker` value changes (via their underlying UIKit controls)
+- `List` row and `.pickerStyle(.inline)` / `.pickerStyle(.wheel)` selections
+- Custom views with tap gestures (when SwiftUI exposes them as accessibility elements — most container views with `.onTapGesture` already qualify)
 
 #### Custom Clickable Views
 
-For SwiftUI views that use `.onTapGesture` but aren't automatically recognized, use the ``userpilotRecognizeClickAnalytics()`` modifier:
+If a custom SwiftUI view with `.onTapGesture` is not picked up, apply Apple's native accessibility modifiers so the view is exposed as a single clickable element:
 
 ```swift
 VStack {
@@ -335,10 +340,11 @@ VStack {
 .onTapGesture {
     performAction()
 }
-.userpilotRecognizeClickAnalytics()  // Enable click tracking
+.accessibilityElement(children: .combine)
+.accessibilityAddTraits(.isButton)
 ```
 
-This modifier adds proper accessibility traits to make the view recognizable as a clickable element.
+For attaching analytics text and a logical view type to any SwiftUI view, use ``userpilotLabel(_:)`` (see *View+UserpilotLabel*).
 
 ### Hiding Sensitive Data in SwiftUI
 
@@ -377,6 +383,6 @@ Button("Debug Action", action: debugAction)
 | Pause all capture temporarily | `Userpilot.stopAutoCapture()` / `Userpilot.resumeAutoCapture()` |
 | Set ignore/redact on a responder from Swift | Set `userpilotIgnore*` / `userpilotRedact*` properties directly |
 | Apply a default to every instance of a type | Override `userpilotIgnoreInteractionsDefault` / `userpilotIgnoreInnerHierarchyDefault` |
-| Make a custom view tappable for autocapture | Call `userpilotRecognizeClickAnalytics()` on the view |
+| Make a custom UIKit view tappable for autocapture | Call `userpilotRecognizeClickAnalytics()` on the `UIView` (UIKit only) |
 
 For manual tracking (e.g. custom events or screens), continue to use ``Userpilot/track(_:properties:)`` and ``Userpilot/screen(_:)`` as described in the [iOS SDK installation](https://userpilot-feature-mobile-revamped.mintlify.app/developer/installation/mobile/ios/installation) guide.

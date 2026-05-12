@@ -96,9 +96,8 @@ internal extension UIPickerView {
             elementType: String(describing: type(of: self))
         )
 
-        // Row and component indexes
-        payload.row = row
-        payload.sourceProperties[AutoCaptureConstants.selectedIndex] = component
+        // Row index
+        payload.sourceProperties[AutoCaptureConstants.selectedIndex] = row
 
         // Selected title from the data source (requires UIPickerViewDelegate to implement titleForRow)
         if config.enableInteractionValueCapture,

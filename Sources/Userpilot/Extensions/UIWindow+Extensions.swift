@@ -155,7 +155,15 @@ extension UIWindow {
         }
 
         // 2. Check for UITableViewCell
+        //    Skip cells that live inside a UIPickerView (e.g. SwiftUI's `.pickerStyle(.wheel)`
+        //    backs onto `UIKitPickerView → UIPickerView → UIPickerTableView →
+        //    UIPickerTableViewWrapperCell`). The picker view's delegate hook will emit the
+        //    canonical `picker_view_changed` event for the same gesture, and we don't want a
+        //    duplicate `table_view_cell_selected` from the picker's internal table.
         if let tableCell = view.findParentTableViewCell() {
+            if tableCell.findAncestorUIPickerView() != nil {
+                return
+            }
             tableCell.captureTableViewCellSelection(touchedView: view)
             return
         }

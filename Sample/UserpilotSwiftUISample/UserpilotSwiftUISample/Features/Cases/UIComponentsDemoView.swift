@@ -58,7 +58,7 @@ class UIComponentsDemo {
             DemoScreen(title: "Toggle Components") {
                 // ✅ Basic Toggle - Tracked automatically
                 DemoSection(title: "Basic Toggle") {
-                    Toggle("Enable Feature", isOn: $isOn)
+                    Toggle("Enable Feature", isOn: $isOn).accessibilityLabel("Test Label")
                 }
 
                 // ✅ Toggle with custom style
