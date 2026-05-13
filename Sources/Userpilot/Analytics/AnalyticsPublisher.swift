@@ -484,12 +484,12 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         let tabName = trackEventThrottleString(from: properties[AutoCaptureConstants.tabName])
         if tabName.isEmpty {
             let hierarchy = trackEventThrottleString(from: properties[AutoCaptureConstants.hierarchy])
-            let row = trackEventThrottleString(from: properties[AutoCaptureConstants.row])
+            let row = trackEventThrottleString(from: properties[AutoCaptureConstants.selectedIndex])
             let interaction = trackEventThrottleString(from: event.interactionEventName)
             return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)"
         } else {
-            let itemId = trackEventThrottleString(from: properties[AutoCaptureConstants.itemId])
-            return "\(screenName)|\(trackTitle)|\(tabName)|\(itemId)"
+            let tabIndex = properties[AutoCaptureConstants.tabIndex]
+            return "\(screenName)|\(trackTitle)|\(tabName)|\(tabIndex)"
         }
     }
 

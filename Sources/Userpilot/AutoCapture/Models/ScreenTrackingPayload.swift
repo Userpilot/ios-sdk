@@ -73,7 +73,7 @@ internal struct ScreenTrackingPayload: Equatable {
         }
 
         if Userpilot.isInitialized, let appFramework = Userpilot.shared.config.appFramework {
-            dict[AutoCaptureConstants.appSource] = appFramework.rawValue
+            dict[AutoCaptureConstants.uiFramework] = appFramework.rawValue
         }
         return dict
     }

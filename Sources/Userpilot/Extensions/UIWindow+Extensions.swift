@@ -53,32 +53,6 @@ extension UIWindow {
         }
     }
 
-    // MARK: SwiftUI Click
-
-    /// Handles SwiftUI click tracking at the given point; sends event through the UIKit engine pipeline.
-    /// - Parameters:
-    ///   - point: The touch point in window coordinates
-    ///   - event: The UI event
-    ///   - view: The UIView that was touched (resolved to deepest subview)
-    private func handleSwiftUIClick(at point: CGPoint, event: UIEvent, view: UIView) {
-        let config = Userpilot.shared.config
-        guard config.enableInteractionAutoCapture else { return }
-        guard !view.shouldIgnoreInteractions() else { return }
-        // Prefer UIKit event for navigation bar (e.g. back button) to avoid duplicate SwiftUI + UIKit events
-        if config.preferUIKitOverSwiftUIForNavigationBar, view.isInsideNavigationBar {
-            return
-        }
-
-        let swiftUIProperties =
-            SwiftUIViewResolver.resolveClickProperties(
-                window: self,
-                point: point,
-                event: event,
-                fallbackView: view
-            ) ?? [:]
-        Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
-    }
-
     // MARK: Touch Routing
 
     /// Finds the deepest (front-most) subview whose frame contains `point`,
@@ -204,28 +178,28 @@ extension UIWindow {
         let useRedactedInner = (effectiveView !== view)
 
         var eventProperties: [String: Any] = [
-            AutoCaptureConstants.elementType: String(describing: type(of: effectiveView)),
+            AutoCaptureConstants.targetViewClass: String(describing: type(of: effectiveView)),
             AutoCaptureConstants.hierarchy: path
         ]
 
         if let capture = view.resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
             if let labelViewType = capture.viewType {
-                eventProperties[AutoCaptureConstants.elementType] = labelViewType
+                eventProperties[AutoCaptureConstants.targetViewClass] = labelViewType
             }
-            eventProperties[AutoCaptureConstants.elementText] = capture.labeledView.shouldRedactText()
+            eventProperties[AutoCaptureConstants.targetText] = capture.labeledView.shouldRedactText()
                 ? AutoCaptureConstants.reductText
                 : capture.label
         } else if useRedactedInner {
-            eventProperties[AutoCaptureConstants.elementText] = AutoCaptureConstants.reductText
+            eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
-                eventProperties[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
+                eventProperties[AutoCaptureConstants.targetResourceId] = accessibilityIdentifier
             }
             if let accessibilityLabel = view.getAccessibilityLabelContent() {
                 eventProperties[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
             }
             if let text = view.getTextContent() {
-                eventProperties[AutoCaptureConstants.elementText] = text
+                eventProperties[AutoCaptureConstants.targetText] = text
             }
         }
 

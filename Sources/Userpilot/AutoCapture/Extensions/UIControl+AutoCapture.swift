@@ -96,7 +96,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.value] = slider.value
+                payload.sourceProperties[AutoCaptureConstants.selectedValue] = slider.value
             }
 
         case let segmentedControl as UISegmentedControl:
@@ -119,7 +119,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.value] = stepper.value
+                payload.sourceProperties[AutoCaptureConstants.selectedValue] = stepper.value
             }
 
         case let datePicker as UIDatePicker:

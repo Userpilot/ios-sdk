@@ -412,11 +412,9 @@ private extension AutoCaptureCoordinater {
     /// True when any identifying string is present (including redacted placeholder).
     private func windowTouchHasMetadata(_ properties: [String: Any]) -> Bool {
         let keys: [String] = [
-            AutoCaptureConstants.elementText,
+            AutoCaptureConstants.targetText,
             AutoCaptureConstants.accessibilityLabel,
-            AutoCaptureConstants.accessibilityIdentifier,
-            AutoCaptureConstants.elementLabel,
-            AutoCaptureConstants.accessibilityId
+            AutoCaptureConstants.targetResourceId
         ]
         for key in keys {
             guard let string = properties[key] as? String else { continue }
@@ -429,7 +427,7 @@ private extension AutoCaptureCoordinater {
 
     /// Drops taps on structural containers, private `_UI…` internals, and bare SwiftUI views when there is no signal.
     private func shouldPublishWindowLevelTouch(_ properties: [String: Any]) -> Bool {
-        guard let elementType = properties[AutoCaptureConstants.elementType] as? String else {
+        guard let elementType = properties[AutoCaptureConstants.targetViewClass] as? String else {
             return false
         }
         if windowTouchIsPrivateUIKitElementType(elementType) {
@@ -450,25 +448,21 @@ private extension AutoCaptureCoordinater {
 
     /// Maps window `sendEvent` dictionaries into the same payload shape as other interaction paths.
     private func interactionPayload(fromWindowClick properties: [String: Any]) -> InteractionPayload? {
-        guard let elementType = properties[AutoCaptureConstants.elementType] as? String else {
+        guard let elementType = properties[AutoCaptureConstants.targetViewClass] as? String else {
             return nil
         }
         var payload = InteractionPayload(
             interactionType: .tap,
             elementType: elementType
         )
-        if let text = properties[AutoCaptureConstants.elementText] as? String {
-            payload.elementText = text
-        } else if let label = properties[AutoCaptureConstants.elementLabel] as? String {
-            payload.elementText = label
+        if let targetText = properties[AutoCaptureConstants.targetText] as? String {
+            payload.elementText = targetText
         }
-        if let a11yLabel = properties[AutoCaptureConstants.accessibilityLabel] as? String {
-            payload.accessibilityLabel = a11yLabel
+        if let accessibilityLabel = properties[AutoCaptureConstants.accessibilityLabel] as? String {
+            payload.accessibilityLabel = accessibilityLabel
         }
-        if let a11yId = properties[AutoCaptureConstants.accessibilityIdentifier] as? String {
-            payload.accessibilityIdentifier = a11yId
-        } else if let swiftUIId = properties[AutoCaptureConstants.accessibilityId] as? String {
-            payload.accessibilityIdentifier = swiftUIId
+        if let targetResourceId = properties[AutoCaptureConstants.targetResourceId] as? String {
+            payload.accessibilityIdentifier = targetResourceId
         }
         payload.elementPath = properties[AutoCaptureConstants.hierarchy] as? String
         return payload
@@ -556,7 +550,7 @@ private extension AutoCaptureCoordinater {
             AutoCaptureConstants.rawInteractionType: interactionType.rawValue
         ]
         if let framework = config.appFramework?.rawValue {
-            result[AutoCaptureConstants.appSource] = framework
+            result[AutoCaptureConstants.uiFramework] = framework
         }
         return result
     }

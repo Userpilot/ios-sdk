@@ -85,18 +85,18 @@ internal struct InteractionPayload {
     // swiftlint:disable:next function_body_length cyclomatic_complexity superfluous_disable_command
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
-            AutoCaptureConstants.elementType: elementType
+            AutoCaptureConstants.targetViewClass: elementType
         ]
 
         // Element properties
         if let elementText = elementText {
-            dict[AutoCaptureConstants.elementText] = elementText
+            dict[AutoCaptureConstants.targetText] = elementText
         }
         if let accessibilityLabel = accessibilityLabel {
             dict[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
         }
         if let accessibilityIdentifier = accessibilityIdentifier {
-            dict[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
+            dict[AutoCaptureConstants.targetResourceId] = accessibilityIdentifier
         }
         if let elementPath = elementPath {
             dict[AutoCaptureConstants.hierarchy] = elementPath
@@ -105,7 +105,7 @@ internal struct InteractionPayload {
             dict[AutoCaptureConstants.targetAction] = targetAction
         }
         if let targetClass = targetClass {
-            dict[AutoCaptureConstants.targetClass] = targetClass
+            dict[AutoCaptureConstants.ownerTargetClass] = targetClass
         }
         if let targetViewName = targetViewName {
             dict[AutoCaptureConstants.targetViewName] = targetViewName
@@ -125,7 +125,7 @@ internal struct InteractionPayload {
             dict[AutoCaptureConstants.section] = section
         }
         if let row = row {
-            dict[AutoCaptureConstants.row] = row
+            dict[AutoCaptureConstants.selectedIndex] = row
         }
 
         return dict
