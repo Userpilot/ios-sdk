@@ -36,29 +36,30 @@ internal struct AutoCaptureConstants {
 
     // MARK: - Event envelope
 
-    static let screen = "screen"
     static let internalProperties = "internal_properties"
     static let nestedProperties = "properties"
-    static let tabName = "tab_name"
-    static let tabIndex = "tab_index"
     static let rawInteractionType = "raw_interaction_type"
     static let uiFramework = "ui_framework"
 
     // MARK: - Screen context (`buildScreenDictionary` / tracking payload)
 
+    static let screen = "screen"
     static let screenName = "screen_name"
     static let screenClass = "screen_class"
     static let screenTitle = "title"
     static let screenType = "screen_type"
     static let navigationTitle = "navigation_title"
+    static let currentScreen = "current_screen"
+    static let isUserpilotContainerClass = "is_userpilot_container_class"
     static let vcAccessibilityIdentifier = "vc_accessibility_identifier"
     static let vcAccessibilityLabel = "vc_accessibility_label"
 
-    static let currentScreen = "current_screen"
-    static let isUserpilotContainerClass = "is_userpilot_container_class"
     static let source = "screen_source"
     static let autoCaptureSourceValue = "auto"
     static let manualCaptureSourceValue = "manual"
+
+    static let tabName = "tab_name"
+    static let tabIndex = "tab_index"
 
     /// `true` when a SwiftUI autocaptured screen resolved to the same name/title as the
     /// previous screen context, usually because UIKit exposed a stale navigation title.
@@ -68,7 +69,7 @@ internal struct AutoCaptureConstants {
 
     static let hierarchy = "hierarchy"
     static let interactionType = "interaction_type"
-    static let targetViewClass = "target_view_class"
+    static let targetClass = "target_class"
     static let targetText = "target_text"
     static let accessibilityLabel = "accessibility_label"
     static let targetResourceId = "target_resource_id"
@@ -77,7 +78,7 @@ internal struct AutoCaptureConstants {
     static let targetViewName = "target_view_name"
     static let placeholder = "placeholder"
     static let dialogTitle = "dialog_title"
-    static let dialogMessage = "message"
+    static let dialogMessage = "dialog_message"
     static let section = "section"
 
     // MARK: - Interaction (source / internal_properties)

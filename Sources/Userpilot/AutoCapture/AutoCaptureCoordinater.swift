@@ -427,7 +427,7 @@ private extension AutoCaptureCoordinater {
 
     /// Drops taps on structural containers, private `_UI…` internals, and bare SwiftUI views when there is no signal.
     private func shouldPublishWindowLevelTouch(_ properties: [String: Any]) -> Bool {
-        guard let elementType = properties[AutoCaptureConstants.targetViewClass] as? String else {
+        guard let elementType = properties[AutoCaptureConstants.targetClass] as? String else {
             return false
         }
         if windowTouchIsPrivateUIKitElementType(elementType) {
@@ -448,7 +448,7 @@ private extension AutoCaptureCoordinater {
 
     /// Maps window `sendEvent` dictionaries into the same payload shape as other interaction paths.
     private func interactionPayload(fromWindowClick properties: [String: Any]) -> InteractionPayload? {
-        guard let elementType = properties[AutoCaptureConstants.targetViewClass] as? String else {
+        guard let elementType = properties[AutoCaptureConstants.targetClass] as? String else {
             return nil
         }
         var payload = InteractionPayload(

@@ -85,7 +85,7 @@ internal struct InteractionPayload {
     // swiftlint:disable:next function_body_length cyclomatic_complexity superfluous_disable_command
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
-            AutoCaptureConstants.targetViewClass: elementType
+            AutoCaptureConstants.targetClass: elementType
         ]
 
         // Element properties

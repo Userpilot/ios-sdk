@@ -178,13 +178,13 @@ extension UIWindow {
         let useRedactedInner = (effectiveView !== view)
 
         var eventProperties: [String: Any] = [
-            AutoCaptureConstants.targetViewClass: String(describing: type(of: effectiveView)),
+            AutoCaptureConstants.targetClass: String(describing: type(of: effectiveView)),
             AutoCaptureConstants.hierarchy: path
         ]
 
         if let capture = view.resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
             if let labelViewType = capture.viewType {
-                eventProperties[AutoCaptureConstants.targetViewClass] = labelViewType
+                eventProperties[AutoCaptureConstants.targetClass] = labelViewType
             }
             eventProperties[AutoCaptureConstants.targetText] = capture.labeledView.shouldRedactText()
                 ? AutoCaptureConstants.reductText
