@@ -45,15 +45,20 @@ internal enum UIKitViewResolver {
             var desc = "\(type(of: node))"
             var attributes = ""
 
+            // Skip attributes whose value is the redacted placeholder ("****"). They carry no
+            // signal and only add noise to the hierarchy string. `attr__index` below is always
+            // emitted because it's a positional integer, never redacted.
             if let label = node.accessibilityLabel?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
-               !label.isEmpty {
+               !label.isEmpty,
+               label != AutoCaptureConstants.reductText {
                 attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
-               !id.isEmpty {
+               !id.isEmpty,
+               id != AutoCaptureConstants.reductText {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
