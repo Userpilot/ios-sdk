@@ -45,20 +45,27 @@ internal enum UIKitViewResolver {
             var desc = "\(type(of: node))"
             var attributes = ""
 
-            // Skip attributes whose value is the redacted placeholder ("****"). They carry no
-            // signal and only add noise to the hierarchy string. `attr__index` below is always
-            // emitted because it's a positional integer, never redacted.
+            // Match the Android accessibility model: `accessibility_label` (and `accessibility_id`)
+            // are static developer-set identifiers, not PII text content, so they're governed only
+            // by the accessibility-label flag — never by text redaction. This mirrors Android's
+            // `shouldRedactContentDescription`, which intentionally does NOT call `shouldRedact()`.
+            // We also keep the `value == "****"` short-circuit so any pre-redacted value that
+            // somehow reaches us is still stripped. `attr__index` below is always emitted.
+            let accessibilityRedacted = node.shouldRedactAccessibilityLabel()
+
             if let label = node.accessibilityLabel?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !label.isEmpty,
-               label != AutoCaptureConstants.reductText {
+               label != AutoCaptureConstants.reductText,
+               !accessibilityRedacted {
                 attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !id.isEmpty,
-               id != AutoCaptureConstants.reductText {
+               id != AutoCaptureConstants.reductText,
+               !accessibilityRedacted {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
