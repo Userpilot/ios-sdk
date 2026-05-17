@@ -36,9 +36,9 @@ internal extension UITextField {
         payload.placeholder = placeholder
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.elementPath = path
+        payload.hierarchy = path
         if effectiveView !== self {
-            payload.elementType = String(describing: type(of: effectiveView))
+            payload.targetClass = String(describing: type(of: effectiveView))
         } else {
             payload.accessibilityIdentifier = accessibilityIdentifier
             payload.accessibilityLabel = getAccessibilityLabelContent()
@@ -74,9 +74,9 @@ internal extension UITextView {
         payload.sourceProperties[AutoCaptureConstants.textLength] = text.count
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.elementPath = path
+        payload.hierarchy = path
         if effectiveView !== self {
-            payload.elementType = String(describing: type(of: effectiveView))
+            payload.targetClass = String(describing: type(of: effectiveView))
         } else {
             payload.accessibilityIdentifier = accessibilityIdentifier
             payload.accessibilityLabel = getAccessibilityLabelContent()

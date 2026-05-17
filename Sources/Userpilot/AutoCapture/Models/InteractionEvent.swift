@@ -22,7 +22,7 @@ internal struct InteractionPayload {
     let interactionType: InteractionType
 
     /// The element type (e.g., "button", "switch", "slider")
-    var elementType: String
+    var targetClass: String
 
     // MARK: - Optional Element Properties
 
@@ -36,13 +36,13 @@ internal struct InteractionPayload {
     var accessibilityIdentifier: String?
 
     /// The hierarchical path to the element
-    var elementPath: String?
+    var hierarchy: String?
 
     /// The target action name (e.g., "onBackButtonClicked:" from IBAction)
     var targetAction: String?
 
     /// The target class name that handles the action
-    var targetClass: String?
+    var ownerTargetClass: String?
 
     /// The IBOutlet property name (e.g., "searchTextField")
     var targetViewName: String?
@@ -76,7 +76,7 @@ internal struct InteractionPayload {
         elementType: String
     ) {
         self.interactionType = interactionType
-        self.elementType = elementType
+        self.targetClass = elementType
     }
 
     // MARK: - Conversion
@@ -85,7 +85,7 @@ internal struct InteractionPayload {
     // swiftlint:disable:next function_body_length cyclomatic_complexity superfluous_disable_command
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
-            AutoCaptureConstants.targetClass: elementType
+            AutoCaptureConstants.targetClass: targetClass
         ]
 
         // Element properties
@@ -98,13 +98,13 @@ internal struct InteractionPayload {
         if let accessibilityIdentifier = accessibilityIdentifier {
             dict[AutoCaptureConstants.targetResourceId] = accessibilityIdentifier
         }
-        if let elementPath = elementPath {
-            dict[AutoCaptureConstants.hierarchy] = elementPath
+        if let hierarchy = hierarchy {
+            dict[AutoCaptureConstants.hierarchy] = hierarchy
         }
         if let targetAction = targetAction {
             dict[AutoCaptureConstants.targetAction] = targetAction
         }
-        if let targetClass = targetClass {
+        if let targetClass = ownerTargetClass {
             dict[AutoCaptureConstants.ownerTargetClass] = targetClass
         }
         if let targetViewName = targetViewName {

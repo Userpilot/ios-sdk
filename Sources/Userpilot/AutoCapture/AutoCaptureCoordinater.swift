@@ -464,7 +464,7 @@ private extension AutoCaptureCoordinater {
         if let targetResourceId = properties[AutoCaptureConstants.targetResourceId] as? String {
             payload.accessibilityIdentifier = targetResourceId
         }
-        payload.elementPath = properties[AutoCaptureConstants.hierarchy] as? String
+        payload.hierarchy = properties[AutoCaptureConstants.hierarchy] as? String
         return payload
     }
 
@@ -529,6 +529,19 @@ private extension AutoCaptureCoordinater {
         )
         payload.dialogTitle = screenPayload.alertTitle
         payload.dialogMessage = screenPayload.alertMessage
+
+        // Build a synthetic hierarchy leaf for the dialog so the published event carries
+        // `hierarchy = "UIAlertController:attr__index=\"0\";<UnderlyingScreen>"` — same shape
+        // as Android's `AddPropertyDialog:attr__index="0";IdentifyActivity`. The underlying
+        // screen class is appended downstream by `appendScreenNameSegmentToHierarchy` (the
+        // screen tracker still holds the screen the dialog was presented over because dialog
+        // payloads short-circuit before `updateScreen(...)` is called).
+        let dialogClass = screenPayload.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
+        let leaf = dialogClass.isEmpty
+            ? AutoCaptureConstants.elementTypeUIAlertController
+            : dialogClass.replacingOccurrences(of: "\"", with: "\\\"")
+        payload.hierarchy = "\(leaf):attr__index=\"0\""
+
         publishAutoCaptureInteractionPayload(payload)
     }
 

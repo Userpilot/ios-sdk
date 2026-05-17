@@ -52,7 +52,7 @@ internal extension UIControl {
         // Add target-action info (e.g., "onBackButtonClicked:" from IBAction)
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
 
         // Continuous controls (UISlider): debounce per view — send once after quiet period
@@ -154,15 +154,15 @@ internal extension UIControl {
         payload.accessibilityLabel = getAccessibilityLabelContent()
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.elementPath = path
+        payload.hierarchy = path
         if effectiveView !== self {
-            payload.elementType = String(describing: type(of: effectiveView))
+            payload.targetClass = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText
         }
 
         if let userpilotLabel = resolveUserpilotLabel() {
             if let labelViewType = resolveUserpilotLabelViewType() {
-                payload.elementType = labelViewType
+                payload.targetClass = labelViewType
             }
             payload.elementText = shouldRedactText()
                 ? AutoCaptureConstants.reductText

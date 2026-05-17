@@ -143,7 +143,7 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         if !config.enableInteractionTextCapture {
             payload.elementText = menuAction.title
@@ -162,7 +162,7 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         if !config.enableInteractionTextCapture {
             payload.elementText = menu.title
@@ -187,9 +187,9 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
-        payload.elementPath = path
+        payload.hierarchy = path
 
         if useRedactedInner {
             payload.elementText = AutoCaptureConstants.reductText
@@ -216,7 +216,7 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         if !config.enableInteractionTextCapture {
             payload.elementText = item.title
@@ -251,9 +251,9 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
-        payload.elementPath = path
+        payload.hierarchy = path
 
         if useRedactedInner {
             payload.elementText = AutoCaptureConstants.reductText
@@ -285,7 +285,7 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
     }

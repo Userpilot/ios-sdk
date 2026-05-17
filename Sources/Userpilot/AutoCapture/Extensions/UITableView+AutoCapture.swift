@@ -29,7 +29,7 @@ internal extension UITableViewCell {
             interactionType: .tableViewCellSelected,
             elementType: String(describing: type(of: self))
         )
-        payload.targetClass = "UITableViewCell"
+        payload.ownerTargetClass = "UITableViewCell"
 
         // Try to get index path from parent table view
         if let tableView = findParentTableView(),
@@ -39,16 +39,16 @@ internal extension UITableViewCell {
         }
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.elementPath = path
+        payload.hierarchy = path
         if let userpilotLabel = (touchedView ?? self).resolveUserpilotLabel() {
             if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
-                payload.elementType = labelViewType
+                payload.targetClass = labelViewType
             }
             payload.elementText = (touchedView ?? self).shouldRedactText()
                 ? AutoCaptureConstants.reductText
                 : userpilotLabel
         } else if effectiveView !== self {
-            payload.elementType = String(describing: type(of: effectiveView))
+            payload.targetClass = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText
         } else {
             payload.elementText = touchedView?.getTextContent()
