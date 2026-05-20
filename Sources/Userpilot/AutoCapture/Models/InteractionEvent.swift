@@ -96,7 +96,7 @@ internal struct InteractionPayload {
             dict[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
         }
         if let accessibilityIdentifier = accessibilityIdentifier {
-            dict[AutoCaptureConstants.targetResourceId] = accessibilityIdentifier
+            dict[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
         }
         if let hierarchy = hierarchy {
             dict[AutoCaptureConstants.hierarchy] = hierarchy

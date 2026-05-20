@@ -414,7 +414,7 @@ private extension AutoCaptureCoordinater {
         let keys: [String] = [
             AutoCaptureConstants.targetText,
             AutoCaptureConstants.accessibilityLabel,
-            AutoCaptureConstants.targetResourceId
+            AutoCaptureConstants.accessibilityIdentifier
         ]
         for key in keys {
             guard let string = properties[key] as? String else { continue }
@@ -461,7 +461,7 @@ private extension AutoCaptureCoordinater {
         if let accessibilityLabel = properties[AutoCaptureConstants.accessibilityLabel] as? String {
             payload.accessibilityLabel = accessibilityLabel
         }
-        if let targetResourceId = properties[AutoCaptureConstants.targetResourceId] as? String {
+        if let targetResourceId = properties[AutoCaptureConstants.accessibilityIdentifier] as? String {
             payload.accessibilityIdentifier = targetResourceId
         }
         payload.hierarchy = properties[AutoCaptureConstants.hierarchy] as? String

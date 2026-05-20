@@ -72,7 +72,7 @@ internal struct AutoCaptureConstants {
     static let targetClass = "target_class"
     static let targetText = "target_text"
     static let accessibilityLabel = "accessibility_label"
-    static let targetResourceId = "target_resource_id"
+    static let accessibilityIdentifier = "accessibility_identifier"
     static let targetAction = "target_action"
     static let ownerTargetClass = "owner_target_class"
     static let targetViewName = "target_view_name"

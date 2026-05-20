@@ -85,17 +85,11 @@ internal final class ScreenNameTracker: ScreenNameTracking {
 
         // Common (always included)
         var screen: [String: String] = [
-            AutoCaptureConstants.screenTitle: payload.screenClass
+            AutoCaptureConstants.screenTitle: payload.screenClass,
+            AutoCaptureConstants.screenName: payload.currentScreen
         ]
-
-        // SwiftUI-specific additions
-        if isSwiftUI {
-            screen[AutoCaptureConstants.screenName] = payload.currentScreen
-
-            if let navigationTitle = payload.navigationTitle,
-               !navigationTitle.isEmpty {
-                screen[AutoCaptureConstants.navigationTitle] = navigationTitle
-            }
+        if let navigationTitle = payload.navigationTitle, !navigationTitle.isEmpty {
+            screen[AutoCaptureConstants.navigationTitle] = navigationTitle
         }
 
         return screen

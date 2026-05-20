@@ -193,7 +193,7 @@ extension UIWindow {
             eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
-                eventProperties[AutoCaptureConstants.targetResourceId] = accessibilityIdentifier
+                eventProperties[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
             }
             if let accessibilityLabel = view.getAccessibilityLabelContent() {
                 eventProperties[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
