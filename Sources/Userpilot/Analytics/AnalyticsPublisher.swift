@@ -652,6 +652,7 @@ extension AnalyticsPublisher {
             // Handle cached track event
             if let cachedEvent {
                 trackEvent(cachedEvent)
+                clearCachedEvent()
             }
         }
     }
