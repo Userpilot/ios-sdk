@@ -303,7 +303,7 @@ struct ProfileView: View {
 
 #### Manual Screen Tracking
 
-For more control, use the ``trackScreen(_:)`` modifier to manually track screen events:
+For more control, use the ``userpilotScreen(_:)`` modifier to manually track screen events:
 
 ```swift
 struct CheckoutView: View {
@@ -312,7 +312,7 @@ struct CheckoutView: View {
             Text("Checkout")
             // ...
         }
-        .trackScreen("Purchase Checkout")  // Manual screen tracking
+        .userpilotScreen("Purchase Checkout")  // Manual screen tracking
     }
 }
 ```
