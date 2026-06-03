@@ -30,14 +30,22 @@ Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
 
 ### Screen events
 
-When **screen autocapture** is enabled, the SDK records a screen event when a `UIViewController` appears (e.g. pushed, presented, or shown in a tab). Each event includes:
+When **screen autocapture** is enabled, the SDK publishes a screen event the first time a `UIViewController` appears (pushed, presented, or shown in a tab). Each screen event carries the current screen's metadata only — there is no "previous screen" / path / timestamp / root-flag field on the event itself.
 
-- Current and previous screen names and classes  
-- Screen type (e.g. ViewController), path, navigation title  
-- Tab name and index when inside a `UITabBarController`  
-- Root screen flag and timestamp  
+| Property | Type | Always sent? | Notes |
+|---|---|---|---|
+| `screen_name` | string | yes | Resolved screen name (`userpilotScreenName` override, SwiftUI `userpilotScreenName(_:)` modifier, or the VC class name). |
+| `screen_class` | string | yes | The view controller's class name. |
+| `screen_type` | string | yes | E.g. `"UIViewController"` or `"NavigationController"`. |
+| `is_userpilot_container_class` | bool | yes | `true` for built-in container VCs and any custom container that overrides `isUserpilotContainerClass`. |
+| `source` | string | yes | Always `"auto-capture"` for autocaptured screens. |
+| `navigation_title` | string | optional | Only included when present and non-empty. |
+| `vc_accessibility_identifier` | string | optional | Only included when set on the VC's view. |
+| `vc_accessibility_label` | string | optional | Only included when set on the VC's view. |
+| `screen_name_matches_previous_screen` | bool | optional | SwiftUI only — emitted when the resolved name matches the previous screen (used by the SDK to coalesce duplicate hosting-controller appearances). |
+| `ui_framework` | string | optional | `"UIKit"` or `"SwiftUI"`, set from `Config.appFramework`. |
 
-Transient view controllers such as `UIAlertController` and `UIActivityViewController` are **not** treated as the current or previous screen; they are still tracked for analytics but do not update the screen stack.
+`UIAlertController` is **not** tracked as a screen. Its presentation is rerouted to the dialog autocapture path and emitted as a `mobile_autocapture` interaction with `interaction_type = "view_presented"` carrying the alert's title and message.
 
 ### Interaction events
 
@@ -46,13 +54,20 @@ When **interaction autocapture** is enabled, the SDK captures:
 | Interaction type | UIKit element | Notes |
 |------------------|---------------|--------|
 | Tap | `UIButton`, other `UIControl` subclasses | Includes target-action name when available |
-| Value change | `UISwitch`, `UISlider`, `UISegmentedControl`, `UIStepper`, `UIDatePicker`, `UIPageControl` | Slider and text input are cached and sent once per screen (no flood of events) |
+| Value change | `UISwitch`, `UISlider`, `UISegmentedControl`, `UIStepper`, `UIDatePicker`, `UIPageControl`, `UIPickerView` | Slider values are cached and sent once per screen to avoid event floods |
 | Text input | `UITextField`, `UITextView` | Cached; one event per field when leaving the screen |
-| Cell selection | `UITableView`, `UICollectionView` | Cell class name, index path, and text/labels when available |
+| Cell selection | `UITableView`, `UICollectionView` | Cell class name, index path, and visible text/labels when available |
 | View tap | `UILabel`, `UIImageView`, custom views | Resolves deepest subview at touch point for accurate element type and text |
-| Alert / sheet | `UIAlertController` | View-presented event with title and message |
+| Tab selection | `UITabBarController` | Emitted as `interaction_type = "tab_selected"` with `tab_name` and `tab_index` |
+| Dialog presentation | `UIAlertController` (alert + action sheet styles) | Emitted as `interaction_type = "view_presented"` with the alert's title and message |
 
-All interaction events include a **screen** object with current/previous screen, path, tab info, and related context from the screen name tracker.
+All interaction events include a nested **screen** object resolved from the current `ScreenNameTracker` payload. It contains:
+
+- `screen_title` — the current screen class
+- `screen_name` — the current resolved screen name
+- `navigation_title` — only when set and non-empty
+
+There is no "previous screen", path, or tab field on the nested screen object. Tab context lives on the dedicated `tab_selected` interaction event described above.
 
 ---
 
