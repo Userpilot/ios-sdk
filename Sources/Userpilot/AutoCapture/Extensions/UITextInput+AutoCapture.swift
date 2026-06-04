@@ -41,7 +41,7 @@ internal extension UITextField {
         // through an ignore-inner-hierarchy ancestor (effectiveView === self), and only for SwiftUI —
         // UIKit sibling indices already differ, so its behavior is unchanged.
         let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
-            ? UIKitViewResolver.editableFieldOrdinal(for: self)
+            ? UIKitViewResolver.siblingOrdinal(for: self)
             : nil
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
@@ -86,7 +86,7 @@ internal extension UITextView {
         // through an ignore-inner-hierarchy ancestor (effectiveView === self), and only for SwiftUI —
         // UIKit sibling indices already differ, so its behavior is unchanged.
         let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
-            ? UIKitViewResolver.editableFieldOrdinal(for: self)
+            ? UIKitViewResolver.siblingOrdinal(for: self)
             : nil
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {

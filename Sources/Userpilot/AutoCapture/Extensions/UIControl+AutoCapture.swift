@@ -157,8 +157,16 @@ internal extension UIControl {
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.hierarchy = path
+        // SwiftUI sibling sliders otherwise resolve to identical hierarchy strings; override the leaf
+        // index with a stable on-screen ordinal so they become distinct (same fix as text inputs).
+        // Only when not capturing through an ignore-inner-hierarchy ancestor (effectiveView === self),
+        // and only for SwiftUI — UIKit sibling indices already differ. `siblingOrdinal` returns nil for
+        // controls other than slider/text inputs, so buttons/switches/steppers/etc. are unaffected.
+        let effectiveView = userpilotEffectiveViewForCapture()
+        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
+            ? UIKitViewResolver.siblingOrdinal(for: self)
+            : nil
+        payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText

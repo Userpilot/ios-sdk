@@ -54,7 +54,7 @@ internal enum UIKitViewResolver {
     ///   - view: The UIView to resolve the path for.
     ///   - leafIndexOverride: When non-nil, used as the leaf segment's `attr__index` in place of the
     ///     natural sibling index. Ancestor segments are unaffected. Used to disambiguate SwiftUI
-    ///     sibling text inputs that otherwise collapse to identical paths (see ``editableFieldOrdinal(for:)``).
+    ///     sibling controls that otherwise collapse to identical paths (see ``siblingOrdinal(for:)``).
     /// - Returns: Hierarchical path string in leaf-to-root order.
     static func resolvePath(view: UIView, leafIndexOverride: Int? = nil) -> String {
         var path = [String]()
@@ -185,28 +185,32 @@ internal enum UIKitViewResolver {
         return (effectiveView, path)
     }
 
-    // MARK: - SwiftUI editable-field disambiguation
+    // MARK: - SwiftUI sibling-control disambiguation
 
-    /// Stable on-screen ordinal for a text input among its same-kind siblings on the screen.
+    /// Stable on-screen ordinal for a control among its same-kind siblings on the screen.
     ///
-    /// SwiftUI sibling text inputs collapse to identical hierarchy strings: each `TextField` lives in
-    /// its own private host chain, so each resolves to `attr__index="0"` and terminates at the same
-    /// hosting controller. This computes a stable ordinal for `field` among all same-kind editable
-    /// inputs (`UITextField` vs `UITextView`) under its owning view controller's root view, ordered by
-    /// on-screen position (top→bottom, then left→right). Used as the leaf `attr__index`, so two fields
-    /// become `…:attr__index="0"` and `…:attr__index="1"`. Unlike an `ObjectIdentifier`, this is derived
-    /// from layout, so it is stable across app launches and identical for every user.
+    /// SwiftUI sibling controls collapse to identical hierarchy strings: each `TextField`/`Slider`
+    /// lives in its own private host chain, so each resolves to `attr__index="0"` and terminates at
+    /// the same hosting controller. This computes a stable ordinal for `view` among all same-kind
+    /// controls (`UITextField`, `UITextView`, or `UISlider`) under its owning view controller's root
+    /// view, ordered by on-screen position (top→bottom, then left→right). Used as the leaf
+    /// `attr__index`, so two controls become `…:attr__index="0"` and `…:attr__index="1"`. Unlike an
+    /// `ObjectIdentifier`, this is derived from layout, so it is stable across app launches and
+    /// identical for every user.
     ///
-    /// - Returns: The field's ordinal, or `nil` when there are 0–1 matching fields (single-field
-    ///   screens keep their natural index) or the owning root can't be resolved.
-    static func editableFieldOrdinal(for field: UIView) -> Int? {
-        guard let root = owningViewControllerRootView(of: field) else { return nil }
+    /// - Returns: The control's ordinal, or `nil` when its kind isn't a known disambiguated control,
+    ///   there are 0–1 matching siblings (single-control screens keep their natural index), or the
+    ///   owning root can't be resolved.
+    static func siblingOrdinal(for view: UIView) -> Int? {
+        guard let root = owningViewControllerRootView(of: view) else { return nil }
 
         let isSameKind: (UIView) -> Bool
-        if field is UITextField {
+        if view is UITextField {
             isSameKind = { $0 is UITextField }
-        } else if field is UITextView {
+        } else if view is UITextView {
             isSameKind = { $0 is UITextView }
+        } else if view is UISlider {
+            isSameKind = { $0 is UISlider }
         } else {
             return nil
         }
@@ -215,9 +219,9 @@ internal enum UIKitViewResolver {
         collectViews(in: root, matching: isSameKind, into: &matches)
         guard matches.count > 1 else { return nil }
 
-        let window = field.window
-        func windowOrigin(_ view: UIView) -> CGPoint {
-            (view.superview?.convert(view.frame, to: window) ?? view.frame).origin
+        let window = view.window
+        func windowOrigin(_ candidate: UIView) -> CGPoint {
+            (candidate.superview?.convert(candidate.frame, to: window) ?? candidate.frame).origin
         }
 
         let sorted = matches.sorted { lhs, rhs in
@@ -226,7 +230,7 @@ internal enum UIKitViewResolver {
             if abs(lhsOrigin.y - rhsOrigin.y) > 0.5 { return lhsOrigin.y < rhsOrigin.y }
             return lhsOrigin.x < rhsOrigin.x
         }
-        return sorted.firstIndex { $0 === field }
+        return sorted.firstIndex { $0 === view }
     }
 
     /// Walks up from `view` to the root view of the view controller that owns it — the same
