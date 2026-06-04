@@ -10,6 +10,8 @@
 //  unique identifiers for UIKit view elements in automatic analytics capture.
 //
 
+// swiftlint:disable file_length
+
 import UIKit
 
 /// `UIKitViewResolver` provides utilities for UIKit view element identification and tracking.
@@ -48,9 +50,13 @@ internal enum UIKitViewResolver {
     /// transient siblings (e.g. `_UIScrollViewScrollIndicator`) do not shift the
     /// position of stable siblings.
     ///
-    /// - Parameter view: The UIView to resolve the path for.
+    /// - Parameters:
+    ///   - view: The UIView to resolve the path for.
+    ///   - leafIndexOverride: When non-nil, used as the leaf segment's `attr__index` in place of the
+    ///     natural sibling index. Ancestor segments are unaffected. Used to disambiguate SwiftUI
+    ///     sibling text inputs that otherwise collapse to identical paths (see ``editableFieldOrdinal(for:)``).
     /// - Returns: Hierarchical path string in leaf-to-root order.
-    static func resolvePath(view: UIView) -> String {
+    static func resolvePath(view: UIView, leafIndexOverride: Int? = nil) -> String {
         var path = [String]()
         var currentView: UIView? = view
         var isLeaf = true
@@ -105,7 +111,8 @@ internal enum UIKitViewResolver {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
-            attributes += "attr__index=\"\(stableIndex(of: node, in: parent))\""
+            let indexValue = (isLeaf ? leafIndexOverride : nil) ?? stableIndex(of: node, in: parent)
+            attributes += "attr__index=\"\(indexValue)\""
 
             if !attributes.isEmpty {
                 desc += ":\(attributes)"
@@ -176,6 +183,78 @@ internal enum UIKitViewResolver {
         let effectiveView = view.userpilotEffectiveViewForCapture()
         let path = resolvePath(view: effectiveView)
         return (effectiveView, path)
+    }
+
+    // MARK: - SwiftUI editable-field disambiguation
+
+    /// Stable on-screen ordinal for a text input among its same-kind siblings on the screen.
+    ///
+    /// SwiftUI sibling text inputs collapse to identical hierarchy strings: each `TextField` lives in
+    /// its own private host chain, so each resolves to `attr__index="0"` and terminates at the same
+    /// hosting controller. This computes a stable ordinal for `field` among all same-kind editable
+    /// inputs (`UITextField` vs `UITextView`) under its owning view controller's root view, ordered by
+    /// on-screen position (top→bottom, then left→right). Used as the leaf `attr__index`, so two fields
+    /// become `…:attr__index="0"` and `…:attr__index="1"`. Unlike an `ObjectIdentifier`, this is derived
+    /// from layout, so it is stable across app launches and identical for every user.
+    ///
+    /// - Returns: The field's ordinal, or `nil` when there are 0–1 matching fields (single-field
+    ///   screens keep their natural index) or the owning root can't be resolved.
+    static func editableFieldOrdinal(for field: UIView) -> Int? {
+        guard let root = owningViewControllerRootView(of: field) else { return nil }
+
+        let isSameKind: (UIView) -> Bool
+        if field is UITextField {
+            isSameKind = { $0 is UITextField }
+        } else if field is UITextView {
+            isSameKind = { $0 is UITextView }
+        } else {
+            return nil
+        }
+
+        var matches: [UIView] = []
+        collectViews(in: root, matching: isSameKind, into: &matches)
+        guard matches.count > 1 else { return nil }
+
+        let window = field.window
+        func windowOrigin(_ view: UIView) -> CGPoint {
+            (view.superview?.convert(view.frame, to: window) ?? view.frame).origin
+        }
+
+        let sorted = matches.sorted { lhs, rhs in
+            let lhsOrigin = windowOrigin(lhs)
+            let rhsOrigin = windowOrigin(rhs)
+            if abs(lhsOrigin.y - rhsOrigin.y) > 0.5 { return lhsOrigin.y < rhsOrigin.y }
+            return lhsOrigin.x < rhsOrigin.x
+        }
+        return sorted.firstIndex { $0 === field }
+    }
+
+    /// Walks up from `view` to the root view of the view controller that owns it — the same
+    /// terminator `resolvePath` uses: a node whose `next` responder is a `UIViewController`
+    /// whose `view` is that node.
+    private static func owningViewControllerRootView(of view: UIView) -> UIView? {
+        var node: UIView? = view
+        while let current = node {
+            if (current.next as? UIViewController)?.view === current {
+                return current
+            }
+            node = current.superview
+        }
+        return nil
+    }
+
+    /// Depth-first collects every descendant of `root` (and `root`'s subtree) satisfying `matches`.
+    private static func collectViews(
+        in root: UIView,
+        matching matches: (UIView) -> Bool,
+        into result: inout [UIView]
+    ) {
+        for subview in root.subviews {
+            if matches(subview) {
+                result.append(subview)
+            }
+            collectViews(in: subview, matching: matches, into: &result)
+        }
     }
 }
 
@@ -347,3 +426,5 @@ internal extension UIView {
         return label
     }
 }
+
+// swiftlint:enable file_length
