@@ -30,7 +30,7 @@ internal protocol AutoCaptureCoordinating: AnyObject {
     func suppressScreenAutoCaptureAfterSDKContent()
 
     /// Publishes a `mobile_autocapture` event for tab-bar selection.
-    func handleTabSelected(name tabName: String, index tabIndex: Int)
+    func handleTabSelected(name tabName: String, index tabIndex: Int, screenClass: String)
 
     /// Publishes a structured interaction (control, cell, text input, etc.) as `mobile_autocapture`.
     func handleInteractionEvent(_ payload: InteractionPayload)
@@ -188,13 +188,25 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
 
     // MARK: - Tab Tracking
 
-    func handleTabSelected(name tabName: String, index tabIndex: Int) {
+    func handleTabSelected(name tabName: String, index tabIndex: Int, screenClass: String) {
         guard isInteractionTrackingActive else { return }
 
         let interactionType = InteractionType.tabSelected
         var properties = buildTabProperties(name: tabName, index: tabIndex)
         let internalProps = buildInternalProperties(for: interactionType)
         properties.merge(internalProps) { (_, new) in new }
+
+        // Attach a minimal hierarchy leaf for the selected tab content, mirroring the
+        // `view_presented` dialog path: `<TabContentVC>:attr__index="<tabIndex>"`. The
+        // tracked screen class is appended downstream as `;<ScreenName>`. As with the
+        // dialog hierarchy this is intentionally shallow — it identifies the selected
+        // tab's content controller rather than a full leaf-to-root view walk.
+        let leaf = screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !leaf.isEmpty {
+            let escaped = leaf.replacingOccurrences(of: "\"", with: "\\\"")
+            properties[AutoCaptureConstants.hierarchy] = "\(escaped):attr__index=\"\(tabIndex)\""
+            appendScreenNameSegmentToHierarchy(&properties)
+        }
 
         let event = makeEvent(
             type: EventType.autoCaptureEvent,
@@ -382,6 +394,20 @@ private extension AutoCaptureCoordinater {
         AutoCaptureConstants.swiftUIView
     ]
 
+    /// SwiftUI framework-internal layout / hosting scaffolding classes that surface as the resolved
+    /// leaf when a tap lands on container background rather than an interactive element. These never
+    /// carry developer-meaningful text/label/id, so a tap resolving to one of them with no metadata is
+    /// a dead click. The non-underscore names below are not caught by `windowTouchIsPrivateUIKitElementType`
+    /// (which only handles `_UI…` / `_NS…`). They are matched only after the metadata check, so taps on
+    /// these classes that *do* carry text/accessibility info are still published unchanged.
+    private static let swiftUIStructuralContainerTypes: Set<String> = [
+        "PlatformGroupContainer",
+        "PlatformContainer",
+        "PlatformViewHost",
+        "HostingView",
+        "HostingScrollView"
+    ]
+
     /// Private / internal UIKit view class names (e.g. `_UITextLayoutCanvasView`) — never publish as window taps.
     private func windowTouchIsPrivateUIKitElementType(_ elementType: String) -> Bool {
         if elementType.hasPrefix("_UI") { return true }
@@ -406,6 +432,21 @@ private extension AutoCaptureCoordinater {
         guard let hierarchy else { return false }
         if hierarchy.contains("UIKeyboardImpl") || hierarchy.contains("UIKBKeyView") { return true }
         if hierarchy.contains("TUIKB") || hierarchy.contains("UIInputSet") { return true }
+        return false
+    }
+
+    /// SwiftUI scaffolding leaf (hosting / platform container) with no metadata — a dead click.
+    ///
+    /// Only consulted for SwiftUI-configured apps and only after `windowTouchHasMetadata` has already
+    /// returned `false`, so this can never suppress a tap that resolved any text / accessibility signal.
+    /// These class names are SwiftUI-exclusive, so UIKit capture is unaffected.
+    private func windowTouchIsSwiftUIStructuralContainer(_ elementType: String) -> Bool {
+        guard config.appFramework == .SwiftUI else { return false }
+        if Self.swiftUIStructuralContainerTypes.contains(elementType) { return true }
+        // SwiftUI's private hosting wrappers embed these stable, framework-internal substrings.
+        if elementType.contains("HostingView") || elementType.contains("HostingScrollView") {
+            return true
+        }
         return false
     }
 
@@ -439,6 +480,9 @@ private extension AutoCaptureCoordinater {
         }
         if windowTouchHasMetadata(properties) {
             return true
+        }
+        if windowTouchIsSwiftUIStructuralContainer(elementType) {
+            return false
         }
         if Self.structuralWindowTouchElementTypes.contains(elementType) {
             return false

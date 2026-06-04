@@ -58,7 +58,7 @@ When **interaction autocapture** is enabled, the SDK captures:
 | Text input | `UITextField`, `UITextView` | Cached; one event per field when leaving the screen |
 | Cell selection | `UITableView`, `UICollectionView` | Cell class name, index path, and visible text/labels when available |
 | View tap | `UILabel`, `UIImageView`, custom views | Resolves deepest subview at touch point for accurate element type and text |
-| Tab selection | `UITabBarController` | Emitted as `interaction_type = "tab_selected"` with `tab_name` and `tab_index` |
+| Tab selection | `UITabBarController` | Emitted as `interaction_type = "tab_selected"` with `tab_name`, `tab_index`, and a shallow `hierarchy` leaf for the selected tab's content controller |
 | Dialog presentation | `UIAlertController` (alert + action sheet styles) | Emitted as `interaction_type = "view_presented"` with the alert's title and message |
 
 All interaction events include a nested **screen** object resolved from the current `ScreenNameTracker` payload. It contains:

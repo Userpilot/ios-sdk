@@ -40,7 +40,15 @@ extension UITabBarController {
         let tabTitle = selectedVC.tabBarItem?.title
             ?? "\(AutoCaptureConstants.defaultTabTitlePrefix)\(tabIndex + 1)"
 
+        // Class of the newly selected tab's content controller — used as the
+        // hierarchy leaf for the published `tab_selected` event.
+        let screenClass = String(describing: type(of: selectedVC))
+
         // Call the engine directly via Userpilot.shared
-        Userpilot.shared.autoCaptureEngine.handleTabSelected(name: tabTitle, index: tabIndex)
+        Userpilot.shared.autoCaptureEngine.handleTabSelected(
+            name: tabTitle,
+            index: tabIndex,
+            screenClass: screenClass
+        )
     }
 }
