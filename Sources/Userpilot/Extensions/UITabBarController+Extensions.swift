@@ -45,7 +45,7 @@ extension UITabBarController {
         let screenClass = String(describing: type(of: selectedVC))
 
         // Call the engine directly via Userpilot.shared
-        Userpilot.shared.autoCaptureEngine.handleTabSelected(
+        Userpilot.shared.autoCaptureCoordinator.handleTabSelected(
             name: tabTitle,
             index: tabIndex,
             screenClass: screenClass

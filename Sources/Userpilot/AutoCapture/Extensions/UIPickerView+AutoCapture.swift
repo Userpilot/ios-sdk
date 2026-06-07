@@ -117,7 +117,7 @@ internal extension UIPickerView {
         payload.accessibilityLabel = getAccessibilityLabelContent()
         payload.targetViewName = resolveReferenceName()
 
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Resolves the title for the picked row, trying every API SwiftUI / UIKit may expose it on.

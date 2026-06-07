@@ -57,7 +57,7 @@ internal extension UICollectionViewCell {
         }
 
         // Send to the engine
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     // MARK: - Private Helpers

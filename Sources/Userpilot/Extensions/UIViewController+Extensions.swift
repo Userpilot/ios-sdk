@@ -122,10 +122,10 @@ internal extension UIViewController {
            screenClassName.contains("HostingController") {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                Userpilot.shared.autoCaptureEngine.trackScreen(buildScreenTrackingPayload())
+                Userpilot.shared.autoCaptureCoordinator.trackScreen(buildScreenTrackingPayload())
             }
         } else {
-            Userpilot.shared.autoCaptureEngine.trackScreen(buildScreenTrackingPayload())
+            Userpilot.shared.autoCaptureCoordinator.trackScreen(buildScreenTrackingPayload())
         }
     }
 

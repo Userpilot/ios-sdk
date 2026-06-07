@@ -62,7 +62,7 @@ internal extension UIControl {
         }
 
         // Send immediately for discrete controls
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     // Builds an interaction payload based on the control type
