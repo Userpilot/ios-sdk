@@ -29,7 +29,7 @@ internal protocol ScreenNameTracking: AnyObject {
     func buildScreenDictionary() -> [String: Any]
 
     /// Builds a screen context dictionary for auto event properties
-    func buildScreenDictionaryForEvent() -> [String: Any]
+    func buildScreenDictionaryForEvent(isSwiftUI: Bool) -> [String: String]
 
     /// Resets all tracked state to initial values
     func reset()
@@ -78,14 +78,19 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     }
 
     /// Builds a screen context dictionary from the current payload for event properties
-    func buildScreenDictionaryForEvent() -> [String: Any] {
+    func buildScreenDictionaryForEvent(isSwiftUI: Bool) -> [String: String] {
         guard let payload = currentPayload else {
             return [:]
         }
 
-        var screen: [String: Any] = [
-            AutoCaptureConstants.screenTitle: payload.screenClass
+        // Common (always included)
+        var screen: [String: String] = [
+            AutoCaptureConstants.screenTitle: payload.screenClass,
+            AutoCaptureConstants.screenName: payload.currentScreen
         ]
+        if let navigationTitle = payload.navigationTitle, !navigationTitle.isEmpty {
+            screen[AutoCaptureConstants.navigationTitle] = navigationTitle
+        }
 
         return screen
     }

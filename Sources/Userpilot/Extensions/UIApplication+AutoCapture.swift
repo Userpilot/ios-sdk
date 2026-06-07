@@ -143,13 +143,13 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         if !config.enableInteractionTextCapture {
             payload.elementText = menuAction.title
         }
         payload.accessibilityIdentifier = menuAction.identifier.rawValue
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Captures UIMenu selection (when sender is the menu itself). Config only (no view/responder chain).
@@ -162,13 +162,13 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         if !config.enableInteractionTextCapture {
             payload.elementText = menu.title
         }
         payload.accessibilityIdentifier = menu.identifier.rawValue
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Builds a full interaction payload for a UIView
@@ -187,9 +187,9 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
-        payload.elementPath = path
+        payload.hierarchy = path
 
         if useRedactedInner {
             payload.elementText = AutoCaptureConstants.reductText
@@ -200,7 +200,7 @@ extension UIApplication {
             payload.targetViewName = view.resolveReferenceName()
         }
 
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Config only for text/label (UIBarButtonItem is not in the view responder chain).
@@ -216,7 +216,7 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
         if !config.enableInteractionTextCapture {
             payload.elementText = item.title
@@ -225,7 +225,7 @@ extension UIApplication {
             payload.accessibilityLabel = item.accessibilityLabel
         }
         payload.accessibilityIdentifier = item.accessibilityIdentifier
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Captures any sender that isn’t a UIControl, UIView, or UIBarButtonItem (e.g. UIMenu element, custom object).
@@ -251,9 +251,9 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
-        payload.elementPath = path
+        payload.hierarchy = path
 
         if useRedactedInner {
             payload.elementText = AutoCaptureConstants.reductText
@@ -264,7 +264,7 @@ extension UIApplication {
             payload.targetViewName = view.resolveReferenceName()
         }
 
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Captures any sender that isn’t a UIControl, UIGestureRecognizer, UIView,
@@ -285,8 +285,8 @@ extension UIApplication {
         )
         payload.targetAction = NSStringFromSelector(action)
         if let target = target {
-            payload.targetClass = String(describing: type(of: target))
+            payload.ownerTargetClass = String(describing: type(of: target))
         }
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 }

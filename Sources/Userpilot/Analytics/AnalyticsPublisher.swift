@@ -484,19 +484,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         let tabName = trackEventThrottleString(from: properties[AutoCaptureConstants.tabName])
         if tabName.isEmpty {
             let hierarchy = trackEventThrottleString(from: properties[AutoCaptureConstants.hierarchy])
-            let row = trackEventThrottleString(from: properties[AutoCaptureConstants.row])
+            let row = trackEventThrottleString(from: properties[AutoCaptureConstants.selectedIndex])
             let interaction = trackEventThrottleString(from: event.interactionEventName)
             return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)"
         } else {
-            let itemId = trackEventThrottleString(from: properties[AutoCaptureConstants.itemId])
-            return "\(screenName)|\(trackTitle)|\(tabName)|\(itemId)"
+            let tabIndex = properties[AutoCaptureConstants.tabIndex]
+            return "\(screenName)|\(trackTitle)|\(tabName)|\(tabIndex)"
         }
     }
 
     /// Resolves a display class for throttling from `Event.screen` (set on autocapture events via `makeEvent`).
     private func trackEventThrottleScreenName(from screen: Payload) -> String {
         guard let screen, !screen.isEmpty else { return "" }
-        if let name = screen[AutoCaptureConstants.classSimpleName] as? String, !name.isEmpty { return name }
         if let name = screen[AutoCaptureConstants.screenClass] as? String, !name.isEmpty { return name }
         if let name = screen[AutoCaptureConstants.screenTitle] as? String, !name.isEmpty { return name }
         if let name = screen[AutoCaptureConstants.screenName] as? String, !name.isEmpty { return name }
@@ -638,7 +637,7 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.screenTitleProperty] = screenEvent.screenTitle ?? ""
 
                 let existingMetadata = screenViewEntity.event.properties ?? [:]
-                var newMetadata: [String: Any] = [
+                let newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: fakeReloadScreenEvent,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
@@ -906,7 +905,7 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.screenTitleProperty] = screenViewEntity.event.screenTitle
 
                 let existingMetadata = screenViewEntity.event.properties ?? [:]
-                var newMetadata: [String: Any] = [
+                let newMetadata: [String: Any] = [
                     AnalyticsPublisher.isSessionStartedProperty: startSession,
                     AnalyticsPublisher.fakeReload: true,
                     AnalyticsPublisher.seenContents: Array(screenViewEntity.seenExperiences),
@@ -915,8 +914,22 @@ extension AnalyticsPublisher {
                 payload[AnalyticsPublisher.metaDataProperty] = existingMetadata.merging(newMetadata) { _, new in new }
 
                 socketManager.publish(screenViewEntity.event.eventName, payload: payload)
+                suppressScreenAutocaptureAfterFakeReload()
             }
         }
+    }
+
+    /// Suppresses automatic screen capture after sending a fake reload screen event.
+    ///
+    /// Fake reload is an SDK-generated screen event used to send `seen_contents` / `seen_surveys`
+    /// without treating the close of SDK UI as real client navigation. After the fake reload is
+    /// published, UIKit/SwiftUI may re-fire `viewWillAppear` for the underlying app screen hierarchy.
+    /// This hook asks the autocapture coordinator to ignore that short lifecycle burst.
+    private func suppressScreenAutocaptureAfterFakeReload() {
+        guard config.enableScreenAutoCapture,
+              config.appFramework == .SwiftUI
+        else { return }
+        container?.resolve(AutoCaptureCoordinating.self).suppressScreenAutoCaptureAfterSDKContent()
     }
 
     /**

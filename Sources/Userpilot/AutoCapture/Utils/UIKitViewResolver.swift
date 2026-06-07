@@ -10,6 +10,8 @@
 //  unique identifiers for UIKit view elements in automatic analytics capture.
 //
 
+// swiftlint:disable file_length
+
 import UIKit
 
 /// `UIKitViewResolver` provides utilities for UIKit view element identification and tracking.
@@ -34,48 +36,142 @@ internal enum UIKitViewResolver {
     /// A `;SCREEN_NAME:…` segment from `screenNameTracker` is appended when publishing
     /// interaction events in `AutoCapturer`, not here.
     ///
-    /// - Parameter view: The UIView to resolve the path for.
+    /// ### Stability across navigation
+    ///
+    /// The walk terminates at the owning `UIViewController`'s root view and skips
+    /// any UIKit private container classes encountered above it (`UITransitionView`,
+    /// `UINavigationTransitionView`, `UILayoutContainerView`, `UIDropShadowView`,
+    /// `UIViewControllerWrapperView`, `UIWindow`, plus anything whose class name
+    /// starts with `_`). Those classes appear and disappear from `UIWindow.subviews`
+    /// during transitions, modal presentations, and snapshot animations, so their
+    /// `firstIndex(of:)` value is not stable across navigations and would cause the
+    /// same UI element to produce different hierarchy strings on different visits.
+    /// `indexInParent` is also computed against a filtered sibling list so that
+    /// transient siblings (e.g. `_UIScrollViewScrollIndicator`) do not shift the
+    /// position of stable siblings.
+    ///
+    /// - Parameters:
+    ///   - view: The UIView to resolve the path for.
+    ///   - leafIndexOverride: When non-nil, used as the leaf segment's `attr__index` in place of the
+    ///     natural sibling index. Ancestor segments are unaffected. Used to disambiguate SwiftUI
+    ///     sibling controls that otherwise collapse to identical paths (see ``siblingOrdinal(for:)``).
     /// - Returns: Hierarchical path string in leaf-to-root order.
-    static func resolvePath(view: UIView) -> String {
+    static func resolvePath(view: UIView, leafIndexOverride: Int? = nil) -> String {
         var path = [String]()
         var currentView: UIView? = view
+        var isLeaf = true
 
         while let node = currentView {
             let parent = node.superview
-            var desc = "\(type(of: node))"
+            let className = String(describing: type(of: node))
+
+            // The owning view controller's root view is the natural terminator
+            // even when its class is on the deny-list — SwiftUI's
+            // `UIHostingController.view` is `_UIHostingView`, which is private
+            // and therefore in the skip set. Detecting the boundary here means
+            // we always stop at the VC, regardless of whether we emit the node.
+            let isOwningVCRootView =
+                (node.next as? UIViewController)?.view === node
+
+            // Skip UIKit private container classes for ancestors only. The leaf is
+            // always emitted so the hierarchy describes the touched element even in
+            // pathological cases where a private class somehow ends up at the leaf.
+            if !isLeaf && shouldSkipInHierarchy(className) {
+                if isOwningVCRootView {
+                    break
+                }
+                currentView = parent
+                continue
+            }
+
+            var desc = className
             var attributes = ""
+
+            // Match the Android accessibility model: `accessibility_label` (and `accessibility_id`)
+            // are static developer-set identifiers, not PII text content, so they're governed only
+            // by the accessibility-label flag — never by text redaction. This mirrors Android's
+            // `shouldRedactContentDescription`, which intentionally does NOT call `shouldRedact()`.
+            // We also keep the `value == "****"` short-circuit so any pre-redacted value that
+            // somehow reaches us is still stripped. `attr__index` below is always emitted.
+            let accessibilityRedacted = node.shouldRedactAccessibilityLabel()
 
             if let label = node.accessibilityLabel?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
-               !label.isEmpty {
+               !label.isEmpty,
+               label != AutoCaptureConstants.reductText,
+               !accessibilityRedacted {
                 attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
-               !id.isEmpty {
+               !id.isEmpty,
+               id != AutoCaptureConstants.reductText,
+               !accessibilityRedacted {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
 
-            let indexInParent: Int
-            if let parent = parent,
-               let index = parent.subviews.firstIndex(of: node) {
-                indexInParent = index
-            } else {
-                indexInParent = 0
-            }
-
-            attributes += "attr__index=\"\(indexInParent)\""
+            let indexValue = (isLeaf ? leafIndexOverride : nil) ?? stableIndex(of: node, in: parent)
+            attributes += "attr__index=\"\(indexValue)\""
 
             if !attributes.isEmpty {
                 desc += ":\(attributes)"
             }
 
             path.append(desc)
+            isLeaf = false
+
+            // Stop at the owning view controller's root view: above this, UIKit's
+            // private window/transition chrome has unstable subview ordering across
+            // navigations (the original `UITransitionView:attr__index` regression).
+            if isOwningVCRootView {
+                break
+            }
+
             currentView = parent
         }
 
         return path.joined(separator: ";")
+    }
+
+    // MARK: - Stability helpers
+
+    /// UIKit private container classes whose presence and ordering inside their
+    /// parent's `subviews` is unstable across navigation transitions, modal
+    /// presentations, snapshot animations, and split-view layout.
+    ///
+    /// Encoding any of these into the hierarchy string makes the resulting
+    /// identity flicker between events fired on the same UI element. They are
+    /// dropped from emitted segments and excluded from sibling-index calculations.
+    private static let unstableContainerClassNames: Set<String> = [
+        "UIWindow",
+        "UITransitionView",
+        "UIDropShadowView",
+        "UILayoutContainerView",
+        "UINavigationTransitionView",
+        "UIViewControllerWrapperView"
+    ]
+
+    /// Returns `true` if `className` names a UIKit private container that should
+    /// be excluded from emitted hierarchy segments and from sibling indexing.
+    /// Anything starting with `_` is treated as Apple-private by convention.
+    private static func shouldSkipInHierarchy(_ className: String) -> Bool {
+        if className.hasPrefix("_") { return true }
+        return unstableContainerClassNames.contains(className)
+    }
+
+    /// Position of `node` inside `parent`'s `subviews`, ignoring private siblings
+    /// whose presence is transient (scroll indicators, snapshot/transition views).
+    /// Falls back to the raw index when filtering can't locate the node.
+    private static func stableIndex(of node: UIView, in parent: UIView?) -> Int {
+        guard let parent = parent else { return 0 }
+        let stableSiblings = parent.subviews.filter {
+            !shouldSkipInHierarchy(String(describing: type(of: $0)))
+        }
+        if let index = stableSiblings.firstIndex(of: node) {
+            return index
+        }
+        return parent.subviews.firstIndex(of: node) ?? 0
     }
 
     /// Resolves the view and path to use for capture, respecting userpilotIgnoreInnerHierarchy.
@@ -87,6 +183,82 @@ internal enum UIKitViewResolver {
         let effectiveView = view.userpilotEffectiveViewForCapture()
         let path = resolvePath(view: effectiveView)
         return (effectiveView, path)
+    }
+
+    // MARK: - SwiftUI sibling-control disambiguation
+
+    /// Stable on-screen ordinal for a control among its same-kind siblings on the screen.
+    ///
+    /// SwiftUI sibling controls collapse to identical hierarchy strings: each `TextField`/`Slider`
+    /// lives in its own private host chain, so each resolves to `attr__index="0"` and terminates at
+    /// the same hosting controller. This computes a stable ordinal for `view` among all same-kind
+    /// controls (`UITextField`, `UITextView`, or `UISlider`) under its owning view controller's root
+    /// view, ordered by on-screen position (top→bottom, then left→right). Used as the leaf
+    /// `attr__index`, so two controls become `…:attr__index="0"` and `…:attr__index="1"`. Unlike an
+    /// `ObjectIdentifier`, this is derived from layout, so it is stable across app launches and
+    /// identical for every user.
+    ///
+    /// - Returns: The control's ordinal, or `nil` when its kind isn't a known disambiguated control,
+    ///   there are 0–1 matching siblings (single-control screens keep their natural index), or the
+    ///   owning root can't be resolved.
+    static func siblingOrdinal(for view: UIView) -> Int? {
+        guard let root = owningViewControllerRootView(of: view) else { return nil }
+
+        let isSameKind: (UIView) -> Bool
+        if view is UITextField {
+            isSameKind = { $0 is UITextField }
+        } else if view is UITextView {
+            isSameKind = { $0 is UITextView }
+        } else if view is UISlider {
+            isSameKind = { $0 is UISlider }
+        } else {
+            return nil
+        }
+
+        var matches: [UIView] = []
+        collectViews(in: root, matching: isSameKind, into: &matches)
+        guard matches.count > 1 else { return nil }
+
+        let window = view.window
+        func windowOrigin(_ candidate: UIView) -> CGPoint {
+            (candidate.superview?.convert(candidate.frame, to: window) ?? candidate.frame).origin
+        }
+
+        let sorted = matches.sorted { lhs, rhs in
+            let lhsOrigin = windowOrigin(lhs)
+            let rhsOrigin = windowOrigin(rhs)
+            if abs(lhsOrigin.y - rhsOrigin.y) > 0.5 { return lhsOrigin.y < rhsOrigin.y }
+            return lhsOrigin.x < rhsOrigin.x
+        }
+        return sorted.firstIndex { $0 === view }
+    }
+
+    /// Walks up from `view` to the root view of the view controller that owns it — the same
+    /// terminator `resolvePath` uses: a node whose `next` responder is a `UIViewController`
+    /// whose `view` is that node.
+    private static func owningViewControllerRootView(of view: UIView) -> UIView? {
+        var node: UIView? = view
+        while let current = node {
+            if (current.next as? UIViewController)?.view === current {
+                return current
+            }
+            node = current.superview
+        }
+        return nil
+    }
+
+    /// Depth-first collects every descendant of `root` (and `root`'s subtree) satisfying `matches`.
+    private static func collectViews(
+        in root: UIView,
+        matching matches: (UIView) -> Bool,
+        into result: inout [UIView]
+    ) {
+        for subview in root.subviews {
+            if matches(subview) {
+                result.append(subview)
+            }
+            collectViews(in: subview, matching: matches, into: &result)
+        }
     }
 }
 
@@ -258,3 +430,5 @@ internal extension UIView {
         return label
     }
 }
+
+// swiftlint:enable file_length

@@ -6,7 +6,7 @@
 //
 
 /// Payload containing comprehensive screen tracking information for auto capture events.
-internal struct ScreenTrackingPayload {
+internal struct ScreenTrackingPayload: Equatable {
     // MARK: - Properties
 
     /// The current screen name
@@ -29,6 +29,9 @@ internal struct ScreenTrackingPayload {
 
     /// The accessibilityLabel of the view controller
     let vcAccessibilityLabel: String?
+
+    /// True when SwiftUI resolved this screen to the same name/title as the previous screen context.
+    var screenNameMatchesPreviousScreen: Bool?
 
     /// True when this payload represents a `UIAlertController`
     /// (including subclasses) — dialog autocapture instead of a screen event.
@@ -65,6 +68,13 @@ internal struct ScreenTrackingPayload {
             dict[AutoCaptureConstants.vcAccessibilityLabel] = vcAccessibilityLabel
         }
 
+        if let screenNameMatchesPreviousScreen {
+            dict[AutoCaptureConstants.screenNameMatchesPreviousScreen] = screenNameMatchesPreviousScreen
+        }
+
+        if Userpilot.isInitialized, let appFramework = Userpilot.shared.config.appFramework {
+            dict[AutoCaptureConstants.uiFramework] = appFramework.rawValue
+        }
         return dict
     }
 }

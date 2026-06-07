@@ -750,7 +750,7 @@ extension ExperiencesPublisher {
     private func canShowExperience() -> Bool {
         guard
             // No pending content to show (removed for some reason)
-            let experienceContent = pendingExperiences.first,
+            !pendingExperiences.isEmpty,
             // Already have an active rendered experience
             !hasActiveExperience
         else { return false }

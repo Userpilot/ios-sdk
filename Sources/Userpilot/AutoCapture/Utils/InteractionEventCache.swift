@@ -38,7 +38,7 @@ internal enum InteractionEventCache {
             lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
             lastDeliveredLock.unlock()
         }
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(envelope.payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(envelope.payload)
     }
 
     /// Schedules sending the interaction after `interactionDebounceInterval` of quiet time for this view.

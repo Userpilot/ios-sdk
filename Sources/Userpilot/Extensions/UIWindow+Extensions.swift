@@ -49,38 +49,8 @@ extension UIWindow {
 
             let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
 
-            if Userpilot.shared.config.appFramework == .SwiftUI {
-                handleSwiftUIClick(at: locationInWindow, event: event, view: resolvedView)
-            } else {
-                handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
-            }
+            handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
         }
-    }
-
-    // MARK: SwiftUI Click
-
-    /// Handles SwiftUI click tracking at the given point; sends event through the UIKit engine pipeline.
-    /// - Parameters:
-    ///   - point: The touch point in window coordinates
-    ///   - event: The UI event
-    ///   - view: The UIView that was touched (resolved to deepest subview)
-    private func handleSwiftUIClick(at point: CGPoint, event: UIEvent, view: UIView) {
-        let config = Userpilot.shared.config
-        guard config.enableInteractionAutoCapture else { return }
-        guard !view.shouldIgnoreInteractions() else { return }
-        // Prefer UIKit event for navigation bar (e.g. back button) to avoid duplicate SwiftUI + UIKit events
-        if config.preferUIKitOverSwiftUIForNavigationBar, view.isInsideNavigationBar {
-            return
-        }
-
-        let swiftUIProperties =
-            SwiftUIViewResolver.resolveClickProperties(
-                window: self,
-                point: point,
-                event: event,
-                fallbackView: view
-            ) ?? [:]
-        Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
     }
 
     // MARK: Touch Routing
@@ -159,7 +129,15 @@ extension UIWindow {
         }
 
         // 2. Check for UITableViewCell
+        //    Skip cells that live inside a UIPickerView (e.g. SwiftUI's `.pickerStyle(.wheel)`
+        //    backs onto `UIKitPickerView → UIPickerView → UIPickerTableView →
+        //    UIPickerTableViewWrapperCell`). The picker view's delegate hook will emit the
+        //    canonical `picker_view_changed` event for the same gesture, and we don't want a
+        //    duplicate `table_view_cell_selected` from the picker's internal table.
         if let tableCell = view.findParentTableViewCell() {
+            if tableCell.findAncestorUIPickerView() != nil {
+                return
+            }
             tableCell.captureTableViewCellSelection(touchedView: view)
             return
         }
@@ -196,27 +174,23 @@ extension UIWindow {
     ) {
         guard !view.shouldIgnoreInteractions() else { return }
 
-        if config.appFramework == .SwiftUI,
-           let swiftUIProperties = SwiftUIViewResolver.resolveClickProperties(
-               window: window,
-               point: point,
-               event: event,
-               fallbackView: view
-           ) {
-            Userpilot.shared.autoCaptureEngine.handleClickTracked(swiftUIProperties)
-            return
-        }
-
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
         let useRedactedInner = (effectiveView !== view)
 
         var eventProperties: [String: Any] = [
-            AutoCaptureConstants.elementType: String(describing: type(of: effectiveView)),
+            AutoCaptureConstants.targetClass: String(describing: type(of: effectiveView)),
             AutoCaptureConstants.hierarchy: path
         ]
 
-        if useRedactedInner {
-            eventProperties[AutoCaptureConstants.elementText] = AutoCaptureConstants.reductText
+        if let capture = view.resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
+            if let labelViewType = capture.viewType {
+                eventProperties[AutoCaptureConstants.targetClass] = labelViewType
+            }
+            eventProperties[AutoCaptureConstants.targetText] = capture.labeledView.shouldRedactText()
+                ? AutoCaptureConstants.reductText
+                : capture.label
+        } else if useRedactedInner {
+            eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
                 eventProperties[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
@@ -225,11 +199,11 @@ extension UIWindow {
                 eventProperties[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
             }
             if let text = view.getTextContent() {
-                eventProperties[AutoCaptureConstants.elementText] = text
+                eventProperties[AutoCaptureConstants.targetText] = text
             }
         }
 
-        Userpilot.shared.autoCaptureEngine.handleClickTracked(eventProperties)
+        Userpilot.shared.autoCaptureCoordinator.handleClickTracked(eventProperties)
     }
 
 }

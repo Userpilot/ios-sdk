@@ -118,6 +118,7 @@ private struct UserpilotIgnoreInteractionsRepresentable: UIViewRepresentable {
 /// Internal UIView that applies the ignore interactions property to its parent view
 private class UserpilotIgnoreInteractionsView: UIView {
     private var ignore: Bool
+    private weak var appliedToView: UIView?
 
     init(ignore: Bool) {
         self.ignore = ignore
@@ -140,16 +141,33 @@ private class UserpilotIgnoreInteractionsView: UIView {
         applyIgnoreInteractionsToParent()
     }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        applyIgnoreInteractionsToParent()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        applyIgnoreInteractionsToParent()
+    }
+
+    override func removeFromSuperview() {
+        super.removeFromSuperview()
+        appliedToView?.userpilotIgnoreInteractions = false
+        appliedToView = nil
+    }
+
     private func applyIgnoreInteractionsToParent() {
-        // Find the parent view that contains our SwiftUI content
-        var parent = superview
-        while parent != nil {
-            // Apply to the parent view
-            if let parentView = parent {
-                parentView.userpilotIgnoreInteractions = ignore
-                break
-            }
-            parent = parent?.superview
+        guard let parent = superview else {
+            appliedToView?.userpilotIgnoreInteractions = false
+            appliedToView = nil
+            return
         }
+
+        if appliedToView !== parent {
+            appliedToView?.userpilotIgnoreInteractions = false
+            appliedToView = parent
+        }
+        parent.userpilotIgnoreInteractions = ignore
     }
 }

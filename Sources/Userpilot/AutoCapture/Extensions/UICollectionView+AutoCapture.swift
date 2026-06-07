@@ -29,7 +29,7 @@ internal extension UICollectionViewCell {
             interactionType: .collectionViewItemSelected,
             elementType: String(describing: type(of: self))
         )
-        payload.targetClass = "UICollectionViewCell"
+        payload.ownerTargetClass = "UICollectionViewCell"
 
         // Try to get index path from parent collection view
         if let collectionView = findParentCollectionView(),
@@ -39,9 +39,16 @@ internal extension UICollectionViewCell {
         }
 
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.elementPath = path
-        if effectiveView !== self {
-            payload.elementType = String(describing: type(of: effectiveView))
+        payload.hierarchy = path
+        if let userpilotLabel = (touchedView ?? self).resolveUserpilotLabel() {
+            if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
+                payload.targetClass = labelViewType
+            }
+            payload.elementText = (touchedView ?? self).shouldRedactText()
+                ? AutoCaptureConstants.reductText
+                : userpilotLabel
+        } else if effectiveView !== self {
+            payload.targetClass = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText
         } else {
             payload.elementText = touchedView?.getTextContent()
@@ -50,7 +57,7 @@ internal extension UICollectionViewCell {
         }
 
         // Send to the engine
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     // MARK: - Private Helpers

@@ -135,17 +135,29 @@ internal final class ScreenNameResolver {
         return nil
     }
 
+    private static func hostingRootView(from viewController: UIViewController) -> Any? {
+        var currentMirror: Mirror? = Mirror(reflecting: viewController)
+
+        while let mirror = currentMirror {
+            for child in mirror.children where child.label == "rootView" {
+                return child.value
+            }
+            currentMirror = mirror.superclassMirror
+        }
+
+        return nil
+    }
+
     private static func swiftUIRootViewType(_ viewController: UIViewController) -> String? {
         let vcType = String(describing: type(of: viewController))
-        guard vcType.contains("UIHostingController") else { return nil }
-        let mirror = Mirror(reflecting: viewController)
-        for child in mirror.children where child.label == "rootView" {
-            let childType = String(describing: type(of: child.value))
-            return childType.components(separatedBy: ".").last?
-                .components(separatedBy: "<").first?
-                .components(separatedBy: "(").first ?? childType
-        }
-        return nil
+        guard vcType.contains("HostingController"),
+            let rootView = hostingRootView(from: viewController)
+        else { return nil }
+
+        let childType = String(describing: type(of: rootView))
+        return childType.components(separatedBy: ".").last?
+            .components(separatedBy: "<").first?
+            .components(separatedBy: "(").first ?? childType
     }
 
     private static func navigationStackTitlesString(_ viewController: UIViewController) -> String? {
@@ -221,9 +233,6 @@ extension UIViewController {
         }
         return "UIViewController"
     }
-//    var screenType: String {
-//        return String(describing: type(of: self))
-//    }
 
     var isRootViewController: Bool {
         if view.window?.rootViewController === self { return true }

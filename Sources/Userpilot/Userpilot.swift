@@ -140,14 +140,20 @@ public class Userpilot: NSObject {
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
-        container.registerLazy(ScreenTimeTracking.self, initializer: ScreenTimeTracker.init)
-        container.registerLazy(AutoCapturing.self, initializer: AutoCapturer.init)
+        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
         container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
+
+        // Only spin up the auto-detector when the host app didn't set the
+        // framework explicitly via `Config.appFramework(_:)`.
+        if config.appFramework == nil {
+            container.registerEager(
+                AppFrameworkDetector.self, initializer: AppFrameworkDetector.init)
+        }
     }
 }
 
@@ -433,8 +439,8 @@ extension Userpilot {
 extension Userpilot {
 
     /// Internal access to the automatic capture engine (screen + interaction hooks).
-    internal var autoCaptureEngine: AutoCapturing {
-        return container.resolve(AutoCapturing.self)
+    internal var autoCaptureCoordinator: AutoCaptureCoordinating {
+        return container.resolve(AutoCaptureCoordinating.self)
     }
 
     /// Check auto capture configuration and initialize engines if enabled.
@@ -444,8 +450,20 @@ extension Userpilot {
         let interactionEnabled = config.enableInteractionAutoCapture
 
         if screenAutocaptureEnabled || interactionEnabled {
-            _ = autoCaptureEngine
+            _ = autoCaptureCoordinator
         }
+    }
+
+    /// Auto capture screen events from wrappers
+    @objc
+    public func trackExternalAutoCaptureScreen(_ title: String) {
+        autoCaptureCoordinator.trackExternalAutoCaptureScreen(title)
+    }
+
+    /// Auto capture interactions events from wrappers
+    @objc
+    public func trackExternalAutoCaptureEvent(eventName: String, properties: Payload) {
+        autoCaptureCoordinator.trackExternalAutoCaptureEvent(eventName, properties)
     }
 }
 
