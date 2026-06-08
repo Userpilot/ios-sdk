@@ -439,7 +439,7 @@ extension Userpilot {
 extension Userpilot {
 
     /// Internal access to the automatic capture engine (screen + interaction hooks).
-    internal var autoCaptureEngine: AutoCaptureCoordinating {
+    internal var autoCaptureCoordinator: AutoCaptureCoordinating {
         return container.resolve(AutoCaptureCoordinating.self)
     }
 
@@ -450,8 +450,20 @@ extension Userpilot {
         let interactionEnabled = config.enableInteractionAutoCapture
 
         if screenAutocaptureEnabled || interactionEnabled {
-            _ = autoCaptureEngine
+            _ = autoCaptureCoordinator
         }
+    }
+
+    /// Auto capture screen events from wrappers
+    @objc
+    public func trackExternalAutoCaptureScreen(_ title: String) {
+        autoCaptureCoordinator.trackExternalAutoCaptureScreen(title)
+    }
+
+    /// Auto capture interactions events from wrappers
+    @objc
+    public func trackExternalAutoCaptureEvent(eventName: String, properties: Payload) {
+        autoCaptureCoordinator.trackExternalAutoCaptureEvent(eventName, properties)
     }
 }
 

@@ -62,7 +62,7 @@ internal extension UIControl {
         }
 
         // Send immediately for discrete controls
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     // Builds an interaction payload based on the control type
@@ -118,7 +118,11 @@ internal extension UIControl {
                 interactionType: .stepperChanged,
                 elementType: elementType
             )
-            if config.enableInteractionValueCapture {
+            // SwiftUI's `Stepper` keeps its value in SwiftUI state and uses the backing `UIStepper`
+            // only as an input proxy, so its `.value` stays at the default (0) and never reflects the
+            // bound value. Drop `selected_value` for SwiftUI rather than emit a misleading 0. In UIKit
+            // `UIStepper.value` is authoritative, so it's still captured there.
+            if config.enableInteractionValueCapture, config.appFramework != .SwiftUI {
                 payload.sourceProperties[AutoCaptureConstants.selectedValue] = stepper.value
             }
 
@@ -153,8 +157,16 @@ internal extension UIControl {
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.hierarchy = path
+        // SwiftUI sibling sliders otherwise resolve to identical hierarchy strings; override the leaf
+        // index with a stable on-screen ordinal so they become distinct (same fix as text inputs).
+        // Only when not capturing through an ignore-inner-hierarchy ancestor (effectiveView === self),
+        // and only for SwiftUI — UIKit sibling indices already differ. `siblingOrdinal` returns nil for
+        // controls other than slider/text inputs, so buttons/switches/steppers/etc. are unaffected.
+        let effectiveView = userpilotEffectiveViewForCapture()
+        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
+            ? UIKitViewResolver.siblingOrdinal(for: self)
+            : nil
+        payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText

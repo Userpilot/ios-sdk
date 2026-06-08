@@ -21,7 +21,7 @@ public extension View {
     /// Marks a SwiftUI View to be tracked as a screen event when it appears
     /// - Parameter screenName: The name of the screen (defaults to view type)
     /// - Returns: A modified view that will be tracked as a screen
-    func trackScreen(_ screenName: String? = nil) -> some View {
+    func userpilotScreen(_ screenName: String? = nil) -> some View {
         let screenEventName = screenName ?? "\(type(of: self))"
         return modifier(UserpilotSwiftUIViewModifier(screenEventName: screenEventName))
     }

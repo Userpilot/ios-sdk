@@ -203,7 +203,7 @@ extension UIWindow {
             }
         }
 
-        Userpilot.shared.autoCaptureEngine.handleClickTracked(eventProperties)
+        Userpilot.shared.autoCaptureCoordinator.handleClickTracked(eventProperties)
     }
 
 }
