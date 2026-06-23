@@ -98,13 +98,20 @@ internal class SurveyViewModel {
     }
 
     /// Trigger thank you module
-    func showThankYouMessage() {
-        guard let surveyContent, let surveyTheme else { return }
+    @discardableResult
+    func showThankYouMessage() -> Bool {
+        guard let surveyContent, let surveyTheme else { return false }
         if surveyContent.modules.last?.type == .completed {
             experiencesPublisher.showThankYouMessage(surveyContent, surveyTheme, submissionId)
-        } else {
-            onSurveyCompleted()
+            return true
         }
+        onSurveyCompleted()
+        return false
+    }
+
+    /// Notify the publisher after the survey view has finished dismissing.
+    func onExperienceDismissalCompleted() {
+        experiencesPublisher.experienceDidFinishDismissing()
     }
 
     /// Triggered the deep link from thank you message.

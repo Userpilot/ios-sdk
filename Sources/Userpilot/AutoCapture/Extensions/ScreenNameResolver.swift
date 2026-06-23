@@ -32,7 +32,10 @@ internal final class ScreenNameResolver {
      Fallback: displayName(viewController)
      */
     static func resolvedName(for viewController: UIViewController) -> String {
-        let config = Userpilot.isInitialized ? Userpilot.shared.config : nil
+        // Resolve via the OWNING Userpilot instance so e.g. an embedded SDK that
+        // disabled `enableScreenTitleCapture` is honoured for its own VCs even when
+        // the host app's instance has it enabled.
+        let config = InstanceResolver.shared.target(forViewController: viewController)?.config
         let titleCaptureEnabled = config?.enableScreenTitleCapture ?? true
 
         if let name = viewController.userpilotSwiftUIScreenName, !name.isEmpty { return name }
@@ -205,8 +208,10 @@ extension UIViewController {
     }
 
     func resolveNavigationTitle() -> String? {
-        guard let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-            config.enableScreenTitleCapture
+        // Use the owning instance's config so navigation titles are gated by the
+        // tenant whose VC this is.
+        guard let config = InstanceResolver.shared.target(forViewController: self)?.config,
+              config.enableScreenTitleCapture
         else { return nil }
         return userpilotScreenTitle
     }

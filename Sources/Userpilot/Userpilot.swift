@@ -23,32 +23,51 @@ public class Userpilot: NSObject {
 
     // MARK: - Shared Instance
 
-    /// Backing storage for the shared instance.
-    private static var _shared: Userpilot?
-
-    /// Returns the shared `Userpilot` instance that was created during initialization.
+    /// Returns the default `Userpilot` instance — the one that opted in via
+    /// `Config.defaultInstance(true)` — or `nil` when no instance currently holds
+    /// the default role.
     ///
-    /// - Important: You must initialize `Userpilot(config:)` before accessing this property.
-    ///   Accessing `shared` before initialization will trigger a fatal error.
-    @objc
-    public static var shared: Userpilot {
-        guard let instance = _shared else {
-            fatalError("Userpilot SDK has not been initialized. Call Userpilot(config:) first.")
-        }
-        return instance
+    /// In single-instance integrations (the common case) this is the only
+    /// instance the host app created via `Userpilot(config:)`; `isDefault`
+    /// defaults to `true`, so no extra configuration is needed. In multi-instance
+    /// integrations (e.g. an app that uses Userpilot directly while also depending
+    /// on a vendor SDK that embeds Userpilot) this returns whichever instance
+    /// claimed the default role — normally the host, with the vendor opting out
+    /// via `defaultInstance(false)`. Selection is claim-based, so it is independent
+    /// of init order.
+    ///
+    /// SDK-internal call sites use this as the fallback for unattributed
+    /// autocapture and screen-tracking work.
+    internal static var shared: Userpilot? {
+        return Registry.shared.default
     }
 
-    /// Returns `true` if the SDK has been initialized and the shared instance is available.
-    @objc
-    public static var isInitialized: Bool {
-        return _shared != nil
+    /// Returns `true` if the SDK has been initialized and the default instance is available.
+    internal static var isInitialized: Bool {
+        return Registry.shared.default != nil
+    }
+
+    /// Look up a registered `Userpilot` instance by its configured token.
+    ///
+    /// Returns `nil` when no instance has been created with that token, or when the only
+    /// instance for that token has been deallocated.
+    ///
+    /// Useful for code paths that need to reach a specific tenant from outside the
+    /// callsite that created it (e.g. callbacks from a vendor SDK back into Userpilot).
+    internal static func instance(forToken token: String) -> Userpilot? {
+        return Registry.shared.instance(forToken: token)
     }
 
     // MARK: - Properties
 
     /// A dependency injection container that stores and provides necessary services like analytics,
     /// storage, and networking.
-    let container = DIContainer()
+    ///
+    /// `var` rather than `let` so the idempotent initializer can adopt an already-registered
+    /// instance's container when `Userpilot(config:)` is called twice with the same token —
+    /// see the explanatory comment in `init(config:)`. External callers never see this
+    /// property; it remains module-internal.
+    var container = DIContainer()
 
     /// Configuration object that holds initialization parameters for the SDK.
     let config: Config
@@ -77,6 +96,20 @@ public class Userpilot: NSObject {
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
+    /// Lazy-instantiated overlay window used to present experiences for this instance.
+    ///
+    /// Each `Userpilot` instance owns one. The window is created on first
+    /// access (i.e. only when this instance actually presents an experience),
+    /// uses passthrough hit-testing so non-experience touches fall through, and
+    /// sits at a deterministic `UIWindow.Level` derived from the instance's
+    /// registration order. See `ExperienceOverlayWindow` for the full rationale.
+    ///
+    /// Marked `internal` so `ExperiencesPublisher` can route presentations
+    /// through it; never exposed to host apps directly.
+    internal lazy var experienceOverlayWindow: ExperienceOverlayWindow = {
+        ExperienceOverlayWindow(owningInstance: self)
+    }()
+
     // MARK: - Delegates
 
     /// The delegate object that handles application screen navigation during experience presentation.
@@ -92,10 +125,16 @@ public class Userpilot: NSObject {
 
     /**
      Initializes the `Userpilot` SDK with the provided configuration.
-    
-     This method sets up the required services such as analytics, storage, and networking, and prepares
-     the SDK for tracking and rendering.
-    
+
+     Idempotent ("get-or-create"): if a `Userpilot` for `config.token` is already
+     registered, this initializer adopts that instance's services by pointing the
+     new wrapper at the existing dependency container. The supplied `config` is
+     discarded in that case — the first call wins. This prevents accidental
+     socket / observer churn from duplicate `Userpilot(config:)` calls.
+
+     On the fresh-init path it sets up analytics, storage, networking, push
+     auto-config, and autocapture as before.
+
      - Parameter config: A `Config` object that contains various initialization settings like logging,
      API keys, and anonymous user tracking settings.
      */
@@ -105,8 +144,43 @@ public class Userpilot: NSObject {
         self.config = config
         super.init()
 
-        // Store as the shared instance for global access (e.g., from swizzled methods)
-        Userpilot._shared = self
+        // One-shot legacy storage migration. Idempotent, runs at most once per
+        // (token, install). The first-token-wins claim inside `StorageMigrator`
+        // ensures only one tenant ever absorbs the legacy v1 suite.
+        StorageMigrator.runIfNeeded(forToken: config.token)
+
+        // Idempotent: if a Userpilot for this token already exists, adopt its
+        // container and return. The new wrapper still resolves the same
+        // services (analytics, socket, storage, etc.) as the original — the
+        // existing instance and this returned facade publish through the same
+        // underlying machinery. Callers that hold the original reference and
+        // the one returned here both observe the same state.
+        if let existing = Registry.shared.instance(forToken: config.token) {
+            self.container = existing.container
+            config.logger.error(
+                // swiftlint:disable:next line_length
+                "⚠️ Userpilot already initialized for token %{public}@; returning the existing instance. The supplied config was discarded.",
+                config.token
+            )
+            return
+        }
+
+        // Default-instance resolution: if `Config.defaultInstance(true)` was set
+        // (the default), this instance claims the default role (first claim wins).
+        // When the role is already held, the claim is rejected. See
+        // `Registry.register(_:)`.
+        // The registry is a pure data structure, so when it rejects a second
+        // `isDefault` claim it returns the existing claimant's token and the
+        // warning is emitted here at the call site.
+        if let existingDefaultToken = Registry.shared.register(self) {
+            config.logger.error(
+                // swiftlint:disable:next line_length
+                "⚠️ isDefault is already claimed by token %{public}@; ignoring isDefault=true on token %{public}@. Only one Userpilot instance per process can be the default; unattributed events will continue to route to %{public}@.",
+                existingDefaultToken,
+                config.token,
+                existingDefaultToken
+            )
+        }
 
         // Set up the dependency container and register required services
         initializeContainer()
@@ -117,8 +191,12 @@ public class Userpilot: NSObject {
         // Start Auto capture
         checkAutoCapture()
 
-        // Log the initialization of the SDK with the current version
+        // Log the initialization of the SDK with the current version.
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
+    }
+
+    deinit {
+        Registry.shared.unregister(self)
     }
 
     // MARK: - Setup Methods
@@ -133,6 +211,11 @@ public class Userpilot: NSObject {
     internal func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
+        // Inject the process-wide registry as an abstraction so consumers
+        // (e.g. `AutoCaptureCoordinater`) resolve it instead of reaching for
+        // `Registry.shared` directly. The value is the shared singleton, so
+        // every instance's container hands back the same registry.
+        container.register(InstanceRegistering.self, value: Registry.shared)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
@@ -443,6 +526,17 @@ extension Userpilot {
         return container.resolve(AutoCaptureCoordinating.self)
     }
 
+    /// The analytics publisher backing this instance, resolved from its container.
+    ///
+    /// Used by a non-default instance's `AutoCaptureCoordinater` to forward an
+    /// autocapture event into this (default) instance's publisher when the default
+    /// opted in via `Config.allowReceiveEventsFromExternalSource`. Publishing
+    /// straight to the publisher (never back through routing) means it cannot
+    /// re-forward.
+    internal func resolveAnalyticsPublisher() -> AnalyticsPublishing {
+        container.resolve(AnalyticsPublishing.self)
+    }
+
     /// Check auto capture configuration and initialize engines if enabled.
     public func checkAutoCapture() {
         let config = container.resolve(Userpilot.Config.self)
@@ -467,20 +561,23 @@ extension Userpilot {
     }
 }
 
-// MARK: - Autocapture Stop / Resume (thin facade; implementation in AutocaptureStopResume)
+// MARK: - Autocapture Stop / Resume (per instance)
 
 extension Userpilot {
 
-    /// Stops automatic screen and interaction capture. No events are recorded until `resumeAutoCapture()` is called.
+    /// Stops automatic screen and interaction capture for **this** instance. No events are
+    /// recorded for it until `resumeAutoCapture()` is called. Other Userpilot instances in the
+    /// same process keep capturing, so a host app and an embedded vendor SDK can pause independently.
     @objc
-    public static func stopAutoCapture() {
-        AutocaptureViewConfiguration.stopAutoCapture()
+    public func stopAutoCapture() {
+        autoCaptureCoordinator.stopAutoCapture()
     }
 
-    /// Resumes automatic screen and interaction capture after a previous `stopAutoCapture()`.
+    /// Resumes automatic screen and interaction capture for **this** instance after a previous
+    /// `stopAutoCapture()`.
     @objc
-    public static func resumeAutoCapture() {
-        AutocaptureViewConfiguration.resumeAutoCapture()
+    public func resumeAutoCapture() {
+        autoCaptureCoordinator.resumeAutoCapture()
     }
 }
 

@@ -22,6 +22,10 @@ final class ConstantsTests: XCTestCase {
         XCTAssertEqual(GeneralConstants.PATH_NAME, "/mobile/v1/events/websocket")
         XCTAssertEqual(GeneralConstants.SESSION_DURATION, 1800, accuracy: 0.1)
         XCTAssertEqual(GeneralConstants.CONFIGURATION_DURATION, 1800, accuracy: 0.1)
-        XCTAssertEqual(GeneralConstants.USERPILOT_LOGGING_CATEOGRY, "general")
+    }
+
+    func testUserpilotLoggingConstants() {
+        XCTAssertEqual(UserpilotLogging.subsystem, "com.userpilot.sdk")
+        XCTAssertEqual(UserpilotLogging.general, "general")
     }
 }

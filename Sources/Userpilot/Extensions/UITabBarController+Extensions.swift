@@ -30,7 +30,7 @@ extension UITabBarController {
         trackTabSwitch(in: self)
     }
 
-    /// Tracks tab switch events by calling the engine directly
+    /// Tracks tab switch events by routing to the owning Userpilot instance.
     /// - Parameter tabBarController: The tab bar controller that changed tabs
     func trackTabSwitch(in tabBarController: UITabBarController) {
         guard Userpilot.isInitialized else { return }
@@ -40,15 +40,12 @@ extension UITabBarController {
         let tabTitle = selectedVC.tabBarItem?.title
             ?? "\(AutoCaptureConstants.defaultTabTitlePrefix)\(tabIndex + 1)"
 
-        // Class of the newly selected tab's content controller — used as the
-        // hierarchy leaf for the published `tab_selected` event.
-        let screenClass = String(describing: type(of: selectedVC))
-
-        // Call the engine directly via Userpilot.shared
-        Userpilot.shared.autoCaptureCoordinator.handleTabSelected(
+        // Resolve via the *selected* view controller, not the container, so the
+        // event attributes to the tenant whose screen the user just navigated to.
+        InstanceResolver.shared.handleTabSelected(
             name: tabTitle,
             index: tabIndex,
-            screenClass: screenClass
+            source: selectedVC
         )
     }
 }

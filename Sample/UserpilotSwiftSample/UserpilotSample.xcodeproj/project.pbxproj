@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		584EB5291B9C5A6C54DCE170 /* VendorContentHostViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6D55EECBB3DAC68AF4D9F8 /* VendorContentHostViewController.swift */; };
 		AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942A82CD25CD700924844 /* MainViewController.xib */; };
 		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
 		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
@@ -78,6 +79,7 @@
 		C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */; };
 		C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C12C5CFFFB0083928E /* Assets.xcassets */; };
 		C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */; };
+		E8AB5B49C178845A83F0A1DB /* VendorKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0B20FC36847B9ADD33A43E06 /* VendorKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -176,6 +178,7 @@
 		C5C897C12C5CFFFB0083928E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C5C897C42C5CFFFB0083928E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C5C897C62C5CFFFB0083928E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EA6D55EECBB3DAC68AF4D9F8 /* VendorContentHostViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VendorContentHostViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,12 +194,22 @@
 				AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */,
 				AB76616F2D1305AF0044BA57 /* Userpilot in Frameworks */,
 				ABFD95802D0E096500F8F757 /* Userpilot in Frameworks */,
+				E8AB5B49C178845A83F0A1DB /* VendorKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		23F9B1B37AB7E6FFD9C85001 /* VendorContent */ = {
+			isa = PBXGroup;
+			children = (
+				EA6D55EECBB3DAC68AF4D9F8 /* VendorContentHostViewController.swift */,
+			);
+			name = VendorContent;
+			path = VendorContent;
+			sourceTree = "<group>";
+		};
 		AB585F5F2CD79C0400E2A66D /* Properties */ = {
 			isa = PBXGroup;
 			children = (
@@ -266,6 +279,7 @@
 				AB6DBD402C68D2180009BB11 /* Main */,
 				AB6DBD362C68CD450009BB11 /* Core */,
 				AB6DBD2D2C68BF450009BB11 /* Identify */,
+				23F9B1B37AB7E6FFD9C85001 /* VendorContent */,
 			);
 			path = Featues;
 			sourceTree = "<group>";
@@ -593,6 +607,7 @@
 				AB76616E2D1305AF0044BA57 /* Userpilot */,
 				AB3D7E1F2D1413EA00FC4ECF /* Userpilot */,
 				AB2564902DB4F4AB00393126 /* Userpilot */,
+				0B20FC36847B9ADD33A43E06 /* VendorKit */,
 			);
 			productName = UserPilotSample;
 			productReference = C5C897B52C5CFFFA0083928E /* UserpilotSample.app */;
@@ -624,7 +639,8 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */,
+				AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "ios-sdk" */,
+				9EC166B8A41D94A973507D12 /* XCLocalSwiftPackageReference "VendorKit" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -735,6 +751,7 @@
 				ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */,
 				ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */,
 				AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */,
+				584EB5291B9C5A6C54DCE170 /* VendorContentHostViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1070,13 +1087,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */ = {
+		9EC166B8A41D94A973507D12 /* XCLocalSwiftPackageReference "VendorKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../../ios-sample-vendor/VendorKit";
+		};
+		AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "ios-sdk" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../../ios-sdk";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0B20FC36847B9ADD33A43E06 /* VendorKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9EC166B8A41D94A973507D12 /* XCLocalSwiftPackageReference "VendorKit" */;
+			productName = VendorKit;
+		};
 		AB2564902DB4F4AB00393126 /* Userpilot */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Userpilot;

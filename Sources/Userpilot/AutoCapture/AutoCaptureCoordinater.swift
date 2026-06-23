@@ -43,6 +43,16 @@ internal protocol AutoCaptureCoordinating: AnyObject {
 
     /// Auto capture interactions events from wrappers
     func trackExternalAutoCaptureEvent(_ eventName: String, _ properties: Payload)
+
+    /// `true` when capture is paused for this instance via `stopAutoCapture()`.
+    var isStopped: Bool { get }
+
+    /// Pauses automatic screen + interaction capture for THIS instance only;
+    /// other instances in the process keep capturing. Reversed by `resumeAutoCapture()`.
+    func stopAutoCapture()
+
+    /// Resumes automatic capture for THIS instance after `stopAutoCapture()`.
+    func resumeAutoCapture()
 }
 
 // Responsible for automatically capturing screen transitions and user interaction events
@@ -62,6 +72,10 @@ internal class AutoCaptureCoordinater {
     /// Tracks the current screen name/class and navigation history.
     private let screenNameTracker: ScreenNameTracking
 
+    /// Process-wide instance registry, injected so the external-source forwarding
+    /// path can resolve the default instance without touching `Registry.shared`.
+    private let registry: InstanceRegistering
+
     /// Protects pending SwiftUI screen state and SDK-content dismissal suppression.
     private let screenCaptureStateLock = NSLock()
 
@@ -80,6 +94,12 @@ internal class AutoCaptureCoordinater {
     /// Dismissing SDK content can re-fire the underlying app's viewWillAppear chain.
     private let sdkContentDismissalSuppressionInterval: TimeInterval = 0.8
 
+    /// Per-instance stop/resume gate. When `true`, this instance records no screen
+    /// or interaction events until `resumeAutoCapture()` is called; other instances
+    /// are unaffected. Guarded by `stopResumeLock`.
+    private let stopResumeLock = NSLock()
+    private var _isStopped = false
+
     // MARK: - Computed Helpers
 
     /// Reusable internal properties shared across all events.
@@ -89,7 +109,7 @@ internal class AutoCaptureCoordinater {
     /// Centralises the nil-check so call sites stay clean.
     private var currentScreenDictionary: [String: Any]? {
         guard screenNameTracker.getCurrentPayload() != nil else { return nil }
-        return screenNameTracker.buildScreenDictionaryForEvent(isSwiftUI: config.appFramework == .SwiftUI)
+        return screenNameTracker.buildScreenDictionaryForEvent()
     }
 
     // MARK: - Initialization
@@ -105,6 +125,7 @@ internal class AutoCaptureCoordinater {
         self.config = container.resolve(Userpilot.Config.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
+        self.registry = container.resolve(InstanceRegistering.self)
 
         // Screen swizzles are required for both features (interaction tracking
         // needs to know which screen an event occurred on).
@@ -150,14 +171,14 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
 
     /// Handles a resolved screen payload from the swizzled view-controller lifecycle.
     ///
-    /// This is the main gate for automatic screen capture. It drops events while global autocapture
-    /// is stopped, ignores the short SDK-content dismissal window, routes dialogs to dialog capture,
-    /// and coalesces SwiftUI hosting-controller appearances before publishing a screen event.
+    /// This is the main gate for automatic screen capture. It drops events while this instance's
+    /// autocapture is stopped, ignores the short SDK-content dismissal window, routes dialogs to
+    /// dialog capture, and coalesces SwiftUI hosting-controller appearances before publishing.
     ///
     /// - Parameter screen: The resolved screen payload for the appearing view controller.
     func trackScreen(_ screen: ScreenTrackingPayload) {
         tryCatch {
-            guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
+            guard !isStopped else { return }
             guard !shouldSuppressScreenAutoCapture else { return }
 
             if screen.isDialogPresentation {
@@ -220,7 +241,7 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
             interactionEventName: interactionType.toInteractionEventType().rawValue
         )
 
-        analyticsPublisher.publish(event)
+        publishWithForwarding(event)
     }
 
     // MARK: - Interaction Tracking
@@ -234,6 +255,27 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
         guard shouldPublishWindowLevelTouch(properties) else { return }
         guard let payload = interactionPayload(fromWindowClick: properties) else { return }
         publishInteractionPayload(payload)
+    }
+
+    // MARK: - Stop / Resume (per instance)
+
+    /// `true` while this instance's capture is paused. Thread-safe.
+    var isStopped: Bool {
+        stopResumeLock.lock()
+        defer { stopResumeLock.unlock() }
+        return _isStopped
+    }
+
+    func stopAutoCapture() {
+        stopResumeLock.lock()
+        _isStopped = true
+        stopResumeLock.unlock()
+    }
+
+    func resumeAutoCapture() {
+        stopResumeLock.lock()
+        _isStopped = false
+        stopResumeLock.unlock()
     }
 }
 
@@ -262,9 +304,10 @@ private extension AutoCaptureCoordinater {
         return false
     }
 
-    /// `true` when interaction tracking is both globally enabled and not paused at runtime.
+    /// `true` when interaction tracking is enabled for this instance and not paused
+    /// at runtime via `stopAutoCapture()`.
     var isInteractionTrackingActive: Bool {
-        !AutocaptureViewConfiguration.isAutoCaptureStopped && config.enableInteractionAutoCapture
+        !isStopped && config.enableInteractionAutoCapture
     }
 
     /// Returns `true` when a screen payload should be delayed and coalesced for SwiftUI.
@@ -310,25 +353,23 @@ private extension AutoCaptureCoordinater {
     /// clears pending state. The actual publish happens after unlocking to avoid holding state lock
     /// while analytics callbacks run.
     func publishPendingSwiftUIScreenIfAllowed() {
-        screenCaptureStateLock.lock()
+        let screenToPublish: ScreenTrackingPayload? = {
+            screenCaptureStateLock.lock()
+            defer { screenCaptureStateLock.unlock() }
 
-        if let suppressScreenCaptureUntil {
-            if Date() < suppressScreenCaptureUntil {
-                screenCaptureStateLock.unlock()
-                return
+            if let suppressScreenCaptureUntil {
+                if Date() < suppressScreenCaptureUntil { return nil }
+                self.suppressScreenCaptureUntil = nil
             }
-            self.suppressScreenCaptureUntil = nil
-        }
 
-        guard let screen = pendingSwiftUIScreenPayload else {
-            screenCaptureStateLock.unlock()
-            return
-        }
+            guard let screen = pendingSwiftUIScreenPayload else { return nil }
 
-        pendingSwiftUIScreenPayload = nil
-        pendingSwiftUIScreenWorkItem = nil
-        screenCaptureStateLock.unlock()
+            pendingSwiftUIScreenPayload = nil
+            pendingSwiftUIScreenWorkItem = nil
+            return screen
+        }()
 
+        guard let screen = screenToPublish else { return }
         publishScreen(screen)
     }
 
@@ -359,7 +400,7 @@ private extension AutoCaptureCoordinater {
             properties: screenNameTracker.buildScreenDictionary()
         )
 
-        analyticsPublisher.publish(event)
+        publishWithForwarding(event)
     }
 
     /// Returns whether the SwiftUI screen name/title matches the previous screen context.
@@ -566,7 +607,25 @@ private extension AutoCaptureCoordinater {
             properties: properties,
             interactionEventName: interaction.interactionType.toInteractionEventType().rawValue
         )
+        publishWithForwarding(event)
+    }
+
+    /// Publishes [event] to this instance's own publisher, then — when this is a
+    /// non-default instance and the resolved default (client app) instance opted in
+    /// via `Config.allowReceiveEventsFromExternalSource` — forwards the same event to
+    /// the default instance so the host app becomes aware of vendor-owned autocapture
+    /// events.
+    func publishWithForwarding(_ event: Event) {
         analyticsPublisher.publish(event)
+        forwardToDefaultIfNeeded(event)
+    }
+
+    private func forwardToDefaultIfNeeded(_ event: Event) {
+        guard let defaultInstance = registry.default else { return }
+        // This instance is the default → the event is already its own; do not self-forward.
+        guard defaultInstance.config.token != config.token else { return }
+        guard defaultInstance.config.allowReceiveEventsFromExternalSource else { return }
+        defaultInstance.resolveAnalyticsPublisher().publish(event)
     }
 
     /// `UIAlertController` is not emitted as a screen view; send
@@ -581,11 +640,11 @@ private extension AutoCaptureCoordinater {
         payload.dialogMessage = screen.alertMessage
 
         // Build a synthetic hierarchy leaf for the dialog so the published event carries
-        // `hierarchy = "UIAlertController:attr__index=\"0\";<UnderlyingScreen>"` — same shape
-        // as Android's `AddPropertyDialog:attr__index="0";IdentifyActivity`. The underlying
-        // screen class is appended downstream by `appendScreenNameSegmentToHierarchy` (the
-        // screen tracker still holds the screen the dialog was presented over because dialog
-        // payloads short-circuit before `updateScreen(...)` is called).
+        // `hierarchy = "UIAlertController:attr__index=\"0\";<UnderlyingScreen>"`.
+        // The underlying screen class is appended downstream by
+        // `appendScreenNameSegmentToHierarchy` (the screen tracker still holds the screen
+        // the dialog was presented over because dialog payloads short-circuit before
+        // `updateScreen(...)` is called).
         let dialogClass = screen.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
         let leaf = dialogClass.isEmpty
             ? AutoCaptureConstants.elementTypeUIAlertController

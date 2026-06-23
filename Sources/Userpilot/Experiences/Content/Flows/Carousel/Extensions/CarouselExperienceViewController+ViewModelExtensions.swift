@@ -23,7 +23,9 @@ internal extension CarouselExperienceViewController {
         // Bind data from the view model and update the view accordingly.
         experienceViewModel.bindData = { [weak self] canBindData in
             if !canBindData {
-                self?.dismiss(animated: false, completion: nil)
+                self?.dismiss(animated: false) { [weak self] in
+                    self?.experienceViewModel.onExperienceDismissalCompleted()
+                }
                 return
             }
             // Set up the general style and reload data when view model data changes.

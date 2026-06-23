@@ -12,6 +12,21 @@
 
 import UIKit
 
+// MARK: - Public
+
+@objc
+public extension UIWindow {
+    /// `true` when this window is an internal Userpilot SDK overlay.
+    ///
+    /// Useful from screen-capture / analytics integrations that need to skip
+    /// SDK-owned UI when walking the application's window list. Also used
+    /// internally by `ExperienceOverlayWindow`'s scene resolver to avoid
+    /// picking its own scene as the fallback host.
+    var isUserpilotWindow: Bool {
+        return self is ExperienceOverlayWindow
+    }
+}
+
 // MARK: - Internal
 
 /// Extension providing automatic click tracking for UIWindow
@@ -37,7 +52,9 @@ extension UIWindow {
     @objc func swizzled_sendEvent(_ event: UIEvent) {
         self.swizzled_sendEvent(event)  // calls original sendEvent
 
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
+        // No global stop check here: this is touch bookkeeping shared by all
+        // instances. Per-instance pausing is enforced downstream when the captured
+        // touch is published through the owning instance's coordinator.
         guard Userpilot.isInitialized else { return }
 
         guard let touches = event.allTouches else { return }
@@ -112,7 +129,12 @@ extension UIWindow {
     ///   - point: Touch location in window coordinates
     ///   - event: The UI event
     private func handleTouchOnView(_ view: UIView, window: UIWindow, point: CGPoint, event: UIEvent) {
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance for this view so its config drives
+        // privacy and capture decisions (text/value/accessibility flags). In a
+        // single-instance integration this is the default instance, identical to
+        // the previous global fallback config behaviour.
+        guard let target = InstanceResolver.shared.target(forSource: view) else { return }
+        let config = target.config
         guard config.enableInteractionAutoCapture else { return }
 
         // 1. Skip UIControl subclasses (handled by UIControl.sendAction swizzling)
@@ -203,7 +225,7 @@ extension UIWindow {
             }
         }
 
-        Userpilot.shared.autoCaptureCoordinator.handleClickTracked(eventProperties)
+        InstanceResolver.shared.handleClickTracked(eventProperties, source: view)
     }
 
 }

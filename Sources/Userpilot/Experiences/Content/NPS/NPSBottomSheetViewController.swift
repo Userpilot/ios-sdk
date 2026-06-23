@@ -79,7 +79,9 @@ extension NPSBottomSheetViewController {
                 let npsContent = self.npsViewModel.npsContent,
                 let npsTheme = self.npsViewModel.npsTheme
             else {
-                self?.dismissBottomSheet()
+                self?.dismissBottomSheet {
+                    self?.npsViewModel.onExperienceDismissalCompleted()
+                }
                 return
             }
             self.setupGeneralStyle()
@@ -105,8 +107,17 @@ extension NPSBottomSheetViewController {
 // MARK: - UPExperience
 
 extension NPSBottomSheetViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
-        dismissBottomSheet()
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    ) {
+        dismissBottomSheet { [weak self] in
+            if let completion {
+                completion()
+            } else {
+                self?.npsViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 }
 
@@ -116,7 +127,9 @@ extension NPSBottomSheetViewController: NPSContainerViewDelegate {
 
     func onNPSDismissed() {
         npsViewModel.onNPSDismissed()
-        dismissBottomSheet()
+        dismissBottomSheet { [weak self] in
+            self?.npsViewModel.onExperienceDismissalCompleted()
+        }
     }
 
     func onNPSSubmitted(
@@ -129,7 +142,9 @@ extension NPSBottomSheetViewController: NPSContainerViewDelegate {
 
     func onEndNPS(completedData: CompletedData?) {
         npsViewModel.endNPS(completedData)
-        dismissBottomSheet()
+        dismissBottomSheet { [weak self] in
+            self?.npsViewModel.onExperienceDismissalCompleted()
+        }
     }
 
 }

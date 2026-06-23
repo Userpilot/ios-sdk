@@ -28,6 +28,10 @@ class MockUserpilot: Userpilot {
     override func initializeContainer() {
         container.owner = self
         container.register(Userpilot.Config.self, value: config)
+        // The real `AutoCaptureCoordinater` resolves `InstanceRegistering`; register
+        // the shared registry (which these MockUserpilot instances register into on
+        // init) so forwarding tests see the same default-resolution behavior.
+        container.register(InstanceRegistering.self, value: Userpilot.Registry.shared)
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
         container.register(SessionMonitoring.self, value: sessionMonitor)
@@ -38,6 +42,12 @@ class MockUserpilot: Userpilot {
         container.register(SDKSettingsDetectoring.self, value: sdkSettingsDetectorer)
         container.register(ThemeHandling.self, value: themeHandler)
         container.register(ImageLoading.self, value: imageLoader)
+        // Real screen tracker + autocapture coordinator (lazy: only built when a test
+        // resolves `autoCaptureCoordinator`). `ScreenNameTracker.init` ignores its
+        // container, and `AutoCaptureCoordinater.init` resolves the mocks registered
+        // above, so this is safe for tests that never touch autocapture.
+        container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
+        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
     }
 
     var onIdentify: ((String, Payload, Payload) -> Void)?
@@ -157,6 +167,11 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     var onEndExperience: ((Bool) -> Void)?
     func endExperience(manualClose: Bool) {
         onEndExperience?(manualClose)
+    }
+
+    var onExperienceDidFinishDismissing: (() -> Void)?
+    func experienceDidFinishDismissing() {
+        onExperienceDidFinishDismissing?()
     }
 
     var onCanRequestScreenEvent: (() -> Bool)?
@@ -444,8 +459,12 @@ class MockSDKEvent: SDKEvent {
 class MockUPExperience: UIViewController, UPExperience {
     var onTriggerClose: ((Bool) -> Void)?
 
-    func triggerCloseExpereince(manualClose: Bool) {
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    ) {
         onTriggerClose?(manualClose)
+        completion?()
     }
 }
 

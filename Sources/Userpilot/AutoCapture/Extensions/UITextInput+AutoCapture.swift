@@ -21,8 +21,11 @@ internal extension UITextField {
     /// Called on every `textDidChange` — debounced interaction capture for the field.
     func cacheTextFieldChanged() {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance from the field's responder chain so
+        // typed-text events follow that tenant's privacy and capture flags.
+        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
         guard !shouldIgnoreInteractions() else { return }
 
@@ -67,8 +70,10 @@ internal extension UITextView {
     /// Called on every `textDidChange` — debounced interaction capture for the text view.
     func cacheTextViewChanged() {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance from the text view's responder chain.
+        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
         guard !shouldIgnoreInteractions() else { return }
 

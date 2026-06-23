@@ -223,8 +223,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter socketState: The state to set for the socket after logout
      * - Parameter shouldClearCachedIdentifyEvent: If true, indicates this logout comes from app level,
      *        meaning the user is logged out and there is no new login. This will clear the
-     *        FCM token from backend. On user switch, the backend handles clearing the
-     *        FCM token from the old user.
+     *        push token from the backend. On user switch, the backend handles clearing the
+     *        push token from the old user.
      */
     func logout(
         socketState: SocketManager.SocketState,
@@ -464,8 +464,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     * Stable key for event throttling. Mirrors Android `trackEventThrottleKey`:
-     * non-AutoCapture events use `eventTitle`, or `eventName` when
+     * Stable key for event throttling.
+     * Non-AutoCapture events use `eventTitle`, or `eventName` when
      * the title is empty; autocapture uses screen + interaction/tab context.
      */
     private func trackEventThrottleKey(_ event: Event) -> String {
@@ -488,7 +488,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             let interaction = trackEventThrottleString(from: event.interactionEventName)
             return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)"
         } else {
-            let tabIndex = properties[AutoCaptureConstants.tabIndex]
+            let tabIndex = properties[AutoCaptureConstants.tabIndex] ?? 0
             return "\(screenName)|\(trackTitle)|\(tabName)|\(tabIndex)"
         }
     }
@@ -595,6 +595,7 @@ extension AnalyticsPublisher {
      * - Parameter fakeReloadScreenEvent: When from identify (update user properties), request
      *        identify with fake reload true, otherwise false.
      */
+    // swiftlint:disable:next function_body_length
     private func flushPriorityEvents(
         isRequestIdentify: Bool = true,
         canRequestScreenEvent: Bool = true,
@@ -629,7 +630,12 @@ extension AnalyticsPublisher {
                 let screenEvent = screenViewEntity.event
                 if let screenTitle = screenEvent.screenTitle {
                     if !config.enableScreenAutoCapture && config.enableInteractionAutoCapture {
-                        screenNameTracker.updateScreen(with: ScreenTrackingPayload(screenTitle: screenTitle))
+                        screenNameTracker.updateScreen(
+                            with: ScreenTrackingPayload(
+                                screenTitle: screenTitle,
+                                appFramework: config.appFramework
+                            )
+                        )
                     }
                     experiencesPublisher?.updateSceen(screenTitle)
                 }
@@ -929,7 +935,10 @@ extension AnalyticsPublisher {
         guard config.enableScreenAutoCapture,
               config.appFramework == .SwiftUI
         else { return }
-        container?.resolve(AutoCaptureCoordinating.self).suppressScreenAutoCaptureAfterSDKContent()
+        // Dismissing this instance's SDK content can re-fire `viewWillAppear` on
+        // every other registered instance's underlying UI as well. Route through
+        // the resolver so all instances briefly suppress autocapture together.
+        InstanceResolver.shared.suppressScreenAutoCaptureAfterSDKContent()
     }
 
     /**

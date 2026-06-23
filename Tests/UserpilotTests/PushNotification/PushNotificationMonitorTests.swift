@@ -152,7 +152,7 @@ class PushNotificationMonitorTests: XCTestCase {
         let completionExpectation = expectation(description: "completion called")
         let completion = { completionExpectation.fulfill() }
 
-        userpilot.storage.userId = "default-1111"
+        userpilot.storage.userId = "default-00000"
 
         // Act
         let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: completion)
@@ -169,7 +169,7 @@ class PushNotificationMonitorTests: XCTestCase {
         let completionExpectation = expectation(description: "completion called")
         let completion = { completionExpectation.fulfill() }
 
-        userpilot.storage.userId = "default-1111"
+        userpilot.storage.userId = "default-00000"
         userpilot.analyticsPublisher.canRequestEvent = false
 
         // Act
@@ -178,6 +178,19 @@ class PushNotificationMonitorTests: XCTestCase {
         // Assert
         waitForExpectations(timeout: 1.0)
         XCTAssertTrue(result)
+    }
+
+    func testDidReceiveNotification_returnsFalse_whenAppTokenMismatch() throws {
+        // Arrange
+        let userInfo = [AnyHashable: Any].userpilotPushNotification(appToken: "NX-11111")
+        let response = try XCTUnwrap(UNNotificationResponse.mock(userInfo: userInfo))
+        userpilot.storage.userId = "default-00000"
+
+        // Act
+        let result = pushNotificationMonitor.didReceiveNotification(response: response, completionHandler: {})
+
+        // Assert
+        XCTAssertFalse(result)
     }
 
     func testAttemptDeferredNotificationResponse_handlesDeferred_whenUserMatches() throws {
@@ -247,7 +260,7 @@ class PushNotificationMonitorTests: XCTestCase {
         let didHandleDeferred = pushNotificationMonitor.attemptDeferredNotificationResponse()
 
         // Assert
-        XCTAssertTrue(result)
+        XCTAssertFalse(result)
         XCTAssertFalse(didHandleDeferred)
     }
 }
@@ -264,16 +277,25 @@ extension Dictionary where Key == AnyHashable, Value == Any {
         ]
     }
 
-    static var userpilotPushNotification: Self {
+    static func userpilotPushNotification(
+        appToken: String = "NX-00000",
+        userId: String = "default-00000",
+        notificationId: Any = "5"
+    ) -> Self {
         [
             "data": [
                 "notification_type": "userpilot-notification",
-                "notification_id": "5",
-                "user_id": "default-00000",
+                "app_token": appToken,
+                "notification_id": notificationId,
+                "user_id": userId,
                 "deep_link": "app://some-link"
 
             ]
         ]
+    }
+
+    static var userpilotPushNotification: Self {
+        userpilotPushNotification()
     }
 }
 

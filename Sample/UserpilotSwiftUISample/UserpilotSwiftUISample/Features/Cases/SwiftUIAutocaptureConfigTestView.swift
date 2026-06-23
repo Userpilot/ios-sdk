@@ -30,7 +30,7 @@ struct SwiftUIAutocaptureConfigTestView: View {
                     symbol: "waveform.path.ecg",
                     tint: .teal,
                     api: ".userpilotScreen(_:)",
-                    detail: "Posts a screen event when the modified view appears (calls Userpilot.shared.screen). Use for explicit screen transitions outside automatic naming."
+                    detail: "Posts a screen event when the modified view appears. Use for explicit screen transitions outside automatic naming."
                 )
 
                 modifierCard(

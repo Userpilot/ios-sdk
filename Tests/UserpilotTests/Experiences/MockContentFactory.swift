@@ -37,7 +37,6 @@ internal enum MockContentFactory {
                             "colors": [:]
                         ],
                         "button_action": [
-                            "android_deep_link": NSNull(),
                             "button_action": "next",
                             "ios_deep_link": NSNull()
                         ],

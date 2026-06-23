@@ -35,14 +35,14 @@ class UserpilotManager {
     // MARK: - Userpilot SDK APIs
     
     func initialize() {
-        guard
-            let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
-        else { return }
+        guard let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken) else { return }
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(enabled: true)
             .enableUseInAppBrowser()
             .enableScreenAutoCapture()
             .enableInteractionAutoCapture()
+            .enableInteractionTextCapture()
+            .enableInteractionAccessibilityLabelCapture()
             .enableInteractionValueCapture()
         )
         userpilot?.navigationDelegate = self
@@ -79,6 +79,16 @@ class UserpilotManager {
     /// Track user events
     func track(eventName: String, properties: [String: Any]? = nil) {
         userpilot?.track(eventName: eventName, properties: properties)
+    }
+
+    /// Pauses automatic capture for this instance until `resumeAutoCapture()` is called.
+    func stopAutoCapture() {
+        userpilot?.stopAutoCapture()
+    }
+
+    /// Resumes automatic capture for this instance after `stopAutoCapture()`.
+    func resumeAutoCapture() {
+        userpilot?.resumeAutoCapture()
     }
     
     func triggerExperience(experienceId: String) {

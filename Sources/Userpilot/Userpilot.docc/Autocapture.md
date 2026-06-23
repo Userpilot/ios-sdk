@@ -213,19 +213,19 @@ pinPadView.userpilotIgnoreInnerHierarchy = true
 
 Unlike `userpilotIgnoreInteractions` (which records nothing), `userpilotIgnoreInnerHierarchy` still sends a tap event — it just omits inner details.
 
-### Stopping and resuming all autocapture
+### Stopping and resuming autocapture
 
-To halt all screen and interaction capture temporarily (e.g. during onboarding flows or sensitive transactions):
+To halt screen and interaction capture temporarily (e.g. during onboarding flows or sensitive transactions), call the instance methods:
 
 ```swift
-Userpilot.stopAutoCapture()
+userpilot.stopAutoCapture()
 
 // ... sensitive flow ...
 
-Userpilot.resumeAutoCapture()
+userpilot.resumeAutoCapture()
 ```
 
-While stopped, **no** screen or interaction events are recorded regardless of any other configuration. This is a global toggle — it overrides per-view settings.
+While stopped, **no** screen or interaction events are recorded for that instance, regardless of any other configuration — it overrides per-view settings. Stop/resume is **per instance**: pausing one `Userpilot` instance does not affect other instances in the same process.
 
 ---
 
@@ -441,7 +441,7 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 |------|----------|
 | Turn on screen + interaction capture | ``enableScreenAutoCapture(_:)``, ``enableInteractionAutoCapture(_:)`` |
 | No text/labels in events (global) | ``enableInteractionTextCapture(false)``, ``enableInteractionAccessibilityLabelCapture(false)`` |
-| Pause all capture temporarily | `Userpilot.stopAutoCapture()` / `Userpilot.resumeAutoCapture()` |
+| Pause capture for an instance temporarily | `userpilot.stopAutoCapture()` / `userpilot.resumeAutoCapture()` |
 
 ### UIKit
 

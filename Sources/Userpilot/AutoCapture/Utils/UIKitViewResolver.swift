@@ -87,12 +87,11 @@ internal enum UIKitViewResolver {
             var desc = className
             var attributes = ""
 
-            // Match the Android accessibility model: `accessibility_label` (and `accessibility_id`)
-            // are static developer-set identifiers, not PII text content, so they're governed only
-            // by the accessibility-label flag — never by text redaction. This mirrors Android's
-            // `shouldRedactContentDescription`, which intentionally does NOT call `shouldRedact()`.
-            // We also keep the `value == "****"` short-circuit so any pre-redacted value that
-            // somehow reaches us is still stripped. `attr__index` below is always emitted.
+            // `accessibility_label` (and `accessibility_id`) are static developer-set
+            // identifiers, not PII text content, so they're governed only by the
+            // accessibility-label flag — never by text redaction. We also keep the
+            // `value == "****"` short-circuit so any pre-redacted value that somehow reaches
+            // us is still stripped. `attr__index` below is always emitted.
             let accessibilityRedacted = node.shouldRedactAccessibilityLabel()
 
             if let label = node.accessibilityLabel?
@@ -312,7 +311,12 @@ internal extension UIView {
     /// and API (userpilotRedactText on responder chain).
     /// - Returns: True if text should be redacted
     func shouldRedactText() -> Bool {
-        if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil, !config.enableInteractionTextCapture {
+        // Resolve the OWNING Userpilot instance from this view so the redaction
+        // policy follows that tenant's config, not the host's. Critical for
+        // multi-instance integrations: the host might allow text capture while
+        // the embedded SDK requires redaction (or vice versa).
+        if let config = InstanceResolver.shared.target(forSource: self)?.config,
+           !config.enableInteractionTextCapture {
             return true
         }
         var responder: UIResponder? = self
@@ -328,8 +332,9 @@ internal extension UIView {
     /// (userpilotRedactAccessibilityLabel on responder chain).
     /// - Returns: True if accessibility labels should be redacted
     func shouldRedactAccessibilityLabel() -> Bool {
-        if let config = Userpilot.isInitialized ? Userpilot.shared.config : nil,
-            !config.enableInteractionAccessibilityLabelCapture {
+        // Same reasoning as `shouldRedactText`: route via the owning instance.
+        if let config = InstanceResolver.shared.target(forSource: self)?.config,
+           !config.enableInteractionAccessibilityLabelCapture {
             return true
         }
         var responder: UIResponder? = self
