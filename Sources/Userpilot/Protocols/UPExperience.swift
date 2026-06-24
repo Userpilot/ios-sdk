@@ -16,5 +16,8 @@ import Foundation
 internal protocol UPExperience: AnyObject {
 
     /// Triggers the closure of the current experience.
-    func triggerCloseExpereince(manualClose: Bool)
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    )
 }

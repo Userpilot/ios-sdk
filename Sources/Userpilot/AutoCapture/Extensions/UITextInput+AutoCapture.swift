@@ -21,8 +21,11 @@ internal extension UITextField {
     /// Called on every `textDidChange` — debounced interaction capture for the field.
     func cacheTextFieldChanged() {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance from the field's responder chain so
+        // typed-text events follow that tenant's privacy and capture flags.
+        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
         guard !shouldIgnoreInteractions() else { return }
 
@@ -35,8 +38,15 @@ internal extension UITextField {
         payload.sourceProperties[AutoCaptureConstants.textLength] = text?.count ?? 0
         payload.placeholder = placeholder
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.hierarchy = path
+        let effectiveView = userpilotEffectiveViewForCapture()
+        // SwiftUI sibling text fields otherwise resolve to identical hierarchy strings; override the
+        // leaf index with a stable on-screen ordinal so they become distinct. Only when not capturing
+        // through an ignore-inner-hierarchy ancestor (effectiveView === self), and only for SwiftUI —
+        // UIKit sibling indices already differ, so its behavior is unchanged.
+        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
+            ? UIKitViewResolver.siblingOrdinal(for: self)
+            : nil
+        payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
         } else {
@@ -60,8 +70,10 @@ internal extension UITextView {
     /// Called on every `textDidChange` — debounced interaction capture for the text view.
     func cacheTextViewChanged() {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance from the text view's responder chain.
+        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
         guard !shouldIgnoreInteractions() else { return }
 
@@ -73,8 +85,15 @@ internal extension UITextView {
         payload.sourceProperties[AutoCaptureConstants.hasText] = !text.isEmpty
         payload.sourceProperties[AutoCaptureConstants.textLength] = text.count
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.hierarchy = path
+        let effectiveView = userpilotEffectiveViewForCapture()
+        // SwiftUI sibling text views otherwise resolve to identical hierarchy strings; override the
+        // leaf index with a stable on-screen ordinal so they become distinct. Only when not capturing
+        // through an ignore-inner-hierarchy ancestor (effectiveView === self), and only for SwiftUI —
+        // UIKit sibling indices already differ, so its behavior is unchanged.
+        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
+            ? UIKitViewResolver.siblingOrdinal(for: self)
+            : nil
+        payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
         } else {

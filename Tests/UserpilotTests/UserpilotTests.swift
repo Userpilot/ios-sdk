@@ -13,10 +13,18 @@ import XCTest
 
 class UserpilotTests: XCTestCase {
     var userpilot: MockUserpilot!
+    var token: String!
 
     override func setUpWithError() throws {
-        let config = Userpilot.Config(token: "NX-00000")
+        token = "NX-\(UUID().uuidString)"
+        let config = Userpilot.Config(token: token).defaultInstance(false)
         userpilot = MockUserpilot(config: config)
+    }
+
+    override func tearDownWithError() throws {
+        userpilot = nil
+        token = nil
+        try super.tearDownWithError()
     }
 
     // MARK: - Version
@@ -115,7 +123,7 @@ class UserpilotTests: XCTestCase {
         guard case let .identify(userId) = lastUpdate.type else {
             return XCTFail("Expected an identify event")
         }
-        XCTAssertTrue(userId.hasPrefix("NX-00000"))
+        XCTAssertTrue(userId.hasPrefix(token))
     }
     
     func testAnonymous_generatesUserIdWithAppTokenPrefix_andCachesIt() throws {
@@ -136,7 +144,7 @@ class UserpilotTests: XCTestCase {
         guard case let .identify(firstUserId) = firstEvent.type else {
             return XCTFail("Expected an identify event for first call")
         }
-        XCTAssertTrue(firstUserId.hasPrefix("NX-00000"), "User ID should have app token prefix")
+        XCTAssertTrue(firstUserId.hasPrefix(token), "User ID should have app token prefix")
 
         let secondEvent = try XCTUnwrap(trackedEvents.last)
         guard case let .identify(secondUserId) = secondEvent.type else {
@@ -259,7 +267,7 @@ class UserpilotTests: XCTestCase {
         let settings = userpilot.settings()
 
         // Assert
-        XCTAssertEqual(settings["Token"] as? String, "NX-00000")
+        XCTAssertEqual(settings["Token"] as? String, token)
         XCTAssertEqual(settings["SDK version"] as? String, userpilot.version())
 
         let user = settings["User"] as? [String: Any]
@@ -354,7 +362,9 @@ class UserpilotTests: XCTestCase {
 
         // Act
         autoreleasepool {
-            let userpilot = Userpilot(config: Userpilot.Config(token: "NX-11111"))
+            let userpilot = Userpilot(
+                config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
+            )
 
             weakUserpilot = userpilot
             weakConfig = userpilot.container.resolve(Userpilot.Config.self)

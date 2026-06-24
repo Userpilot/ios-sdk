@@ -70,15 +70,26 @@ internal extension SurveyListViewController {
     }
 
     /// Closes the carousel experience view and triggers the onDismiss event.
-    func closeExperience() {
+    func closeExperience(completion: (() -> Void)? = nil) {
         surveyViewModel.onSurveyDismissed()
-        dismiss(animated: true)
+        dismiss(animated: true) { [weak self] in
+            if let completion {
+                completion()
+            } else {
+                self?.surveyViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 
     /// trigger thank you message & close the experience
     func showThankYouMessage() {
-        dismiss(animated: true)
-        surveyViewModel.showThankYouMessage()
+        dismiss(animated: true) { [weak self] in
+            guard let self else { return }
+            let willPresentThankYouMessage = self.surveyViewModel.showThankYouMessage()
+            if !willPresentThankYouMessage {
+                self.surveyViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 }
 

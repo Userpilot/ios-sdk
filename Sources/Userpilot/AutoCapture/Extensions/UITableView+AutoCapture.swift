@@ -20,8 +20,13 @@ internal extension UITableViewCell {
     /// - Parameter touchedView: The specific view that was touched within the cell
     func captureTableViewCellSelection(touchedView: UIView?) {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance from this cell. Touched view is preferred
+        // because it lives deeper in the responder chain (more accurate scope match).
+        guard let owningInstance = InstanceResolver.shared.target(forSource: touchedView ?? self) else {
+            return
+        }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
         guard !shouldIgnoreInteractions() else { return }
 
@@ -56,8 +61,8 @@ internal extension UITableViewCell {
             payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
         }
 
-        // Send to the engine
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(payload)
+        // Send to the owning instance's engine
+        owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     // MARK: - Private Helpers

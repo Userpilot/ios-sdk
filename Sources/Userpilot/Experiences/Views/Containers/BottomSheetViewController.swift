@@ -84,6 +84,14 @@ internal class BottomSheetViewController: UIViewController {
         animatePresent()
     }
 
+    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        guard flag else {
+            super.dismiss(animated: false, completion: completion)
+            return
+        }
+        dismissBottomSheet(completion: completion)
+    }
+
     deinit {
         UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
         ? .forceLeftToRight : .forceRightToLeft

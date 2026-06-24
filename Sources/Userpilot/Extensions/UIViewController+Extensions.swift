@@ -24,7 +24,8 @@ internal extension UIViewController {
     @objc
     func userpilot__viewWillAppear(animated: Bool) {
         userpilot__viewWillAppear(animated: animated)
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
+        // Per-instance stop is enforced in `AutoCaptureCoordinater.trackScreen`,
+        // which `captureScreenIfNeeded()` routes to after resolving the owner.
         captureScreenIfNeeded()
     }
 
@@ -88,14 +89,28 @@ internal extension UIViewController {
 
     // MARK: Private
 
+    // The complexity here is the sum of guards that filter out internal/system
+    // VCs, untracked screens, and async SwiftUI hosting controllers. Each branch
+    // is straight-line and individually trivial; collapsing them would harm
+    // readability without removing any logic.
+    // swiftlint:disable:next cyclomatic_complexity
     private func captureScreenIfNeeded() {
-        guard Userpilot.isInitialized,
-              Userpilot.shared.config.enableScreenAutoCapture
-        else { return }
+        guard Userpilot.isInitialized else { return }
+        guard view.window?.isUserpilotWindow != true else { return }
+
+        // Resolve the owning Userpilot instance from this view controller. In a
+        // single-instance integration this is always the default instance and
+        // matches the previous global fallback lookup. In multi-instance the
+        // resolution honours the bundle / window / VC-class scope of each instance.
+        guard let owningInstance = InstanceResolver.shared.target(forViewController: self) else {
+            return
+        }
+        let config = owningInstance.config
+        guard config.enableScreenAutoCapture else { return }
 
         guard !isUIKitSystemContainerViewController() else { return }
 
-        if Userpilot.shared.config.appFramework == .SwiftUI {
+        if config.appFramework == .SwiftUI {
             // ✅ SwiftUI path: filter noisy system VCs, keep HostingControllers
             if isSwiftUISystemNoisyViewController() {
                 return
@@ -118,24 +133,23 @@ internal extension UIViewController {
         // the screen name set via .userpilotScreenName(). Without this,
         // viewWillAppear fires before the bridge UIView is created, causing the
         // first screen event to miss the custom name.
-        if Userpilot.shared.config.appFramework == .SwiftUI,
+        if config.appFramework == .SwiftUI,
            screenClassName.contains("HostingController") {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                Userpilot.shared.autoCaptureEngine.trackScreen(buildScreenTrackingPayload())
+                owningInstance.autoCaptureCoordinator.trackScreen(buildScreenTrackingPayload(config: config))
             }
         } else {
-            Userpilot.shared.autoCaptureEngine.trackScreen(buildScreenTrackingPayload())
+            owningInstance.autoCaptureCoordinator.trackScreen(buildScreenTrackingPayload(config: config))
         }
     }
 
     // MARK: Payload Building
 
-    private func buildScreenTrackingPayload() -> ScreenTrackingPayload {
-        let config = Userpilot.shared.config
+    private func buildScreenTrackingPayload(config: Userpilot.Config) -> ScreenTrackingPayload {
 
         if let alert = self as? UIAlertController {
-            return ScreenTrackingPayload(
+            var payload = ScreenTrackingPayload(
                 currentScreen: resolvedScreenNameForCapture(),
                 screenClass: screenClassName,
                 screenType: screenType,
@@ -147,9 +161,11 @@ internal extension UIViewController {
                 alertTitle: alert.title,
                 alertMessage: alert.message
             )
+            payload.appFramework = config.appFramework
+            return payload
         }
 
-        return ScreenTrackingPayload(
+        var payload = ScreenTrackingPayload(
             currentScreen: resolvedScreenNameForCapture(),
             screenClass: screenClassName,
             screenType: screenType,
@@ -158,5 +174,7 @@ internal extension UIViewController {
             vcAccessibilityIdentifier: view.accessibilityIdentifier,
             vcAccessibilityLabel: view.accessibilityLabel
         )
+        payload.appFramework = config.appFramework
+        return payload
     }
 }

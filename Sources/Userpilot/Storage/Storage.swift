@@ -64,7 +64,7 @@ internal class Storage: DataStoring {
      These keys correspond to the properties being stored, ensuring a consistent mapping between
      runtime properties and their storage keys.
      */
-    private enum Key: String {
+    internal enum Key: String, CaseIterable {
         case socketURL
         case userId
         case anonymousUserId
@@ -80,10 +80,20 @@ internal class Storage: DataStoring {
     /// The configuration object for the Userpilot SDK, containing settings that are resolved via dependency injection.
     private let config: Userpilot.Config
 
-    /// A lazy-loaded `UserDefaults` instance, scoped to the SDK’s user defaults suite name for isolating stored data.
-    private lazy var defaults = UserDefaults(
-        suiteName: "\(Storage.userDefaultSuiteName)\(Bundle.main.identifier)"
-    )
+    /// A lazy-loaded `UserDefaults` instance, scoped per-tenant by appending the
+    /// configured token to the host app's bundle identifier. Two `Userpilot`
+    /// instances in the same process therefore read and write into completely
+    /// separate suites and cannot trample each other's `userId`, `pushToken`,
+    /// `anonymousUserId`, or session data.
+    ///
+    /// Suite name format: `com.userpilot.storage.<bundleId>.<token>`
+    ///
+    /// Note: legacy v1 → v2 migration is driven from `Userpilot(config:)` and
+    /// uses a process-shared first-token-wins claim (see `StorageMigrator`),
+    /// so the same legacy bytes are never adopted by more than one tenant.
+    private lazy var defaults: UserDefaults? = {
+        UserDefaults(suiteName: Storage.suiteName(forToken: config.token))
+    }()
 
     /// The URL of the socket connection used by the SDK. The value is stored and retrieved from `UserDefaults`.
     internal var socketURL: String {
@@ -217,5 +227,26 @@ internal class Storage: DataStoring {
 internal extension Storage {
 
     // Static constants
+
+    /// Prefix for `UserDefaults` suite names. Combined with the host app's bundle
+    /// identifier and the SDK token to form the full suite, e.g.
+    /// `com.userpilot.storage.com.acme.app.MY_TOKEN`.
     static let userDefaultSuiteName = "com.userpilot.storage."
+
+    /// Legacy suite name used by SDK v1 (no token component).
+    /// Retained for one-shot migration only — never written to from v2.
+    static var legacyUserDefaultSuiteName: String {
+        return "\(userDefaultSuiteName)\(Bundle.main.identifier)"
+    }
+
+    /// Process-shared `UserDefaults` suite that records cross-tenant migration
+    /// facts (currently just the first token that absorbed legacy data). Used
+    /// by `StorageMigrator` to enforce a first-token-wins policy across
+    /// `Userpilot` instances coexisting in the same process.
+    static let legacySystemSuiteName = "\(userDefaultSuiteName)__system"
+
+    /// Builds the per-tenant `UserDefaults` suite name for `token`.
+    static func suiteName(forToken token: String) -> String {
+        return "\(userDefaultSuiteName)\(Bundle.main.identifier).\(token)"
+    }
 }

@@ -309,6 +309,11 @@ internal class ExperienceViewModel {
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
     }
 
+    /// Notify the publisher after the experience view has finished dismissing.
+    func onExperienceDismissalCompleted() {
+        experiencesPublisher.experienceDidFinishDismissing()
+    }
+
     // MARK: - Deep Link Handling
 
     /**

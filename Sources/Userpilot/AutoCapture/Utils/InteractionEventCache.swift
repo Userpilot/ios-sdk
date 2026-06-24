@@ -18,10 +18,26 @@ import UIKit
 
 internal enum InteractionEventCache {
 
-    private struct DebouncedInteractionEnvelope {
+    /// Holds the payload, dedup metadata, and a weak reference to the source view so the
+    /// owning `Userpilot` instance can be re-resolved at delivery time. Keeping the view
+    /// reference weak prevents the cache from extending the source's lifetime.
+    private final class DebouncedInteractionEnvelope {
         let payload: InteractionPayload
         let textLengthForDedupe: Int?
         let debounceKey: String
+        weak var source: UIView?
+
+        init(
+            payload: InteractionPayload,
+            textLengthForDedupe: Int?,
+            debounceKey: String,
+            source: UIView?
+        ) {
+            self.payload = payload
+            self.textLengthForDedupe = textLengthForDedupe
+            self.debounceKey = debounceKey
+            self.source = source
+        }
     }
 
     private static let lastDeliveredLock = NSLock()
@@ -38,7 +54,10 @@ internal enum InteractionEventCache {
             lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
             lastDeliveredLock.unlock()
         }
-        Userpilot.shared.autoCaptureEngine.handleInteractionEvent(envelope.payload)
+        // Re-resolve the owning instance at delivery time so it always reflects the
+        // current Registry state. If the source view has been deallocated, fall back
+        // to the registered default.
+        InstanceResolver.shared.handleInteractionEvent(envelope.payload, source: envelope.source)
     }
 
     /// Schedules sending the interaction after `interactionDebounceInterval` of quiet time for this view.
@@ -63,7 +82,8 @@ internal enum InteractionEventCache {
         let envelope = DebouncedInteractionEnvelope(
             payload: payload,
             textLengthForDedupe: textLengthForDedupe,
-            debounceKey: key
+            debounceKey: key,
+            source: view
         )
         debouncer.schedule(key: key, value: envelope)
     }

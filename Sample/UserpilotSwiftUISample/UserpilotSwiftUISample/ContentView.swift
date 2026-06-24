@@ -90,7 +90,7 @@ struct ContentView: View {
                     ) {
                         sampleRow(
                             title: "SwiftUI autocapture config",
-                            subtitle: "Screen name, trackScreen, click recognition, and link to redact/ignore tests.",
+                            subtitle: "Screen name, userpilotScreen, click recognition, and link to redact/ignore tests.",
                             icon: "gearshape.2.fill",
                             gradient: [.purple, .indigo],
                             action: { showAutocaptureConfig = true }

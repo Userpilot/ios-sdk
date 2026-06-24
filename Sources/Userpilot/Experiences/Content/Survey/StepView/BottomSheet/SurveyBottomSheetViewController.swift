@@ -88,7 +88,9 @@ extension SurveyBottomSheetViewController {
                 let surveyContent = self.surveyViewModel.surveyContent,
                 let surveyTheme = self.surveyViewModel.surveyTheme
             else {
-                self?.dismissBottomSheet()
+                self?.dismissBottomSheet {
+                    self?.surveyViewModel.onExperienceDismissalCompleted()
+                }
                 return
             }
             self.setupGeneralStyle()
@@ -109,7 +111,9 @@ extension SurveyBottomSheetViewController {
 
         // triger close survey
         surveyViewModel.closeSurvey = { [weak self] in
-            self?.dismissBottomSheet()
+            self?.dismissBottomSheet {
+                self?.surveyViewModel.onExperienceDismissalCompleted()
+            }
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
@@ -126,8 +130,17 @@ extension SurveyBottomSheetViewController {
 // MARK: - UPExperience
 
 extension SurveyBottomSheetViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
-        dismissBottomSheet()
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    ) {
+        dismissBottomSheet { [weak self] in
+            if let completion {
+                completion()
+            } else {
+                self?.surveyViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 }
 
@@ -137,7 +150,9 @@ extension SurveyBottomSheetViewController: SurveyContainerViewDelegate {
 
     func onClose() {
         surveyViewModel.onSurveyDismissed()
-        dismissBottomSheet()
+        dismissBottomSheet { [weak self] in
+            self?.surveyViewModel.onExperienceDismissalCompleted()
+        }
     }
 
     func onAction(

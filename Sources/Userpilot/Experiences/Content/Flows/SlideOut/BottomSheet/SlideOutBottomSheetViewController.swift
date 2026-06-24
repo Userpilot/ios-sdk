@@ -91,7 +91,9 @@ internal extension SlideOutBottomSheetViewController {
                 canBindData,
                 let slideOutContent = self.experienceViewModel.slideOutContent
             else {
-                self?.dismissBottomSheet()
+                self?.dismissBottomSheet {
+                    self?.experienceViewModel.onExperienceDismissalCompleted()
+                }
                 return
             }
 
@@ -125,6 +127,7 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
     func onClose() {
         dismissBottomSheet { [weak self] in
             self?.experienceViewModel.onDismissStep()
+            self?.experienceViewModel.onExperienceDismissalCompleted()
         }
     }
 
@@ -135,6 +138,7 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
         guard let action else { return }
         dismissBottomSheet { [weak self] in
             self?.experienceViewModel.onExperienceCompleted()
+            self?.experienceViewModel.onExperienceDismissalCompleted()
             if action.deepLink != nil {
                 self?.experienceViewModel.onDeepLinkTriggered()
             }
@@ -145,7 +149,16 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
 // MARK: - UPExperience
 
 extension SlideOutBottomSheetViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
-        dismissBottomSheet()
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    ) {
+        dismissBottomSheet { [weak self] in
+            if let completion {
+                completion()
+            } else {
+                self?.experienceViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 }

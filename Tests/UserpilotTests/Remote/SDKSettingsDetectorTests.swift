@@ -17,16 +17,27 @@ final class SDKSettingsDetectorTests: XCTestCase {
 
     override func setUpWithError() throws {
         super.setUp()
-        let config = Userpilot.Config(token: "NX-00000")
+        URLProtocolStub.reset()
+        let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         logger = MockLogger()
         config.logger = logger
         userpilot = MockUserpilot(config: config)
+        userpilot.storage.configurationDate = nil
+        userpilot.storage.socketURL = ""
 
         let sessionConfig = URLSessionConfiguration.ephemeral
         sessionConfig.protocolClasses = [URLProtocolStub.self]
         let testSession = URLSession(configuration: sessionConfig)
 
         detector = SDKSettingsDetector(container: userpilot.container, session: testSession)
+    }
+
+    override func tearDownWithError() throws {
+        URLProtocolStub.reset()
+        detector = nil
+        userpilot = nil
+        logger = nil
+        try super.tearDownWithError()
     }
 
     // Test 1: Should skip network when config is recent

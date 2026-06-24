@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Userpilot SDK** supports deep linking to navigate to specific screens in your app using a custom URL scheme or an external URL. This guide will walk you through how to configure deep links in your Android app to trigger your app screens.
+The **Userpilot SDK** supports deep linking to navigate to specific screens in your app using a custom URL scheme or an external URL. This guide will walk you through how to configure deep links in your iOS app to trigger your app screens.
 
 
 ## Custom URL Format

@@ -29,8 +29,8 @@ struct SwiftUIAutocaptureConfigTestView: View {
                     title: "Manual screen event",
                     symbol: "waveform.path.ecg",
                     tint: .teal,
-                    api: ".trackScreen(_:)",
-                    detail: "Posts a screen event when the modified view appears (calls Userpilot.shared.screen). Use for explicit screen transitions outside automatic naming."
+                    api: ".userpilotScreen(_:)",
+                    detail: "Posts a screen event when the modified view appears. Use for explicit screen transitions outside automatic naming."
                 )
 
                 modifierCard(
