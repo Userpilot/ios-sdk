@@ -522,6 +522,7 @@ extension ExperiencesPublisher {
      * - Parameter themeId: The ID of the theme to fetch
      */
     private func fetchThemeData(_ themeId: Int) {
+        return
         guard analyticsPublisher.canRequestEvent else {
             clearPendingExperiences()
             return

@@ -33,7 +33,9 @@ final class SocketManagerTests: XCTestCase {
     }
 
     override func tearDown() {
-        socketManager.close()
+        // setUp throws XCTSkip when credentials aren't configured, so these may
+        // never be assigned — tear down defensively instead of force-unwrapping.
+        socketManager?.close()
         socketManager = nil
         userpilot = nil
         mockSocketSubscription = nil

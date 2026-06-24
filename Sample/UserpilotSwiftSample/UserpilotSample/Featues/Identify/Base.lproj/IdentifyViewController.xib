@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="24506" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="24504"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
@@ -12,10 +12,10 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="IdentifyViewController" customModule="UserpilotSample" customModuleProvider="target">
             <connections>
-                <outlet property="anonymousButton" destination="Dew-rY-RoJ" id="U0J-ni-vji"/>
+                <outlet property="anonymousButton" destination="Dew-rY-RoJ" id="OCy-7H-elS"/>
                 <outlet property="companyPropertiesStackView" destination="L7Z-TY-pZW" id="Bki-yc-1cy"/>
                 <outlet property="labelAuthorizedUser" destination="3U7-SQ-g1x" id="Wei-7m-uyM"/>
-                <outlet property="textFieldUserID" destination="DZc-hu-a3a" id="1uF-C6-SF7"/>
+                <outlet property="textFieldUserID" destination="DZc-hu-a3a" id="GHh-6I-mac"/>
                 <outlet property="userPropertiesStackView" destination="pV0-fK-eN7" id="yoD-G1-Nom"/>
                 <outlet property="view" destination="iN0-l3-epB" id="aOX-U4-Rf4"/>
             </connections>
@@ -26,7 +26,7 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1JW-us-yJb">
-                    <rect key="frame" x="16.000000000000004" y="72" width="49.333333333333343" height="40"/>
+                    <rect key="frame" x="16.000000000000004" y="131" width="49.333333333333343" height="40"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="40" id="mn4-b6-bay"/>
                     </constraints>
@@ -38,13 +38,13 @@
                     </connections>
                 </button>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Identify" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="DMR-Yt-jkv">
-                    <rect key="frame" x="170" y="83" width="53.333333333333343" height="18"/>
+                    <rect key="frame" x="170" y="142" width="53.333333333333343" height="18"/>
                     <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
                     <nil key="textColor"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Dmf-Y6-2UJ">
-                    <rect key="frame" x="329" y="77" width="48" height="30"/>
+                    <rect key="frame" x="329" y="136" width="48" height="30"/>
                     <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
                     <state key="normal" title="Logout">
                         <color key="titleColor" systemColor="systemRedColor"/>
@@ -54,7 +54,7 @@
                     </connections>
                 </button>
                 <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="xOX-pA-Rln">
-                    <rect key="frame" x="0.0" y="120" width="393" height="568"/>
+                    <rect key="frame" x="0.0" y="179" width="393" height="475"/>
                     <subviews>
                         <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="2eQ-Se-4fw">
                             <rect key="frame" x="0.0" y="0.0" width="393" height="505"/>
@@ -77,13 +77,13 @@
                                             <textInputTraits key="textInputTraits"/>
                                         </textField>
                                         <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="User Properties" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="BRf-AR-gsJ">
-                                            <rect key="frame" x="16.000000000000007" y="107.33333333333334" width="124.66666666666669" height="20.333333333333329"/>
+                                            <rect key="frame" x="16.000000000000007" y="107.33333333333331" width="124.66666666666669" height="20.333333333333329"/>
                                             <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="17"/>
                                             <nil key="textColor"/>
                                             <color key="highlightedColor" name="Shark"/>
                                         </label>
                                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="SQa-8T-fls">
-                                            <rect key="frame" x="347" y="102.66666666666666" width="30" height="30"/>
+                                            <rect key="frame" x="347" y="102.66666666666669" width="30" height="30"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="30" id="0wI-Ly-ksK"/>
                                                 <constraint firstAttribute="height" constant="30" id="G9U-Ik-o0B"/>
@@ -179,7 +179,7 @@
                     <viewLayoutGuide key="frameLayoutGuide" id="cO3-bo-ISr"/>
                 </scrollView>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ZdB-mZ-qEQ">
-                    <rect key="frame" x="16" y="704" width="361" height="45"/>
+                    <rect key="frame" x="16" y="670" width="361" height="45"/>
                     <color key="backgroundColor" name="AccentColor"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="45" id="Iuq-AB-Gyj"/>
@@ -194,7 +194,7 @@
                     </connections>
                 </button>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Dew-rY-RoJ">
-                    <rect key="frame" x="16" y="757" width="361" height="45"/>
+                    <rect key="frame" x="16" y="723" width="361" height="45"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="45" id="ESl-l1-x0N"/>
                     </constraints>
@@ -238,7 +238,7 @@
         <image name="arrow.backward" catalog="system" width="128" height="95"/>
         <image name="plus" catalog="system" width="128" height="113"/>
         <namedColor name="AccentColor">
-            <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
         </namedColor>
         <namedColor name="MineShaft">
             <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

@@ -138,6 +138,16 @@ internal class AutoCaptureCoordinater {
             setupAutoCaptureInteractions()
             config.logger.info("📊 Automatic UIKit interaction tracking enabled")
         }
+
+        // SwiftUI button-title capture: enrich pure-SwiftUI taps (which yield no UIKit
+        // text) with the control title. Only for SwiftUI apps, and only when interaction
+        // text capture is on — it reuses `enableInteractionTextCapture` rather than adding
+        // a flag. When `appFramework` is nil, auto-detection is still pending; install the
+        // hooks now and let the hook itself ignore non-SwiftUI view controllers.
+        if SwiftUITitleCapturePolicy.shouldInstall(config: config) {
+            setupSwiftUITitleCapture()
+            config.logger.info("📊 Automatic SwiftUI interaction title capture enabled")
+        }
     }
 
     // MARK: - Private Setup
@@ -160,6 +170,14 @@ internal class AutoCaptureCoordinater {
         AutoCaptureSwizzler.swizzlePickerViewDelegate()
         AutoCaptureSwizzler.registerTextFieldNotifications()
         AutoCaptureSwizzler.registerTextViewNotifications()
+    }
+
+    /// Installs the `viewDidAppear` rescan swizzle and starts the SwiftUI scan cache.
+    /// The cache itself defers any scan requested before the app becomes active.
+    private func setupSwiftUITitleCapture() {
+        AutoCaptureSwizzler.swizzleSwiftUIScanScheduling()
+        SwiftUIScanCache.shared.start()
+        SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared)
     }
 }
 
@@ -699,6 +717,11 @@ private extension AutoCaptureCoordinater {
         )
     }
 
+}
+
+// MARK: - Screen identity (internal for unit testing)
+
+extension AutoCaptureCoordinater {
     /// UIKit production behavior is preserved: screen events keep using the controller class.
     /// SwiftUI uses the resolved logical screen name when available so initial screen capture,
     /// fake reload, and dedupe all key off the same screen identity.
@@ -707,7 +730,6 @@ private extension AutoCaptureCoordinater {
         let logicalName = screen.currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
         return logicalName.isEmpty ? screenClass : logicalName
     }
-
 }
 
 // MARK: Auto capture wrappers APIs

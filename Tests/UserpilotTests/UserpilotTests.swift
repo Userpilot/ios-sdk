@@ -381,6 +381,11 @@ class UserpilotTests: XCTestCase {
             XCTAssertNotNil(weakUserpilot)
         }
 
+        // `init(config:)` stores the instance in the static `Userpilot._shared`
+        // (an intentional external reference). Clear it so this test verifies
+        // the graph has no retain CYCLES once the external reference is gone.
+        Userpilot._resetSharedForTesting()
+
         let expectation = XCTestExpectation(description: "Async cleanup completed")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             expectation.fulfill()

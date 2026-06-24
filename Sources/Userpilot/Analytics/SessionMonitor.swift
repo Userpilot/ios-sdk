@@ -33,8 +33,12 @@ internal class SessionMonitor: SessionMonitoring {
     /// The storage used to store user-related data.
     private let storage: DataStoring
 
-    /// A flag to prevent calling didEnterForeground twice
-    private var hasInitializedForeground = false
+    /// True once the first real lifecycle state has been handled — either the
+    /// deferred "assume active" init path or an explicit background/foreground
+    /// notification. Stops the deferred init block from overriding a lifecycle
+    /// event that already arrived (e.g. a synthetic `didEnterBackground` posted
+    /// while `UIApplication` is still `.active`, common in Flutter/ReactNative hosts).
+    private var hasHandledInitialLifecycle = false
 
     /// A flag to mintor app status
     private var _isAppActive = true
@@ -66,9 +70,12 @@ internal class SessionMonitor: SessionMonitoring {
         // these plugins and native iOS apps.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            if UIApplication.shared.applicationState == .active && !self.hasInitializedForeground {
+            // If a real lifecycle event was already handled between init and this
+            // deferred block, don't override it with the initial active assumption.
+            guard !self.hasHandledInitialLifecycle else { return }
+            if UIApplication.shared.applicationState == .active {
                 self._isAppActive = true
-                self.hasInitializedForeground = true
+                self.hasHandledInitialLifecycle = true
                 self.analyticsPublisher.resume()
             }
         }
@@ -85,7 +92,7 @@ internal class SessionMonitor: SessionMonitoring {
     }
 
     func reset() {
-        hasInitializedForeground = false
+        hasHandledInitialLifecycle = false
 
         // Stop listening for further lifecycle callbacks
         NotificationCenter.default.removeObserver(
@@ -107,6 +114,7 @@ internal class SessionMonitor: SessionMonitoring {
     @objc
     func didEnterBackground(notification: Notification) {
         _isAppActive = false
+        hasHandledInitialLifecycle = true
         storage.sessionDate = Date()
         analyticsPublisher.flush()
     }
@@ -117,7 +125,7 @@ internal class SessionMonitor: SessionMonitoring {
     @objc
     func didEnterForeground(notification: Notification) {
         _isAppActive = true
-        hasInitializedForeground = true
+        hasHandledInitialLifecycle = true
         analyticsPublisher.resume()
     }
 }

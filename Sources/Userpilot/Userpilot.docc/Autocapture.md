@@ -13,7 +13,7 @@ Autocapture is **off by default**. Enable it when building your ``Userpilot/Conf
 ```swift
 Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .logging(enabled: true)
-    .appFramework(.uiKit)  // Specify UIKit framework
+    .appFramework(.UIKit)  // Specify UIKit framework
     .enableScreenAutoCapture(true)   // Capture screen views automatically
     .enableInteractionAutoCapture(true) // Capture taps and interactions automatically
 )
@@ -81,7 +81,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 |----------|--------|-------------|--------|
 | ``enableScreenAutoCapture`` | ``enableScreenAutoCapture(_:)`` | Turn automatic screen capture on or off. | `false` |
 | ``enableScreenTitleCapture`` | ``enableScreenTitleCapture(_:)`` | When enabled, screen titles (e.g. navigation title, tab title) may be captured. Set to `false` to disable title capture globally. | `true` |
-| ``appFramework`` | ``appFramework(_:)`` | Specify whether your app uses UIKit or SwiftUI (affects autocapture behavior). | `.uiKit` |
+| ``appFramework`` | ``appFramework(_:)`` | Specify whether your app uses UIKit or SwiftUI (affects autocapture behavior). | `.UIKit` |
 | ``enableSwiftUIInteractionTitleCapture`` | ``enableSwiftUIInteractionTitleCapture(_:)`` | Enables SwiftUI-specific title enrichment for interaction events on supported iOS versions. | `true` |
 | ``enableSwiftUIInteractionTitleCaptureBelowIOS26`` | ``enableSwiftUIInteractionTitleCaptureBelowIOS26(_:)`` | Opts into SwiftUI interaction title enrichment on iOS versions below 26 after app validation. | `false` |
 
@@ -91,6 +91,8 @@ Configure global capture and privacy via ``Userpilot/Config``.
 |----------|--------|-------------|--------|
 | ``enableInteractionAutoCapture`` | ``enableInteractionAutoCapture(_:)`` | Turn automatic interaction capture on or off. | `false` |
 | ``enableInteractionTextCapture`` | ``enableInteractionTextCapture(_:)`` | When enabled, user-visible text (labels, button titles, etc.) may be captured. Set to `false` to disable globally. | `true` |
+| ``enableSwiftUIInteractionTitleCapture`` | ``enableSwiftUIInteractionTitleCapture(_:)`` | When enabled, enriches pure SwiftUI taps with button/control titles when UIKit has no text. Requires interaction autocapture and text capture. | `true` |
+| ``enableSwiftUIInteractionTitleCaptureBelowIOS26`` | ``enableSwiftUIInteractionTitleCaptureBelowIOS26(_:)`` | Opts SwiftUI title enrichment into iOS versions below 26. iOS 26 and later are enabled by default when the global SwiftUI title gate is enabled. | `false` |
 | ``enableInteractionAccessibilityLabelCapture`` | ``enableInteractionAccessibilityLabelCapture(_:)`` | When enabled, accessibility labels may be captured. Set to `false` to disable globally. Use with `enableInteractionTextCapture(false)` when accessibility may mirror on-screen text. | `true` |
 | ``enableInteractionValueCapture`` | ``enableInteractionValueCapture(_:)`` | When enabled, captures values from controls like switches, sliders, and pickers. | `true` |
 | ``ignoreTapForTextInputEditingActions`` | ``ignoreTapForTextInputEditingActions(_:)`` | When true, prevents duplicate events by not sending tap events for text input editing actions. | `true` |
@@ -100,7 +102,7 @@ Example: disable all text and accessibility label capture for maximum privacy:
 
 ```swift
 Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
-    .appFramework(.uiKit)  // Specify UIKit framework
+    .appFramework(.UIKit)  // Specify UIKit framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
     .enableInteractionTextCapture(false)
@@ -296,7 +298,7 @@ For SwiftUI apps, set the app framework in your configuration:
 
 ```swift
 Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
-    .appFramework(.swiftUI)
+    .appFramework(.SwiftUI)  // Specify SwiftUI framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
     .enableSwiftUIInteractionTitleCapture(true)
@@ -305,11 +307,11 @@ Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
 
 All UIKit configuration options — including ``enableInteractionTextCapture(_:)``, ``enableInteractionAccessibilityLabelCapture(_:)``, ``enableInteractionValueCapture(_:)``, and ``enableScreenTitleCapture(_:)`` — apply unchanged to SwiftUI apps.
 
-SwiftUI interaction title capture is enabled by default for iOS 26 and newer when `appFramework(.swiftUI)` and interaction autocapture are enabled. For iOS versions below 26, enable it explicitly after testing the app:
+SwiftUI interaction title capture is enabled by default for iOS 26 and newer when `appFramework(.SwiftUI)` and interaction autocapture are enabled. For iOS versions below 26, enable it explicitly after testing the app:
 
 ```swift
 Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
-    .appFramework(.swiftUI)
+    .appFramework(.SwiftUI)
     .enableInteractionAutoCapture(true)
     .enableSwiftUIInteractionTitleCapture(true)
     .enableSwiftUIInteractionTitleCaptureBelowIOS26(true)
@@ -317,6 +319,20 @@ Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
 ```
 
 Set ``enableSwiftUIInteractionTitleCapture(false)`` to turn this SwiftUI-specific title enrichment off entirely.
+
+SwiftUI interaction title capture is enabled by default on iOS 26 and later when interaction autocapture and interaction text capture are enabled. On iOS versions below 26, opt in explicitly while validating your app:
+
+```swift
+Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+    .appFramework(.SwiftUI)
+    .enableScreenAutoCapture(true)
+    .enableInteractionAutoCapture(true)
+    .enableSwiftUIInteractionTitleCapture(true)
+    .enableSwiftUIInteractionTitleCaptureBelowIOS26(true)
+)
+```
+
+During validation builds, the SDK may emit `[UP-SUI]` debug logs that show SwiftUI title scans and resolution stages. These logs are intended for testing and tuning.
 
 ### Screen Tracking in SwiftUI
 
@@ -418,6 +434,39 @@ SwiftUI interaction titles are resolved from the currently rendered UI around th
 - Explicit ``userpilotLabel(_:)`` values win over inferred titles and are recommended for custom composite controls.
 - Global privacy settings such as ``enableInteractionTextCapture(_:)`` and ``enableInteractionAccessibilityLabelCapture(_:)`` still control whether text or accessibility labels are included.
 
+### SwiftUI Title Capture Limitations
+
+SwiftUI title capture has two title-resolution stages:
+
+1. A public accessibility-tree read on the hosting view hierarchy.
+2. A rendered display-list text map that uses the currently materialized SwiftUI render output.
+
+The display-list scan captures rendered/materialized text, not the entire theoretical SwiftUI view tree. In a long `ScrollView`, `List`, `LazyVStack`, or nested lazy layout, off-screen rows may not exist in the rendered display list until SwiftUI materializes them. The SDK schedules scans on screen appearance and after touch/scroll settling so newly rendered content can be picked up.
+
+Static text can appear in the display-list text map without becoming `target_text` on an event. The SDK only attaches `target_text` when the tapped point resolves to a tappable/control-like title, so tapping empty space or a static paragraph does not attach nearby text as a button title.
+
+The previous reflection/y-band fallback has been removed because it was approximate and unreliable across SwiftUI versions and navigation styles.
+
+### SwiftUI Scan Modifiers
+
+Use ``userpilotSkipAccessibilityScan()`` on a SwiftUI screen to skip the public accessibility-tree read for that screen's hosting controller. This is useful for complex nested lazy layouts affected by accessibility traversal hangs. Display-list title capture can still resolve visible button/control titles.
+
+Use ``userpilotScanOnce()`` on a mostly static SwiftUI screen to skip accessibility and run one current-rendered-screen title scan:
+
+```swift
+struct StaticButtonsView: View {
+    var body: some View {
+        VStack {
+            Button("Primary Action") {}
+            Button("Secondary Action") {}
+        }
+        .userpilotScanOnce()
+    }
+}
+```
+
+`userpilotScanOnce()` scans the current rendered/materialized screen only once. It does not guarantee titles for off-screen lazy/list rows that SwiftUI has not rendered during that one-time scan.
+
 ### Hiding Sensitive Data in SwiftUI
 
 #### Redacting Text — ``userpilotRedactText(_:)``
@@ -480,7 +529,7 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 | Hide inner structure of a container | Set `userpilotIgnoreInnerHierarchy = true` on the container view |
 | Set ignore/redact on a responder from Swift | Set `userpilotIgnore*` / `userpilotRedact*` properties directly |
 | Apply a default to every instance of a type | Override `userpilotIgnoreInteractionsDefault` / `userpilotIgnoreInnerHierarchyDefault` |
-| Make a custom UIKit view tappable for autocapture | Call `userpilotRecognizeClickAnalytics()` on the `UIView` |
+| Make a custom UIKit view tappable for autocapture | Call `userpilotRecognizeClickAnalytics()` on the `UIView` (UIKit only) |
 
 ### SwiftUI
 
@@ -489,8 +538,10 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 | Override the autocaptured screen name | ``userpilotScreenName(_:)`` |
 | Emit a manual screen event (autocapture disabled) | ``userpilotScreen(_:)`` |
 | Label a custom or composite tappable view | ``userpilotLabel(_:)`` |
-| Enable SwiftUI interaction title capture | ``enableSwiftUIInteractionTitleCapture(_:)`` |
-| Opt into SwiftUI title capture below iOS 26 | ``enableSwiftUIInteractionTitleCaptureBelowIOS26(_:)`` |
+| Enable SwiftUI title capture | ``enableSwiftUIInteractionTitleCapture(_:)`` with ``enableInteractionAutoCapture(_:)`` and ``enableInteractionTextCapture(_:)`` |
+| Enable SwiftUI title capture below iOS 26 | ``enableSwiftUIInteractionTitleCaptureBelowIOS26(_:)`` |
+| Skip accessibility for a SwiftUI screen | ``userpilotSkipAccessibilityScan()`` |
+| Scan a current SwiftUI screen once | ``userpilotScanOnce()`` |
 | Redact text for a view or subtree | ``userpilotRedactText(_:)`` |
 | Suppress interaction events for a view or subtree | ``userpilotIgnoreInteractions(_:)`` |
 

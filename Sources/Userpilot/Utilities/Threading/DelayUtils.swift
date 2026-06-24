@@ -78,7 +78,14 @@ internal class DelayUtils {
      - Returns: `true` if there's a pending action, `false` otherwise
      */
     func hasPendingAction() -> Bool {
-        return currentWorkItem != nil && currentWorkItem?.isCancelled == false
+        // Read on the same serial queue that owns every write to `currentWorkItem`
+        // (set in `delayAction`, cleared in `cancelDelay` — both via `queue`).
+        // This removes the data race and gives a happens-before guarantee: a read
+        // issued after `delayAction` is ordered behind that write, so callers see
+        // the freshly-scheduled work item instead of racing it.
+        return queue.sync {
+            currentWorkItem != nil && currentWorkItem?.isCancelled == false
+        }
     }
 
     /**

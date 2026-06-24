@@ -58,6 +58,14 @@ public class Userpilot: NSObject {
         return Registry.shared.instance(forToken: token)
     }
 
+    #if DEBUG
+    // Test hook: clears process-wide registered instances for isolation.
+    // swiftlint:disable:next identifier_name
+    static func _resetSharedForTesting() {
+        Registry.shared.resetForTesting()
+    }
+    #endif
+
     // MARK: - Properties
 
     /// A dependency injection container that stores and provides necessary services like analytics,

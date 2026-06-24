@@ -27,6 +27,12 @@ public extension UIWindow {
     }
 }
 
+private enum WindowTapCapture {
+    static let tracker = WindowTapTracker()
+    static let maxTapMovement: CGFloat = 10
+    static let maxTapDuration: TimeInterval = 0.5
+}
+
 // MARK: - Internal
 
 /// Extension providing automatic click tracking for UIWindow
@@ -47,8 +53,8 @@ extension UIWindow {
 
     // MARK: Event Handling
 
-    /// Swizzled sendEvent that intercepts and processes touch events
-    /// - Parameter event: The UI event to process
+    // Swizzled sendEvent that intercepts and processes touch events.
+    // swiftlint:disable:next cyclomatic_complexity
     @objc func swizzled_sendEvent(_ event: UIEvent) {
         self.swizzled_sendEvent(event)  // calls original sendEvent
 
@@ -56,17 +62,64 @@ extension UIWindow {
         // instances. Per-instance pausing is enforced downstream when the captured
         // touch is published through the owning instance's coordinator.
         guard Userpilot.isInitialized else { return }
+        guard let sharedUserpilot = Userpilot.shared else { return }
 
         guard let touches = event.allTouches else { return }
-        for touch in touches where touch.phase == .began {
-            let locationInWindow = touch.location(in: self)
-            // SwiftUI often leaves touch.view nil; fall back to hit-testing the window.
-            let touchedView = touch.view ?? self.hitTest(locationInWindow, with: event)
-            guard let view = touchedView else { continue }
+        for touch in touches {
+            switch touch.phase {
+            case .began:
+                WindowTapCapture.tracker.began(
+                    touch,
+                    at: touch.location(in: self),
+                    timestamp: touch.timestamp
+                )
 
-            let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
+            case .ended:
+                let locationInWindow = touch.location(in: self)
+                guard touches.count == 1,
+                      WindowTapCapture.tracker.end(
+                          touch,
+                          at: locationInWindow,
+                          timestamp: touch.timestamp,
+                          maxMovement: WindowTapCapture.maxTapMovement,
+                          maxDuration: WindowTapCapture.maxTapDuration
+                      ) != nil else { break }
 
-            handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
+                // SwiftUI often leaves touch.view nil; fall back to hit-testing the window.
+                let touchedView = touch.view ?? self.hitTest(locationInWindow, with: event)
+                guard let view = touchedView else { continue }
+
+                let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
+
+                // A fast first tap after navigation can beat the debounced
+                // screen-appear scan. Populate the title cache before resolving —
+                // but only when the tap actually lands inside SwiftUI content, so
+                // pure-UIKit taps never pay for a SwiftUI scan.
+                let config = sharedUserpilot.config
+                if resolvedView.up_isInsideHostingView,
+                   SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: true) {
+                    SwiftUIScanCache.shared.prepareForTapResolutionIfNeeded(
+                        at: locationInWindow,
+                        in: self
+                    )
+                }
+
+                handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
+
+            case .cancelled:
+                WindowTapCapture.tracker.forget(touch)
+
+            default:
+                break
+            }
+        }
+
+        // SwiftUI title capture: refresh the scan cache at touch-sequence end so lazy
+        // content revealed by a scroll gets picked up. Flag- and framework-gated.
+        let config = sharedUserpilot.config
+        if SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: true),
+           touches.contains(where: { $0.phase == .ended || $0.phase == .cancelled }) {
+            SwiftUIScanCache.shared.scheduleRescan(reason: .touchEnded)
         }
     }
 
@@ -211,16 +264,6 @@ extension UIWindow {
             eventProperties[AutoCaptureConstants.targetText] = capture.labeledView.shouldRedactText()
                 ? AutoCaptureConstants.reductText
                 : capture.label
-        } else if let swiftUITitle = SwiftUITitleResolver.resolveTitle(
-            at: point,
-            in: window,
-            from: view,
-            config: config
-        ) {
-            eventProperties[AutoCaptureConstants.targetClass] = swiftUITitle.viewType
-            eventProperties[AutoCaptureConstants.targetText] = swiftUITitle.sourceView.shouldRedactText()
-                ? AutoCaptureConstants.reductText
-                : swiftUITitle.title
         } else if useRedactedInner {
             eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
         } else {
@@ -232,6 +275,28 @@ extension UIWindow {
             }
             if let text = view.getTextContent() {
                 eventProperties[AutoCaptureConstants.targetText] = text
+            }
+        }
+
+        // SwiftUI button-title enrichment: only when nothing above produced a title, the
+        // tap is inside a hosting view, and text capture is on. Writes `target_text` ONLY —
+        // target_class / hierarchy / accessibility_* are untouched. Ignore at/above the
+        // tapped view was already handled by `shouldIgnoreInteractions()` at the top of
+        // this method; here we also catch the pure-SwiftUI case where the policy carrier
+        // flag sits on a DESCENDANT (which the upward responder-chain gate can't see).
+        if eventProperties[AutoCaptureConstants.targetText] == nil,
+           view.up_isInsideHostingView,
+           SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: true),
+           let title = SwiftUITitleResolver.shared.resolveTitle(at: point, in: window) {
+            if view.userpilotIgnoreInteractions
+                || view.up_flagInSubtree(containing: point, \.userpilotIgnoreInteractions) {
+                // Explicitly ignored — leave target_text unset (the event still emits
+                // untitled, exactly as today). Never suppress an event the pipeline emits.
+            } else {
+                let shouldRedact = view.shouldRedactText()
+                    || view.up_flagInSubtree(containing: point, \.userpilotRedactText)
+                eventProperties[AutoCaptureConstants.targetText] =
+                    shouldRedact ? AutoCaptureConstants.reductText : title
             }
         }
 

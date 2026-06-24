@@ -18,7 +18,10 @@ import UIKit
 internal enum AutocaptureViewConfiguration {
 
     static func swiftUITitleCaptureEnabled(config: Userpilot.Config, sourceView: UIView) -> Bool {
-        SwiftUITitleCapturePolicy.shouldRun(config: config, sourceView: sourceView)
+        SwiftUITitleCapturePolicy.shouldRun(
+            config: config,
+            isSwiftUIHost: sourceView.up_isInsideHostingView
+        )
     }
 
     // MARK: - Instance setters (called by Userpilot public API)

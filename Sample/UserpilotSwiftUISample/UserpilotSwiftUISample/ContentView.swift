@@ -11,13 +11,27 @@ import Userpilot
 struct ContentView: View {
     @State private var showIdentifyScreen = false
     @State private var showScreensFlow = false
-    @State private var showAutocaptureConfig = false
-    @State private var showClickAnalyticsDemo1 = false
-    @State private var showTabDemo1 = false
-    @State private var showTabDemo2 = false
+    @State private var showClickAnalytics = false
+    @State private var showClickAnalyticsFullScreen = false
+    @State private var showClickAnalyticsStateSwap = false
+    @State private var showTabsNavigation = false
     @State private var showUIComponent = false
+    @State private var showNestedLazyStacks = false
+    @State private var showModalButtons = false
 
     var body: some View {
+        if showClickAnalyticsStateSwap {
+            NavigationStack {
+                ClickAnalyticsView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Back") {
+                                showClickAnalyticsStateSwap = false
+                            }
+                        }
+                    }
+            }
+        } else {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
@@ -47,44 +61,51 @@ struct ContentView: View {
 
                     sampleSection(
                         title: "Click analytics",
-                        description: "Single click analytics demo with practical label-based examples.",
+                        description: "Single click analytics flow with practical label-based examples.",
                         sectionIcon: "hand.tap.fill",
                         sectionTint: .orange
                     ) {
                         sampleRow(
-                            title: "Click analytics demo",
+                            title: "Click analytics",
                             subtitle: "Buttons first, then gesture and custom component patterns.",
                             icon: "hand.tap.fill",
                             gradient: [.pink, .orange],
-                            action: { showClickAnalyticsDemo1 = true }
+                            action: { showClickAnalytics = true }
+                        )
+                        sampleRow(
+                            title: "Click analytics full screen",
+                            subtitle: "Open the same screen with fullScreenCover, not navigationDestination.",
+                            icon: "arrow.up.left.and.arrow.down.right",
+                            gradient: [.orange, .red],
+                            action: { showClickAnalyticsFullScreen = true }
+                        )
+                        sampleRow(
+                            title: "Click analytics state swap",
+                            subtitle: "Replace the root content manually without navigationDestination.",
+                            icon: "rectangle.2.swap",
+                            gradient: [.purple, .orange],
+                            action: { showClickAnalyticsStateSwap = true }
                         )
                     }
 
                     sampleSection(
-                        title: "Tabs & structure",
-                        description: "Tab-based navigation samples to validate hierarchy and screen boundaries.",
+                        title: "Tabs & navigation",
+                        description: "Tab bar + NavigationStack pushes, lists, sheets and alerts — validates screen boundaries and tab-title capture.",
                         sectionIcon: "square.split.2x1.fill",
                         sectionTint: .mint
                     ) {
                         sampleRow(
-                            title: "Tab demo 1",
-                            subtitle: "Primary tab bar scenario for autocapture.",
+                            title: "Tabs & navigation",
+                            subtitle: "Switch tabs and push screens to exercise autocapture.",
                             icon: "rectangle.split.2x1.fill",
                             gradient: [.mint, .teal],
-                            action: { showTabDemo1 = true }
-                        )
-                        sampleRow(
-                            title: "Tab demo 2",
-                            subtitle: "Alternate tab configuration and nested content.",
-                            icon: "square.grid.2x2.fill",
-                            gradient: [.teal, .green],
-                            action: { showTabDemo2 = true }
+                            action: { showTabsNavigation = true }
                         )
                     }
 
                     sampleSection(
-                        title: "SwiftUI autocapture & UI",
-                        description: "Tweak SwiftUI modifiers for screens, clicks, redaction, and ignored views — plus bundled UI component demos.",
+                        title: "Components & advanced",
+                        description: "UIKit-backed SwiftUI controls, and the accessibility-scan opt-out APIs for the FB21851974 hang pattern.",
                         sectionIcon: "slider.horizontal.3",
                         sectionTint: .purple
                     ) {
@@ -97,10 +118,24 @@ struct ContentView: View {
                         )
                         sampleRow(
                             title: "UI components",
-                            subtitle: "Combined controls and layouts used across the sample app.",
+                            subtitle: "Toggles, sliders, pickers, steppers — SwiftUI controls that are UIKit under the hood.",
                             icon: "rectangle.3.group.fill",
                             gradient: [.indigo, .blue],
                             action: { showUIComponent = true }
+                        )
+                        sampleRow(
+                            title: "Nested lazy stacks",
+                            subtitle: "userpilotSkipAccessibilityScan / userpilotScanOnce on the FB21851974 hang pattern.",
+                            icon: "square.stack.3d.up.fill",
+                            gradient: [.orange, .red],
+                            action: { showNestedLazyStacks = true }
+                        )
+                        sampleRow(
+                            title: "Modal buttons",
+                            subtitle: "Open buttons in a sheet instead of a NavigationStack destination.",
+                            icon: "rectangle.on.rectangle.angled",
+                            gradient: [.purple, .pink],
+                            action: { showModalButtons = true }
                         )
                     }
                 }
@@ -114,26 +149,39 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showScreensFlow) {
                 ScreenOne()
             }
-            .navigationDestination(isPresented: $showAutocaptureConfig) {
-                SwiftUIAutocaptureConfigTestView()
+            .navigationDestination(isPresented: $showClickAnalytics) {
+                ClickAnalyticsView()
             }
-            .navigationDestination(isPresented: $showClickAnalyticsDemo1) {
-                ContentViewClickAnalyticsDemo1()
-            }
-            .navigationDestination(isPresented: $showTabDemo1) {
-                ContentViewTabDemo1()
-            }
-            .navigationDestination(isPresented: $showTabDemo2) {
-                ContentViewTabDemo2()
+            .navigationDestination(isPresented: $showTabsNavigation) {
+                TabsNavigationView()
             }
             .navigationDestination(isPresented: $showUIComponent) {
-                UIComponentsDemo.CombinedUIComponentsView()
+                ComponentsShowcase.CombinedUIComponentsView()
+            }
+            .navigationDestination(isPresented: $showNestedLazyStacks) {
+                NestedLazyStackAutocaptureView()
+            }
+            .sheet(isPresented: $showModalButtons) {
+                ModalButtonsAutocaptureView()
+            }
+            .fullScreenCover(isPresented: $showClickAnalyticsFullScreen) {
+                NavigationStack {
+                    ClickAnalyticsView()
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Close") {
+                                    showClickAnalyticsFullScreen = false
+                                }
+                            }
+                        }
+                }
             }
             .navigationTitle("Userpilot sample")
             .userpilotScreenName("HomeScreen")
             .onReceive(NotificationCenter.default.publisher(for: UserpilotManager.openScreenOneNotification)) { _ in
                 showScreensFlow = true
             }
+        }
         }
     }
 
@@ -267,6 +315,8 @@ struct ContentView: View {
             .shadow(color: gradient.first?.opacity(0.35) ?? .clear, radius: 8, y: 4)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits([.isButton])
     }
 }
 
