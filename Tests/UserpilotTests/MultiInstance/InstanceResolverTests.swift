@@ -72,10 +72,10 @@ final class InstanceResolverTests: XCTestCase {
         let vendorConfig = Userpilot.Config(token: "VENDOR").attach(windows: [window])
         let vendor = MockUserpilot(config: vendorConfig)
 
-        // VC inside that window — window scope should win over (no) class scope.
+        // Window-level autocapture hooks resolve from the window object itself.
         let vc = HostVC()
         window.rootViewController = vc
-        let resolved = InstanceResolver.shared.target(forViewController: vc)
+        let resolved = InstanceResolver.shared.target(forSource: window)
         XCTAssertTrue(resolved === vendor)
 
         _ = host

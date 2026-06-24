@@ -62,6 +62,36 @@ final class StorageMigratorTests: XCTestCase {
                        "Migration must record the applied version to skip re-running on next launch")
     }
 
+    func testMigration_copiesKnownKeysWithSupportedUserDefaultsTypesAndIgnoresUnknownKeys() throws {
+        let legacy = try XCTUnwrap(UserDefaults(suiteName: Self.legacySuiteName))
+        let target = try XCTUnwrap(UserDefaults(suiteName: Self.tokenedSuiteName))
+
+        let sessionDate = Date(timeIntervalSince1970: 123)
+        let configurationDate = Date(timeIntervalSince1970: 456)
+
+        legacy.set("wss://socket.userpilot.io", forKey: Storage.Key.socketURL.rawValue)
+        legacy.set("user-123", forKey: Storage.Key.userId.rawValue)
+        legacy.set("anonymous-abc", forKey: Storage.Key.anonymousUserId.rawValue)
+        legacy.set("{\"user_id\":\"user-123\"}", forKey: Storage.Key.user.rawValue)
+        legacy.set("{\"user_id\":\"temporary\"}", forKey: Storage.Key.temporaryUser.rawValue)
+        legacy.set(sessionDate, forKey: Storage.Key.sessionDate.rawValue)
+        legacy.set(configurationDate, forKey: Storage.Key.configurationDate.rawValue)
+        legacy.set("push-token-data", forKey: Storage.Key.pushToken.rawValue)
+        legacy.set("ignore-me", forKey: "unknown.key")
+
+        StorageMigrator.runIfNeeded(target: target, legacy: legacy)
+
+        XCTAssertEqual(target.string(forKey: Storage.Key.socketURL.rawValue), "wss://socket.userpilot.io")
+        XCTAssertEqual(target.string(forKey: Storage.Key.userId.rawValue), "user-123")
+        XCTAssertEqual(target.string(forKey: Storage.Key.anonymousUserId.rawValue), "anonymous-abc")
+        XCTAssertEqual(target.string(forKey: Storage.Key.user.rawValue), "{\"user_id\":\"user-123\"}")
+        XCTAssertEqual(target.string(forKey: Storage.Key.temporaryUser.rawValue), "{\"user_id\":\"temporary\"}")
+        XCTAssertEqual(target.object(forKey: Storage.Key.sessionDate.rawValue) as? Date, sessionDate)
+        XCTAssertEqual(target.object(forKey: Storage.Key.configurationDate.rawValue) as? Date, configurationDate)
+        XCTAssertEqual(target.string(forKey: Storage.Key.pushToken.rawValue), "push-token-data")
+        XCTAssertNil(target.object(forKey: "unknown.key"))
+    }
+
     func testMigration_isIdempotent() throws {
         let legacy = try XCTUnwrap(UserDefaults(suiteName: Self.legacySuiteName))
         let target = try XCTUnwrap(UserDefaults(suiteName: Self.tokenedSuiteName))
@@ -80,23 +110,37 @@ final class StorageMigratorTests: XCTestCase {
     func testMigration_doesNotOverwriteExistingV2Data() throws {
         let legacy = try XCTUnwrap(UserDefaults(suiteName: Self.legacySuiteName))
         let target = try XCTUnwrap(UserDefaults(suiteName: Self.tokenedSuiteName))
+        let system = try XCTUnwrap(UserDefaults(suiteName: Self.systemSuiteName))
 
         // Target already populated by v2 — must never be overwritten by legacy.
         target.set("v2-real-user", forKey: Storage.Key.userId.rawValue)
         legacy.set("legacy-stale-user", forKey: Storage.Key.userId.rawValue)
 
-        StorageMigrator.runIfNeeded(target: target, legacy: legacy)
+        StorageMigrator.runIfNeeded(
+            target: target,
+            legacy: legacy,
+            system: system,
+            token: Self.tokenA
+        )
 
         XCTAssertEqual(target.string(forKey: Storage.Key.userId.rawValue), "v2-real-user")
         XCTAssertEqual(target.integer(forKey: StorageMigrator.migrationVersionKey),
                        StorageMigrator.currentMigrationVersion)
+        XCTAssertNil(system.string(forKey: StorageMigrator.legacyOwnerTokenKey),
+                     "A legacy-owner claim must not be written when no copy happened")
     }
 
     func testMigration_marksCompletedWhenLegacyIsEmpty() throws {
         let legacy = try XCTUnwrap(UserDefaults(suiteName: Self.legacySuiteName))
         let target = try XCTUnwrap(UserDefaults(suiteName: Self.tokenedSuiteName))
+        let system = try XCTUnwrap(UserDefaults(suiteName: Self.systemSuiteName))
 
-        StorageMigrator.runIfNeeded(target: target, legacy: legacy)
+        StorageMigrator.runIfNeeded(
+            target: target,
+            legacy: legacy,
+            system: system,
+            token: Self.tokenA
+        )
 
         // Even with no data to migrate, the version marker is set so subsequent
         // launches skip the check immediately.
@@ -105,6 +149,8 @@ final class StorageMigratorTests: XCTestCase {
         for key in Storage.Key.allCases {
             XCTAssertNil(target.object(forKey: key.rawValue))
         }
+        XCTAssertNil(system.string(forKey: StorageMigrator.legacyOwnerTokenKey),
+                     "A legacy-owner claim must not be written when no legacy data exists")
     }
 
     func testMigration_marksCompletedWhenLegacySuiteUnavailable() throws {
@@ -201,6 +247,49 @@ final class StorageMigratorTests: XCTestCase {
         StorageMigrator.runIfNeeded(target: target, legacy: legacy, system: system, token: Self.tokenA)
 
         XCTAssertEqual(target.string(forKey: Storage.Key.userId.rawValue), "u1")
+    }
+
+    func testMigration_honorsLegacyOwnerTokenWrittenByOlderBuilds() throws {
+        let legacy = try XCTUnwrap(UserDefaults(suiteName: Self.legacySuiteName))
+        let target = try XCTUnwrap(UserDefaults(suiteName: Self.tokenedSuiteNameB))
+        let system = try XCTUnwrap(UserDefaults(suiteName: Self.systemSuiteName))
+
+        legacy.set("legacy-user", forKey: Storage.Key.userId.rawValue)
+        system.set(Self.tokenA, forKey: "__userpilotLegacyOwnerToken")
+
+        StorageMigrator.runIfNeeded(
+            target: target,
+            legacy: legacy,
+            system: system,
+            token: Self.tokenB
+        )
+
+        XCTAssertNil(target.string(forKey: Storage.Key.userId.rawValue))
+        XCTAssertEqual(target.integer(forKey: StorageMigrator.migrationVersionKey),
+                       StorageMigrator.currentMigrationVersion)
+        XCTAssertNil(system.string(forKey: StorageMigrator.legacyOwnerTokenKey),
+                     "Skipping due to an old-format claim must not rewrite the new claim key")
+        XCTAssertEqual(system.string(forKey: "__userpilotLegacyOwnerToken"), Self.tokenA)
+    }
+
+    func testMigration_matchingLegacyOwnerTokenFromOlderBuildCanCopyAndUpgradesClaimKey() throws {
+        let legacy = try XCTUnwrap(UserDefaults(suiteName: Self.legacySuiteName))
+        let target = try XCTUnwrap(UserDefaults(suiteName: Self.tokenedSuiteName))
+        let system = try XCTUnwrap(UserDefaults(suiteName: Self.systemSuiteName))
+
+        legacy.set("legacy-user", forKey: Storage.Key.userId.rawValue)
+        system.set(Self.tokenA, forKey: "__userpilotLegacyOwnerToken")
+
+        StorageMigrator.runIfNeeded(
+            target: target,
+            legacy: legacy,
+            system: system,
+            token: Self.tokenA
+        )
+
+        XCTAssertEqual(target.string(forKey: Storage.Key.userId.rawValue), "legacy-user")
+        XCTAssertEqual(system.string(forKey: StorageMigrator.legacyOwnerTokenKey), Self.tokenA)
+        XCTAssertEqual(system.string(forKey: "__userpilotLegacyOwnerToken"), Self.tokenA)
     }
 }
 

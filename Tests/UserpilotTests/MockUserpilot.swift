@@ -312,9 +312,9 @@ class MockStorage: DataStoring {
     var userId: String = "user-id"
     var anonymousUserId: String = ""
     var user: String = ""
-    var temporaryUser: String? = ""
-    var sessionDate: Date? = Date()
-    var configurationDate: Date? = Date()
+    var temporaryUser: String?
+    var sessionDate: Date?
+    var configurationDate: Date?
 }
 
 // MARK: - Mock Session Monitor

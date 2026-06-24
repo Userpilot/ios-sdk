@@ -182,10 +182,9 @@ internal enum MockContentFactory {
     
     // MARK: – NEW: Survey ------------------------------------------------------------------
     
-    static func makeSurveyContent(id: Int = 1, token: String = "survey-token") -> SurveyContent {
+    static func makeSurveyContent(id: Int = 1) -> SurveyContent {
         return SurveyContent(
             id: id,
-            token: token,
             type: .step,
             modules: [makeSurveyStep()],
             metadata: SurveyContentMetaData(buttonLabel: "Continue"),

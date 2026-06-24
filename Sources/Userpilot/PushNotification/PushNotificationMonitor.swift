@@ -69,7 +69,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
     /// A computed property indicating whether push notifications are enabled.
     var pushEnabled: Bool {
-        pushAuthorizationStatus == .authorized && storage.pushToken != nil
+        pushAuthorizationStatus == .authorized && storage.pushToken.isNotEmpty
     }
 
     private var deferredNotification: UserpilotNotification?
@@ -351,6 +351,13 @@ extension PushNotificationMonitor {
 
     func setCachedToken(token: Data?) {
         cachedToken = token
+    }
+
+    func processNotificationForTesting(
+        userInfo: [AnyHashable: Any],
+        completionHandler: (() -> Void)? = nil
+    ) -> Bool {
+        processNotification(userInfo, completionHandler: completionHandler)
     }
 
 }
