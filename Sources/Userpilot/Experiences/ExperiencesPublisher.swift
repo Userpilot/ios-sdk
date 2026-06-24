@@ -36,6 +36,9 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Manually end experience
     func endExperience(manualClose: Bool)
 
+    /// Notify that an experience view finished dismissing
+    func experienceDidFinishDismissing()
+
     /// Determine if can requst screen event
     func canRequestScreenEvent() -> Bool
 
@@ -202,6 +205,41 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         return UIApplication.shared.resolveTopViewController()
     }
 
+    /// Resolves the host view controller that experiences should be presented on.
+    ///
+    /// Multi-instance: returns this instance's overlay window root VC so two
+    /// instances may render experiences concurrently without competing for the
+    /// host app's `keyWindow`. The overlay uses passthrough hit-testing so
+    /// non-experience touches still reach the underlying app UI.
+    ///
+    /// Single-instance: behaves identically — the overlay is a single full-screen
+    /// window at `windowLevel.normal + 1` that fully passes touches through when
+    /// no experience is being presented.
+    ///
+    /// The overlay window surfaces itself synchronously in `init`, so by the
+    /// time we return the rootVC it is already in the scene's window hierarchy
+    /// and safe to present on. `refreshWindowLevel()` re-resolves the level on
+    /// every present so newly-registered tenants don't disturb the z-order of
+    /// in-flight presentations.
+    ///
+    /// Falls back to the legacy `topViewControllerProvider()` only when the
+    /// owning instance has been deallocated (defensive — should not happen
+    /// under normal lifecycle).
+    internal func experiencePresentationHost() -> UIViewController? {
+        if let overlay = userpilot?.experienceOverlayWindow {
+            overlay.prepareForPresentation()
+            return overlay.rootViewController
+        }
+        return topViewControllerProvider()
+    }
+
+    /// Hides the overlay window when no experience is currently presented on it.
+    /// Called from dismissal paths so the overlay window doesn't sit visible
+    /// (and consume input focus) while idle.
+    internal func hideExperienceOverlayIfIdle() {
+        userpilot?.experienceOverlayWindow.hideIfIdle()
+    }
+
     /**
      * Ends all active experience views.
      *
@@ -209,11 +247,28 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func endExperience(manualClose: Bool) {
         performOn(.main) { [weak self] in
-            if let topVC = self?.activeExperience,
-               let experience = topVC as? UPExperience {
-                experience.triggerCloseExpereince(manualClose: manualClose)
+            guard let self else { return }
+            guard let topVC = self.activeExperience else {
+                self.hideExperienceOverlayIfIdle()
+                return
             }
-            self?.activeExperience = nil
+
+            self.activeExperience = nil
+            guard let experience = topVC as? UPExperience else {
+                self.hideExperienceOverlayIfIdle()
+                return
+            }
+
+            experience.triggerCloseExperience(manualClose: manualClose) { [weak self] in
+                self?.experienceDidFinishDismissing()
+            }
+        }
+    }
+
+    /// Cleans up the overlay after the actual UIKit dismissal completion fires.
+    func experienceDidFinishDismissing() {
+        performOn(.main) { [weak self] in
+            self?.hideExperienceOverlayIfIdle()
         }
     }
 
@@ -630,9 +685,10 @@ extension ExperiencesPublisher {
         performOn(.main) { [weak self] in
             guard
                 let self = self,
-                let topViewController = self.topViewControllerProvider()
+                let host = self.experiencePresentationHost()
             else {
                 self?.isTriggeringThankYouMessage = false
+                self?.experienceDidFinishDismissing()
                 return
             }
             delayUtils.delayAction { [weak self] in
@@ -651,9 +707,12 @@ extension ExperiencesPublisher {
                             self?.triggerDeepLink(url: url)
                         }
                     }
-                    self?.isTriggeringThankYouMessage = false
                 }
-                topViewController.presentBottomSheet(viewController: thankYouBottomSheetViewController)
+                thankYouBottomSheetViewController.onDismissCompleted = { [weak self] in
+                    self?.isTriggeringThankYouMessage = false
+                    self?.experienceDidFinishDismissing()
+                }
+                host.presentBottomSheet(viewController: thankYouBottomSheetViewController)
             }
         }
     }
@@ -704,7 +763,7 @@ internal extension ExperiencesPublisher {
                 }
 
                 performOn(.main) {
-                    guard let topViewController = self.topViewControllerProvider() else {
+                    guard let host = self.experiencePresentationHost() else {
                         self.processNextPendingExperiences()
                         return
                     }
@@ -716,11 +775,11 @@ internal extension ExperiencesPublisher {
                     self.activeExperience = viewController
                     switch presentation {
                     case .fullScreen, .normal:
-                        topViewController.present(viewController, animated: true)
+                        host.present(viewController, animated: true)
                     case .dialog:
-                        topViewController.presentDialog(viewController: viewController)
+                        host.presentDialog(viewController: viewController)
                     case .bottomSheet:
-                        topViewController.presentBottomSheet(viewController: viewController)
+                        host.presentBottomSheet(viewController: viewController)
                     }
                 }
             }

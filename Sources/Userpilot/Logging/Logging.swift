@@ -12,6 +12,11 @@
 import Foundation
 import os.log
 
+internal enum UserpilotLogging {
+    static let subsystem = "com.userpilot.sdk"
+    static let general = "general"
+}
+
 /**
  Logging protocol to log SDK logs
  */
@@ -35,7 +40,7 @@ extension OSLog: Logging {
 
     /// Create an userpilot logger.
     convenience init(userpilotCategory category: String) {
-        self.init(subsystem: "com.userpilot.sdk", category: category)
+        self.init(subsystem: UserpilotLogging.subsystem, category: category)
     }
 
     /*

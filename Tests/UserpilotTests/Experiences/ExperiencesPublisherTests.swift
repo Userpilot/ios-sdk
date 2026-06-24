@@ -20,7 +20,8 @@ final class ExperiencesPublisherTests: XCTestCase {
     
     override func setUpWithError() throws {
         super.setUp()
-        let config = Userpilot.Config(token: "NX-00000")
+        callbackRegistered = false
+        let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         userpilot = MockUserpilot(config: config)
        
         userpilot.socketManager.onRegisterCallback = { _ in
@@ -31,6 +32,7 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     override func tearDown() {
+        experiencesPublisher = nil
         userpilot = nil
         super.tearDown()
     }
@@ -143,23 +145,19 @@ final class ExperiencesPublisherTests: XCTestCase {
         let mockDelegate = MockNavigationDelegate()
         userpilot.navigationDelegate = mockDelegate
 
+        let expectation = XCTestExpectation(description: "Wait for deep link handling")
         var navigatedURL: URL?
         mockDelegate.onNavigate = { url in
             navigatedURL = url
+            expectation.fulfill()
         }
-
-        let expectation = XCTestExpectation(description: "Wait for deep link handling")
 
         // Act
         experiencesPublisher.triggerDeepLink(url: testURL)
 
         // Assert
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            XCTAssertEqual(navigatedURL, testURL)
-            expectation.fulfill()
-        }
-
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 2.0)
+        XCTAssertEqual(navigatedURL, testURL)
     }
 
     // MARK: - Socket Event Tests
@@ -217,7 +215,7 @@ final class ExperiencesPublisherTests: XCTestCase {
             // Assert
             XCTAssertNotNil(result)
             if case .flow(let content) = result {
-                XCTAssertEqual(content.token, "mobile:77")
+                XCTAssertEqual(content.id, 77)
             } else {
                 XCTFail("Expected flow content")
             }
@@ -255,7 +253,7 @@ final class ExperiencesPublisherTests: XCTestCase {
             // Assert
             XCTAssertNotNil(result)
             if case .survey(let content) = result {
-                XCTAssertEqual(content.token, "survey-123")
+                XCTAssertEqual(content.id, 1)
             } else {
                 XCTFail("Expected survey content")
             }
@@ -348,8 +346,9 @@ final class ExperiencesPublisherTests: XCTestCase {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let result = self.experiencesPublisher.getActiveMobileContent()
                 // Should still be the first (flow) content
-                if case .flow(_) = result {
-                    XCTAssertTrue(true)
+                if case .flow(let content) = result {
+                    let expectedId = (mockPayload["mobile_contents"] as? [String: Any])?["id"] as? Int
+                    XCTAssertEqual(content.id, expectedId)
                 } else {
                     XCTFail("Expected flow content to remain")
                 }
@@ -479,11 +478,14 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [expectation], timeout: 2.0)
 
         // Verify that we still have valid state after concurrent access
+        let resultExpectation = XCTestExpectation(description: "Wait for pending content check")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             let result = self.experiencesPublisher.getActiveMobileContent()
             // Should have some content (the last one to be processed)
             XCTAssertNotNil(result)
+            resultExpectation.fulfill()
         }
+        wait(for: [resultExpectation], timeout: 1.0)
     }
 }
 

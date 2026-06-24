@@ -82,7 +82,9 @@ extension SurveyDialogViewController {
                 let surveyContent = self.surveyViewModel.surveyContent,
                 let surveyTheme = self.surveyViewModel.surveyTheme
             else {
-                self?.dismissDialog()
+                self?.dismissDialog {
+                    self?.surveyViewModel.onExperienceDismissalCompleted()
+                }
                 return
             }
             self.setupGeneralStyle()
@@ -104,7 +106,9 @@ extension SurveyDialogViewController {
 
         // triger close survey
         surveyViewModel.closeSurvey = { [weak self] in
-            self?.dismissDialog()
+            self?.dismissDialog {
+                self?.surveyViewModel.onExperienceDismissalCompleted()
+            }
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
@@ -121,8 +125,17 @@ extension SurveyDialogViewController {
 // MARK: - UPExperience
 
 extension SurveyDialogViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
-        dismissDialog()
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    ) {
+        dismissDialog { [weak self] in
+            if let completion {
+                completion()
+            } else {
+                self?.surveyViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 }
 
@@ -132,7 +145,9 @@ extension SurveyDialogViewController: SurveyContainerViewDelegate {
 
     func onClose() {
         surveyViewModel.onSurveyDismissed()
-        dismissDialog()
+        dismissDialog { [weak self] in
+            self?.surveyViewModel.onExperienceDismissalCompleted()
+        }
     }
 
     func onAction(

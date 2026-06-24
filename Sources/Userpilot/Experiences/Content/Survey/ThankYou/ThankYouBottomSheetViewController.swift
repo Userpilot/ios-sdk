@@ -61,6 +61,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     internal let surveyContent: SurveyContent
     internal let surveyTheme: SurveyTheme
     var actionButtonClicked: (String?) -> Void = { _ in }
+    var onDismissCompleted: () -> Void = {}
 
     // MARK: - Initializers
 
@@ -94,7 +95,13 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
 
     @objc private func buttonDismissClicked() {
         actionButtonClicked(nil)
-        dismiss(animated: true)
+        dismissThankYouBottomSheet()
+    }
+
+    private func dismissThankYouBottomSheet() {
+        dismissBottomSheet { [weak self] in
+            self?.onDismissCompleted()
+        }
     }
 }
 
@@ -118,7 +125,7 @@ internal extension ThankYouBottomSheetViewController {
             self?.actionButtonClicked(
                 surveyStep.metadata?.buttonAction == .deepLink ?
                 surveyStep.metadata?.iosDeepLink : nil)
-            self?.dismiss(animated: true)
+            self?.dismissThankYouBottomSheet()
         }
     }
 

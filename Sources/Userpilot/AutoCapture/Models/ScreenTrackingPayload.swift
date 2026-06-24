@@ -43,6 +43,12 @@ internal struct ScreenTrackingPayload: Equatable {
     /// Alert message from `UIAlertController.message`.
     var alertMessage: String?
 
+    /// The app framework reported by the owning Userpilot instance at the time the
+    /// payload was built. Stored on the payload so screen events route the correct
+    /// per-tenant `ui_framework` value rather than reading from the SDK default
+    /// fallback, which is wrong when multiple instances coexist.
+    var appFramework: Userpilot.AppFramework?
+
     // MARK: - Conversion
 
     /// Converts the payload to a dictionary for event properties
@@ -72,7 +78,7 @@ internal struct ScreenTrackingPayload: Equatable {
             dict[AutoCaptureConstants.screenNameMatchesPreviousScreen] = screenNameMatchesPreviousScreen
         }
 
-        if Userpilot.isInitialized, let appFramework = Userpilot.shared.config.appFramework {
+        if let appFramework = appFramework {
             dict[AutoCaptureConstants.uiFramework] = appFramework.rawValue
         }
         return dict
@@ -82,7 +88,7 @@ internal struct ScreenTrackingPayload: Equatable {
 // MARK: - Manual screen tracking
 
 extension ScreenTrackingPayload {
-    init(screenTitle: String) {
+    init(screenTitle: String, appFramework: Userpilot.AppFramework? = nil) {
         self.init(
             currentScreen: screenTitle,
             screenClass: screenTitle,
@@ -92,5 +98,6 @@ extension ScreenTrackingPayload {
             vcAccessibilityIdentifier: nil,
             vcAccessibilityLabel: nil
         )
+        self.appFramework = appFramework
     }
 }

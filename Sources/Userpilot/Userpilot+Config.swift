@@ -13,6 +13,8 @@ import Foundation
 import UIKit
 import os.log
 
+// swiftlint:disable file_length
+
 extension Userpilot {
 
     // The app framework used by the client application.
@@ -95,6 +97,58 @@ extension Userpilot {
         /// duplicate events when tapping navigation bar buttons in SwiftUI.
         var preferUIKitOverSwiftUIForNavigationBar: Bool = true
 
+        // MARK: - Multi-instance scope (autocapture ownership)
+
+        /// Bundle identifiers this instance has explicitly claimed as its own. The
+        /// autocapture resolution uses these to attribute UI events to the owning Userpilot
+        /// instance when multiple instances coexist in the same process.
+        ///
+        /// In single-instance integrations this stays empty and the (only) instance
+        /// implicitly owns every event via the SDK default fallback.
+        internal var attachedBundleIdentifiers: Set<String> = []
+
+        /// Windows this instance has explicitly claimed. Held weakly so a window dismissal
+        /// does not retain it past its natural lifetime.
+        internal let attachedWindows = NSHashTable<UIWindow>.weakObjects()
+
+        /// View-controller classes this instance has explicitly claimed. Subclasses are
+        /// considered owned too.
+        internal var attachedViewControllerClasses: [AnyClass] = []
+
+        /// Marks this Userpilot instance as the global fallback for autocapture events
+        /// that aren't explicitly attributed (no `userpilot:` arg) and aren't anchored to
+        /// a particular UI subtree (no `attach(bundles:)` / `attach(windows:)` /
+        /// `attach(viewControllerClasses:)`, no SwiftUI `userpilotOwner`).
+        ///
+        /// Defaults to `true` so the host application is the default instance without
+        /// extra configuration. Embedded third-party / vendor SDKs that coexist in the
+        /// same process MUST opt out via `defaultInstance(false)` and anchor their own
+        /// UI explicitly. Any unattributed UI event then routes to the host instead of
+        /// fanning out to every tenant.
+        ///
+        /// Conflict policy:
+        /// - Only one instance can hold the default role. An instance with
+        ///   `isDefault = true` claims it when the role is unclaimed. If the role is
+        ///   already held, the new claim is rejected and a warning is logged; the
+        ///   existing claimant keeps the role. Embedded vendors MUST call
+        ///   `defaultInstance(false)` so they do not compete for the slot.
+        /// - If no instance claims it, there is no default at all and un-anchored
+        ///   events are dropped rather than attributed to an arbitrary tenant. Keep
+        ///   the default of `true` on the host app so it owns un-anchored events.
+        var isDefault: Bool = true
+
+        /// When `true` on the **default** (client app) instance, autocapture events
+        /// (screen + interaction) that originate on a non-default instance — i.e. an
+        /// embedded third-party / vendor SDK — are also forwarded to this default
+        /// instance, so the host app's analytics and backend become aware of them.
+        ///
+        /// Read only on the resolved default instance. Has no effect on non-default
+        /// instances. Defaults to `false`, so existing integrations are unchanged
+        /// unless the host opts in via `allowReceiveEventsFromExternalSource()`. The
+        /// forwarded event is delivered unchanged through this instance's publisher
+        /// (associated with the host's user/session).
+        var allowReceiveEventsFromExternalSource: Bool = false
+
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
         @objc
@@ -109,7 +163,12 @@ extension Userpilot {
         @discardableResult
         @objc
         public func logging(enabled isEnabled: Bool) -> Self {
-            logger = isEnabled ? OSLog(userpilotCategory: GeneralConstants.USERPILOT_LOGGING_CATEOGRY) : .disabled
+            logger = isEnabled
+                ? UPLogger(
+                    category: UserpilotLogging.general,
+                    token: token
+                )
+                : OSLog.disabled
             return self
         }
 
@@ -265,6 +324,108 @@ extension Userpilot {
         @objc
         public func preferUIKitOverSwiftUIForNavigationBar(_ prefer: Bool = true) -> Self {
             preferUIKitOverSwiftUIForNavigationBar = prefer
+            return self
+        }
+
+        // MARK: - Multi-instance scope setters
+
+        /// Claim every UI rooted in any of the given `bundles` for this Userpilot instance.
+        ///
+        /// Use this when an SDK that embeds Userpilot wants its own UI (e.g. a settings screen
+        /// shipped inside the SDK's framework) attributed to its own tenant rather than the
+        /// host app's. Autocapture resolves ownership by walking the responder
+        /// chain to the nearest view controller, then comparing `Bundle(for: vc.class)`'s
+        /// `bundleIdentifier` against every registered instance's claimed bundles.
+        ///
+        /// Calls are additive: each invocation merges `bundles` into the existing claims, so
+        /// attaching extra bundles later does not overwrite earlier ones. Bundles without a
+        /// `bundleIdentifier` are ignored, and duplicate identifiers are de-duplicated.
+        ///
+        /// - Parameter bundles: The bundles whose UI this Userpilot instance should own.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func attach(bundles: [Bundle]) -> Self {
+            for bundle in bundles {
+                if let identifier = bundle.bundleIdentifier, !identifier.isEmpty {
+                    attachedBundleIdentifiers.insert(identifier)
+                }
+            }
+            return self
+        }
+
+        /// Claim every UI hosted by any of the given `windows` for this Userpilot instance.
+        ///
+        /// Useful when an SDK presents its own dedicated `UIWindow`s (e.g. an overlay window
+        /// for an embedded experience) that don't live inside their own framework bundle.
+        /// Windows are held weakly.
+        ///
+        /// Calls are additive: each invocation merges `windows` into the existing claims.
+        ///
+        /// - Parameter windows: The windows whose UI this Userpilot instance should own.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func attach(windows: [UIWindow]) -> Self {
+            for window in windows {
+                attachedWindows.add(window)
+            }
+            return self
+        }
+
+        /// Claim every view controller of any class in `viewControllerClasses` (or any
+        /// subclass of those classes) for this Userpilot instance.
+        ///
+        /// Escape hatch for unusual hosting setups where neither bundle nor window
+        /// resolution is sufficient. Subclasses are considered owned.
+        ///
+        /// Calls are additive: each invocation appends to the existing claims, so passing
+        /// extra classes later does not overwrite earlier ones.
+        ///
+        /// - Parameter viewControllerClasses: The view controller classes this instance
+        ///   should own.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func attach(viewControllerClasses: [AnyClass]) -> Self {
+            attachedViewControllerClasses.append(contentsOf: viewControllerClasses)
+            return self
+        }
+
+        /// Marks this Userpilot instance as the global fallback for autocapture
+        /// events that have no other owner (no explicit `userpilot:` argument and
+        /// no `attach(bundles:)` / `attach(windows:)` / `attach(viewControllerClasses:)`
+        /// hit and no SwiftUI `userpilotOwner` env value).
+        ///
+        /// Typical usage: the host application leaves this at `true` (the default);
+        /// embedded third-party SDKs call `.defaultInstance(false)`. Default resolution
+        /// is claim-based — when the vendor opts out, the host holds the role
+        /// regardless of init order. See `isDefault` for the conflict policy.
+        ///
+        /// - Parameter enabled: A boolean indicating whether this instance should
+        ///   be the explicit default. Defaults to `true`.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func defaultInstance(_ enabled: Bool = true) -> Self {
+            isDefault = enabled
+            return self
+        }
+
+        /// Allows this (default) instance to also receive autocapture events that
+        /// originate on a non-default instance (an embedded third-party / vendor SDK),
+        /// so the host app becomes aware of them.
+        ///
+        /// Only effective on the resolved default instance. See
+        /// `allowReceiveEventsFromExternalSource` for the full policy.
+        ///
+        /// - Parameter enabled: Whether to receive forwarded external-source events.
+        ///   Defaults to `true`.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func allowReceiveEventsFromExternalSource(_ enabled: Bool = true) -> Self {
+            allowReceiveEventsFromExternalSource = enabled
             return self
         }
 

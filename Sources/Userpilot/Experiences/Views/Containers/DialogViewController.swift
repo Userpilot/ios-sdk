@@ -71,6 +71,14 @@ internal class DialogViewController: UIViewController {
         animatePresent()
     }
 
+    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        guard flag else {
+            super.dismiss(animated: false, completion: completion)
+            return
+        }
+        dismissDialog(completion: completion)
+    }
+
     deinit {
         UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
         ? .forceLeftToRight : .forceRightToLeft

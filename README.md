@@ -27,6 +27,7 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Configurations](#configurations-optional)
     - [Auto Capture](#auto-capture)
     - [Push Notification](#push-notification)
+    - [Multi-Instance Support](#multi-instance-support)
  - [📝 Documentation](#-documentation)
  - [🎬 Samples](#-samples)
  - [📄 License](#-license)
@@ -295,6 +296,10 @@ Userpilot SDK supports automatic screen tracking to help you capture mobile scre
 ### Push Notification
 
 Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/developer/installation/mobile/ios/push-notifications).
+
+### Multi-Instance Support
+
+Userpilot iOS SDK supports running multiple independent instances in the same process. Each instance keeps its own analytics, autocapture scope, storage, and experience overlay window isolated from other instances. For setup instructions and routing details, please refer to the [Multi-Instance Guide](Sources/Userpilot/Userpilot.docc/MultiInstance.md).
 
 ## 📝 Documentation
 

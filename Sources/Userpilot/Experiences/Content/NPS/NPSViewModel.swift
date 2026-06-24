@@ -135,6 +135,11 @@ internal class NPSViewModel {
         }
     }
 
+    /// Notify the publisher after the NPS view has finished dismissing.
+    func onExperienceDismissalCompleted() {
+        experiencesPublisher.experienceDidFinishDismissing()
+    }
+
     // MARK: - Logging
 
     private func logExperience(state: String) {

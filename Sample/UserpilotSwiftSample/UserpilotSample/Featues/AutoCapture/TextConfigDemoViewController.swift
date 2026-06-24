@@ -185,7 +185,7 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         stackView.addArrangedSubview(defaultIgnoreInnerHierarchyContainer)
 
         addSectionHeader("8. Stop / Resume AutoCapture")
-        addLabel("Use these buttons to test Userpilot.stopAutoCapture() and Userpilot.resumeAutoCapture().")
+        addLabel("Use these buttons to test the per-instance userpilot.stopAutoCapture() and userpilot.resumeAutoCapture().")
         stopAutoCaptureButton.setTitle("Stop AutoCapture", for: .normal)
         stopAutoCaptureButton.addTarget(
             self,
@@ -229,7 +229,7 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         userpilotIgnoreInnerHierarchy -> inner path details collapse to the parent container.
         userpilotIgnoreInteractionsDefault -> all instances of the demo subclass ignore taps.
         userpilotIgnoreInnerHierarchyDefault -> all instances of the demo subclass collapse inner details.
-        Userpilot.stopAutoCapture / resumeAutoCapture -> globally disable and re-enable autocapture.
+        userpilot.stopAutoCapture / resumeAutoCapture -> pause and resume autocapture for this instance only.
         userpilotRecognizeClickAnalytics() -> makes custom UIViews trackable as taps.
         """)
     }
@@ -424,12 +424,12 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
     }
 
     @objc private func onStopAutoCaptureTapped() {
-        Userpilot.stopAutoCapture()
+        UserpilotManager.shared.stopAutoCapture()
         showAlert("AutoCapture Stopped", "Autocapture is now paused until you tap Resume AutoCapture.")
     }
 
     @objc private func onResumeAutoCaptureTapped() {
-        Userpilot.resumeAutoCapture()
+        UserpilotManager.shared.resumeAutoCapture()
         showAlert("AutoCapture Resumed", "Autocapture is active again.")
     }
 

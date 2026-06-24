@@ -63,6 +63,41 @@ final class EventTests: XCTestCase {
         XCTAssertEqual(event.userpilotAnalytic, .event)
     }
 
+    func testAutoCaptureEventTypeProperties() {
+        let eventType = EventType.autoCaptureEvent
+        let event = Event(
+            type: eventType,
+            properties: ["target": "button"],
+            interactionEventName: InteractionEventType.tap.rawValue
+        )
+
+        XCTAssertEqual(eventType.caseName, "mobile_autocapture")
+        XCTAssertEqual(eventType.eventName, "mobile_autocapture")
+        XCTAssertFalse(eventType.isEvent)
+        XCTAssertFalse(eventType.isScreenEvent)
+        XCTAssertFalse(eventType.isIdentifyEvent)
+        XCTAssertNil(eventType.eventTitle)
+        XCTAssertNil(eventType.userId)
+        XCTAssertNil(eventType.screenTitle)
+        XCTAssertEqual(event.caseName, "mobile_autocapture")
+        XCTAssertEqual(event.eventName, "mobile_autocapture")
+        XCTAssertEqual(event.userpilotAnalytic, .event)
+        XCTAssertEqual(event.interactionEventName, "tap")
+        XCTAssertEqual(event.properties?["target"] as? String, "button")
+    }
+
+    func testEventDerivedAnalyticsTypeForScreenAndIdentify() {
+        let screen = Event(type: .screen("Home"))
+        let identify = Event(type: .identify("user-1"))
+
+        XCTAssertEqual(screen.userpilotAnalytic, .screen)
+        XCTAssertEqual(screen.screenTitle, "Home")
+        XCTAssertEqual(screen.eventTitle, "")
+        XCTAssertEqual(identify.userpilotAnalytic, .identify)
+        XCTAssertEqual(identify.userId, "user-1")
+        XCTAssertEqual(identify.eventTitle, "")
+    }
+
     func testEventToUser() {
         let props: Payload = ["age": 25]
         let company: Payload = ["name": "Acme Inc."]

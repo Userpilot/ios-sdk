@@ -12,30 +12,10 @@
 import ObjectiveC
 import UIKit
 
-/// Internal type that owns autocapture view configuration (class defaults, responder setters, stop/resume state).
+/// Internal type that owns autocapture view configuration: class defaults and
+/// per-view responder setters (ignore-interactions, redaction). Stop/resume is no
+/// longer here — it is per-instance state on each `AutoCaptureCoordinater`.
 internal enum AutocaptureViewConfiguration {
-
-    // MARK: - Stop / Resume
-
-    private static let stopResumeLock = NSLock()
-    private static var _isAutoCaptureStopped = false
-
-    /// When `true`, all autocapture paths exit at the first check (no screen or interaction events).
-    static var isAutoCaptureStopped: Bool {
-        _isAutoCaptureStopped
-    }
-
-    static func stopAutoCapture() {
-        stopResumeLock.lock()
-        _isAutoCaptureStopped = true
-        stopResumeLock.unlock()
-    }
-
-    static func resumeAutoCapture() {
-        stopResumeLock.lock()
-        _isAutoCaptureStopped = false
-        stopResumeLock.unlock()
-    }
 
     // MARK: - Instance setters (called by Userpilot public API)
 

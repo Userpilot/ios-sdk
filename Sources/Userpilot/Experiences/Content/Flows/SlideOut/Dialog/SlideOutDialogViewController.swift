@@ -81,7 +81,9 @@ extension SlideOutDialogViewController {
                 canBindData,
                 let slideOutContent = self.experienceViewModel.slideOutContent
             else {
-                self?.dismissDialog()
+                self?.dismissDialog {
+                    self?.experienceViewModel.onExperienceDismissalCompleted()
+                }
                 return
             }
             self.setupGeneralStyle()
@@ -111,6 +113,7 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
     func onClose() {
         dismissDialog { [weak self] in
             self?.experienceViewModel.onDismissStep()
+            self?.experienceViewModel.onExperienceDismissalCompleted()
         }
     }
 
@@ -120,6 +123,7 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
         guard let action else { return }
         dismissDialog { [weak self] in
             self?.experienceViewModel.onExperienceCompleted()
+            self?.experienceViewModel.onExperienceDismissalCompleted()
             if action.deepLink != nil {
                 self?.experienceViewModel.onDeepLinkTriggered()
             }
@@ -130,7 +134,16 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
 // MARK: - UPExperience
 
 extension SlideOutDialogViewController: UPExperience {
-    func triggerCloseExpereince(manualClose: Bool) {
-        dismissDialog()
+    func triggerCloseExperience(
+        manualClose: Bool,
+        completion: (() -> Void)?
+    ) {
+        dismissDialog { [weak self] in
+            if let completion {
+                completion()
+            } else {
+                self?.experienceViewModel.onExperienceDismissalCompleted()
+            }
+        }
     }
 }

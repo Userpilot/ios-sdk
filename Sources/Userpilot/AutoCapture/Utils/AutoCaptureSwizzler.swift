@@ -149,18 +149,4 @@ internal enum AutoCaptureSwizzler {
         }
     }
 
-    // MARK: - Setup All Interaction Tracking
-
-    /// Sets up all interaction tracking swizzles and notifications
-    static func setupAllInteractionTracking() {
-        // UIWindow.sendEvent captures: regular views, table cells, collection cells
-        swizzleClickTracking()
-        // UIApplication.sendAction captures: UIControl, UIBarButtonItem, UIMenu, etc. (single path, no duplicates)
-        swizzleApplicationSendAction()
-        // UIPickerView delegate hooking captures row selections
-        swizzlePickerViewDelegate()
-        // Text input notifications
-        registerTextFieldNotifications()
-        registerTextViewNotifications()
-    }
 }

@@ -18,12 +18,22 @@ import SwiftUI
 /// Extension providing screen tracking functionality for SwiftUI views.
 /// SwiftUI uses protocol extensions; API is `public` (not `open`—only classes support `open`).
 public extension View {
-    /// Marks a SwiftUI View to be tracked as a screen event when it appears
-    /// - Parameter screenName: The name of the screen (defaults to view type)
-    /// - Returns: A modified view that will be tracked as a screen
-    func userpilotScreen(_ screenName: String? = nil) -> some View {
+    /// Marks a SwiftUI View to be tracked as a screen event when it appears.
+    ///
+    /// - Parameters:
+    ///   - screenName: The name of the screen (defaults to view type).
+    ///   - userpilot: The instance to publish the screen event on. When `nil`
+    ///     (the default), routes to the SDK's default instance. In single-instance
+    ///     integrations this is the only instance; in multi-instance integrations it
+    ///     is whichever instance claimed the default role (`isDefault`). Pass this
+    ///     explicitly when a SwiftUI subtree must publish into a specific tenant
+    ///     (e.g. a vendor SDK's instance).
+    /// - Returns: A modified view that will be tracked as a screen.
+    func userpilotScreen(_ screenName: String? = nil, userpilot: Userpilot? = nil) -> some View {
         let screenEventName = screenName ?? "\(type(of: self))"
-        return modifier(UserpilotSwiftUIViewModifier(screenEventName: screenEventName))
+        return modifier(
+            UserpilotSwiftUIViewModifier(screenEventName: screenEventName, userpilot: userpilot)
+        )
     }
 }
 
@@ -36,6 +46,9 @@ private struct UserpilotSwiftUIViewModifier: ViewModifier {
     /// The screen event name to track
     let screenEventName: String
 
+    /// Optional explicit destination. When `nil`, falls back to the default instance.
+    let userpilot: Userpilot?
+
     // MARK: - ViewModifier Protocol
 
     /// Applies the screen tracking modifier to the content
@@ -43,8 +56,9 @@ private struct UserpilotSwiftUIViewModifier: ViewModifier {
     /// - Returns: Modified view with screen tracking
     func body(content: Self.Content) -> some View {
         content.onAppear {
-            guard Userpilot.isInitialized else { return }
-            Userpilot.shared.screen(screenEventName)
+            // Explicit param wins; otherwise route to the default. If neither
+            // exists (SDK not initialised), the event is a silent no-op.
+            (userpilot ?? Userpilot.Registry.shared.default)?.screen(screenEventName)
         }
     }
 }

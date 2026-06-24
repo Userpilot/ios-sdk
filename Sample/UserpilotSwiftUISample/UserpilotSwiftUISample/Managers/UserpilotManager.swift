@@ -32,7 +32,7 @@ class UserpilotManager {
 
     func initialize() {
         userpilot = Userpilot(
-            config: Userpilot.Config(token: "NX-b83a34b8")
+            config: Userpilot.Config(token: "<#APP_TOKEN#>")
                 .logging(enabled: true)
                 .enableUseInAppBrowser()
                 .enableScreenAutoCapture()

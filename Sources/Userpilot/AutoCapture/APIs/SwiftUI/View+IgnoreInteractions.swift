@@ -70,7 +70,7 @@ public extension View {
     ///
     /// - This modifier is recursive - if applied to a container view, all interactions in child views will be ignored
     /// - The views remain fully functional; only the analytics tracking is disabled
-    /// - This does not affect manual tracking via `Userpilot.shared.track()`
+    /// - This does not affect manual tracking on a `Userpilot` instance
     ///
     /// - Parameter ignore: Whether to ignore interactions (defaults to true)
     /// - Returns: A view with interaction tracking disabled

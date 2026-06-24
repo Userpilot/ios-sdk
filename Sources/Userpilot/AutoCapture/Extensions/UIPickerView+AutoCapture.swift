@@ -86,8 +86,10 @@ internal extension UIPickerView {
     /// Builds and dispatches an interaction payload for a picker row selection.
     func capturePickerViewSelection(row: Int, component: Int) {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance for this picker view.
+        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
         guard !shouldIgnoreInteractions() else { return }
 
@@ -117,7 +119,7 @@ internal extension UIPickerView {
         payload.accessibilityLabel = getAccessibilityLabelContent()
         payload.targetViewName = resolveReferenceName()
 
-        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
+        owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     /// Resolves the title for the picked row, trying every API SwiftUI / UIKit may expose it on.

@@ -16,13 +16,15 @@ final class SessionMonitorTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        let config = Userpilot.Config(token: "NX-00000")
+        let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         userpilot = MockUserpilot(config: config)
         monitor = SessionMonitor(container: userpilot.container)
     }
 
     override func tearDown() {
         monitor.reset()
+        monitor = nil
+        userpilot = nil
         super.tearDown()
     }
 
@@ -31,21 +33,13 @@ final class SessionMonitorTests: XCTestCase {
         var trackedFlushEvent = 0
         userpilot.analyticsPublisher.onFlush = { trackedFlushEvent += 1 }
 
-        let expectation = self.expectation(description: "Background notification handled")
-
-        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
-
         // Act
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            XCTAssertFalse(self.monitor.isAppActive, "App should be marked inactive in background")
-            // swiftlint:disable:next line_length
-            XCTAssertNotNil(self.userpilot.storage.sessionDate, "Session date should be stored when going to background")
-            XCTAssertEqual(trackedFlushEvent, 1, "Flush should be called exactly once")
-            expectation.fulfill()
-        }
+        monitor.didEnterBackground(notification: Notification(name: UIApplication.didEnterBackgroundNotification))
 
         // Assert
-        wait(for: [expectation], timeout: 1.0)
+        XCTAssertFalse(monitor.isAppActive, "App should be marked inactive in background")
+        XCTAssertNotNil(userpilot.storage.sessionDate, "Session date should be stored when going to background")
+        XCTAssertEqual(trackedFlushEvent, 1, "Flush should be called exactly once")
     }
 
     func testDidEnterForeground_shouldResumeAnalytics() {
@@ -53,19 +47,12 @@ final class SessionMonitorTests: XCTestCase {
         var trackedResumeEvent = 0
         userpilot.analyticsPublisher.onResume = { trackedResumeEvent += 1 }
 
-        let expectation = self.expectation(description: "Foreground notification handled")
-
-        NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
-
         // Act
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            XCTAssertTrue(self.monitor.isAppActive, "App should be marked active when entering foreground")
-            XCTAssertEqual(trackedResumeEvent, 1, "Resume should be called exactly once")
-            expectation.fulfill()
-        }
+        monitor.didEnterForeground(notification: Notification(name: UIApplication.willEnterForegroundNotification))
 
         // Assert
-        wait(for: [expectation], timeout: 1.0)
+        XCTAssertTrue(monitor.isAppActive, "App should be marked active when entering foreground")
+        XCTAssertEqual(trackedResumeEvent, 1, "Resume should be called exactly once")
     }
 
     func testInit_shouldResumeAnalyticsIfAppIsActive() {
@@ -113,15 +100,15 @@ final class SessionMonitorTests: XCTestCase {
         // Assert
         XCTAssertTrue(monitor.isAppActive, "App should be active initially")
 
-        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        monitor.didEnterBackground(notification: Notification(name: UIApplication.didEnterBackgroundNotification))
         XCTAssertFalse(monitor.isAppActive, "App should be inactive after background event")
 
-        NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+        monitor.didEnterForeground(notification: Notification(name: UIApplication.willEnterForegroundNotification))
         XCTAssertTrue(monitor.isAppActive, "App should be active again after foreground event")
     }
 
     func testSessionDate_shouldBeClearedOnReset() {
-        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        monitor.didEnterBackground(notification: Notification(name: UIApplication.didEnterBackgroundNotification))
         XCTAssertNotNil(userpilot.storage.sessionDate, "Session date should be set when entering background")
 
         monitor.reset()

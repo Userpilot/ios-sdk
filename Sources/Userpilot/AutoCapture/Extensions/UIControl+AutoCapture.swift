@@ -32,8 +32,13 @@ internal extension UIControl {
     /// Called from UIApplication.sendAction swizzle when sender is a UIControl.
     func captureControlInteraction(action: Selector, target: Any?, event: UIEvent?) {
         guard Userpilot.isInitialized else { return }
-        guard !AutocaptureViewConfiguration.isAutoCaptureStopped else { return }
-        let config = Userpilot.shared.config
+        // Resolve the owning Userpilot instance from the responder chain so this
+        // control's events follow its tenant's privacy / capture flags.
+        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        // Per-instance stop gate: this control's tenant may have paused capture
+        // via `stopAutoCapture()` while other instances keep running.
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }
 
         // Skip tap for text field/text view editing actions when configured;
@@ -62,7 +67,7 @@ internal extension UIControl {
         }
 
         // Send immediately for discrete controls
-        Userpilot.shared.autoCaptureCoordinator.handleInteractionEvent(payload)
+        owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 
     // Builds an interaction payload based on the control type

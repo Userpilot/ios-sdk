@@ -22,13 +22,13 @@ internal struct DispatchQueueConstants {
     static let DI_CONTAINER_QUEUE = "com.userpilot.dicontainer-queue"
     static let THROTTLE_QUEUE = "com.userpilot.throttle-queue"
     static let DEBOUNCE_QUEUE = "com.userpilot.debounce-queue"
+    static let REGISTRY_QUEUE = "com.userpilot.registry-queue"
 }
 
 internal struct GeneralConstants {
     static let PATH_NAME = "/mobile/v1/events/websocket"
     static let SESSION_DURATION = TimeInterval(30 * 60)
     static let CONFIGURATION_DURATION = TimeInterval(30 * 60)
-    static let USERPILOT_LOGGING_CATEOGRY = "general"
 }
 
 /// Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).

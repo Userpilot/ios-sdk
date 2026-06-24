@@ -69,7 +69,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
     /// A computed property indicating whether push notifications are enabled.
     var pushEnabled: Bool {
-        pushAuthorizationStatus == .authorized && storage.pushToken != nil
+        pushAuthorizationStatus == .authorized && storage.pushToken.isNotEmpty
     }
 
     private var deferredNotification: UserpilotNotification?
@@ -238,15 +238,19 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
             return false  // Early exit if userpilot is nil
         }
 
+        if let appToken = parsedNotification.appToken, !appToken.isEmpty, appToken != config.token {
+            return false
+        }
+
+        // If there’s an active session and a user Id mismatch, let another instance
+        // try to handle the response instead of swallowing it.
+        guard parsedNotification.userId == storage.userId else {
+            return false
+        }
+
         // Handle deferred notification if analytics event is not yet allowed
         guard analyticsPublisher.canRequestEvent else {
             deferredNotification = parsedNotification
-            completionHandler?()
-            return true
-        }
-
-        // If there’s an active session and a user Id mismatch, skip processing
-        guard parsedNotification.userId == storage.userId else {
             completionHandler?()
             return true
         }
@@ -272,6 +276,11 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         else { return false }
 
         defer { deferredNotification = nil }
+
+        if let appToken = parsedNotification.appToken, !appToken.isEmpty, appToken != config.token {
+            config.logger.info("Deferred notification response skipped")
+            return false
+        }
 
         guard parsedNotification.userId == storage.userId else {
             config.logger.info("Deferred notification response skipped")
@@ -342,6 +351,13 @@ extension PushNotificationMonitor {
 
     func setCachedToken(token: Data?) {
         cachedToken = token
+    }
+
+    func processNotificationForTesting(
+        userInfo: [AnyHashable: Any],
+        completionHandler: (() -> Void)? = nil
+    ) -> Bool {
+        processNotification(userInfo, completionHandler: completionHandler)
     }
 
 }
