@@ -64,6 +64,52 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(analyticsPublisher.screenEntity?.event.screenTitle, "Home Screen")
     }
 
+    func testPublish_screenEvent_shouldSyncScreenTrackerForWrapperInteractionOnlyConfig() {
+        // Arrange
+        let config = Userpilot.Config(token: "NX-WRAPPER-\(UUID().uuidString)")
+            .additionalProperties([
+                WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter,
+                WrapperSDKConstants.enableScreenAutoCapture: false,
+                WrapperSDKConstants.enableInteractionAutoCapture: true
+            ])
+            .defaultInstance(false)
+        userpilot = MockUserpilot(config: config)
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
+        let screenEvent = Event(type: .screen("Wrapper Manual Screen"))
+
+        // Act
+        analyticsPublisher.publish(screenEvent)
+
+        // Assert
+        let tracker = userpilot.container.resolve(ScreenNameTracking.self)
+        XCTAssertEqual(tracker.getCurrentPayload()?.currentScreen, "Wrapper Manual Screen")
+    }
+
+    func testPublish_screenEvent_shouldNotSyncScreenTrackerForWrapperScreenAutocaptureConfig() {
+        // Arrange
+        let config = Userpilot.Config(token: "NX-WRAPPER-\(UUID().uuidString)")
+            .additionalProperties([
+                WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter,
+                WrapperSDKConstants.enableScreenAutoCapture: true,
+                WrapperSDKConstants.enableInteractionAutoCapture: true
+            ])
+            .defaultInstance(false)
+        userpilot = MockUserpilot(config: config)
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
+        let screenEvent = Event(type: .screen("Wrapper Screen Autocapture"))
+
+        // Act
+        analyticsPublisher.publish(screenEvent)
+
+        // Assert
+        let tracker = userpilot.container.resolve(ScreenNameTracking.self)
+        XCTAssertNil(tracker.getCurrentPayload())
+    }
+
     func testPublish_customEvent_shouldAddToQueue() {
         // Arrange
         let customEvent = Event(type: .event("button_clicked"))
@@ -87,6 +133,40 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         wait(for: [expectation], timeout: 2.0)
+    }
+
+    func testPublish_autoCaptureEvent_shouldRejectEmptyScreenPayload() {
+        // Arrange
+        let logger = MockLogger()
+        let config = Userpilot.Config(token: "NX-AUTOCAPTURE-\(UUID().uuidString)")
+            .defaultInstance(false)
+        config.logger = logger
+        userpilot = MockUserpilot(config: config)
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        userpilot.socketManager.isSocketOpened = true
+        let errorLogged = expectation(description: "autocapture screen error logged")
+        logger.onError = { message, _ in
+            if String(describing: message).contains("Auto capture event must have screen") {
+                errorLogged.fulfill()
+            }
+        }
+        let event = Event(
+            type: .autoCaptureEvent,
+            properties: [AutoCaptureConstants.rawInteractionType: "tap"],
+            screen: [:],
+            interactionEventName: "tap"
+        )
+        var didPublishEvent = false
+        userpilot.socketManager.onPublish = { _, _, _ in
+            didPublishEvent = true
+        }
+
+        // Act
+        analyticsPublisher.publish(event)
+
+        // Assert
+        wait(for: [errorLogged], timeout: 1)
+        XCTAssertFalse(didPublishEvent)
     }
 
     func testPublish_whenSocketNotOpened_shouldCacheEvent() {

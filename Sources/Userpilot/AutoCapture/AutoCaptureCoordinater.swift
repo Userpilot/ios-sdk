@@ -127,6 +127,8 @@ internal class AutoCaptureCoordinater {
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
         self.registry = container.resolve(InstanceRegistering.self)
 
+        guard !config.isWrapperSDK else { return }
+
         // Screen swizzles are required for both features (interaction tracking
         // needs to know which screen an event occurred on).
         if config.enableScreenAutoCapture {
@@ -715,11 +717,13 @@ private extension AutoCaptureCoordinater {
 extension AutoCaptureCoordinater {
     /// Auto capture screen events from wrappers
     func trackExternalAutoCaptureScreen(_ screen: String) {
+        guard config.isWrapperSDK else { return }
         publishScreen(ScreenTrackingPayload(screenTitle: screen))
     }
 
     /// Auto capture interactions events from wrappers
     func trackExternalAutoCaptureEvent(_ eventName: String, _ properties: Payload) {
+        guard config.isWrapperSDK else { return }
         let event = Event(
             type: EventType.autoCaptureEvent,
             properties: properties,

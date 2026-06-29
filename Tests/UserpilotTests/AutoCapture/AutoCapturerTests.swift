@@ -62,4 +62,67 @@ final class AutoCapturerTests: XCTestCase {
 
         XCTAssertEqual(trackedEvent?.screenTitle, "HomeViewController")
     }
+
+    func testExternalAutoCaptureScreen_isIgnoredForNonWrapperConfig() {
+        let userpilot = MockUserpilot(
+            config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
+                .defaultInstance(false)
+        )
+        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        var trackedEvent: Event?
+        userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
+
+        autoCapturer.trackExternalAutoCaptureScreen("Wrapper Home")
+
+        XCTAssertNil(trackedEvent)
+    }
+
+    func testExternalAutoCaptureScreen_isPublishedForWrapperConfig() {
+        let userpilot = MockUserpilot(
+            config: Userpilot.Config(token: "AUTOCAPTURE-WRAPPER-\(UUID().uuidString)")
+                .additionalProperties([
+                    WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeReactNative
+                ])
+                .defaultInstance(false)
+        )
+        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        var trackedEvent: Event?
+        userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
+
+        autoCapturer.trackExternalAutoCaptureScreen("Wrapper Home")
+
+        XCTAssertEqual(trackedEvent?.screenTitle, "Wrapper Home")
+    }
+
+    func testExternalAutoCaptureEvent_isIgnoredForNonWrapperConfig() {
+        let userpilot = MockUserpilot(
+            config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
+                .defaultInstance(false)
+        )
+        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        var trackedEvent: Event?
+        userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
+
+        autoCapturer.trackExternalAutoCaptureEvent("tap", ["target": "button"])
+
+        XCTAssertNil(trackedEvent)
+    }
+
+    func testExternalAutoCaptureEvent_isPublishedForWrapperConfig() {
+        let userpilot = MockUserpilot(
+            config: Userpilot.Config(token: "AUTOCAPTURE-WRAPPER-\(UUID().uuidString)")
+                .additionalProperties([
+                    WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter
+                ])
+                .defaultInstance(false)
+        )
+        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        var trackedEvent: Event?
+        userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
+
+        autoCapturer.trackExternalAutoCaptureEvent("tap", ["target": "button"])
+
+        XCTAssertEqual(trackedEvent?.interactionEventName, "tap")
+        XCTAssertEqual(trackedEvent?.properties?["target"] as? String, "button")
+    }
 }

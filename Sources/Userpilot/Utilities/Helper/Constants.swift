@@ -31,6 +31,15 @@ internal struct GeneralConstants {
     static let CONFIGURATION_DURATION = TimeInterval(30 * 60)
 }
 
+internal struct WrapperSDKConstants {
+    static let pluginType = "PluginType"
+    static let pluginTypeReactNative = "ReactNative"
+    static let pluginTypeFlutter = "Flutter"
+    static let pluginTypeIonic = "Ionic"
+    static let enableScreenAutoCapture = "WrapperEnableScreenAutoCapture"
+    static let enableInteractionAutoCapture = "WrapperEnableInteractionAutoCapture"
+}
+
 /// Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).
 internal struct AutoCaptureConstants {
 

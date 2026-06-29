@@ -629,7 +629,7 @@ extension AnalyticsPublisher {
             if let screenViewEntity, canRequestScreenEvent {
                 let screenEvent = screenViewEntity.event
                 if let screenTitle = screenEvent.screenTitle {
-                    if !config.enableScreenAutoCapture && config.enableInteractionAutoCapture {
+                    if shouldSyncManualScreenForInteractionPayload() {
                         screenNameTracker.updateScreen(
                             with: ScreenTrackingPayload(
                                 screenTitle: screenTitle,
@@ -661,6 +661,14 @@ extension AnalyticsPublisher {
                 clearCachedEvent()
             }
         }
+    }
+
+    private func shouldSyncManualScreenForInteractionPayload() -> Bool {
+        if config.isWrapperSDK {
+            return !config.isWrapperScreenAutoCaptureEnabled &&
+                config.isWrapperInteractionAutoCaptureEnabled
+        }
+        return !config.enableScreenAutoCapture && config.enableInteractionAutoCapture
     }
 
     /*
@@ -697,7 +705,7 @@ extension AnalyticsPublisher {
                     if let screen = eventToSend.screen {
                         payload[AnalyticsPublisher.screen] = screen
                     }
-                    if eventToSend.type == .autoCaptureEvent && eventToSend.screen == nil {
+                    if eventToSend.type == .autoCaptureEvent && eventToSend.screen?.isEmpty != false {
                         self.logger.error("❗ Event Error, Auto capture event must have screen")
                         return
                     }
