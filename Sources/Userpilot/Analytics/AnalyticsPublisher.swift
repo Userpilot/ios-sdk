@@ -486,7 +486,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             let hierarchy = trackEventThrottleString(from: properties[AutoCaptureConstants.hierarchy])
             let row = trackEventThrottleString(from: properties[AutoCaptureConstants.selectedIndex])
             let interaction = trackEventThrottleString(from: event.interactionEventName)
-            return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)"
+            let targetPath = trackEventThrottleString(from: properties[AutoCaptureConstants.targetPath])
+            return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)|\(targetPath)"
         } else {
             let tabIndex = properties[AutoCaptureConstants.tabIndex] ?? 0
             return "\(screenName)|\(trackTitle)|\(tabName)|\(tabIndex)"
