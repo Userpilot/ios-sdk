@@ -17,7 +17,7 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
         return view
     }()
     
@@ -294,6 +294,8 @@ internal class NPSContainerView: UIView {
 
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 
@@ -338,16 +340,22 @@ internal class NPSContainerView: UIView {
         
         // Remove old views before adding the new one
         stepSectionsStackView.arrangedSubviews.forEach {
-            if $0 is UPExperienceView {
+            if $0 !== imageContainerView {
                 $0.removeFromSuperview()
             }
         }
         
         stepSectionsStackView.addArrangedSubview(newView)
 
-        // Ensure layout updates before calculating the height
+        // Force layout update to ensure constraints are applied
+        stepSectionsStackView.setNeedsLayout()
         stepSectionsStackView.layoutIfNeeded()
 
+        // Additional layout pass for RTL content to ensure proper text wrapping
+        if isRTL {
+            newView.setNeedsLayout()
+            newView.layoutIfNeeded()
+        }
         
         // Calculate the new height required for contentContainerView
         let newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
@@ -598,8 +606,8 @@ extension NPSContainerView {
         if let completedData = getThankYouMessage() {
             stepsProgressView.isHidden = true
             barStepsProgressView.isHidden = true
-            if (!completedData.button.enabled) {
-                footerButtonsStackView.isHidden = true
+            if !completedData.button.enabled {
+                footerButtonsContianer.isHidden = true
                 return
             }
             footerButtonsStackView.clearViews()

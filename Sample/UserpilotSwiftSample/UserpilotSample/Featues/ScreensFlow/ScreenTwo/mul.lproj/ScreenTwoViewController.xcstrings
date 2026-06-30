@@ -1,27 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "1IC-NC-MKC.normalTitle" : {
-      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"1IC-NC-MKC\";",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "رجوع"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Button"
-          }
-        }
-      }
-    },
-    "6UZ-QK-BHy.configuration.title" : {
-      "comment" : "Class = \"UIButton\"; configuration.title = \"Show experience\"; ObjectID = \"6UZ-QK-BHy\";",
-      "extractionState" : "stale",
+    "gIF-6g-aKZ.configuration.title" : {
+      "comment" : "Class = \"UIButton\"; configuration.title = \"Show experience\"; ObjectID = \"gIF-6g-aKZ\";",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -37,14 +19,14 @@
         }
       }
     },
-    "6UZ-QK-BHy.normalTitle" : {
-      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"6UZ-QK-BHy\";",
-      "extractionState" : "stale",
+    "gIF-6g-aKZ.normalTitle" : {
+      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"gIF-6g-aKZ\";",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "كبسة"
+            "value" : "رجوع"
           }
         },
         "en" : {
@@ -55,9 +37,9 @@
         }
       }
     },
-    "eft-v9-sQR.text" : {
-      "comment" : "Class = \"UILabel\"; text = \"Screen Two\"; ObjectID = \"eft-v9-sQR\";",
-      "extractionState" : "stale",
+    "ncF-n6-k7c.text" : {
+      "comment" : "Class = \"UILabel\"; text = \"Screen Two\"; ObjectID = \"ncF-n6-k7c\";",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -73,46 +55,16 @@
         }
       }
     },
-    "gIF-6g-aKZ.configuration.title" : {
-      "comment" : "Class = \"UIButton\"; configuration.title = \"Show experience\"; ObjectID = \"gIF-6g-aKZ\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Show experience"
-          }
-        }
-      }
-    },
-    "gIF-6g-aKZ.normalTitle" : {
-      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"gIF-6g-aKZ\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Button"
-          }
-        }
-      }
-    },
-    "ncF-n6-k7c.text" : {
-      "comment" : "Class = \"UILabel\"; text = \"Screen Two\"; ObjectID = \"ncF-n6-k7c\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Screen Two"
-          }
-        }
-      }
-    },
     "Pn7-f9-HTA.normalTitle" : {
       "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"Pn7-f9-HTA\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رجوع"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",

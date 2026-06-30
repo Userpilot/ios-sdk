@@ -85,4 +85,17 @@ extension ExperienceContent {
             return content
         }
     }
+
+    /// Retrieves the id for the content.
+    /// - Returns: A Int representing the id of the content.
+    func experienceId() -> Int {
+        switch self {
+        case .flow(let content):
+            return content.id
+        case .survey(let content):
+            return content.id
+        case .nps:
+            return 0
+        }
+    }
 }

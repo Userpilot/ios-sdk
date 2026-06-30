@@ -138,7 +138,7 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             experienceState: .started
         )
-        logExperience(state: "Started", experienceId: flowContent.id)
+        logExperience(state: UserpilotExperienceState.started.rawValueString, experienceId: flowContent.id)
 
         userpilot?.experienceDelegate?.onExperienceStepStateChanged(
             experienceType: .flow,
@@ -149,7 +149,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Started",
+            state: UserpilotExperienceState.started.rawValueString,
             experienceId: flowContent.id,
             stepId: step.id,
             step: 1,
@@ -159,9 +159,7 @@ internal class ExperienceViewModel {
         let eventExperienceSeen = ExperienceFlowSeenEvent(flowId: flowContent.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
 
-        let eventStepSeen = ExperienceFlowStepSeenEvent(
-            flowId: flowContent.id,
-            stepId: step.id)
+        let eventStepSeen = ExperienceFlowStepSeenEvent(flowId: flowContent.id, stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
     }
 
@@ -183,7 +181,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Completed",
+            state: UserpilotExperienceState.completed.rawValueString,
             experienceId: flowContent.id,
             stepId: step.id,
             step: flowContent.steps.count,
@@ -195,7 +193,7 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             experienceState: .completed
         )
-        logExperience(state: "Completed", experienceId: flowContent.id)
+        logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: flowContent.id)
 
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
@@ -235,7 +233,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Completed",
+            state: UserpilotExperienceState.completed.rawValueString,
             experienceId: flowContent.id,
             stepId: currentStep.id,
             step: step,
@@ -251,7 +249,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Started",
+            state: UserpilotExperienceState.started.rawValueString,
             experienceId: flowContent.id,
             stepId: currentStep.id,
             step: step + 1,
@@ -289,7 +287,7 @@ internal class ExperienceViewModel {
             totalSteps: NSNumber(value: flowContent.steps.count)
         )
         logStep(
-            state: "Dismissed",
+            state: UserpilotExperienceState.dismissed.rawValueString,
             experienceId: flowContent.id,
             stepId: step.id,
             step: lastStep + 1,
@@ -301,7 +299,7 @@ internal class ExperienceViewModel {
             experienceId: NSNumber(value: flowContent.id),
             experienceState: .dismissed
         )
-        logExperience(state: "Dismissed", experienceId: flowContent.id)
+        logExperience(state: UserpilotExperienceState.dismissed.rawValueString, experienceId: flowContent.id)
 
         let eventExperienceDismissed = ExperienceFlowDismissedEvent(
             flowId: flowContent.id,
@@ -335,7 +333,8 @@ internal class ExperienceViewModel {
         experienceId: Int
     ) {
         logger.info(
-            "🌠 Userpilot experience -> type: Flow, experienceId: %{public}@, state: %{public}@",
+            "🌠 Userpilot experience -> type: %{public}@, experienceId: %{public}@, state: %{public}@",
+            UserpilotExperienceType.flow.rawValueString,
             String(experienceId),
             state
         )

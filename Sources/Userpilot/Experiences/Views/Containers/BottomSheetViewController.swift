@@ -201,7 +201,7 @@ private extension BottomSheetViewController {
 
 // MARK: - Animations
 
-internal extension BottomSheetViewController {
+extension BottomSheetViewController {
 
     /// Animate the presentation of the bottom sheet
     func animatePresent() {
@@ -227,7 +227,7 @@ internal extension BottomSheetViewController {
 
 // MARK: - Public APIs
 
-internal extension BottomSheetViewController {
+extension BottomSheetViewController {
 
     /// Set the dynamic content for the bottom sheet
     func setContent(

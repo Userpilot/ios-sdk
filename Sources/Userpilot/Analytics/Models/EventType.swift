@@ -140,7 +140,7 @@ internal enum EventType: Equatable {
     }
 }
 
-internal extension EventType {
+extension EventType {
 
     // Static constants
     static let identifyEvent = "user_identify"

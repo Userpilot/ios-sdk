@@ -355,7 +355,9 @@ class UserpilotTests: XCTestCase {
         weak var weakSessionMonitoring: SessionMonitoring?
         weak var weakAutoPropertyDecoration: AutoPropertyDecoratoring?
         weak var weakSocketManager: SocketEvents?
-        weak var weakSDKSettingsDetector: SDKSettingsDetectoring?
+        weak var weakRemoteSource: UserpilotRemoteSourcing?
+        weak var weakExperienceStateManager: ExperienceStateManaging?
+        weak var weakLinkOpener: LinkOpening?
         weak var weakThemeHandler: ThemeHandling?
         weak var weakImageLoader: ImageLoading?
         weak var weakPushNotificationMonitor: PushNotificationMonitoring?
@@ -373,7 +375,9 @@ class UserpilotTests: XCTestCase {
             weakSessionMonitoring = userpilot.container.resolve(SessionMonitoring.self)
             weakAutoPropertyDecoration = userpilot.container.resolve(AutoPropertyDecoratoring.self)
             weakSocketManager = userpilot.container.resolve(SocketEvents.self)
-            weakSDKSettingsDetector = userpilot.container.resolve(SDKSettingsDetectoring.self)
+            weakRemoteSource = userpilot.container.resolve(UserpilotRemoteSourcing.self)
+            weakExperienceStateManager = userpilot.container.resolve(ExperienceStateManaging.self)
+            weakLinkOpener = userpilot.container.resolve(LinkOpening.self)
             weakThemeHandler = userpilot.container.resolve(ThemeHandling.self)
             weakImageLoader = userpilot.container.resolve(ImageLoading.self)
             weakPushNotificationMonitor = userpilot.container.resolve(PushNotificationMonitoring.self)
@@ -394,7 +398,9 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(weakSessionMonitoring)
         XCTAssertNil(weakAutoPropertyDecoration)
         XCTAssertNil(weakSocketManager)
-        XCTAssertNil(weakSDKSettingsDetector)
+        XCTAssertNil(weakRemoteSource)
+        XCTAssertNil(weakExperienceStateManager)
+        XCTAssertNil(weakLinkOpener)
         XCTAssertNil(weakThemeHandler)
         XCTAssertNil(weakImageLoader)
         XCTAssertNil(weakPushNotificationMonitor)

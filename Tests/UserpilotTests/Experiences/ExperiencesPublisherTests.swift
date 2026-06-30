@@ -79,6 +79,63 @@ final class ExperiencesPublisherTests: XCTestCase {
         }
     }
 
+    func testTriggerExperience_shouldCacheManualTrigger_WhenActiveExperienceExists() {
+        // Arrange
+        let mockVC = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: mockVC)
+        var publishedEvent: SDKEvent?
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+            publishedEvent = event
+        }
+
+        // Act
+        experiencesPublisher.triggerExperience("cached-experience-id")
+
+        // Assert
+        let expectation = XCTestExpectation(description: "manual trigger cached")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            XCTAssertNil(publishedEvent)
+            XCTAssertTrue(self.userpilot.experienceStateManager.hasCachedExperience())
+            XCTAssertEqual(self.userpilot.experienceStateManager.getCachedExperienceId(), "cached-experience-id")
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testPublishInternalSDKEvent_shouldReplayCachedManualTrigger_WhenExperienceCloses() {
+        // Arrange
+        let cacheExpectation = XCTestExpectation(description: "manual trigger cached")
+        let replayExpectation = XCTestExpectation(description: "cached manual trigger replayed")
+        let mockVC = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: mockVC)
+
+        var publishedExperienceIds: [String] = []
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+            if let event = event as? ExperienceContentEvent {
+                publishedExperienceIds.append(event.experienceId)
+                replayExpectation.fulfill()
+            }
+        }
+
+        experiencesPublisher.triggerExperience("cached-experience-id")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            cacheExpectation.fulfill()
+        }
+        wait(for: [cacheExpectation], timeout: 1.0)
+
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 77]
+        )
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        // Assert
+        wait(for: [replayExpectation], timeout: 1.0)
+        XCTAssertEqual(publishedExperienceIds, ["cached-experience-id"])
+    }
+
     // MARK: - endExperience Tests
 
     func testEndExperience_shouldTriggerCloseOnTopViewController() {
@@ -139,16 +196,14 @@ final class ExperiencesPublisherTests: XCTestCase {
 
     // MARK: - triggerDeepLink Tests
 
-    func testTriggerDeepLink_shouldCallNavigationDelegate_WhenDelegateExists() {
+    func testTriggerDeepLink_shouldForwardURLToLinkOpener() {
         // Arrange
         let testURL = URL(string: "https://example.com")!
-        let mockDelegate = MockNavigationDelegate()
-        userpilot.navigationDelegate = mockDelegate
 
         let expectation = XCTestExpectation(description: "Wait for deep link handling")
-        var navigatedURL: URL?
-        mockDelegate.onNavigate = { url in
-            navigatedURL = url
+        var handledURL: URL?
+        userpilot.linkOpener.onHandleURL = { url in
+            handledURL = url
             expectation.fulfill()
         }
 
@@ -157,7 +212,7 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Assert
         wait(for: [expectation], timeout: 2.0)
-        XCTAssertEqual(navigatedURL, testURL)
+        XCTAssertEqual(handledURL, testURL)
     }
 
     // MARK: - Socket Event Tests
@@ -378,6 +433,36 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertEqual(publishedEvent?.eventName, "test-event")
     }
 
+    func testPublishInternalSDKEvent_shouldSuppressAnalytics_WhenPreviewModeIsActive() {
+        // Arrange
+        var publishedEvent: SDKEvent?
+        userpilot.experienceStateManager.markPreviewMode()
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+            publishedEvent = event
+        }
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "test-event"))
+
+        // Assert
+        XCTAssertNil(publishedEvent)
+    }
+
+    func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
+        // Arrange
+        userpilot.experienceStateManager.markPreviewMode()
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 77]
+        )
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        // Assert
+        XCTAssertFalse(userpilot.experienceStateManager.isPreviewMode())
+    }
+
     func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseNPSEvent() {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
@@ -454,6 +539,48 @@ final class ExperiencesPublisherTests: XCTestCase {
             expectation.fulfill()
         }
 
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    // MARK: - Preview Experience Tests
+
+    func testTriggerPreviewExperience_shouldFetchPreviewContentWithQueryType() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "preview fetch requested")
+        var capturedParams: PreviewExperienceQueryParams?
+        userpilot.remoteSource.onFetchPreviewExperience = { params, completion in
+            capturedParams = params
+            completion(.failure(.emptyResponse))
+            expectation.fulfill()
+        }
+
+        // Act
+        experiencesPublisher.triggerPreviewExperience(
+            "preview-123",
+            [URLQueryItem(name: "type", value: "survey")]
+        )
+
+        // Assert
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(capturedParams?.appToken, userpilot.config.token)
+        XCTAssertEqual(capturedParams?.contentType, "survey")
+        XCTAssertEqual(capturedParams?.contentId, "preview-123")
+        XCTAssertEqual(capturedParams?.baseUrl, RemoteSource.experienceBaseURL)
+    }
+
+    func testTriggerPreviewExperience_shouldEnterPreviewModeBeforeFetching() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "preview mode entered")
+        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
+            XCTAssertTrue(self.userpilot.experienceStateManager.isPreviewMode())
+            completion(.failure(.emptyResponse))
+            expectation.fulfill()
+        }
+
+        // Act
+        experiencesPublisher.triggerPreviewExperience("preview-123", [])
+
+        // Assert
         wait(for: [expectation], timeout: 1.0)
     }
 

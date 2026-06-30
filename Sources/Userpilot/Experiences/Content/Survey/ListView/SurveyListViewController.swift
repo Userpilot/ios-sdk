@@ -73,6 +73,8 @@ internal class SurveyListViewController: UIViewController {
         super.viewWillAppear(animated)
         if surveyViewModel.isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 

@@ -30,7 +30,7 @@ internal class UPIconTextContainerView: UIStackView {
     private func setupViewProperties() {
         axis = .vertical
         alignment = .fill
-        spacing = 8
+        spacing = 16
         distribution = .fill
     }
 

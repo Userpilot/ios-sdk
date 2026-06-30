@@ -32,9 +32,9 @@
 		AB6DBD3D2C68CE9D0009BB11 /* FlowRoutingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */; };
 		AB6DBD422C68D7C30009BB11 /* BaseNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */; };
 		AB6DBD452C68D8560009BB11 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD442C68D8560009BB11 /* Utils.swift */; };
-		AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */; };
 		AB76616F2D1305AF0044BA57 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB76616E2D1305AF0044BA57 /* Userpilot */; };
 		AB791F182D0B6638008E4523 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB791F172D0B6638008E4523 /* Userpilot */; };
+		AB8A08862FF27964004C16B3 /* String+Int+Exensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8A08852FF27961004C16B3 /* String+Int+Exensions.swift */; };
 		ABAC8E6A2CE9CF21005EEC9D /* SDKEventsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABAC8E692CE9CF21005EEC9D /* SDKEventsViewController.xib */; };
 		ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = ABAC8E6D2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib */; };
 		ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABACA85A2C96D5AF006C9B77 /* PropertyView.swift */; };
@@ -114,7 +114,6 @@
 		AB6DBD3C2C68CE9D0009BB11 /* FlowRoutingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRoutingManager.swift; sourceTree = "<group>"; };
 		AB6DBD412C68D7C30009BB11 /* BaseNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseNavigationController.swift; sourceTree = "<group>"; };
 		AB6DBD442C68D8560009BB11 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
-		AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Exensions.swift"; sourceTree = "<group>"; };
 		AB8616182F99E5F5009E2C79 /* IQKeyboardCore.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardCore.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB8616192F99E5F5009E2C79 /* IQKeyboardCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQKeyboardCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB86161A2F99E5F5009E2C79 /* IQKeyboardManagerSwift.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQKeyboardManagerSwift.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -131,6 +130,7 @@
 		AB8616252F99E5F5009E2C79 /* IQTextInputViewNotification.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQTextInputViewNotification.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB8616262F99E5F5009E2C79 /* IQTextView.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = IQTextView.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB8616272F99E5F5009E2C79 /* IQTextView.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = IQTextView.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB8A08852FF27961004C16B3 /* String+Int+Exensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Int+Exensions.swift"; sourceTree = "<group>"; };
 		ABAC8E682CE9CF21005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventsViewController.xib; sourceTree = "<group>"; };
 		ABAC8E6B2CE9CF21005EEC9D /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/SDKEventsViewController.xcstrings; sourceTree = "<group>"; };
 		ABAC8E6C2CE9E9D0005EEC9D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/SDKEventTableViewCell.xib; sourceTree = "<group>"; };
@@ -312,7 +312,7 @@
 		AB6DBD492C68DA370009BB11 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
-				AB6DBD4A2C68DA470009BB11 /* String+Exensions.swift */,
+				AB8A08852FF27961004C16B3 /* String+Int+Exensions.swift */,
 				ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */,
 				ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */,
 			);
@@ -710,7 +710,6 @@
 				ABCDBF402CAEAB970083DF1D /* DeepLinkViewController.swift in Sources */,
 				ABFB5FD82C916E500054E142 /* EventsViewController.swift in Sources */,
 				ABACA85B2C96D5AF006C9B77 /* PropertyView.swift in Sources */,
-				AB6DBD4B2C68DA470009BB11 /* String+Exensions.swift in Sources */,
 				ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */,
 				AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */,
 				ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */,
@@ -726,6 +725,7 @@
 				ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */,
 				ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */,
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
+				AB8A08862FF27964004C16B3 /* String+Int+Exensions.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
 				ABCD47302F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift in Sources */,
 				AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */,

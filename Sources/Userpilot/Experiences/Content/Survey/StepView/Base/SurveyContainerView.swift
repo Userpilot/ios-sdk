@@ -239,6 +239,8 @@ internal class SurveyContainerView: UIView {
 
         if isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 
@@ -406,9 +408,16 @@ internal class SurveyContainerView: UIView {
         stepSectionsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         stepSectionsStackView.addArrangedSubview(newView)
 
-        // Ensure layout updates before calculating the height
+        // Force layout update to ensure constraints are applied
+        stepSectionsStackView.setNeedsLayout()
         stepSectionsStackView.layoutIfNeeded()
 
+        // Additional layout pass for RTL content to ensure proper text wrapping
+        if isRTL {
+            newView.setNeedsLayout()
+            newView.layoutIfNeeded()
+        }
+        
         // Calculate the new height required for contentContainerView
         var newHeight = stepSectionsStackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
         if newView.isKind(of: UPLikertView.self) {

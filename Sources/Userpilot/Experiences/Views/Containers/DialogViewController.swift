@@ -217,7 +217,7 @@ extension DialogViewController {
 
 // MARK: - Update constraints on screen rotation
 
-internal extension DialogViewController {
+extension DialogViewController {
     func resetWidth(_ size: CGSize) {
         let widthRatio = self.calculateDialogWidthRatio()
         self.mainContainerWidthConstraint?.constant = size.width * widthRatio

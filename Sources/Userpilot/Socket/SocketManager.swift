@@ -46,7 +46,7 @@ internal protocol SocketEvents: AnyObject {
     func registerCallback(_ socketSubscription: SocketSubscription)
 }
 
-internal extension SocketEvents {
+extension SocketEvents {
 
     func publish(
         _ eventName: String,
@@ -173,13 +173,16 @@ internal class SocketManager {
     private let logger: Logging
 
     /// SDK settings detector.
-    private let sdkSettingsDetector: SDKSettingsDetectoring
+    private let userpilotRemoteSource: UserpilotRemoteSourcing
 
     /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
 
     // track socket state
     private var socketState: SocketState = .closed
+
+    // track fetching socket settings
+    private lazy var isFetchingSocketSettings: AtomicReference<Bool> = AtomicReference(false)
 
     // MARK: - Initialization
 
@@ -193,7 +196,7 @@ internal class SocketManager {
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
-        self.sdkSettingsDetector = container.resolve(SDKSettingsDetectoring.self)
+        self.userpilotRemoteSource = container.resolve(UserpilotRemoteSourcing.self)
         self.logger = config.logger
     }
 
@@ -277,6 +280,7 @@ extension SocketManager {
                         self.logger.info("🚀 SOCKET channel joined")
                         self.updateSocketState(.opened)
                         self.$socketSubscription.invoke { $0.onSocketOpened() }
+                        self.isFetchingSocketSettings.value = false
                     }
                 )
                 .delegateReceive(
@@ -286,17 +290,20 @@ extension SocketManager {
                             "⚠️ SOCKET channel join failed: %{public}@", message.payload)
                         self.updateSocketState(.error)
                         self.closeSocket()
+                        self.isFetchingSocketSettings.value = false
                     })
 
             phoenixChannel?.onError { [weak self] message in
                 self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
                 self?.updateSocketState(.error)
                 self?.closeSocket()
+                self?.isFetchingSocketSettings.value = false
             }
 
             phoenixChannel?.onClose { [weak self] message in
                 self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
                 self?.updateSocketState(.closed)
+                self?.isFetchingSocketSettings.value = false
             }
 
             // Connect the socket
@@ -371,20 +378,24 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to open a WebSocket connection
     func connect() {
-        if config.token.isEmpty || storage.userId.isEmpty {
-            updateSocketState(.closed)
+        if config.token.isEmpty || storage.userId.isEmpty || isSocketOpened || isJoiningSocket {
             return
         }
-
-        // Prevent multiple connection attempts when already connecting or connected
-        guard socketState != .connecting && !isSocketOpened else {
-            logger.debug("🔄 SOCKET already connecting or opened, skipping connect")
+        if !isFetchingSocketSettings.compareAndSet(expected: false, new: true) {
             return
         }
-
-        updateSocketState(.connecting)
-        sdkSettingsDetector.fetchSettings { [weak self] in
-            self?.openSocket()
+        logger.debug("🚥 Socket connection is establishing...")
+        userpilotRemoteSource.fetchSettings { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success:
+                self.openSocket()
+            case .failure(let error):
+                self.logger.error(
+                    "❗ Failed to fetch SDK settings: %{public}@, socket connection aborted",
+                    error.localizedDescription)
+                self.isFetchingSocketSettings.value = false
+            }
         }
     }
 
@@ -436,7 +447,7 @@ extension SocketManager: SocketEvents {
 
 // MARK: - Properties name
 
-internal extension SocketManager {
+extension SocketManager {
 
     // Static constants
     private static let channelTopic = "events:*"

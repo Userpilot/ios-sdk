@@ -205,7 +205,7 @@ internal struct NPSTheme: Decodable {
 
     // radius
     var borderRadius: CGFloat {
-        CGFloat(box?.radius ?? 12)
+        CGFloat(box?.radius ?? 24)
     }
 }
 

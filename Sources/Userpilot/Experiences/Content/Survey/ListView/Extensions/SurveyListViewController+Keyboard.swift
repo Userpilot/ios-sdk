@@ -67,7 +67,7 @@ extension SurveyListViewController {
 
                 // Ensure only scroll if the field is actually hidden by the keyboard
                 if offsetY > 0 {
-                    UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut, animations: {
+                    UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut, animations: {
                         // Adjust content inset and scroll in the same animation block
                         self.scrollView.contentInset.bottom = adjustmentHeight
                         self.scrollView.verticalScrollIndicatorInsets.bottom = adjustmentHeight

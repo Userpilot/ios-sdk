@@ -219,11 +219,14 @@ public class Userpilot: NSObject {
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
-        container.registerLazy(SDKSettingsDetectoring.self, initializer: SDKSettingsDetector.init)
+        container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
+        container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
+        container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
+        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
@@ -597,4 +600,28 @@ extension Userpilot {
 
 }
 
+// MARK: - Deep links
+
+extension Userpilot {
+
+    /// Verifies if an incoming URL is intended for the Userpilot SDK.
+    /// - Parameter url: The URL being opened.
+    /// - Returns: `true` if the URL matches the Userpilot URL Scheme or `false` if the URL is not
+    ///  known by the Userpilot SDK.
+    ///
+    /// If the `url` is an Userpilot URL, this function may launch an experience or otherwise alter
+    /// the UI state.
+    ///
+    /// This function is intended to be called added at the top of your
+    /// `UIApplicationDelegate`'s `application(_:open:options:)` function:
+    /// ```swift
+    /// guard !userpilot.didHandleURL(url) else { return true }
+    /// ```
+    @discardableResult
+    @objc
+    public func didHandleURL(_ url: URL) -> Bool {
+        return container.resolve(DeepLinkHandling.self).didHandleURL(url)
+    }
+
+}
 // swiftlint:enable file_length

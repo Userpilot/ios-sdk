@@ -45,6 +45,9 @@ internal struct UserpilotNotification {
     /// An optional deep link URL contained in the notification.
     let deeplink: URL?
 
+    /// An optional is test flag for testing notification.
+    let isTest: String?
+
     // MARK: - Initializer
 
     /**
@@ -67,5 +70,6 @@ internal struct UserpilotNotification {
         self.userId = userId
 
         self.deeplink = (data["deep_link"] as? String).flatMap { URL(string: $0) }
+        self.isTest = data["is_test"] as? String
     }
 }

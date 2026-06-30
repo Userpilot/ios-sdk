@@ -85,7 +85,7 @@ extension AutoPropertyDecorator: AutoPropertyDecoratoring {
 
 // MARK: - Properties name
 
-internal extension AutoPropertyDecorator {
+extension AutoPropertyDecorator {
 
     // Static constants
     static let autoPropertiesKey = "autoProperties"

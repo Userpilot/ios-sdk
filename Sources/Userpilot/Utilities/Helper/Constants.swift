@@ -31,6 +31,14 @@ internal struct GeneralConstants {
     static let CONFIGURATION_DURATION = TimeInterval(30 * 60)
 }
 
+internal struct RemoteSource {
+    static let settingsBaseURL = "https://find.userpilot.io/v1/lookups/"
+    static let socketPath = "/mobile/v1/events/websocket"
+    static let experienceBaseURL =
+        "https://appex-dev-nxtapp-14664.userpilot.io/api/v1/public/content"
+    static let configurationDuration = TimeInterval(30 * 60)  // 30 minutes
+}
+
 /// Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).
 internal struct AutoCaptureConstants {
 

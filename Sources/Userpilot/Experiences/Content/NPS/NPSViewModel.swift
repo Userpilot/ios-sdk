@@ -87,7 +87,7 @@ internal class NPSViewModel {
             experienceId: nil,
             experienceState: .started
         )
-        logExperience(state: "Started")
+        logExperience(state: UserpilotExperienceState.started.rawValueString)
 
         let eventExperienceSeen = ExperienceNPSSeenEvent()
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
@@ -103,7 +103,7 @@ internal class NPSViewModel {
             experienceId: nil,
             experienceState: .dismissed
         )
-        logExperience(state: "Dismissed")
+        logExperience(state: UserpilotExperienceState.dismissed.rawValueString)
 
         let eventExperienceDismissed = ExperienceNPSDismissedEvent()
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
@@ -116,7 +116,7 @@ internal class NPSViewModel {
             experienceId: nil,
             experienceState: .submitted
         )
-        logExperience(state: "Submitted")
+        logExperience(state: UserpilotExperienceState.submitted.rawValueString)
 
         let eventExperienceSubmitted = ExperienceNPSSubmittedEvent(
             score: userAnswer - 1,
@@ -144,7 +144,8 @@ internal class NPSViewModel {
 
     private func logExperience(state: String) {
         logger.info(
-            "🌠 Userpilot experience -> type: NPS, state: %{public}@",
+            "🌠 Userpilot experience -> type: %{public}@, state: %{public}@",
+            UserpilotExperienceType.nps.rawValueString,
             state
         )
     }

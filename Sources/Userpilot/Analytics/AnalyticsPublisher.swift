@@ -833,7 +833,7 @@ private extension AnalyticsPublisher {
 }
 
 #if DEBUG
-internal extension AnalyticsPublisher {
+extension AnalyticsPublisher {
     func mockGetCachedEvent() -> Event? {
         return cachedEvent
     }
@@ -962,7 +962,7 @@ extension AnalyticsPublisher {
 
 // MARK: - Event Broadcasting
 
-internal extension AnalyticsPublisher {
+extension AnalyticsPublisher {
 
     /**
      * Broadcasts events to analytics listeners for external consumption.

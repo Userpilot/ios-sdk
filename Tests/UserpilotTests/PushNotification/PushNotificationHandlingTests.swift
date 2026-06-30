@@ -103,9 +103,7 @@ final class PushNotificationHandlingTests: PushNotificationMonitorTestCase {
         host.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in hostEvents.append(event) }
         vendor.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in vendorEvents.append(event) }
 
-        let navigationDelegate = MockNavigationDelegate()
-        vendor.navigationDelegate = navigationDelegate
-        navigationDelegate.onNavigate = { url in navigatedURL = url }
+        vendor.linkOpener.onHandleURL = { url in navigatedURL = url }
 
         let userInfo = [AnyHashable: Any].userpilotPushNotification(
             appToken: vendor.config.token,

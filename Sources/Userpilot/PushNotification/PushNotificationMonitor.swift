@@ -59,6 +59,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     private let storage: DataStoring
     private let analyticsPublisher: AnalyticsPublishing
     private let socketManager: SocketEvents
+    private let linkOpener: LinkOpening
 
     // MARK: - Push Token Management
 
@@ -86,6 +87,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         self.storage = container.resolve(DataStoring.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.socketManager = container.resolve(SocketEvents.self)
+        self.linkOpener = container.resolve(LinkOpening.self)
 
         PushNotificationAutoConfig.register(observer: self)
         socketManager.registerCallback(self)
@@ -307,39 +309,21 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         parsedNotification: UserpilotNotification,
         completionHandler: (() -> Void)? = nil
     ) {
-        let properties: [String: Any] = [
-            "notification_id": Int(parsedNotification.notificationId) ?? 0
-        ]
-
-        analyticsPublisher.publishInternalSDKEvent(
-            PushNotificationOpenedEvent(payload: properties),
-            socketSubscription: self
-        )
+        if parsedNotification.isTest != "true" {
+            let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
+            analyticsPublisher.publishInternalSDKEvent(
+                PushNotificationOpenedEvent(payload: properties),
+                socketSubscription: self
+            )
+        }
 
         if let url = parsedNotification.deeplink {
-            navigateToDeepLink(url, userpilot: userpilot)
+            linkOpener.handleURL(url)
         }
 
         completionHandler?()
     }
 
-    /// Navigates to a deep link URL when the notification includes a deep link.
-    ///
-    /// - Parameters:
-    ///   - url: The URL to navigate to.
-    ///   - userpilot: The Userpilot instance managing navigation.
-    private func navigateToDeepLink(
-        _ url: URL,
-        userpilot: Userpilot
-    ) {
-        if let navigationDelegate = userpilot.navigationDelegate {
-            navigationDelegate.navigate(to: url)
-        } else {
-            if url.isHttpOrHttps, UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
-            }
-        }
-    }
 }
 
 #if DEBUG

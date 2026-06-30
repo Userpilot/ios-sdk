@@ -24,22 +24,14 @@ extension UPSingleInputView {
             countryStackView.isHidden = true
             calendarIconButton.isHidden = true
         case .date:
-            if isRTL {
-                textField.setPadding(start: 60, end: 10)
-            } else {
-                textField.setPadding(start: 10, end: 60)
-            }
+            setDirectionalPadding(leading: 10, trailing: 60)
             textField.keyboardType = .numberPad
             textField.placeholder = "dd/mm/yyyy"
             calendarIconButton.isHidden = false
             countryStackView.isHidden = true
             calendarIconButton.tintColor = ThemeHandler.DefaultValues.grayColor
         case .phone:
-            if isRTL {
-                textField.setPadding(start: 10, end: 120)
-            } else {
-                textField.setPadding(start: 120, end: 10)
-            }
+            setDirectionalPadding(leading: 120, trailing: 10)
             textField.keyboardType = .phonePad
             countryStackView.isHidden = false
             calendarIconButton.isHidden = true
@@ -60,6 +52,14 @@ extension UPSingleInputView {
             textField.keyboardType = .default
             countryStackView.isHidden = true
             calendarIconButton.isHidden = true
+        }
+    }
+
+    private func setDirectionalPadding(leading: CGFloat, trailing: CGFloat) {
+        if isRTL == isAppRTL {
+            textField.setPadding(start: leading, end: trailing)
+        } else {
+            textField.setPadding(start: trailing, end: leading)
         }
     }
 

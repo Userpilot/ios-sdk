@@ -28,6 +28,8 @@ internal class UPIconTextView: UIStackView {
             imageView.widthAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.iconImageDimensions)),
             imageView.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.iconImageDimensions))
         ])
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
         return imageView
     }()
 
@@ -72,13 +74,20 @@ internal class UPIconTextView: UIStackView {
         imageLoader: ImageLoading,
         isRTL: Bool) {
         // Add the subviews to the stack view
-        if isRTL {
+        if isRTL && isAppRTL {
+            addArrangedSubview(imageView)
+            addArrangedSubview(textView)
+        } else if !isRTL && !isAppRTL {
+            addArrangedSubview(imageView)
+            addArrangedSubview(textView)
+        } else if isRTL && !isAppRTL {
             addArrangedSubview(textView)
             addArrangedSubview(imageView)
         } else {
-            addArrangedSubview(imageView)
             addArrangedSubview(textView)
+            addArrangedSubview(imageView)
         }
+
         // Configure the imageView using the provided line data.
         imageView.setupView(line: line, imageLoader: imageLoader)
 

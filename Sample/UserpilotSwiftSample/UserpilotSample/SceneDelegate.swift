@@ -16,7 +16,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach
         // the UIWindow `window` to the provided UIWindowScene `scene`.
-        // If using a storyboard, the `window` property will automatically 
+        // If using a storyboard, the `window` property will automatically
         // be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new
         // (see `application:configurationForConnectingSceneSession` instead).
@@ -29,6 +29,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             self.window = window
             window.makeKeyAndVisible()
         }
+
+        // Handle Userpilot deep links.
+        let unhandledURLContexts = UserpilotManager.shared.filterAndHandle(connectionOptions.urlContexts)
+        // Handle app-specific deep links.
+        print(unhandledURLContexts)
 
         guard (scene as? UIWindowScene) != nil else { return }
     }
@@ -61,6 +66,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Called as the scene transitions from the foreground to the background.
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        // Handle Userpilot deep links.
+        let unhandledURLContexts = UserpilotManager.shared.filterAndHandle(URLContexts)
+        // Handle app-specific deep links.
+        print(unhandledURLContexts)
     }
 
 }

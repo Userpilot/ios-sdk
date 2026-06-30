@@ -96,8 +96,8 @@ extension OSLog: Logging {
              Swift doesn't support splatting so unfortunately `args` needs to be manually enumerated.
              Limiting it to 5 since that seems reasonable.
              */
-            guard args.count <= 5 else {
-                error("Too many log args. 5 are supported, %{public}d passed.", args.count)
+            guard args.count <= 6 else {
+                error("Too many log args. 6 are supported, %{public}d passed.", args.count)
                 return
             }
 
@@ -112,6 +112,8 @@ extension OSLog: Logging {
                 os_log(message, log: self, type: type, args[0], args[1], args[2], args[3])
             case 5:
                 os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4])
+            case 6:
+                os_log(message, log: self, type: type, args[0], args[1], args[2], args[3], args[4], args[5])
             default:
                 os_log(message, log: self, type: type)
             }

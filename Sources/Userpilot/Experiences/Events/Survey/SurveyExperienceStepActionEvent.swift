@@ -19,16 +19,6 @@ internal class SurveyExperienceStepActionEvent: SurveyExperienceActionEvent {
     let moduleId: Int
     let type: String
 
-    /// Creates a dictionary representation of the event data, including the step Id.
-    ///
-    /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
-    override func toMap() -> [String: Any] {
-        var map = super.toMap()
-        map["module_id"] = moduleId
-        map["type"] = type
-        return map
-    }
-
     init(
         surveyId: Int,
         submissionId: Int64,
@@ -38,6 +28,16 @@ internal class SurveyExperienceStepActionEvent: SurveyExperienceActionEvent {
         self.moduleId = moduleId
         self.type = type
         super.init(surveyId: surveyId, submissionId: submissionId)
+    }
+
+    /// Creates a dictionary representation of the event data, including the step Id.
+    ///
+    /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
+    override func toMap() -> [String: Any] {
+        var map = super.toMap()
+        map["module_id"] = moduleId
+        map["type"] = type
+        return map
     }
 }
 

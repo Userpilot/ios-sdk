@@ -20,7 +20,7 @@ class MainViewController: BaseViewController {
 
     // MARK: - Properties
 
-    internal lazy var content: [Content] = [.identify, .screens, .events, .eventsLog, .autoCapture, .configurations]
+    internal lazy var content: [Content] = [.identify, .screens, .events, .eventsLog, .configurations, .autoCapture, .configurations]
 
     // MARK: - Override
     override func viewDidLoad() {
@@ -44,8 +44,21 @@ class MainViewController: BaseViewController {
     internal func showConfigurationDialog() {
         DialogManager.shared().showConfigurationDialog { [weak self] in
             guard self != nil else { return }
+            self?.showAlertWithAction()
+        }
+    }
+
+    private func showAlertWithAction() {
+        let alert = UIAlertController(
+            title: "Confirm",
+            message: "Restart the App to take the new configuration",
+            preferredStyle: .alert
+        )
+        let okAction = UIAlertAction(title: "OK", style: .default) { _ in
             exit(0)
         }
+        alert.addAction(okAction)
+        present(alert, animated: true)
     }
 }
 

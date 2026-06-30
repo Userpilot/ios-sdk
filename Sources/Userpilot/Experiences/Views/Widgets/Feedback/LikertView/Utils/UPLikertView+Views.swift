@@ -13,7 +13,7 @@
 
 import UIKit
 
-internal extension UPLikertView {
+extension UPLikertView {
 
     // MARK: - Setup View Hierarchy
 
