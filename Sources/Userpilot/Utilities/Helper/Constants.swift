@@ -89,8 +89,6 @@ internal struct AutoCaptureConstants {
     static let dialogTitle = "dialog_title"
     static let dialogMessage = "dialog_message"
     static let section = "section"
-    /// used by Flutter
-    static let targetPath = "target_path"
 
     // MARK: - Interaction (source / internal_properties)
 
