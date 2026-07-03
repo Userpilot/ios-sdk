@@ -466,7 +466,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /**
      * Stable key for event throttling.
      * Non-AutoCapture events use `eventTitle`, or `eventName` when
-     * the title is empty; autocapture uses screen + interaction/tab context.
+     * the title is empty; autocapture joins every available discriminator
+     * into a fixed-arity key. Missing discriminators degrade to empty
+     * segments instead of an early return to a coarser key, so events
+     * never collapse back onto the shared autocapture title.
      */
     private func trackEventThrottleKey(_ event: Event) -> String {
         guard case .autoCaptureEvent = event.type else {
@@ -474,24 +477,28 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             return eventTitle.isEmpty ? event.eventName : eventTitle
         }
 
-        let trackTitle = event.eventName
-
-        guard let properties = event.properties else { return trackTitle }
-
-        let screenName = trackEventThrottleScreenName(from: event.screen)
-        if screenName.isEmpty { return trackTitle }
-
-        let tabName = trackEventThrottleString(from: properties[AutoCaptureConstants.tabName])
-        if tabName.isEmpty {
-            let hierarchy = trackEventThrottleString(from: properties[AutoCaptureConstants.hierarchy])
-            let row = trackEventThrottleString(from: properties[AutoCaptureConstants.selectedIndex])
-            let interaction = trackEventThrottleString(from: event.interactionEventName)
-            let targetText = trackEventThrottleString(from: properties[AutoCaptureConstants.targetText])
-            return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)|\(targetText)"
-        } else {
-            let tabIndex = properties[AutoCaptureConstants.tabIndex] ?? 0
-            return "\(screenName)|\(trackTitle)|\(tabName)|\(tabIndex)"
+        let properties = event.properties ?? [:]
+        func prop(_ key: String) -> String {
+            trackEventThrottleString(from: properties[key])
         }
+
+        let rawInteraction = prop(AutoCaptureConstants.rawInteractionType)
+
+        return [
+            trackEventThrottleScreenName(from: event.screen),
+            event.eventName,
+            rawInteraction.isEmpty ? (event.interactionEventName ?? "") : rawInteraction,
+            prop(AutoCaptureConstants.tabName),
+            prop(AutoCaptureConstants.hierarchy),
+            prop(AutoCaptureConstants.accessibilityIdentifier),
+            prop(AutoCaptureConstants.dialogTitle),
+            prop(AutoCaptureConstants.targetText),
+            prop(AutoCaptureConstants.section),
+            prop(AutoCaptureConstants.selectedIndex),
+            prop(AutoCaptureConstants.selectedValue),
+            prop(AutoCaptureConstants.placeholder),
+            prop(AutoCaptureConstants.accessibilityLabel)
+        ].joined(separator: "|")
     }
 
     /// Resolves a display class for throttling from `Event.screen` (set on autocapture events via `makeEvent`).
