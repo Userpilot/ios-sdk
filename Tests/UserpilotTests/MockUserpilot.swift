@@ -320,9 +320,13 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onPublishInternalSDKEvent?(sdkEvent, socketSubscription)
     }
 
-    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?) -> Void)?
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
-        onPublishFakeReloadScreenEvent?(experienceType, experienceId)
+    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?, Bool) -> Void)?
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int?,
+        _ markExperienceAsSeen: Bool
+    ) {
+        onPublishFakeReloadScreenEvent?(experienceType, experienceId, markExperienceAsSeen)
     }
 
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?

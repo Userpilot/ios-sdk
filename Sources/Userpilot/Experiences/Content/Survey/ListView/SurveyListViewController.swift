@@ -114,6 +114,16 @@ extension SurveyListViewController: UPExperience {
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
-        closeExperience(completion: completion)
+        if manualClose {
+            closeExperience(completion: completion)
+        } else {
+            dismiss(animated: true) { [weak self] in
+                if let completion {
+                    completion()
+                } else {
+                    self?.surveyViewModel.onExperienceDismissalCompleted()
+                }
+            }
+        }
     }
 }

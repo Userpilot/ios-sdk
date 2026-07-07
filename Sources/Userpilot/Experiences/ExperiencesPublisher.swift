@@ -379,7 +379,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                     }
                     analyticsPublisher.publishFakeReloadScreenEvent(
                         sdkEvent.getContentType(),
-                        sdkEvent.getContentId()
+                        sdkEvent.getContentId(),
+                        false
                     )
                     resetProcessingPreviewExperienceStatus()
                 }
@@ -417,7 +418,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             if sdkEvent.isEventForCloseExperience() && !experienceStateManager.hasCachedExperience() {
                 experienceStateManager.markIdle()
                 analyticsPublisher.publishFakeReloadScreenEvent(
-                    sdkEvent.getContentType(), sdkEvent.getContentId()
+                    sdkEvent.getContentType(),
+                    sdkEvent.getContentId(),
+                    true
                 )
             } else if sdkEvent.isEventForCloseExperience() {
                 processCachedExperienceAfterClose()
@@ -1007,10 +1010,9 @@ extension ExperiencesPublisher {
             npsTrackedScreen = ""
 
             if hasActiveExperience || experienceStateManager.getActiveComponent() != nil {
-                endExperience(manualClose: true, completion: completion)
+                endExperience(manualClose: false, completion: completion)
             } else {
-                activeExperience = nil
-                experienceStateManager.markIdle()
+                resetProcessingExperienceStatus()
                 hideExperienceOverlayIfIdle()
                 completion?()
             }

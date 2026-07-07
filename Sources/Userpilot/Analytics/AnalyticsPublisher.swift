@@ -48,7 +48,11 @@ internal protocol AnalyticsPublishing: AnyObject {
     )
 
     /// publish fake reload event
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?)
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int?,
+        _ markExperienceAsSeen: Bool
+    )
 
     /// update seen experiences
     func experiencePublished(
@@ -894,16 +898,20 @@ extension AnalyticsPublisher {
      * - Parameter experienceType: The type of experience (FLOW or SURVEY)
      * - Parameter experienceId: The ID of the experience being shown
      */
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int?,
+        _ markExperienceAsSeen: Bool
+    ) {
         tryCatch {
-            guard
-                experienceId != nil,
-                canRequestEvent
-            else { return }
+            guard canRequestEvent else { return }
             if let screenViewEntity {
                 // update the seen content to make sure it contains the dismissed content that
                 // trigger this fake reload
-                experiencePublished(experienceType, experienceId!)
+                if markExperienceAsSeen {
+                    guard let experienceId else { return }
+                    experiencePublished(experienceType, experienceId)
+                }
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return
                 }

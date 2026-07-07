@@ -127,6 +127,7 @@ final class ExperiencesPublisherTests: XCTestCase {
             eventName: SDKEventsName.flowExperienceDismissed.rawValue,
             eventPayload: ["mobile_content_id": 77]
         )
+        closeEvent.isCloseEvent = true
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
@@ -451,16 +452,22 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
         // Arrange
         userpilot.experienceStateManager.markPreviewMode()
+        var markExperienceAsSeen: Bool?
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, markSeen in
+            markExperienceAsSeen = markSeen
+        }
         let closeEvent = MockSDKEvent(
             eventName: SDKEventsName.flowExperienceDismissed.rawValue,
             eventPayload: ["mobile_content_id": 77]
         )
+        closeEvent.isCloseEvent = true
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
 
         // Assert
         XCTAssertFalse(userpilot.experienceStateManager.isPreviewMode())
+        XCTAssertEqual(markExperienceAsSeen, false)
     }
 
     func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseNPSEvent() {
@@ -505,7 +512,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         // so watch for that as proof the debounced block ran.
         let reloadExpectation = XCTestExpectation(description: "debounced fake‑reload published")
         var publishFakeReloadEventCalled = false
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _ in
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
             publishFakeReloadEventCalled = true
             reloadExpectation.fulfill()
         }
@@ -582,6 +589,28 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Assert
         wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testTriggerPreviewExperience_shouldCloseActiveExperienceAsProgrammaticReset() {
+        // Arrange
+        let closeExpectation = XCTestExpectation(description: "active experience closed silently")
+        let fetchExpectation = XCTestExpectation(description: "preview fetch requested")
+        let mockVC = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: mockVC)
+
+        mockVC.onTriggerClose = { manualClose in
+            XCTAssertFalse(manualClose)
+            closeExpectation.fulfill()
+        }
+        userpilot.remoteSource.onFetchPreviewExperience = { _, _ in
+            fetchExpectation.fulfill()
+        }
+
+        // Act
+        experiencesPublisher.triggerPreviewExperience("preview-123", [])
+
+        // Assert
+        wait(for: [closeExpectation, fetchExpectation], timeout: 1.0)
     }
 
     // MARK: - Thread Safety Tests

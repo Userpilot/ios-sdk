@@ -386,7 +386,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Act (add delay before publishing, cause of throttling logic)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
+            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, true)
         }
 
         // Assert (wait for the delayed call)
@@ -404,11 +404,37 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { _, _, _ in publishScreenEventCalled = true }
 
         // Act
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, true)
 
         // Assert
         // Would need to verify socket manager publish was called with fake reload flag
         XCTAssertFalse(publishScreenEventCalled)
+    }
+
+    func testPublishFakeReloadScreenEvent_shouldNotAddSeenContent_WhenMarkSeenIsFalse() {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = true
+        let screenEvent = Event(type: .screen("Test Screen"))
+        analyticsPublisher.publish(screenEvent)
+
+        let expectation = XCTestExpectation(description: "Wait for delayed fake reload publish")
+        var fakeReloadPayload: Payload = nil
+        userpilot.socketManager.onPublish = { _, payload, _ in
+            fakeReloadPayload = payload
+            expectation.fulfill()
+        }
+
+        // Act (add delay before publishing, cause of throttling logic)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, false)
+        }
+
+        // Assert
+        wait(for: [expectation], timeout: 1.0)
+        let metadata = fakeReloadPayload?[AnalyticsPublisher.metaDataProperty] as? [String: Any]
+        let seenContents = metadata?[AnalyticsPublisher.seenContents] as? [Int]
+        XCTAssertFalse(seenContents?.contains(10) ?? false)
+        XCTAssertFalse(analyticsPublisher.screenEntity?.seenExperiences.contains(10) ?? false)
     }
 
     func testExperiencePublished_shouldUpdateSeenExperiences() {
