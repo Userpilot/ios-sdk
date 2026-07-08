@@ -12,6 +12,10 @@ final class UserpilotConfigTests: XCTestCase {
         let config = Userpilot.Config(token: "TOKEN")
 
         XCTAssertEqual(config.token, "TOKEN")
+        XCTAssertTrue(config.additionalProperties.isEmpty)
+        XCTAssertFalse(config.isWrapperSDK)
+        XCTAssertFalse(config.isWrapperScreenAutoCaptureEnabled)
+        XCTAssertFalse(config.isWrapperInteractionAutoCaptureEnabled)
         XCTAssertNil(config.appFramework)
         XCTAssertFalse(config.disableRequestPushPermission)
         XCTAssertFalse(config.useInAppBrowser)
@@ -82,6 +86,32 @@ final class UserpilotConfigTests: XCTestCase {
         XCTAssertEqual(config.attachedViewControllerClasses.count, 2)
         XCTAssertTrue(config.attachedViewControllerClasses.contains { $0 === UIViewController.self })
         XCTAssertTrue(config.attachedViewControllerClasses.contains { $0 === UINavigationController.self })
+    }
+
+    func testWrapperAdditionalPropertiesHelpersReadPluginAndAutocaptureFlags() {
+        let config = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([
+                WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter,
+                WrapperSDKConstants.enableScreenAutoCapture: false,
+                WrapperSDKConstants.enableInteractionAutoCapture: true
+            ])
+
+        XCTAssertTrue(config.isWrapperSDK)
+        XCTAssertFalse(config.isWrapperScreenAutoCaptureEnabled)
+        XCTAssertTrue(config.isWrapperInteractionAutoCaptureEnabled)
+    }
+
+    func testWrapperAdditionalPropertiesHelpersDetectSupportedWrappersOnly() {
+        let reactNativeConfig = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeReactNative])
+        let ionicConfig = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeIonic])
+        let unknownConfig = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([WrapperSDKConstants.pluginType: "Expo"])
+
+        XCTAssertTrue(reactNativeConfig.isWrapperSDK)
+        XCTAssertTrue(ionicConfig.isWrapperSDK)
+        XCTAssertFalse(unknownConfig.isWrapperSDK)
     }
 }
 
