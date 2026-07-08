@@ -36,6 +36,14 @@ extension Userpilot {
         /// Userpilot SDK logger
         var logger: Logging = OSLog.disabled
 
+        /// Additional SDK configuration properties used by wrapper/plugin integrations.
+        ///
+        /// Wrappers can pass integration-specific flags here without expanding the
+        /// public config surface for every platform bridge. The core SDK reads these
+        /// values to identify supported wrapper SDKs and determine whether screen or
+        /// interaction autocapture is handled by the wrapper layer.
+        var additionalProperties: [String: Any] = [:]
+
         /// The app framework (UIKit or SwiftUI).
         ///
         /// `nil` means the SDK will auto-detect the framework once the key window
@@ -169,6 +177,23 @@ extension Userpilot {
                     token: token
                 )
                 : OSLog.disabled
+            return self
+        }
+
+        /// Applies additional SDK configuration properties.
+        ///
+        /// Wrapper/plugin SDKs use this as an escape hatch for bridge-specific setup,
+        /// such as `PluginType`, `WrapperEnableScreenAutoCapture`, and
+        /// `WrapperEnableInteractionAutoCapture`. This function can be called
+        /// multiple times; each call merges into the existing dictionary, and later
+        /// values overwrite earlier values for the same key.
+        ///
+        /// - Parameter additionalProperties: Additional SDK configuration values.
+        /// - Returns: The config object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func additionalProperties(_ additionalProperties: [String: Any]) -> Self {
+            self.additionalProperties = self.additionalProperties.merging(additionalProperties)
             return self
         }
 

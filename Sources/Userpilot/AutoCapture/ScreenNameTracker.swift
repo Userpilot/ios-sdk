@@ -31,6 +31,9 @@ internal protocol ScreenNameTracking: AnyObject {
     /// Builds a screen context dictionary for auto event properties
     func buildScreenDictionaryForEvent() -> [String: String]
 
+    /// Builds a screen context dictionary for wrppers auto event properties
+    func buildScreenDictionaryForWrapperEvent() -> [String: String]
+
     /// Resets all tracked state to initial values
     func reset()
 }
@@ -91,6 +94,19 @@ internal final class ScreenNameTracker: ScreenNameTracking {
         if let navigationTitle = payload.navigationTitle, !navigationTitle.isEmpty {
             screen[Constants.AutoCapture.navigationTitle] = navigationTitle
         }
+
+        return screen
+    }
+
+    func buildScreenDictionaryForWrapperEvent() -> [String: String] {
+        guard let payload = currentPayload else {
+            return [:]
+        }
+
+        // Common (always included)
+        var screen: [String: String] = [
+            AutoCaptureConstants.screenTitle: payload.screenClass
+        ]
 
         return screen
     }

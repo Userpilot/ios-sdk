@@ -92,7 +92,7 @@ extension ScreenTrackingPayload {
         self.init(
             currentScreen: screenTitle,
             screenClass: screenTitle,
-            screenType: "UIViewController",
+            screenType: "",
             navigationTitle: nil,
             isUserpilotContainerClass: false,
             vcAccessibilityIdentifier: nil,

@@ -291,7 +291,7 @@ public protocol UserpilotExperienceDelegate: AnyObject {
 
 ### Auto Capture
 
-Userpilot SDK supports automatic screen tracking to help you capture mobile screen views without manually sending screen events. please refer to the [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation).
+The Userpilot SDK supports automatic capture of screen views and user interaction events. please refer to the [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation).
 
 ### Push Notification
 

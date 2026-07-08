@@ -112,6 +112,12 @@ internal class AutoCaptureCoordinater {
         return screenNameTracker.buildScreenDictionaryForEvent()
     }
 
+    /// same as currentScreenDictionary but for wrappers
+    private var currentScreenDictionaryForWrappers: [String: Any]? {
+        guard screenNameTracker.getCurrentPayload() != nil else { return nil }
+        return screenNameTracker.buildScreenDictionaryForWrapperEvent()
+    }
+
     // MARK: - Initialization
 
     /// Initialises the engine and conditionally enables screen and/or interaction autocapture.
@@ -126,6 +132,8 @@ internal class AutoCaptureCoordinater {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
         self.registry = container.resolve(InstanceRegistering.self)
+
+        guard !config.isWrapperSDK else { return }
 
         // Screen swizzles are required for both features (interaction tracking
         // needs to know which screen an event occurred on).
@@ -714,16 +722,25 @@ private extension AutoCaptureCoordinater {
 
 extension AutoCaptureCoordinater {
     /// Auto capture screen events from wrappers
-    func trackExternalAutoCaptureScreen(_ screen: String) {
-        publishScreen(ScreenTrackingPayload(screenTitle: screen))
+    func trackExternalAutoCaptureScreen(_ title: String) {
+        guard config.isWrapperSDK else { return }
+        let screenPayload = ScreenTrackingPayload(screenTitle: title)
+        screenNameTracker.updateScreen(with: screenPayload)
+        let event = Event(
+            type: .screen(title),
+            properties: [AutoCaptureConstants.source: AutoCaptureConstants.autoCaptureSourceValue]
+        )
+        analyticsPublisher.publish(event)
+
     }
 
     /// Auto capture interactions events from wrappers
     func trackExternalAutoCaptureEvent(_ eventName: String, _ properties: Payload) {
+        guard config.isWrapperSDK else { return }
         let event = Event(
             type: EventType.autoCaptureEvent,
             properties: properties,
-            screen: currentScreenDictionary,
+            screen: currentScreenDictionaryForWrappers,
             interactionEventName: eventName
         )
         analyticsPublisher.publish(event)
