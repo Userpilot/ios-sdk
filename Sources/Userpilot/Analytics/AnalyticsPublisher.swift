@@ -680,23 +680,29 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             return eventTitle.isEmpty ? event.eventName : eventTitle
         }
 
-        let trackTitle = event.eventName
-
-        guard let properties = event.properties else { return trackTitle }
-
-        let screenName = trackEventThrottleScreenName(from: event.screen)
-        if screenName.isEmpty { return trackTitle }
-
-        let tabName = trackEventThrottleString(from: properties[Constants.AutoCapture.tabName])
-        if tabName.isEmpty {
-            let hierarchy = trackEventThrottleString(from: properties[Constants.AutoCapture.hierarchy])
-            let row = trackEventThrottleString(from: properties[Constants.AutoCapture.selectedIndex])
-            let interaction = trackEventThrottleString(from: event.interactionEventName)
-            return "\(screenName)|\(trackTitle)|\(interaction)|\(hierarchy)|\(row)"
-        } else {
-            let tabIndex = properties[Constants.AutoCapture.tabIndex] ?? 0
-            return "\(screenName)|\(trackTitle)|\(tabName)|\(tabIndex)"
+        let properties = event.properties ?? [:]
+        func prop(_ key: String) -> String {
+            trackEventThrottleString(from: properties[key])
         }
+
+        let rawInteraction = prop(Constants.AutoCapture.rawInteractionType)
+
+        return [
+            trackEventThrottleScreenName(from: event.screen),
+            event.eventName,
+            rawInteraction.isEmpty ? (event.interactionEventName ?? "") : rawInteraction,
+            prop(Constants.AutoCapture.tabName),
+            prop(Constants.AutoCapture.tabIndex),
+            prop(Constants.AutoCapture.hierarchy),
+            prop(Constants.AutoCapture.accessibilityIdentifier),
+            prop(Constants.AutoCapture.dialogTitle),
+            prop(Constants.AutoCapture.targetText),
+            prop(Constants.AutoCapture.section),
+            prop(Constants.AutoCapture.selectedIndex),
+            prop(Constants.AutoCapture.selectedValue),
+            prop(Constants.AutoCapture.placeholder),
+            prop(Constants.AutoCapture.accessibilityLabel)
+        ].joined(separator: "|")
     }
 
     /// Resolves a display class for throttling from `Event.screen` (set on autocapture events via `makeEvent`).
@@ -1094,7 +1100,7 @@ extension AnalyticsPublisher {
 
         let screenEvent = screenSessionStateMachine.event
         if let screenTitle = screenEvent.screenTitle {
-            if !config.enableScreenAutoCapture && config.enableInteractionAutoCapture {
+            if shouldSyncManualScreenForInteractionPayload() {
                 screenNameTracker.updateScreen(
                     with: ScreenTrackingPayload(
                         screenTitle: screenTitle,
@@ -1130,6 +1136,16 @@ extension AnalyticsPublisher {
             broadcastEvent(screenEvent, screenEvent.screenTitle ?? "", properties: nil)
         }
         return true
+    }
+
+    /// Whether a manually published screen should update `ScreenNameTracker` so
+    /// subsequent interaction autocapture events carry the correct screen context.
+    private func shouldSyncManualScreenForInteractionPayload() -> Bool {
+        if config.isWrapperSDK {
+            return !config.isWrapperScreenAutoCaptureEnabled &&
+                config.isWrapperInteractionAutoCaptureEnabled
+        }
+        return !config.enableScreenAutoCapture && config.enableInteractionAutoCapture
     }
 
     /**

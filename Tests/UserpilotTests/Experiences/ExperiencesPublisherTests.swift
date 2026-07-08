@@ -451,16 +451,23 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
         // Arrange
         userpilot.experienceStateMachine.markPreviewMode()
+        var publishedFakeReload = false
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
+            publishedFakeReload = true
+            return true
+        }
         let closeEvent = MockSDKEvent(
             eventName: SDKEventsName.flowExperienceDismissed.rawValue,
             eventPayload: ["mobile_content_id": 77]
         )
+        closeEvent.isCloseEvent = true
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
 
         // Assert
         XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
+        XCTAssertTrue(publishedFakeReload)
     }
 
     func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseNPSEvent() {

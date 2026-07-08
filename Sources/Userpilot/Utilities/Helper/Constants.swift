@@ -123,3 +123,13 @@ internal enum Constants {
         static let configurationDuration = TimeInterval(30 * 60)
     }
 }
+
+/// Keys used by wrapper SDKs (React Native, Flutter, Ionic) in `additionalProperties`.
+internal struct WrapperSDKConstants {
+    static let pluginType = "PluginType"
+    static let pluginTypeReactNative = "ReactNative"
+    static let pluginTypeFlutter = "Flutter"
+    static let pluginTypeIonic = "Ionic"
+    static let enableScreenAutoCapture = "WrapperEnableScreenAutoCapture"
+    static let enableInteractionAutoCapture = "WrapperEnableInteractionAutoCapture"
+}
