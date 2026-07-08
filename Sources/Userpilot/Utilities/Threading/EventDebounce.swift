@@ -27,7 +27,7 @@ internal final class EventDebounce<Value> {
 
     /// Serial queue that owns all mutable state. Every read/write of
     /// `workItems` and `latestValues` must happen on this queue.
-    private let queue = DispatchQueue(label: DispatchQueueConstants.DEBOUNCE_QUEUE)
+    private let queue = DispatchQueue(label: Constants.DispatchQueues.debounceQueue)
 
     /// Maps a debounce key to its pending work item.
     private var workItems: [String: DispatchWorkItem] = [:]

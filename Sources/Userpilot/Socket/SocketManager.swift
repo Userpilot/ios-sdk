@@ -14,61 +14,35 @@ import Foundation
 // MARK: - Protocols
 
 /*
- `SocketEvents` defines methods and properties for managing WebSocket connections and events.
+ `SocketManaging` defines methods and properties for managing WebSocket connections and events.
  */
 // swiftlint:disable file_length
-internal protocol SocketEvents: AnyObject {
-    /// Return socket state
+internal protocol SocketManaging: AnyObject {
+    /// Read-only socket state, derived from the Phoenix socket/channel objects.
+    /// These are routing queries for consumers; all state MANAGEMENT (open/close
+    /// gating, half-open recovery, callback suppression) is internal to the manager.
     var isSocketOpened: Bool { get }
     var isJoiningSocket: Bool { get }
-    var didErrorOccurred: Bool { get }
+    var didCloseFromError: Bool { get }
     var isShutdownState: Bool { get }
-    var isSocketConnectedWithUnknownChannel: Bool { get }
 
-    /// Update socket state
-    func updateSocketState(
-        _ socketState: SocketManager.SocketState,
-        forceUpdateState: Bool
-    )
-
-    /// Handle socket open & close
+    /// Handle socket open & close. `connect()` is always safe to call — it gates
+    /// itself on the current socket state and recovers a half-open transport.
     func connect()
     func close()
 
-    /// Publish socket events
+    /// Publish socket events. Push resolutions are delivered to all registered
+    /// subscribers with `message.resolvedEvent` (the response `request_type`) as
+    /// the event name, so no per-call subscription is needed — consumers filter
+    /// by event name. Resolutions are suppressed internally during teardown or
+    /// while the app is inactive.
     func publish(
         _ eventName: String,
-        payload: Payload,
-        socketSubscription: SocketSubscription?
+        payload: Payload
     )
 
     /// Register socket subscription
     func registerCallback(_ socketSubscription: SocketSubscription)
-}
-
-extension SocketEvents {
-
-    func publish(
-        _ eventName: String,
-        payload: Payload,
-        socketSubscription: SocketSubscription? = nil
-    ) {
-        publish(
-            eventName,
-            payload: payload,
-            socketSubscription: socketSubscription
-        )
-    }
-
-    func updateSocketState(
-        _ socketState: SocketManager.SocketState,
-        forceUpdateState: Bool = false
-    ) {
-        updateSocketState(
-            socketState,
-            forceUpdateState: forceUpdateState
-        )
-    }
 }
 
 /// `SocketSubscription` defines a callback interface for handling socket event notifications.
@@ -117,39 +91,7 @@ internal class SocketManager {
 
     // MARK: - Properties
 
-    // Socket state enums
-    enum SocketState {
-        /**
-         When application enter background state, the SDK flush events and then close socket
-         without need to reopen.
-         */
-        case shuttingDown
-
-        /**
-         When SDK getting Identify event while it's already identified/opened channel.
-         */
-        case switchingUser
-
-        /**
-         When socket is opened.
-         */
-        case opened
-
-        /**
-         When socket closed.
-         */
-        case closed
-
-        /**
-         When socket channel is setup including getting settings and open the channel.
-         */
-        case connecting
-
-        /**
-         When getting socket channel error, to prevent retry.
-         */
-        case error
-    }
+    typealias SocketFactory = (_ endpoint: String, _ params: SwiftPhoenixClientPayload?) -> Socket
 
     /// The WebSocket instance for handling connections.
     private var phoenixSocket: Socket?
@@ -178,11 +120,16 @@ internal class SocketManager {
     /// socket susbcriber
     @Multicast var socketSubscription: SocketSubscription
 
-    // track socket state
-    private var socketState: SocketState = .closed
+    /// True while an intentional close is in progress. Suppresses push callbacks that
+    /// race the teardown; cleared when a new connection attempt starts.
+    private var isClosingSocket = false
 
     // track fetching socket settings
     private lazy var isFetchingSocketSettings: AtomicReference<Bool> = AtomicReference(false)
+
+    /// Factory used to create Phoenix sockets. Production uses the real transport;
+    /// tests can inject a fake transport while still exercising the real manager.
+    private let socketFactory: SocketFactory
 
     // MARK: - Initialization
 
@@ -191,13 +138,29 @@ internal class SocketManager {
 
      - Parameter container: The dependency injection container.
      */
-    init(container: DIContainer) {
+    init(
+        container: DIContainer,
+        socketFactory: @escaping SocketFactory = { endpoint, params in
+            Socket(endpoint, params: params)
+        }
+    ) {
+        self.container = container
         self.userpilot = container.owner
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
         self.userpilotRemoteSource = container.resolve(UserpilotRemoteSourcing.self)
         self.logger = config.logger
+        self.socketFactory = socketFactory
+    }
+
+    /// DI container kept for use-time resolution of lifecycle state; resolving
+    /// `SessionMonitoring` at init would create a dependency cycle.
+    private weak var container: DIContainer?
+
+    /// Session monitoring to know when the app is inactive (background teardown).
+    private weak var sessionMonitorer: SessionMonitoring? {
+        return container?.resolve(SessionMonitoring.self)
     }
 
 }
@@ -221,24 +184,23 @@ extension SocketManager {
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
         else { return }
         tryCatch {
-            socketState = .connecting
+            quarantinePreviousSocket()
+
+            isClosingSocket = false
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: Environment.getClientToken(config: config),
-                SocketManager.userIdKey: storage.userId,
-                SocketManager.sdkVersionKey: userpilot?.version() ?? "",
-                SocketManager.autoPropertiesKey: autoProperties,
-                SocketManager.appPropertiesKey: appProperties
+                Constants.Socket.tokenKey: Environment.getClientToken(config: config),
+                Constants.Socket.userIdKey: storage.userId,
+                Constants.Socket.sdkVersionKey: userpilot?.version() ?? "",
+                Constants.Socket.autoPropertiesKey: autoProperties,
+                Constants.Socket.appPropertiesKey: appProperties
             ]
-            phoenixSocket = Socket(
+            phoenixSocket = socketFactory(
                 Environment.getSocketURL(storage: storage),
-                params: socketProperties
+                socketProperties
             )
 
-            guard let phoenixSocket else {
-                socketState = .closed
-                return
-            }
+            guard let phoenixSocket else { return }
 
             // Setup delegates for socket events
             phoenixSocket.delegateOnOpen(to: self) { (self) in
@@ -247,16 +209,14 @@ extension SocketManager {
 
             phoenixSocket.delegateOnClose(to: self) { (self) in
                 self.logger.error("🛑 SOCKET closed")
-                self.updateSocketState(.closed)
-                if self.socketState != .shuttingDown {
-                    self.$socketSubscription.invoke { $0.onSocketClosed() }
-                }
+                // Teardown finished — allow future connection attempts.
+                self.isClosingSocket = false
+                self.$socketSubscription.invoke { $0.onSocketClosed() }
             }
 
             phoenixSocket.delegateOnError(to: self) { (self, error) in
                 let (error, _) = error
                 self.logger.error("❗ SOCKET error - details %{public}@", error.localizedDescription)
-                self.updateSocketState(.error)
             }
 
             phoenixSocket.onMessage(callback: { [weak self] message in
@@ -269,40 +229,46 @@ extension SocketManager {
             }
 
             // Setup the channel - always create a new channel instance to avoid join conflicts
-            let channel = phoenixSocket.channel(SocketManager.channelTopic)
+            let channel = phoenixSocket.channel(Constants.Socket.channelTopic)
 
             // Connect to the channel
             phoenixChannel = channel
             phoenixChannel?.join()?
                 .delegateReceive(
-                    SocketManager.successKey, to: self,
+                    Constants.Socket.successKey, to: self,
                     callback: { (self, _) in
                         self.logger.info("🚀 SOCKET channel joined")
-                        self.updateSocketState(.opened)
                         self.$socketSubscription.invoke { $0.onSocketOpened() }
                         self.isFetchingSocketSettings.value = false
                     }
                 )
                 .delegateReceive(
-                    SocketManager.errorKey, to: self,
+                    Constants.Socket.errorKey, to: self,
                     callback: { (self, message) in
                         self.logger.error(
                             "⚠️ SOCKET channel join failed: %{public}@", message.payload)
-                        self.updateSocketState(.error)
+                        self.closeSocket()
+                        self.isFetchingSocketSettings.value = false
+                    })
+                .delegateReceive(
+                    Constants.Socket.timeoutKey, to: self,
+                    callback: { (self, _) in
+                        // A silently timed-out join is the birth of the half-open
+                        // state (socket connected, channel never joined) — kill it
+                        // at the source; onSocketClosed drives normal recovery.
+                        self.logger.error("⏱️ SOCKET channel join timed out")
                         self.closeSocket()
                         self.isFetchingSocketSettings.value = false
                     })
 
             phoenixChannel?.onError { [weak self] message in
                 self?.logger.error("❗ SOCKET Channel error: %{public}@", message.payload)
-                self?.updateSocketState(.error)
                 self?.closeSocket()
                 self?.isFetchingSocketSettings.value = false
             }
 
             phoenixChannel?.onClose { [weak self] message in
                 self?.logger.debug("🛑 SOCKET Channel close: %{public}@", message.payload)
-                self?.updateSocketState(.closed)
                 self?.isFetchingSocketSettings.value = false
             }
 
@@ -316,7 +282,24 @@ extension SocketManager {
 
      - Parameter completion: A closure that is called when the disconnection completes.
      */
+    /// Structurally abandon any previous transport (e.g. a half-open socket whose
+    /// channel never joined): quarantine its callbacks first so tearing it down
+    /// cannot fire stale close/error events into subscribers, then disconnect it.
+    /// Captures the instance locally and tears down synchronously — race-free
+    /// against a replacement, and a no-op for an already-closed socket.
+    private func quarantinePreviousSocket() {
+        guard let oldSocket = phoenixSocket else { return }
+        if let oldChannel = phoenixChannel {
+            oldSocket.remove(oldChannel)
+        }
+        oldSocket.releaseCallbacks()
+        oldSocket.disconnect()
+    }
+
     private func closeSocket() {
+        // Only mark closing when there is a live socket to tear down; the flag is
+        // cleared by `delegateOnClose` once the socket reports closed.
+        if phoenixSocket != nil { isClosingSocket = true }
         performOn(.main) { [weak self] in
             tryCatch {
                 if let channel = self?.phoenixChannel {
@@ -332,13 +315,13 @@ extension SocketManager {
 
 }
 
-// MARK: - SocketEvents
+// MARK: - SocketManaging
 
-extension SocketManager: SocketEvents {
+extension SocketManager: SocketManaging {
 
-    /// Logic to determine if the channel state is joining
+    /// Logic to determine if the socket/channel is in a joining state
     var isJoiningSocket: Bool {
-        phoenixChannel?.isJoining == true || socketState == .connecting
+        phoenixSocket?.isConnecting == true || phoenixChannel?.isJoining == true
     }
 
     /// Logic to check if the socket is currently open
@@ -346,40 +329,37 @@ extension SocketManager: SocketEvents {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == true
     }
 
-    /// Checks if the socket is closed due to error reason
-    var didErrorOccurred: Bool {
-        socketState == .error
+    /// Checks if the channel errored (used to prevent automatic reopen loops)
+    var didCloseFromError: Bool {
+        phoenixChannel?.isErrored == true
     }
 
-    /// Checks if the socket in shutting down state
+    /// Checks if the socket is being intentionally torn down
     var isShutdownState: Bool {
-        socketState == .shuttingDown
+        isClosingSocket
+            || phoenixSocket?.connectionState == .closing
+            || phoenixChannel?.isLeaving == true
     }
 
-    /// Update socket state
-    func updateSocketState(
-        _ newSocketState: SocketManager.SocketState,
-        forceUpdateState: Bool = false
-    ) {
-        tryCatch {
-            if forceUpdateState || newSocketState == .error {
-                socketState = newSocketState
-                return
-            }
-            if socketState == newSocketState || socketState == .error { return }
-            socketState = newSocketState
-        }
+    /// Checks if a new connection attempt is currently allowed
+    private var isAllowToOpenSocket: Bool {
+        !isShutdownState && !isSocketOpened && !isJoiningSocket
     }
 
     /// Checks if the socket is currently opened without channel
-    var isSocketConnectedWithUnknownChannel: Bool {
+    private var isSocketConnectedWithUnknownChannel: Bool {
         phoenixSocket?.isConnected == true && phoenixChannel?.isJoined == false
     }
 
     /// Implementation to open a WebSocket connection
     func connect() {
-        if config.token.isEmpty || storage.userId.isEmpty || isSocketOpened || isJoiningSocket {
+        if config.token.isEmpty || storage.userId.isEmpty || !isAllowToOpenSocket {
             return
+        }
+        // Half-open transport (connected, channel never joined) passes the gate
+        // above — recover by abandoning it before dialing fresh.
+        if isSocketConnectedWithUnknownChannel {
+            quarantinePreviousSocket()
         }
         if !isFetchingSocketSettings.compareAndSet(expected: false, new: true) {
             return
@@ -401,41 +381,51 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to close the WebSocket connection
     func close() {
-        updateSocketState(.closed)
         closeSocket()
     }
 
     /// Implementation to publish an event over the WebSocket
     func publish(
         _ eventName: String,
-        payload: Payload,
-        socketSubscription: SocketSubscription?
+        payload: Payload
     ) {
         _ = tryCatch {
             phoenixChannel?
-                .push(eventName, payload: payload ?? [:])?
-                .receive(SocketManager.successKey) { [weak self] message in
-                    if self?.socketState != .shuttingDown {
-                        if let socketSubscription {
-                            socketSubscription.onSocketEventSent(eventName, payload, message, true)
-                        } else {
-                            self?.$socketSubscription.invoke {
-                                $0.onSocketEventSent(eventName, payload, message, true)
-                            }
-                        }
-                    }
+                .push(
+                    eventName,
+                    payload: payload ?? [:],
+                    timeout: Constants.Socket.pushTimeout
+                )?
+                .receive(Constants.Socket.successKey) { [weak self] message in
+                    self?.notifyEventSent(eventName, payload, message, true)
                 }
-                .receive(SocketManager.errorKey) { [weak self] message in
-                    if self?.socketState != .shuttingDown {
-                        if let socketSubscription {
-                            socketSubscription.onSocketEventSent(eventName, payload, message, false)
-                        } else {
-                            self?.$socketSubscription.invoke {
-                                $0.onSocketEventSent(eventName, payload, message, false)
-                            }
-                        }
-                    }
+                .receive(Constants.Socket.errorKey) { [weak self] message in
+                    self?.notifyEventSent(eventName, payload, message, false)
                 }
+                .receive(Constants.Socket.timeoutKey) { [weak self] message in
+                    // Without this hook a timed-out push resolves silently and the
+                    // ACK-gated analytics queue stalls until the watchdog fires.
+                    self?.logger.error("⏱️ SOCKET push timed out for event: %{public}@", eventName)
+                    self?.notifyEventSent(eventName, payload, message, false)
+                }
+        }
+    }
+
+    /// Delivers a push resolution (ok/error/timeout) to all registered subscribers.
+    /// The response's `request_type` identifies the event, so consumers filter by
+    /// name; falls back to the pushed event name when the payload carries none
+    /// (error/timeout resolutions). Suppressed during teardown or while the app is
+    /// inactive (background flush) — resolutions must not re-drive the event queue
+    /// mid-teardown.
+    private func notifyEventSent(
+        _ eventName: String,
+        _ payload: Payload,
+        _ message: Message,
+        _ eventSent: Bool
+    ) {
+        guard !isShutdownState, sessionMonitorer?.isAppActive ?? false else { return }
+        $socketSubscription.invoke {
+            $0.onSocketEventSent(message.resolvedEvent ?? eventName, payload, message, eventSent)
         }
     }
 
@@ -443,20 +433,4 @@ extension SocketManager: SocketEvents {
     func registerCallback(_ socketSubscription: SocketSubscription) {
         self.socketSubscription = socketSubscription
     }
-}
-
-// MARK: - Properties name
-
-extension SocketManager {
-
-    // Static constants
-    private static let channelTopic = "events:*"
-    private static let successKey = "ok"
-    private static let errorKey = "error"
-
-    private static let tokenKey = "app_token"
-    private static let userIdKey = "user_id"
-    private static let autoPropertiesKey = "auto_properties"
-    private static let appPropertiesKey = "app_properties"
-    private static let sdkVersionKey = "sdk_version"
 }

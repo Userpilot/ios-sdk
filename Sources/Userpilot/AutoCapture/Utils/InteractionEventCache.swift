@@ -44,7 +44,7 @@ internal enum InteractionEventCache {
     private static var lastDeliveredTextLengthByDebounceKey: [String: Int] = [:]
 
     private static let debouncer = EventDebounce<DebouncedInteractionEnvelope>(
-        delay: AutoCaptureConstants.interactionDebounceInterval,
+        delay: Constants.AutoCapture.interactionDebounceInterval,
         deliveryQueue: .main
     ) { envelope in
         guard Userpilot.isInitialized else { return }

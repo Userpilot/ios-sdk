@@ -1,5 +1,5 @@
 //
-//  UserpilotRemoteSource.swift
+//  UserpilotConstants.RemoteSource.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 17/09/2024.
@@ -79,7 +79,7 @@ internal class UserpilotRemoteSource {
         }
 
         let elapsedTime = Date().timeIntervalSince(configurationDate)
-        return elapsedTime < RemoteSource.configurationDuration
+        return elapsedTime < Constants.RemoteSource.configurationDuration
     }
 
     // Returns appropriate error message based on HTTP status code.
@@ -113,7 +113,7 @@ internal class UserpilotRemoteSource {
 
     /// Builds the remote settings URL using the SDK token.
     private func buildSettingsUrl() -> String {
-        return RemoteSource.settingsBaseURL + config.token
+        return Constants.RemoteSource.settingsBaseURL + config.token
     }
 
     /// Builds the URL for fetching preview experience content.
@@ -197,7 +197,7 @@ internal class UserpilotRemoteSource {
             }
 
             storage.configurationDate = Date()
-            storage.socketURL = baseUrl + RemoteSource.socketPath
+            storage.socketURL = baseUrl + Constants.RemoteSource.socketPath
             logger.info("🔗 Socket URL updated: %{public}@", storage.socketURL)
             return .success(())
         } catch {

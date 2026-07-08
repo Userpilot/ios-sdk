@@ -55,31 +55,31 @@ internal struct ScreenTrackingPayload: Equatable {
     /// - Returns: Dictionary representation of the payload
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
-            AutoCaptureConstants.screenName: currentScreen,
-            AutoCaptureConstants.screenClass: screenClass,
-            AutoCaptureConstants.screenType: screenType,
-            AutoCaptureConstants.isUserpilotContainerClass: isUserpilotContainerClass,
-            AutoCaptureConstants.source: AutoCaptureConstants.autoCaptureSourceValue
+            Constants.AutoCapture.screenName: currentScreen,
+            Constants.AutoCapture.screenClass: screenClass,
+            Constants.AutoCapture.screenType: screenType,
+            Constants.AutoCapture.isUserpilotContainerClass: isUserpilotContainerClass,
+            Constants.AutoCapture.source: Constants.AutoCapture.autoCaptureSourceValue
         ]
 
         if let navigationTitle = navigationTitle {
-            dict[AutoCaptureConstants.navigationTitle] = navigationTitle
+            dict[Constants.AutoCapture.navigationTitle] = navigationTitle
         }
 
         if let vcAccessibilityIdentifier = vcAccessibilityIdentifier {
-            dict[AutoCaptureConstants.vcAccessibilityIdentifier] = vcAccessibilityIdentifier
+            dict[Constants.AutoCapture.vcAccessibilityIdentifier] = vcAccessibilityIdentifier
         }
 
         if let vcAccessibilityLabel = vcAccessibilityLabel {
-            dict[AutoCaptureConstants.vcAccessibilityLabel] = vcAccessibilityLabel
+            dict[Constants.AutoCapture.vcAccessibilityLabel] = vcAccessibilityLabel
         }
 
         if let screenNameMatchesPreviousScreen {
-            dict[AutoCaptureConstants.screenNameMatchesPreviousScreen] = screenNameMatchesPreviousScreen
+            dict[Constants.AutoCapture.screenNameMatchesPreviousScreen] = screenNameMatchesPreviousScreen
         }
 
         if let appFramework = appFramework {
-            dict[AutoCaptureConstants.uiFramework] = appFramework.rawValue
+            dict[Constants.AutoCapture.uiFramework] = appFramework.rawValue
         }
         return dict
     }

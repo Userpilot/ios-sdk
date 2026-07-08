@@ -1,5 +1,5 @@
 //
-//  ExperienceStateManager.swift
+//  ExperienceStateMachine.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 23/11/2025.
@@ -206,10 +206,10 @@ internal protocol ExperienceStateManaging: AnyObject {
     func markActiveFromCurrentState(content: ExperienceContent)
 }
 
-// MARK: - ExperienceStateManager
+// MARK: - ExperienceStateMachine
 
 /// Manages experience flow state transitions and provides thread-safe access to current state.
-internal final class ExperienceStateManager {
+internal final class ExperienceStateMachine {
 
     // MARK: - Properties
 
@@ -227,7 +227,7 @@ internal final class ExperienceStateManager {
 
 // MARK: - ExperienceStateManaging
 
-extension ExperienceStateManager: ExperienceStateManaging {
+extension ExperienceStateMachine: ExperienceStateManaging {
 
     // MARK: - State Access
 

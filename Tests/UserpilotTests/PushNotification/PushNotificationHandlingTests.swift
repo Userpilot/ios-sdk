@@ -100,8 +100,8 @@ final class PushNotificationHandlingTests: PushNotificationMonitorTestCase {
         var vendorCompletionCalled = false
         var navigatedURL: URL?
 
-        host.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in hostEvents.append(event) }
-        vendor.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in vendorEvents.append(event) }
+        host.analyticsPublisher.onPublishInternalSDKEvent = { event in hostEvents.append(event) }
+        vendor.analyticsPublisher.onPublishInternalSDKEvent = { event in vendorEvents.append(event) }
 
         vendor.linkOpener.onHandleURL = { url in navigatedURL = url }
 
@@ -148,7 +148,7 @@ final class PushNotificationHandlingTests: PushNotificationMonitorTestCase {
 
         var didPublishEvent = false
         var didCallCompletion = false
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { _, _ in didPublishEvent = true }
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { _ in didPublishEvent = true }
 
         // Act
         let result = pushNotificationMonitor.processNotificationForTesting(
@@ -172,7 +172,7 @@ final class PushNotificationHandlingTests: PushNotificationMonitorTestCase {
         userpilot.storage.userId = "default-00000"
 
         var publishedEvent: SDKEvent?
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
         }
 

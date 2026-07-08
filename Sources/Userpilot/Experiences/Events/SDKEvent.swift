@@ -42,7 +42,7 @@ extension SDKEvent {
 
 }
 
-/// Used to pass seen content for cached ScreenViewEntity
+/// Used to pass seen content for cached ScreenSessionStateMachine
 extension SDKEvent {
 
     func getContentType() -> ExperienceType {

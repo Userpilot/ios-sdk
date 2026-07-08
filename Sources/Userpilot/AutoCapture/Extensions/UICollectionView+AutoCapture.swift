@@ -50,11 +50,11 @@ internal extension UICollectionViewCell {
                 payload.targetClass = labelViewType
             }
             payload.elementText = (touchedView ?? self).shouldRedactText()
-                ? AutoCaptureConstants.reductText
+                ? Constants.AutoCapture.reductText
                 : userpilotLabel
         } else if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = AutoCaptureConstants.reductText
+            payload.elementText = Constants.AutoCapture.reductText
         } else {
             payload.elementText = touchedView?.getTextContent()
             payload.accessibilityIdentifier = accessibilityIdentifier

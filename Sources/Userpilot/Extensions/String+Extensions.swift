@@ -121,6 +121,15 @@ internal extension String {
         return Double(self) != nil
     }
 
+    /// Analytics events are the ones that flow through the serialized event queue.
+    /// Their socket ACK advances the queue; SDK/content events must not.
+    func isAnalyticsEvent() -> Bool {
+        return self == Constants.Event.identifyEvent ||
+        self == Constants.Event.screenEvent ||
+        self == Constants.Event.trackEvent ||
+        self == Constants.Event.autoCaptureEvent
+    }
+
 }
 
 // MARK: - Colors
@@ -277,7 +286,7 @@ internal extension String {
     - Parameter type: The type to decode into, which must conform to `Decodable`.
     */
     func toArray<T: Decodable>() -> [T]? {
-        let decoder = JSONDecoder()
+        let decoder = UserpilotDecoder.shared
         do {
             let decodedData = try decoder.decode([T].self, from: Data(self.utf8))
             return decodedData

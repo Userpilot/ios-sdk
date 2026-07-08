@@ -34,17 +34,21 @@ class MockUserpilot: Userpilot {
         container.register(InstanceRegistering.self, value: Userpilot.Registry.shared)
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
+        container.register(NetworkMonitoring.self, value: networkMonitor)
+        container.register(OfflineEventsHandling.self, value: offlineEventsHandler)
+        container.register(EventStoring.self, value: eventStorage)
+        container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateMachine.init)
         container.register(SessionMonitoring.self, value: sessionMonitor)
         container.register(PushNotificationMonitoring.self, value: pushNotificationMonitor)
-        container.register(SocketEvents.self, value: socketManager)
+        container.register(SocketManaging.self, value: socketManager)
         container.register(ExperiencesPublishing.self, value: experiencesPublisher)
         container.register(UserpilotRemoteSourcing.self, value: remoteSource)
         container.register(AutoPropertyDecoratoring.self, value: autoPropertyDecorator)
         container.register(ThemeHandling.self, value: themeHandler)
         container.register(ImageLoading.self, value: imageLoader)
         container.register(LinkOpening.self, value: linkOpener)
-        experienceStateManager = ExperienceStateManager(container: container)
-        container.register(ExperienceStateManaging.self, value: experienceStateManager)
+        experienceStateMachine = ExperienceStateMachine(container: container)
+        container.register(ExperienceStateManaging.self, value: experienceStateMachine)
         // Real screen tracker + autocapture coordinator (lazy: only built when a test
         // resolves `autoCaptureCoordinator`). `ScreenNameTracker.init` ignores its
         // container, and `AutoCaptureCoordinater.init` resolves the mocks registered
@@ -61,6 +65,9 @@ class MockUserpilot: Userpilot {
 
     var analyticsPublisher = MockAnalyticsPublisher()
     var storage = MockStorage()
+    var networkMonitor = MockNetworkMonitor()
+    var offlineEventsHandler = MockOfflineEventsHandler()
+    var eventStorage = MockEventStorage()
     var sessionMonitor = MockSessionMonitor()
     var pushNotificationMonitor = MockPushNotificationMonitor()
     var socketManager = MockSocketManager()
@@ -70,7 +77,7 @@ class MockUserpilot: Userpilot {
     var themeHandler = MockThemeHandler()
     var imageLoader = MockImageLoader()
     var linkOpener = MockLinkOpening()
-    var experienceStateManager: ExperienceStateManaging!
+    var experienceStateMachine: ExperienceStateManaging!
     var mockLogger = MockLogger()
 }
 
@@ -183,6 +190,11 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         return onCanRequestScreenEvent?() ?? false
     }
 
+    var currentScreen = ""
+    var getCurrentScreen: String {
+        return currentScreen
+    }
+
     var onTriggerDeepLink: ((URL) -> Void)?
     func triggerDeepLink(url: URL) {
         onTriggerDeepLink?(url)
@@ -198,9 +210,10 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         onShowThankYouMessage?(surveyContent, surveyTheme, submissionId)
     }
 
-    var onUpdateSceen: ((String) -> Void)?
-    func updateSceen(_ screenName: String) {
-        onUpdateSceen?(screenName)
+    var onUpdateScreen: ((String) -> Void)?
+    func updateScreen(_ screenName: String) {
+        currentScreen = screenName
+        onUpdateScreen?(screenName)
     }
 
     var onLogout: (() -> Void)?
@@ -239,13 +252,13 @@ class MockLinkOpening: LinkOpening {
 
 // MARK: - Mock Socket Manager
 
-class MockSocketManager: SocketEvents {
+class MockSocketManager: SocketManaging {
 
     var isSocketOpened: Bool = false
 
     var isJoiningSocket: Bool = false
 
-    var didErrorOccurred: Bool = false
+    var didCloseFromError: Bool = false
 
     var isShutdownState: Bool = false
 
@@ -266,18 +279,12 @@ class MockSocketManager: SocketEvents {
         onRegisterCallback?(socketSubscription)
     }
 
-    var onUpdateSocketState: ((SocketManager.SocketState, Bool) -> Void)?
-    func updateSocketState(_ socketState: SocketManager.SocketState, forceUpdateState: Bool) {
-        onUpdateSocketState?(socketState, forceUpdateState)
-    }
-
-    var onPublish: ((String, Payload, SocketSubscription?) -> Void)?
+    var onPublish: ((String, Payload) -> Void)?
     func publish(
         _ eventName: String,
-        payload: Payload,
-        socketSubscription: SocketSubscription?
+        payload: Payload
     ) {
-        onPublish?(eventName, payload, socketSubscription)
+        onPublish?(eventName, payload)
     }
 
 }
@@ -305,24 +312,25 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onReset?()
     }
 
-    var onLogout: ((SocketManager.SocketState, Bool) -> Void)?
-    func logout(socketState: SocketManager.SocketState, shouldClearCachedIdentifyEvent: Bool) {
-        onLogout?(socketState, shouldClearCachedIdentifyEvent)
+    var onLogout: ((Bool) -> Void)?
+    func logout(clearCachedIdentifyEvent: Bool) {
+        onLogout?(clearCachedIdentifyEvent)
     }
 
     var canRequestEvent: Bool = true
 
-    var onPublishInternalSDKEvent: ((SDKEvent, SocketSubscription?) -> Void)?
-    func publishInternalSDKEvent(
-        _ sdkEvent: SDKEvent,
-        socketSubscription: SocketSubscription?
-    ) {
-        onPublishInternalSDKEvent?(sdkEvent, socketSubscription)
+    var onPublishInternalSDKEvent: ((SDKEvent) -> Void)?
+    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+        onPublishInternalSDKEvent?(sdkEvent)
     }
 
-    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?) -> Void)?
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
-        onPublishFakeReloadScreenEvent?(experienceType, experienceId)
+    var onPublishFakeReloadScreenEvent: ((ExperienceType?, Int?, Bool) -> Bool)?
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType?,
+        _ experienceId: Int?,
+        isFakeReload: Bool
+    ) -> Bool {
+        return onPublishFakeReloadScreenEvent?(experienceType, experienceId, isFakeReload) ?? false
     }
 
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?
@@ -332,7 +340,7 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
 
     var isStartSession: Bool = false
 
-    var screenEntity: ScreenViewEntity?
+    var screenSessionStateMachine: ScreenSessionStateMachine?
 }
 
 // MARK: - Mock Storage
@@ -398,6 +406,94 @@ class MockPushNotificationMonitor: PushNotificationMonitoring {
     func attemptDeferredNotificationResponse() -> Bool {
         onAttemptDeferredNotificationResponse?()
         return false
+    }
+}
+
+// MARK: - Mock Network Monitor
+
+class MockNetworkMonitor: NetworkMonitoring {
+    var isNetworkAvailable: Bool = true
+    var connectionType: ConnectionType = .wifi
+    var isConnectedViaWiFi: Bool { isNetworkAvailable && connectionType == .wifi }
+    var isConnectedViaCellular: Bool { isNetworkAvailable && connectionType == .cellular }
+    var isReady: Bool = true
+    weak var delegate: NetworkMonitoringDelegate?
+
+    var onStartMonitoring: (() -> Void)?
+    func startMonitoring() {
+        onStartMonitoring?()
+    }
+
+    var onStopMonitoring: (() -> Void)?
+    func stopMonitoring() {
+        onStopMonitoring?()
+    }
+}
+
+// MARK: - Mock Offline Events Handler
+
+class MockOfflineEventsHandler: OfflineEventsHandling {
+    var shouldSaveOffline: Bool = false
+    var hasCachedEvents: Bool = false
+    var savedEvents: [(event: Event, clearStoredEventsFirst: Bool)] = []
+    var didRestoreEvents = false
+    var didClearLocalEvents = false
+
+    func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool) {
+        savedEvents.append((event, clearStoredEventsFirst))
+    }
+
+    func restoreEventsFromLocalStorage(completion: (() -> Void)?) {
+        didRestoreEvents = true
+        completion?()
+    }
+
+    func clearLocalEvents() {
+        didClearLocalEvents = true
+        savedEvents.removeAll()
+    }
+}
+
+// MARK: - Mock Event Storage
+
+class MockEventStorage: EventStoring {
+    var events: [EventStorage] = []
+    var didDeleteAllEvents = false
+
+    func saveEvent(_ activity: EventStorage, completion: @escaping (Bool) -> Void) {
+        events.append(activity)
+        completion(true)
+    }
+
+    func getAllEventsAndDelete(completion: @escaping ([EventStorage]) -> Void) {
+        let storedEvents = events
+        events.removeAll()
+        completion(storedEvents)
+    }
+
+    func deleteEvent(_ activity: EventStorage) {
+        events.removeAll { $0.requestId == activity.requestId }
+    }
+
+    func deleteAllEvents() {
+        didDeleteAllEvents = true
+        events.removeAll()
+    }
+
+    func getStorageStats() -> DatabaseStats {
+        let totalSize = events.reduce(Int64(0)) { $0 + Int64($1.sizeBytes) }
+        return DatabaseStats(
+            eventCount: events.count,
+            totalSizeBytes: totalSize,
+            maxEventCount: Constants.Database.maxEventCount,
+            maxSizeBytes: Constants.Database.maxSizeBytes,
+            isCountLimitReached: events.count >= Constants.Database.maxEventCount,
+            isSizeLimitReached: totalSize >= Constants.Database.maxSizeBytes
+        )
+    }
+
+    func hasEvents() -> Bool {
+        !events.isEmpty
     }
 }
 

@@ -12,16 +12,16 @@ import XCTest
 final class ConstantsTests: XCTestCase {
 
     func testDispatchQueueConstants() {
-        XCTAssertEqual(DispatchQueueConstants.EVENT_QUEUE, "com.userpilot.event-queue")
-        XCTAssertEqual(DispatchQueueConstants.EXPERIENCE_QUEUE, "com.userpilot.experience-queue")
-        XCTAssertEqual(DispatchQueueConstants.DI_CONTAINER_QUEUE, "com.userpilot.dicontainer-queue")
-        XCTAssertEqual(DispatchQueueConstants.THROTTLE_QUEUE, "com.userpilot.throttle-queue")
+        XCTAssertEqual(Constants.DispatchQueues.eventQueue, "com.userpilot.event-queue")
+        XCTAssertEqual(Constants.DispatchQueues.experienceQueue, "com.userpilot.experience-queue")
+        XCTAssertEqual(Constants.DispatchQueues.diContainerQueue, "com.userpilot.dicontainer-queue")
+        XCTAssertEqual(Constants.DispatchQueues.throttleQueue, "com.userpilot.throttle-queue")
     }
 
     func testGeneralConstants() {
-        XCTAssertEqual(GeneralConstants.PATH_NAME, "/mobile/v1/events/websocket")
-        XCTAssertEqual(GeneralConstants.SESSION_DURATION, 1800, accuracy: 0.1)
-        XCTAssertEqual(GeneralConstants.CONFIGURATION_DURATION, 1800, accuracy: 0.1)
+        XCTAssertEqual(Constants.RemoteSource.socketPath, "/mobile/v1/events/websocket")
+        XCTAssertEqual(Constants.Analytics.sessionDuration, 1800, accuracy: 0.1)
+        XCTAssertEqual(Constants.RemoteSource.configurationDuration, 1800, accuracy: 0.1)
     }
 
     func testUserpilotLoggingConstants() {

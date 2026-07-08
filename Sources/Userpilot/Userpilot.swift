@@ -78,8 +78,8 @@ public class Userpilot: NSObject {
     /// Lazy loading of the `DataStoring` instance that manages persistent storage (e.g., user data, preferences).
     private lazy var storage = container.resolve(DataStoring.self)
 
-    /// Lazy loading of the `SocketEvents` instance that manages WebSocket connections and event-driven communication.
-    private lazy var socketManager = container.resolve(SocketEvents.self)
+    /// Lazy loading of the `SocketManaging` instance that manages WebSocket connections and event-driven communication.
+    private lazy var socketManager = container.resolve(SocketManaging.self)
 
     /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
@@ -205,7 +205,7 @@ public class Userpilot: NSObject {
      Initializes the DI (Dependency Injection) container and registers required services.
     
      This method sets up lazy initialization for essential SDK services like `DataStoring`,
-     `Networking`, `SocketEvents`, and more.
+     `Networking`, `SocketManaging`, and more.
      By using lazy registration, the services are only created when they are first used, improving performance.
      */
     internal func initializeContainer() {
@@ -218,7 +218,9 @@ public class Userpilot: NSObject {
         container.register(InstanceRegistering.self, value: Registry.shared)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
-        container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
+        container.registerLazy(SocketManaging.self) { container in
+            SocketManager(container: container)
+        }
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
@@ -226,8 +228,12 @@ public class Userpilot: NSObject {
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
-        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
+        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateMachine.init)
+        container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
+        container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateMachine.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
+        container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
+        container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
@@ -336,7 +342,7 @@ extension Userpilot {
         }
         let event = Event(
             type: .screen(title),
-            properties: [AutoCaptureConstants.source: AutoCaptureConstants.manualCaptureSourceValue]
+            properties: [Constants.AutoCapture.source: Constants.AutoCapture.manualCaptureSourceValue]
         )
         analyticsPublisher.publish(event)
     }
@@ -379,7 +385,7 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         storage.user = ""
-        analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
+        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
         clean()
     }
 

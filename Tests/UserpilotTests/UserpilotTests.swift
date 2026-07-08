@@ -226,7 +226,7 @@ class UserpilotTests: XCTestCase {
     func testLogout_resetsUserAndEmitsLogoutEvent() throws {
         // Arrange
         var logoutCalled = false
-        userpilot.analyticsPublisher.onLogout = { _, _ in logoutCalled = true }
+        userpilot.analyticsPublisher.onLogout = { _ in logoutCalled = true }
 
         // Act
         userpilot.logout()
@@ -354,9 +354,9 @@ class UserpilotTests: XCTestCase {
         weak var weakDataStoring: DataStoring?
         weak var weakSessionMonitoring: SessionMonitoring?
         weak var weakAutoPropertyDecoration: AutoPropertyDecoratoring?
-        weak var weakSocketManager: SocketEvents?
+        weak var weakSocketManager: SocketManaging?
         weak var weakRemoteSource: UserpilotRemoteSourcing?
-        weak var weakExperienceStateManager: ExperienceStateManaging?
+        weak var weakExperienceStateMachine: ExperienceStateManaging?
         weak var weakLinkOpener: LinkOpening?
         weak var weakThemeHandler: ThemeHandling?
         weak var weakImageLoader: ImageLoading?
@@ -374,9 +374,9 @@ class UserpilotTests: XCTestCase {
             weakDataStoring = userpilot.container.resolve(DataStoring.self)
             weakSessionMonitoring = userpilot.container.resolve(SessionMonitoring.self)
             weakAutoPropertyDecoration = userpilot.container.resolve(AutoPropertyDecoratoring.self)
-            weakSocketManager = userpilot.container.resolve(SocketEvents.self)
+            weakSocketManager = userpilot.container.resolve(SocketManaging.self)
             weakRemoteSource = userpilot.container.resolve(UserpilotRemoteSourcing.self)
-            weakExperienceStateManager = userpilot.container.resolve(ExperienceStateManaging.self)
+            weakExperienceStateMachine = userpilot.container.resolve(ExperienceStateManaging.self)
             weakLinkOpener = userpilot.container.resolve(LinkOpening.self)
             weakThemeHandler = userpilot.container.resolve(ThemeHandling.self)
             weakImageLoader = userpilot.container.resolve(ImageLoading.self)
@@ -399,7 +399,7 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(weakAutoPropertyDecoration)
         XCTAssertNil(weakSocketManager)
         XCTAssertNil(weakRemoteSource)
-        XCTAssertNil(weakExperienceStateManager)
+        XCTAssertNil(weakExperienceStateMachine)
         XCTAssertNil(weakLinkOpener)
         XCTAssertNil(weakThemeHandler)
         XCTAssertNil(weakImageLoader)

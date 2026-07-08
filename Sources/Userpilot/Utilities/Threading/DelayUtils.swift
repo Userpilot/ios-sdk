@@ -17,7 +17,7 @@ internal class DelayUtils {
     private var currentWorkItem: DispatchWorkItem?
 
     /// Queue for thread-safe operations
-    private let queue = DispatchQueue(label: DispatchQueueConstants.DELAY_QUEUE, qos: .userInteractive)
+    private let queue = DispatchQueue(label: Constants.DispatchQueues.delayQueue, qos: .userInteractive)
 
     /**
      Executes an action after a specified delay.

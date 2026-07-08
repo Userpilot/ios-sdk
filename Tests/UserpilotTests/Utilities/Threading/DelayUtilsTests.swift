@@ -58,7 +58,7 @@ final class DelayUtilsTests: XCTestCase {
             self?.delayUtils.cancelDelay()
 
             // Wait for cancel to complete (since it's async)
-            DispatchQueue(label: DispatchQueueConstants.DELAY_QUEUE).asyncAfter(deadline: .now() + 0.01) {
+            DispatchQueue(label: Constants.DispatchQueues.delayQueue).asyncAfter(deadline: .now() + 0.01) {
                 DispatchQueue.main.async {
                     cancelExpectation.fulfill()
                 }

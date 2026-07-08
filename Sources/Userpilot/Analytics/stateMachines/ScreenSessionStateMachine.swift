@@ -1,53 +1,49 @@
 //
-//  ScreenViewEntity.swift
+//  ScreenSessionStateMachine.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 24/11/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [ScreenViewEntity]
-//  The `ScreenViewEntity` class represents the state and behavior associated with a screen view
-//  in the Userpilot SDK. It tracks the current event, handles fake reload logic, manages seen
-//  experiences, and provides utility methods to update and reset its state.
+//  [ScreenSessionStateMachine]
+//  Tracks the current screen event and the content seen during that screen session.
 //
 
 import Foundation
 
-/// Represents the state and behavior of a screen view in the Userpilot SDK.
-internal class ScreenViewEntity {
+/// Holds screen-session state used when publishing screen and fake-reload events.
+internal class ScreenSessionStateMachine {
     /// The current event associated with the screen view.
     var event: Event
 
-    /// A set of IDs representing the experiences seen during this screen view.
+    /// IDs for flow and survey experiences seen during this screen session.
     var seenExperiences: Set<Int>
     var seenSurveys: Set<Int>
 
-    /// Initializes a new `ScreenViewEntity` instance.
+    /// Initializes a new `ScreenSessionStateMachine` instance.
     ///
     /// - Parameters:
     ///   - event: The current event associated with the screen view.
-    ///   - fakeReload: A flag indicating if the screen view was triggered by a fake reload event. Defaults to `false`.
     ///   - seenExperiences: A set of IDs representing seen experiences. Defaults to an empty set.
-    ///   - didTriggerEvent: A flag indicating whether an event was triggered during the screen view.
-    ///    Defaults to `false`.
+    ///   - seenSurveys: A set of IDs representing seen surveys. Defaults to an empty set.
     init(event: Event, seenExperiences: Set<Int> = [], seenSurveys: Set<Int> = []) {
         self.event = event
         self.seenExperiences = seenExperiences
         self.seenSurveys = seenSurveys
     }
 
-    /// Resets the state of the screen view entity.
+    /// Clears tracked content for the active screen session.
     func resetState() {
         seenExperiences.removeAll()
         seenSurveys.removeAll()
     }
 
-    /// Adds an experience Id to the set of seen experiences.
+    /// Adds a flow experience ID to the seen set.
     func updateSeenFlowExperiences(_ experienceId: Int) {
         seenExperiences.insert(experienceId)
     }
 
-    /// Adds an experience Id to the set of seen experiences.
+    /// Adds a survey experience ID to the seen set.
     func updateSeenSurveyExperiences(_ experienceId: Int) {
         seenSurveys.insert(experienceId)
     }

@@ -30,6 +30,9 @@ internal class SessionMonitor: SessionMonitoring {
     /// The analytics publisher responsible for flushing and resuming events.
     private let analyticsPublisher: AnalyticsPublishing
 
+    /// Network monitor to pause/resume on lifecycle changes.
+    private let networkMonitor: NetworkMonitoring
+
     /// The storage used to store user-related data.
     private let storage: DataStoring
 
@@ -43,6 +46,7 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
     init(container: DIContainer) {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
+        self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.storage = container.resolve(DataStoring.self)
 
         // Add observer for when the app enters the background.
@@ -67,9 +71,7 @@ internal class SessionMonitor: SessionMonitoring {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             if UIApplication.shared.applicationState == .active && !self.hasInitializedForeground {
-                self._isAppActive = true
-                self.hasInitializedForeground = true
-                self.analyticsPublisher.resume()
+                self.onAppStart()
             }
         }
     }
@@ -108,6 +110,7 @@ internal class SessionMonitor: SessionMonitoring {
     func didEnterBackground(notification: Notification) {
         _isAppActive = false
         storage.sessionDate = Date()
+        networkMonitor.stopMonitoring()
         analyticsPublisher.flush()
     }
 
@@ -116,8 +119,14 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterForeground(notification: Notification) {
+        onAppStart()
+    }
+
+    private func onAppStart() {
         _isAppActive = true
         hasInitializedForeground = true
+        networkMonitor.startMonitoring()
         analyticsPublisher.resume()
     }
+
 }

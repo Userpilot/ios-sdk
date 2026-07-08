@@ -97,7 +97,7 @@ internal enum UIKitViewResolver {
             if let label = node.accessibilityLabel?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !label.isEmpty,
-               label != AutoCaptureConstants.reductText,
+               label != Constants.AutoCapture.reductText,
                !accessibilityRedacted {
                 attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
@@ -105,7 +105,7 @@ internal enum UIKitViewResolver {
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !id.isEmpty,
-               id != AutoCaptureConstants.reductText,
+               id != Constants.AutoCapture.reductText,
                !accessibilityRedacted {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
@@ -391,7 +391,7 @@ internal extension UIView {
     /// - Returns: The text content or redacted placeholder
     func getTextContent() -> String? {
         if shouldRedactText() {
-            return AutoCaptureConstants.reductText
+            return Constants.AutoCapture.reductText
         }
 
         if let direct = userpilotRawDirectText(
@@ -425,7 +425,7 @@ internal extension UIView {
     /// - Returns: The accessibility label or redacted placeholder
     func getAccessibilityLabelContent() -> String? {
         if shouldRedactAccessibilityLabel() {
-            return AutoCaptureConstants.reductText
+            return Constants.AutoCapture.reductText
         }
 
         guard let label = accessibilityLabel, !label.isEmpty else {

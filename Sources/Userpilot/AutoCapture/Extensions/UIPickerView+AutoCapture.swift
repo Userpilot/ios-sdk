@@ -99,7 +99,7 @@ internal extension UIPickerView {
         )
 
         // Row index
-        payload.sourceProperties[AutoCaptureConstants.selectedIndex] = row
+        payload.sourceProperties[Constants.AutoCapture.selectedIndex] = row
 
         // Selected title from the delegate. UIKit hosts typically implement
         // `pickerView(_:titleForRow:forComponent:)`; SwiftUI's `UIKitWheelPicker` instead
@@ -108,8 +108,8 @@ internal extension UIPickerView {
         // so `selected_value` is populated for both UIKit and SwiftUI pickers.
         if config.enableInteractionValueCapture,
            let title = userpilotResolvedSelectedTitle(forRow: row, component: component) {
-            payload.sourceProperties[AutoCaptureConstants.selectedValue] =
-                shouldRedactText() ? AutoCaptureConstants.reductText : title
+            payload.sourceProperties[Constants.AutoCapture.selectedValue] =
+                shouldRedactText() ? Constants.AutoCapture.reductText : title
         }
 
         // View path and accessibility

@@ -1,5 +1,5 @@
 //
-//  ExperienceStateManagerTests.swift
+//  ExperienceStateMachineTests.swift
 //  Userpilot SDK
 //
 //  Created by Motasem Hamed on 23/11/2025.
@@ -10,7 +10,7 @@ import XCTest
 @testable import Userpilot
 
 // swiftlint:disable all
-final class ExperienceStateManagerTests: XCTestCase {
+final class ExperienceStateMachineTests: XCTestCase {
 
     private var userpilot: MockUserpilot!
     private var logger: MockLogger!
@@ -22,7 +22,7 @@ final class ExperienceStateManagerTests: XCTestCase {
         logger = MockLogger()
         config.logger = logger
         userpilot = MockUserpilot(config: config)
-        stateManager = ExperienceStateManager(container: userpilot.container)
+        stateManager = ExperienceStateMachine(container: userpilot.container)
     }
 
     override func tearDown() {

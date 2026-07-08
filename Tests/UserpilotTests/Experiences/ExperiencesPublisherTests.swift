@@ -62,7 +62,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         var publishedEvent: SDKEvent?
         let expectation = XCTestExpectation(description: "Event should be published")
         
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
             expectation.fulfill()
         }
@@ -84,7 +84,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         let mockVC = MockUPExperience()
         experiencesPublisher.mockActiveExperience(experience: mockVC)
         var publishedEvent: SDKEvent?
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
         }
 
@@ -95,8 +95,8 @@ final class ExperiencesPublisherTests: XCTestCase {
         let expectation = XCTestExpectation(description: "manual trigger cached")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             XCTAssertNil(publishedEvent)
-            XCTAssertTrue(self.userpilot.experienceStateManager.hasCachedExperience())
-            XCTAssertEqual(self.userpilot.experienceStateManager.getCachedExperienceId(), "cached-experience-id")
+            XCTAssertTrue(self.userpilot.experienceStateMachine.hasCachedExperience())
+            XCTAssertEqual(self.userpilot.experienceStateMachine.getCachedExperienceId(), "cached-experience-id")
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
@@ -110,7 +110,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         experiencesPublisher.mockActiveExperience(experience: mockVC)
 
         var publishedExperienceIds: [String] = []
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             if let event = event as? ExperienceContentEvent {
                 publishedExperienceIds.append(event.experienceId)
                 replayExpectation.fulfill()
@@ -222,7 +222,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         let screenTitle = "TestScreen"
 
         // Act
-        experiencesPublisher.updateSceen(screenTitle)
+        experiencesPublisher.updateScreen(screenTitle)
 
         // Assert
         XCTAssertEqual(experiencesPublisher.mockGetCurrentScreen(), "TestScreen")
@@ -421,7 +421,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         let mockEvent = MockSDKEvent(eventName: "test-event", eventPayload: ["key": "value"])
         var publishedEvent: SDKEvent?
 
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
         }
 
@@ -436,8 +436,8 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testPublishInternalSDKEvent_shouldSuppressAnalytics_WhenPreviewModeIsActive() {
         // Arrange
         var publishedEvent: SDKEvent?
-        userpilot.experienceStateManager.markPreviewMode()
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.experienceStateMachine.markPreviewMode()
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
         }
 
@@ -450,7 +450,7 @@ final class ExperiencesPublisherTests: XCTestCase {
 
     func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
         // Arrange
-        userpilot.experienceStateManager.markPreviewMode()
+        userpilot.experienceStateMachine.markPreviewMode()
         let closeEvent = MockSDKEvent(
             eventName: SDKEventsName.flowExperienceDismissed.rawValue,
             eventPayload: ["mobile_content_id": 77]
@@ -460,7 +460,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
 
         // Assert
-        XCTAssertFalse(userpilot.experienceStateManager.isPreviewMode())
+        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
     }
 
     func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseNPSEvent() {
@@ -493,7 +493,7 @@ final class ExperiencesPublisherTests: XCTestCase {
     func testPublishInternalSDKEvent_shouldHandleCloseEvent_withoutDeepLink() {
         // Arrange
         experiencesPublisher.mockSetCurrentScreen(title: "main_screen")
-        userpilot.analyticsPublisher.screenEntity = ScreenViewEntity(
+        userpilot.analyticsPublisher.screenSessionStateMachine = ScreenSessionStateMachine(
             event: Event(type: .screen("main_screen")),
             seenExperiences: Set(),
             seenSurveys: Set()
@@ -505,9 +505,10 @@ final class ExperiencesPublisherTests: XCTestCase {
         // so watch for that as proof the debounced block ran.
         let reloadExpectation = XCTestExpectation(description: "debounced fake‑reload published")
         var publishFakeReloadEventCalled = false
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _ in
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
             publishFakeReloadEventCalled = true
             reloadExpectation.fulfill()
+            return true
         }
 
         // Act
@@ -565,14 +566,14 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertEqual(capturedParams?.appToken, userpilot.config.token)
         XCTAssertEqual(capturedParams?.contentType, "survey")
         XCTAssertEqual(capturedParams?.contentId, "preview-123")
-        XCTAssertEqual(capturedParams?.baseUrl, RemoteSource.experienceBaseURL)
+        XCTAssertEqual(capturedParams?.baseUrl, Constants.RemoteSource.experienceBaseURL)
     }
 
     func testTriggerPreviewExperience_shouldEnterPreviewModeBeforeFetching() {
         // Arrange
         let expectation = XCTestExpectation(description: "preview mode entered")
         userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
-            XCTAssertTrue(self.userpilot.experienceStateManager.isPreviewMode())
+            XCTAssertTrue(self.userpilot.experienceStateMachine.isPreviewMode())
             completion(.failure(.emptyResponse))
             expectation.fulfill()
         }

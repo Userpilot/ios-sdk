@@ -1,16 +1,16 @@
 //
-//  ScreenViewEntityTests.swift
+//  ScreenSessionStateMachineTests.swift
 //  Userpilot SDK
 //
 
 import XCTest
 @testable import Userpilot
 
-final class ScreenViewEntityTests: XCTestCase {
+final class ScreenSessionStateMachineTests: XCTestCase {
 
     func testInitializationStoresEventAndInitialSeenSets() {
         let event = Event(type: .screen("Home"))
-        let entity = ScreenViewEntity(event: event, seenExperiences: [1, 2], seenSurveys: [3])
+        let entity = ScreenSessionStateMachine(event: event, seenExperiences: [1, 2], seenSurveys: [3])
 
         XCTAssertEqual(entity.event.screenTitle, "Home")
         XCTAssertEqual(entity.seenExperiences, [1, 2])
@@ -18,7 +18,7 @@ final class ScreenViewEntityTests: XCTestCase {
     }
 
     func testUpdateSeenExperiencesDeduplicatesIds() {
-        let entity = ScreenViewEntity(event: Event(type: .screen("Home")))
+        let entity = ScreenSessionStateMachine(event: Event(type: .screen("Home")))
 
         entity.updateSeenFlowExperiences(10)
         entity.updateSeenFlowExperiences(10)
@@ -30,7 +30,7 @@ final class ScreenViewEntityTests: XCTestCase {
     }
 
     func testResetStateClearsSeenSetsWithoutReplacingEvent() {
-        let entity = ScreenViewEntity(
+        let entity = ScreenSessionStateMachine(
             event: Event(type: .screen("Home")),
             seenExperiences: [1],
             seenSurveys: [2]

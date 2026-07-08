@@ -58,7 +58,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     private let config: Userpilot.Config
     private let storage: DataStoring
     private let analyticsPublisher: AnalyticsPublishing
-    private let socketManager: SocketEvents
+    private let socketManager: SocketManaging
     private let linkOpener: LinkOpening
 
     // MARK: - Push Token Management
@@ -86,7 +86,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-        self.socketManager = container.resolve(SocketEvents.self)
+        self.socketManager = container.resolve(SocketManaging.self)
         self.linkOpener = container.resolve(LinkOpening.self)
 
         PushNotificationAutoConfig.register(observer: self)
@@ -113,8 +113,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
                 PushNotificationTokenEvent(
                     appToken: config.token,
                     userId: storage.userId,
-                    token: newToken),
-                socketSubscription: self)
+                    token: newToken))
         }
     }
 
@@ -312,8 +311,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         if parsedNotification.isTest != "true" {
             let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
             analyticsPublisher.publishInternalSDKEvent(
-                PushNotificationOpenedEvent(payload: properties),
-                socketSubscription: self
+                PushNotificationOpenedEvent(payload: properties)
             )
         }
 

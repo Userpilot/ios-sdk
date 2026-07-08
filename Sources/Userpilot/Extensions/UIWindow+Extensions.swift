@@ -200,28 +200,28 @@ extension UIWindow {
         let useRedactedInner = (effectiveView !== view)
 
         var eventProperties: [String: Any] = [
-            AutoCaptureConstants.targetClass: String(describing: type(of: effectiveView)),
-            AutoCaptureConstants.hierarchy: path
+            Constants.AutoCapture.targetClass: String(describing: type(of: effectiveView)),
+            Constants.AutoCapture.hierarchy: path
         ]
 
         if let capture = view.resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
             if let labelViewType = capture.viewType {
-                eventProperties[AutoCaptureConstants.targetClass] = labelViewType
+                eventProperties[Constants.AutoCapture.targetClass] = labelViewType
             }
-            eventProperties[AutoCaptureConstants.targetText] = capture.labeledView.shouldRedactText()
-                ? AutoCaptureConstants.reductText
+            eventProperties[Constants.AutoCapture.targetText] = capture.labeledView.shouldRedactText()
+                ? Constants.AutoCapture.reductText
                 : capture.label
         } else if useRedactedInner {
-            eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
+            eventProperties[Constants.AutoCapture.targetText] = Constants.AutoCapture.reductText
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
-                eventProperties[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
+                eventProperties[Constants.AutoCapture.accessibilityIdentifier] = accessibilityIdentifier
             }
             if let accessibilityLabel = view.getAccessibilityLabelContent() {
-                eventProperties[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
+                eventProperties[Constants.AutoCapture.accessibilityLabel] = accessibilityLabel
             }
             if let text = view.getTextContent() {
-                eventProperties[AutoCaptureConstants.targetText] = text
+                eventProperties[Constants.AutoCapture.targetText] = text
             }
         }
 
