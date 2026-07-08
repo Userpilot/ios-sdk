@@ -489,6 +489,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             event.eventName,
             rawInteraction.isEmpty ? (event.interactionEventName ?? "") : rawInteraction,
             prop(AutoCaptureConstants.tabName),
+            prop(AutoCaptureConstants.tabIndex),
             prop(AutoCaptureConstants.hierarchy),
             prop(AutoCaptureConstants.accessibilityIdentifier),
             prop(AutoCaptureConstants.dialogTitle),
