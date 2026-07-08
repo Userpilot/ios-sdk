@@ -64,6 +64,52 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(analyticsPublisher.screenEntity?.event.screenTitle, "Home Screen")
     }
 
+    func testPublish_screenEvent_shouldSyncScreenTrackerForWrapperInteractionOnlyConfig() {
+        // Arrange
+        let config = Userpilot.Config(token: "NX-WRAPPER-\(UUID().uuidString)")
+            .additionalProperties([
+                WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter,
+                WrapperSDKConstants.enableScreenAutoCapture: false,
+                WrapperSDKConstants.enableInteractionAutoCapture: true
+            ])
+            .defaultInstance(false)
+        userpilot = MockUserpilot(config: config)
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
+        let screenEvent = Event(type: .screen("Wrapper Manual Screen"))
+
+        // Act
+        analyticsPublisher.publish(screenEvent)
+
+        // Assert
+        let tracker = userpilot.container.resolve(ScreenNameTracking.self)
+        XCTAssertEqual(tracker.getCurrentPayload()?.currentScreen, "Wrapper Manual Screen")
+    }
+
+    func testPublish_screenEvent_shouldNotSyncScreenTrackerForWrapperScreenAutocaptureConfig() {
+        // Arrange
+        let config = Userpilot.Config(token: "NX-WRAPPER-\(UUID().uuidString)")
+            .additionalProperties([
+                WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter,
+                WrapperSDKConstants.enableScreenAutoCapture: true,
+                WrapperSDKConstants.enableInteractionAutoCapture: true
+            ])
+            .defaultInstance(false)
+        userpilot = MockUserpilot(config: config)
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
+        let screenEvent = Event(type: .screen("Wrapper Screen Autocapture"))
+
+        // Act
+        analyticsPublisher.publish(screenEvent)
+
+        // Assert
+        let tracker = userpilot.container.resolve(ScreenNameTracking.self)
+        XCTAssertNil(tracker.getCurrentPayload())
+    }
+
     func testPublish_customEvent_shouldAddToQueue() {
         // Arrange
         let customEvent = Event(type: .event("button_clicked"))
@@ -87,6 +133,40 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         wait(for: [expectation], timeout: 2.0)
+    }
+
+    func testPublish_autoCaptureEvent_shouldRejectEmptyScreenPayload() {
+        // Arrange
+        let logger = MockLogger()
+        let config = Userpilot.Config(token: "NX-AUTOCAPTURE-\(UUID().uuidString)")
+            .defaultInstance(false)
+        config.logger = logger
+        userpilot = MockUserpilot(config: config)
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        userpilot.socketManager.isSocketOpened = true
+        let errorLogged = expectation(description: "autocapture screen error logged")
+        logger.onError = { message, _ in
+            if String(describing: message).contains("Auto capture event must have screen") {
+                errorLogged.fulfill()
+            }
+        }
+        let event = Event(
+            type: .autoCaptureEvent,
+            properties: [AutoCaptureConstants.rawInteractionType: "tap"],
+            screen: [:],
+            interactionEventName: "tap"
+        )
+        var didPublishEvent = false
+        userpilot.socketManager.onPublish = { _, _, _ in
+            didPublishEvent = true
+        }
+
+        // Act
+        analyticsPublisher.publish(event)
+
+        // Assert
+        wait(for: [errorLogged], timeout: 1)
+        XCTAssertFalse(didPublishEvent)
     }
 
     func testPublish_whenSocketNotOpened_shouldCacheEvent() {
@@ -537,6 +617,144 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Assert
         XCTAssertFalse(connectCalled)
+    }
+
+    // MARK: - Track Event Throttle Key Tests
+
+    private func makeAutoCaptureEvent(
+        properties: Payload = nil,
+        screen: Payload = [AutoCaptureConstants.screenClass: "HomeViewController"],
+        interactionEventName: String = "tap"
+    ) -> Event {
+        return Event(
+            type: .autoCaptureEvent,
+            properties: properties,
+            screen: screen,
+            interactionEventName: interactionEventName
+        )
+    }
+
+    /// Counts socket publishes triggered by publishing the given events back-to-back.
+    private func publishAndCountSocketPublishes(
+        _ events: [Event],
+        expectedCount: Int,
+        timeout: TimeInterval = 2.0
+    ) -> Int {
+        userpilot.socketManager.isSocketOpened = true
+
+        var publishCount = 0
+        let expectation = XCTestExpectation(description: "events flushed to socket")
+        expectation.expectedFulfillmentCount = expectedCount
+        expectation.assertForOverFulfill = false
+        userpilot.socketManager.onPublish = { _, _, _ in
+            publishCount += 1
+            expectation.fulfill()
+        }
+
+        events.forEach { analyticsPublisher.publish($0) }
+
+        wait(for: [expectation], timeout: timeout)
+        // Grace period so an unexpected extra publish would also be counted
+        let grace = XCTestExpectation(description: "grace period")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { grace.fulfill() }
+        wait(for: [grace], timeout: 1.0)
+        return publishCount
+    }
+
+    func testTrackEvent_autoCaptureNilProperties_distinctInteractionsShouldBothPublish() {
+        let tap = makeAutoCaptureEvent(interactionEventName: "tap")
+        let swipe = makeAutoCaptureEvent(interactionEventName: "swipe")
+
+        let publishCount = publishAndCountSocketPublishes([tap, swipe], expectedCount: 2)
+
+        XCTAssertEqual(publishCount, 2)
+    }
+
+    func testTrackEvent_autoCaptureDialogEvents_differentTitlesShouldBothPublish() {
+        let hierarchy = "UIAlertController:attr__index=\"0\";HomeViewController"
+        let deleteDialog = makeAutoCaptureEvent(
+            properties: [
+                AutoCaptureConstants.hierarchy: hierarchy,
+                AutoCaptureConstants.rawInteractionType: "view_presented",
+                AutoCaptureConstants.dialogTitle: "Delete item?"
+            ],
+            interactionEventName: "view_presented"
+        )
+        let logoutDialog = makeAutoCaptureEvent(
+            properties: [
+                AutoCaptureConstants.hierarchy: hierarchy,
+                AutoCaptureConstants.rawInteractionType: "view_presented",
+                AutoCaptureConstants.dialogTitle: "Log out?"
+            ],
+            interactionEventName: "view_presented"
+        )
+
+        let publishCount = publishAndCountSocketPublishes([deleteDialog, logoutDialog], expectedCount: 2)
+
+        XCTAssertEqual(publishCount, 2)
+    }
+
+    func testTrackEvent_autoCaptureUnresolvableScreenName_shouldStillUseOtherDiscriminators() {
+        // Screen dict is non-empty (passes the flush guard) but has no
+        // class/title/name, so the screen segment cannot be resolved
+        let screen: Payload = [AutoCaptureConstants.screenType: "modal"]
+        let saveTap = makeAutoCaptureEvent(
+            properties: [AutoCaptureConstants.targetText: "Save"],
+            screen: screen
+        )
+        let cancelTap = makeAutoCaptureEvent(
+            properties: [AutoCaptureConstants.targetText: "Cancel"],
+            screen: screen
+        )
+
+        let publishCount = publishAndCountSocketPublishes([saveTap, cancelTap], expectedCount: 2)
+
+        XCTAssertEqual(publishCount, 2)
+    }
+
+    func testTrackEvent_autoCaptureIdenticalEvents_secondShouldThrottle() {
+        let tap = makeAutoCaptureEvent(
+            properties: [
+                AutoCaptureConstants.hierarchy: "UIButton:attr__index=\"0\";HomeViewController",
+                AutoCaptureConstants.rawInteractionType: "tap",
+                AutoCaptureConstants.targetText: "Save"
+            ]
+        )
+
+        let publishCount = publishAndCountSocketPublishes([tap, tap], expectedCount: 1)
+
+        XCTAssertEqual(publishCount, 1)
+    }
+
+    func testTrackEvent_autoCaptureTabEvents_differentTabsShouldBothPublish() {
+        let homeTab = makeAutoCaptureEvent(
+            properties: [
+                AutoCaptureConstants.tabName: "Home",
+                AutoCaptureConstants.tabIndex: 0,
+                AutoCaptureConstants.rawInteractionType: "tab_selected"
+            ],
+            interactionEventName: "tab_selected"
+        )
+        let profileTab = makeAutoCaptureEvent(
+            properties: [
+                AutoCaptureConstants.tabName: "Profile",
+                AutoCaptureConstants.tabIndex: 1,
+                AutoCaptureConstants.rawInteractionType: "tab_selected"
+            ],
+            interactionEventName: "tab_selected"
+        )
+
+        let publishCount = publishAndCountSocketPublishes([homeTab, profileTab], expectedCount: 2)
+
+        XCTAssertEqual(publishCount, 2)
+    }
+
+    func testTrackEvent_customEvents_sameTitleShouldThrottleSecond() {
+        let event = Event(type: .event("button_clicked"))
+
+        let publishCount = publishAndCountSocketPublishes([event, event], expectedCount: 1)
+
+        XCTAssertEqual(publishCount, 1)
     }
 
     func testPublish_withSameIdentifyEvent_shouldNotReprocess() {

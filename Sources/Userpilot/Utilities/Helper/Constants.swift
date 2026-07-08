@@ -39,6 +39,15 @@ internal struct RemoteSource {
     static let configurationDuration = TimeInterval(30 * 60)  // 30 minutes
 }
 
+internal struct WrapperSDKConstants {
+    static let pluginType = "PluginType"
+    static let pluginTypeReactNative = "ReactNative"
+    static let pluginTypeFlutter = "Flutter"
+    static let pluginTypeIonic = "Ionic"
+    static let enableScreenAutoCapture = "WrapperEnableScreenAutoCapture"
+    static let enableInteractionAutoCapture = "WrapperEnableInteractionAutoCapture"
+}
+
 /// Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).
 internal struct AutoCaptureConstants {
 

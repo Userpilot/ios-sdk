@@ -61,10 +61,6 @@ internal struct Event {
         return type.screenTitle
     }
 
-//    var screenTrackingPayload: ScreenTrackingPayload? {
-//        return type.screenTrackingPayload
-//    }
-
     var userId: String? {
         return type.userId
     }
