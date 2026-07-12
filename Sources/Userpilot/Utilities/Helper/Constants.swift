@@ -36,6 +36,8 @@ internal struct WrapperSDKConstants {
     static let pluginTypeReactNative = "ReactNative"
     static let pluginTypeFlutter = "Flutter"
     static let pluginTypeIonic = "Ionic"
+    static let pluginTypeCordova = "Cordova"
+    static let pluginTypeMAUI = "MAUI"
     static let enableScreenAutoCapture = "WrapperEnableScreenAutoCapture"
     static let enableInteractionAutoCapture = "WrapperEnableInteractionAutoCapture"
 }
