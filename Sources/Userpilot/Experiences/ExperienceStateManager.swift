@@ -46,7 +46,7 @@ internal enum ExperienceFlowState {
     case active(triggerType: TriggerType, content: ExperienceContent)
 
     /// Thank you message is displayed after survey completion.
-    case showingThankYou
+    case showingThankYou(isPreview: Bool)
 
     /// Manual experience cached because another experience is in progress.
     case cachedPendingManual(experienceId: String)
@@ -78,6 +78,8 @@ extension ExperienceFlowState {
             return true
         case .waitingDelay(let triggerType), .active(let triggerType, _):
             return triggerType == .preview
+        case .showingThankYou(let isPreview):
+            return isPreview
         default:
             return false
         }
@@ -136,8 +138,8 @@ extension ExperienceFlowState: CustomStringConvertible {
             return "WaitingDelay(\(triggerType))"
         case .active(let triggerType, let content):
             return "Active(\(triggerType), content=\(type(of: content)))"
-        case .showingThankYou:
-            return "ShowingThankYou"
+        case .showingThankYou(let isPreview):
+            return "ShowingThankYou(preview=\(isPreview))"
         case .cachedPendingManual(let experienceId):
             return "CachedPendingManual(id=\(experienceId))"
         case .cachedPendingAutomatic:
@@ -297,7 +299,8 @@ extension ExperienceStateManager: ExperienceStateManaging {
     }
 
     func markShowingThankYou() {
-        state.value = .showingThankYou
+        let isPreview = state.value.isPreviewMode()
+        state.value = .showingThankYou(isPreview: isPreview)
         logger.info("Experience state: ShowingThankYou")
     }
 

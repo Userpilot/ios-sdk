@@ -145,6 +145,19 @@ final class ExperienceStateManagerTests: XCTestCase {
         XCTAssertTrue(stateManager.isActivelyRendered())
     }
 
+    func testMarkShowingThankYou_preservesPreviewMode() {
+        // Arrange
+        stateManager.markPreviewMode()
+        stateManager.markActiveFromCurrentState(content: makeExperienceContent())
+
+        // Act
+        stateManager.markShowingThankYou()
+
+        // Assert
+        XCTAssertTrue(stateManager.isPreviewMode())
+        XCTAssertTrue(stateManager.shouldBypassScreenValidation())
+    }
+
     func testMarkCachedManual_setsCachedExperienceId() {
         // Act
         stateManager.markCachedManual("cached-exp")

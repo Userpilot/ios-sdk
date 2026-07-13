@@ -449,6 +449,52 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertNil(publishedEvent)
     }
 
+    func testPublishInternalSDKEvent_shouldSuppressCompletedSurvey_WhenPreviewThankYouIsShowing() {
+        // Arrange
+        var publishedEvent: SDKEvent?
+        userpilot.experienceStateManager.markPreviewMode()
+        userpilot.experienceStateManager.markActiveFromCurrentState(
+            content: .survey(content: MockContentFactory.makeSurveyContent())
+        )
+        userpilot.experienceStateManager.markShowingThankYou()
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+            publishedEvent = event
+        }
+        let completedSurveyEvent = ExperienceSurveyCompletedEvent(
+            surveyId: 10,
+            submissionId: 20
+        )
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
+
+        // Assert
+        XCTAssertNil(publishedEvent)
+        XCTAssertFalse(userpilot.experienceStateManager.isPreviewMode())
+    }
+
+    func testPublishInternalSDKEvent_shouldPublishCompletedSurvey_WhenThankYouIsNotPreview() {
+        // Arrange
+        var publishedEvent: SDKEvent?
+        userpilot.experienceStateManager.markShowingThankYou()
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+            publishedEvent = event
+        }
+        let completedSurveyEvent = ExperienceSurveyCompletedEvent(
+            surveyId: 10,
+            submissionId: 20
+        )
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
+
+        // Assert
+        XCTAssertEqual(
+            publishedEvent?.eventName,
+            SDKEventsName.surveyExperienceCompleted.rawValue
+        )
+    }
+
     func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
         // Arrange
         userpilot.experienceStateManager.markPreviewMode()
