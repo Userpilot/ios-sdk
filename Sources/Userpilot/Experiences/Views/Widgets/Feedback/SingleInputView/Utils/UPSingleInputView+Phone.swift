@@ -18,6 +18,10 @@ internal extension UPSingleInputView {
 
     /// Displays the country picker popup menu just below the text field.
     @objc func showCoutriesPopupMenu() {
+        // The tap recognizer ignores UIControls (to avoid the text-field refocus
+        // toggle), so tapping the country button no longer dismisses the keyboard
+        // as a side effect. Do it explicitly, mirroring DatePickerDialog.
+        endEditing(true)
         guard let parentView = parentViewController?.view else { return }
 
         // Get the frame of the text field in the parent view's coordinate system

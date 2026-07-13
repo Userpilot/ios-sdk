@@ -106,11 +106,20 @@ final class UserpilotConfigTests: XCTestCase {
             .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeReactNative])
         let ionicConfig = Userpilot.Config(token: "TOKEN")
             .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeIonic])
+        let flutterConfig = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter])
+        let cordovaConfig = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeCordova])
+        let mauiConfig = Userpilot.Config(token: "TOKEN")
+            .additionalProperties([WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeMAUI])
         let unknownConfig = Userpilot.Config(token: "TOKEN")
             .additionalProperties([WrapperSDKConstants.pluginType: "Expo"])
 
         XCTAssertTrue(reactNativeConfig.isWrapperSDK)
         XCTAssertTrue(ionicConfig.isWrapperSDK)
+        XCTAssertTrue(flutterConfig.isWrapperSDK)
+        XCTAssertTrue(cordovaConfig.isWrapperSDK)
+        XCTAssertTrue(mauiConfig.isWrapperSDK)
         XCTAssertFalse(unknownConfig.isWrapperSDK)
     }
 }

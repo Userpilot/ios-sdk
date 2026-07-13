@@ -48,12 +48,14 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        // Handle the "Other" choice input if present.
-        if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice {
-            if let cell = tableView.cellForRow(
-                at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
-                choices[choices.count - 1].otherOptionText = cell.getOtherOptionText()
-            }
+        let lastIndex = choices.count - 1
+        let hasOtherChoice = choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice
+        let wasOtherSelected = hasOtherChoice && (choices[lastIndex].isSelected == true)
+
+        // Handle the "Other" choice input if present: cache typed text before reloading.
+        if hasOtherChoice, let cell = tableView.cellForRow(
+            at: IndexPath(row: lastIndex, section: 0)) as? ChoiceTableViewCell {
+            choices[lastIndex].otherOptionText = cell.getOtherOptionText()
         }
 
         if surveyStep?.metadata?.isMultiSelect == false {
@@ -67,15 +69,30 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
 
         viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
 
+        let tappedOtherRow = hasOtherChoice && indexPath.row == lastIndex
+        let otherSelectedNow = hasOtherChoice && (choices[lastIndex].isSelected == true)
+        // Re-tapping the already-selected "Other" row must not reload that cell:
+        // reloadData resigns the text field's first responder, which visibly
+        // dismisses then re-shows the keyboard. Reload only the other rows so the
+        // "Other" text field keeps its first responder and the keyboard stays put.
+        let keepOtherFocused = tappedOtherRow && wasOtherSelected && otherSelectedNow
+
         UIView.performWithoutAnimation {
-            tableView.reloadData()
+            if keepOtherFocused {
+                let rowsToReload = (0..<choices.count)
+                    .filter { $0 != lastIndex }
+                    .map { IndexPath(row: $0, section: 0) }
+                if !rowsToReload.isEmpty {
+                    tableView.reloadRows(at: rowsToReload, with: .none)
+                }
+            } else {
+                tableView.reloadData()
+            }
         }
 
-        if choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice &&
-            choices.last?.isSelected == true &&
-            indexPath.row == choices.count - 1 {
+        if tappedOtherRow && otherSelectedNow {
             if let cell = tableView.cellForRow(
-                at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
+                at: IndexPath(row: lastIndex, section: 0)) as? ChoiceTableViewCell {
                 cell.showKeyboard()
             }
         } else {
