@@ -20,16 +20,28 @@ internal final class BindableGestureRecognizer: UITapGestureRecognizer, UIGestur
         self.action = action
         super.init(target: nil, action: nil)
         self.addTarget(self, action: #selector(execute))
+        self.delegate = self
     }
 
-    /// Overrides the touch handling to ensure gesture works with keyboard
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        super.touchesBegan(touches, with: event)
-
-        // Attempt to end editing (dismiss keyboard) if needed
-        if let view = self.view {
-            view.endEditing(true)
+    /// Ignore touches that land on a text input, control, or table-view cell.
+    /// Text inputs/controls: otherwise tapping a focused text field would dismiss
+    /// the keyboard and immediately re-focus it, producing a visible show/hide
+    /// toggle. Table cells: those taps belong to the table's selection handling
+    /// (which manages the keyboard itself); letting this recognizer also fire
+    /// `endEditing` fights that handling and toggles the keyboard.
+    /// Genuine background taps still fire the action (which calls `endEditing`).
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldReceive touch: UITouch
+    ) -> Bool {
+        var candidate = touch.view
+        while let view = candidate {
+            if view is UITextField || view is UITextView || view is UIControl || view is UITableViewCell {
+                return false
+            }
+            candidate = view.superview
         }
+        return true
     }
 
     func gestureRecognizer(

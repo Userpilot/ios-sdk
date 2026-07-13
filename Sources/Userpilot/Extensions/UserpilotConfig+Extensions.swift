@@ -32,6 +32,14 @@ internal extension Userpilot.Config {
         additionalProperties.hasPropertyValue(
             WrapperSDKConstants.pluginType,
             expectedValue: WrapperSDKConstants.pluginTypeFlutter
+        ) ||
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeCordova
+        ) ||
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeMAUI
         )
     }
 
