@@ -54,6 +54,17 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertTrue(result)
     }
 
+    func testCanRequestScreenEvent_shouldReturnFalse_WhenPreviewIsPending() {
+        // Arrange
+        userpilot.experienceStateManager.markPreviewMode()
+
+        // Act
+        let result = experiencesPublisher.canRequestScreenEvent()
+
+        // Assert
+        XCTAssertFalse(result)
+    }
+
     // MARK: - triggerExperience Tests
 
     func testTriggerExperience_shouldPublishEvent_WhenNoActiveExperience() {
@@ -227,6 +238,17 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Assert
         XCTAssertEqual(experiencesPublisher.mockGetCurrentScreen(), "TestScreen")
+    }
+
+    func testUpdateScreen_shouldPreservePendingPreview() {
+        // Arrange
+        userpilot.experienceStateManager.markPreviewMode()
+
+        // Act
+        experiencesPublisher.updateSceen("PreviewScreen")
+
+        // Assert
+        XCTAssertTrue(userpilot.experienceStateManager.isPreviewMode())
     }
 
     func testOnSocketEventSent_shouldSaveTheme_ForThemeEvent() {
@@ -659,6 +681,41 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [closeExpectation, fetchExpectation], timeout: 1.0)
     }
 
+    func testTriggerPreviewExperience_shouldIgnoreStaleResponse_WhenNewerPreviewStarts() throws {
+        // Arrange
+        let fetchExpectation = XCTestExpectation(description: "both preview fetches requested")
+        fetchExpectation.expectedFulfillmentCount = 2
+        var completions: [
+            String: (Result<PreviewExperience, RemoteSourceError>) -> Void
+        ] = [:]
+        userpilot.remoteSource.onFetchPreviewExperience = { params, completion in
+            completions[params.contentId] = completion
+            fetchExpectation.fulfill()
+        }
+
+        let latestThemeSaved = XCTestExpectation(description: "latest preview theme saved")
+        var savedThemeIds: [Int] = []
+        userpilot.themeHandler.onSaveTheme = { theme in
+            if let id = theme.id {
+                savedThemeIds.append(id)
+                if id == 22 {
+                    latestThemeSaved.fulfill()
+                }
+            }
+        }
+
+        // Act
+        experiencesPublisher.triggerPreviewExperience("first", [])
+        experiencesPublisher.triggerPreviewExperience("second", [])
+        wait(for: [fetchExpectation], timeout: 1.0)
+        completions["first"]?(.success(try makePreviewExperience(themeId: 11)))
+        completions["second"]?(.success(try makePreviewExperience(themeId: 22)))
+
+        // Assert
+        wait(for: [latestThemeSaved], timeout: 1.0)
+        XCTAssertFalse(savedThemeIds.contains(11))
+    }
+
     // MARK: - Thread Safety Tests
 
     func testThreadSafety_multipleSimultaneousAccess() {
@@ -688,6 +745,24 @@ final class ExperiencesPublisherTests: XCTestCase {
             resultExpectation.fulfill()
         }
         wait(for: [resultExpectation], timeout: 1.0)
+    }
+
+    private func makePreviewExperience(themeId: Int) throws -> PreviewExperience {
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        return PreviewExperience(
+            flow: flow,
+            survey: nil,
+            contentType: "flow",
+            theme: ThemeContent(
+                id: themeId,
+                themeData: ThemeData(carousel: nil, slideOut: nil, survey: nil)
+            )
+        )
     }
 }
 

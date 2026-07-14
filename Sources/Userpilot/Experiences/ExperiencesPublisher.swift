@@ -117,8 +117,8 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// The last screen on which NPS was shown, preventing repeated NPS on same screen.
     private lazy var npsTrackedScreen: String = ""
 
-    /// Queue to track pending experience content waiting to be displayed
-    private var pendingExperiences: [ExperienceContent] = []
+    /// Queue to track pending experience content waiting to be displayed.
+    private var pendingExperiences: [PendingExperience] = []
 
     /// Utility for managing display delays for surveys and NPS experiences
     private lazy var delayUtils = DelayUtils()
@@ -134,6 +134,15 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Track last active experience
     private weak var activeExperience: UIViewController?
+
+    /// Guards preview request identity across lifecycle and network callbacks.
+    private let previewSessionTracker = PreviewSessionTracker()
+
+    /// Content waiting to be shown together with immutable trigger provenance.
+    private struct PendingExperience {
+        let content: ExperienceContent
+        let triggerType: TriggerType
+    }
 
     /// Determines if there are currently active experiences being displayed
     private var hasActiveExperience: Bool {
@@ -196,6 +205,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         return requestFakeScreenReloadEventDate?.isMoreThanOneSecond(from: Date()) ?? true
             && !hasActiveExperience
             && !experienceStateManager.isActive()
+            && !isPreviewExperienceMode()
             && !experienceStateManager.hasCachedExperience()
     }
 
@@ -337,14 +347,14 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func getActiveMobileContent() -> ExperienceContent? {
         guard !pendingExperiences.isEmpty else { return nil }
-        let content = pendingExperiences.first
+        let content = pendingExperiences.first?.content
         clearPendingExperiences()
         return content
     }
 
     /// Preview mode suppresses normal analytics while draft content is being rendered.
     func isPreviewExperienceMode() -> Bool {
-        experienceStateManager.isPreviewMode()
+        experienceStateManager.isPreviewMode() || previewSessionTracker.isActive()
     }
 
     // MARK: - Deep Link Handling
@@ -446,6 +456,10 @@ extension ExperiencesPublisher: SocketSubscription {
         tryCatch {
             if currentScreen == screenName { return }
             currentScreen = screenName
+            if isPreviewExperienceMode() {
+                resumePendingPreviewExperience()
+                return
+            }
             resetState()
         }
     }
@@ -502,23 +516,28 @@ extension ExperiencesPublisher: SocketSubscription {
                 }()
 
                 if let experience {
+                    let triggerType: TriggerType
                     if eventName == SDKEventsName.fetchExperienceContent.rawValue {
+                        triggerType = .manual
                         self.experienceStateManager.markManualTrigger(
                             experience.experienceId().toString()
                         )
                     } else {
+                        triggerType = .automatic
                         self.experienceStateManager.markAutomaticTrigger(experience)
                     }
-                    self.pendingExperiences.append(experience)
+                    self.pendingExperiences.append(
+                        PendingExperience(content: experience, triggerType: triggerType)
+                    )
                 }
             }
 
             // Process the first pending experience
-            if let experience = self.pendingExperiences.first {
-                if experience.asNPSContent() != nil {
-                    self.openNPSBottomSheetExperience(experience)
+            if let pendingExperience = self.pendingExperiences.first {
+                if pendingExperience.content.asNPSContent() != nil {
+                    self.openNPSBottomSheetExperience(pendingExperience)
                 } else {
-                    self.checkCachedThemes(experience.experienceThemeId())
+                    self.checkCachedThemes(pendingExperience.content.experienceThemeId())
                 }
             }
         }
@@ -565,7 +584,9 @@ extension ExperiencesPublisher: SocketSubscription {
                         self.experienceStateManager.markManualTrigger(
                             experience.experienceId().toString()
                         )
-                        self.pendingExperiences.append(experience)
+                        self.pendingExperiences.append(
+                            PendingExperience(content: experience, triggerType: .manual)
+                        )
                         self.checkCachedThemes(experience.experienceThemeId())
                     }
                 }
@@ -621,34 +642,35 @@ extension ExperiencesPublisher {
      * Handles flows (carousel, slide-out), surveys (list, step), and NPS experiences.
      */
     private func openExperienceFlow() {
-        if let experienceContent = pendingExperiences.first {
+        if let pendingExperience = pendingExperiences.first {
+            let experienceContent = pendingExperience.content
             switch experienceContent {
             case .flow(let content):
                 switch content.type {
                 case .carousel:
-                    self.openCarouselExperience(experienceContent)
+                    self.openCarouselExperience(pendingExperience)
                 case .slideout:
                     if self.isBottomSheetContent(content) {
-                        self.openSlideOutBottomSheetExperience(experienceContent)
+                        self.openSlideOutBottomSheetExperience(pendingExperience)
                     } else {
-                        self.openSlideOutDialogExperience(experienceContent)
+                        self.openSlideOutDialogExperience(pendingExperience)
                     }
                 }
 
             case .survey(let content):
                 switch content.type {
                 case .list:
-                    self.openSurveyListExperience(experienceContent)
+                    self.openSurveyListExperience(pendingExperience)
                 case .step:
                     if self.isBottomSheetSurveyContent(content) {
-                        self.openSurveyBottomSheetExperience(experienceContent)
+                        self.openSurveyBottomSheetExperience(pendingExperience)
                     } else {
-                        self.openSurveyDialogExperience(experienceContent)
+                        self.openSurveyDialogExperience(pendingExperience)
                     }
                 }
 
             case .nps:
-                openNPSBottomSheetExperience(experienceContent)
+                openNPSBottomSheetExperience(pendingExperience)
             }
         }
     }
@@ -693,9 +715,9 @@ extension ExperiencesPublisher {
      * Opens a carousel experience in a full-screen activity.
      * Content is passed to prevent issues if pending experiences are cleared during screen transitions.
      */
-    private func openCarouselExperience(_ experienceContent: ExperienceContent) {
+    private func openCarouselExperience(_ pendingExperience: PendingExperience) {
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: ExperienceViewModel.init,
             makeViewController: CarouselExperienceViewController.init,
             presentation: .fullScreen
@@ -703,9 +725,9 @@ extension ExperiencesPublisher {
     }
 
     /** Opens a slide-out experience as a dialog fragment */
-    private func openSlideOutDialogExperience(_ experienceContent: ExperienceContent) {
+    private func openSlideOutDialogExperience(_ pendingExperience: PendingExperience) {
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: ExperienceViewModel.init,
             makeViewController: SlideOutDialogViewController.init,
             presentation: .dialog
@@ -713,9 +735,9 @@ extension ExperiencesPublisher {
     }
 
     /** Opens a slide-out experience as a bottom sheet fragment */
-    private func openSlideOutBottomSheetExperience(_ experienceContent: ExperienceContent) {
+    private func openSlideOutBottomSheetExperience(_ pendingExperience: PendingExperience) {
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: ExperienceViewModel.init,
             makeViewController: SlideOutBottomSheetViewController.init,
             presentation: .bottomSheet
@@ -723,9 +745,9 @@ extension ExperiencesPublisher {
     }
 
     /** Opens a survey experience in a full-screen activity with list view */
-    private func openSurveyListExperience(_ experienceContent: ExperienceContent) {
+    private func openSurveyListExperience(_ pendingExperience: PendingExperience) {
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: SurveyViewModel.init,
             makeViewController: SurveyListViewController.init,
             presentation: .fullScreen
@@ -733,9 +755,9 @@ extension ExperiencesPublisher {
     }
 
     /** Opens a survey experience as a dialog fragment */
-    private func openSurveyDialogExperience(_ experienceContent: ExperienceContent) {
+    private func openSurveyDialogExperience(_ pendingExperience: PendingExperience) {
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: SurveyViewModel.init,
             makeViewController: SurveyDialogViewController.init,
             presentation: .dialog
@@ -743,9 +765,9 @@ extension ExperiencesPublisher {
     }
 
     /** Opens a survey experience as a bottom sheet fragment */
-    private func openSurveyBottomSheetExperience(_ experienceContent: ExperienceContent) {
+    private func openSurveyBottomSheetExperience(_ pendingExperience: PendingExperience) {
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: SurveyViewModel.init,
             makeViewController: SurveyBottomSheetViewController.init,
             presentation: .bottomSheet
@@ -753,13 +775,13 @@ extension ExperiencesPublisher {
     }
 
     /** Opens an NPS experience as a bottom sheet fragment */
-    private func openNPSBottomSheetExperience(_ experienceContent: ExperienceContent) {
+    private func openNPSBottomSheetExperience(_ pendingExperience: PendingExperience) {
         if currentScreen == npsTrackedScreen {
             resetProcessingExperienceStatus()
             return
         }
         showExperience(
-            experienceContent,
+            pendingExperience,
             makeViewModel: NPSViewModel.init,
             makeViewController: NPSBottomSheetViewController.init,
             presentation: .bottomSheet
@@ -836,21 +858,14 @@ extension ExperiencesPublisher {
      * dropped frames and interrupts opening content animations.
      */
     private func showExperience<VM, VC: UIViewController>(
-        _ experienceContent: ExperienceContent,
+        _ pendingExperience: PendingExperience,
         makeViewModel: @escaping (DIContainer) -> VM,
         makeViewController: @escaping (VM) -> VC,
         presentation: PresentationStyle
     ) {
         tryCatch {
-            let triggerType: TriggerType
-            if experienceStateManager.isManualTrigger() {
-                triggerType = .manual
-            } else if experienceStateManager.isPreviewMode() {
-                triggerType = .preview
-            } else {
-                triggerType = .automatic
-            }
-            experienceStateManager.markWaitingDelay(triggerType)
+            let experienceContent = pendingExperience.content
+            experienceStateManager.markWaitingDelay(pendingExperience.triggerType)
 
             delayUtils.delayAction(delayTime: resolvedDelay(experienceContent)) { [weak self] in
                 guard
@@ -980,13 +995,18 @@ extension ExperiencesPublisher {
             if pendingExperiences.isEmpty { return }
             experienceQueue.async { [weak self] in
                 guard let self else { return }
+                if self.pendingExperiences.first?.triggerType == .preview,
+                   self.previewSessionTracker.isActive() {
+                    self.experienceStateManager.markPreviewMode()
+                    return
+                }
                 self.resetProcessingExperienceStatus()
                 if self.pendingExperiences.count == 1 {
                     self.pendingExperiences.removeAll()
                 } else {
-                    if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
-                        self.pendingExperiences = [lastContent]
-                        self.experienceStateManager.markAutomaticTrigger(lastContent)
+                    if let lastPending = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
+                        self.pendingExperiences = [lastPending]
+                        self.experienceStateManager.markAutomaticTrigger(lastPending.content)
                         self.openExperienceFlow()
                     }
                 }
@@ -1000,6 +1020,7 @@ extension ExperiencesPublisher {
      * becomes invalid from view models.
      */
     private func resetState() {
+        previewSessionTracker.cancel()
         resetState(completion: nil)
     }
 
@@ -1024,7 +1045,12 @@ extension ExperiencesPublisher {
         experienceStateManager.markIdle()
     }
 
-    private func resetProcessingPreviewExperienceStatus() {
+    private func resetProcessingPreviewExperienceStatus(previewSessionId: UInt64? = nil) {
+        if let previewSessionId {
+            guard previewSessionTracker.finish(previewSessionId) else { return }
+        } else {
+            previewSessionTracker.cancel()
+        }
         resetProcessingExperienceStatus()
     }
 
@@ -1033,7 +1059,9 @@ extension ExperiencesPublisher {
         switch state {
         case .cachedPendingAutomatic(let experience):
             activeExperience = nil
-            pendingExperiences.append(experience)
+            pendingExperiences.append(
+                PendingExperience(content: experience, triggerType: .automatic)
+            )
             experienceStateManager.markAutomaticTrigger(experience)
             checkCachedThemes(experience.experienceThemeId())
 
@@ -1053,8 +1081,9 @@ extension ExperiencesPublisher {
 extension ExperiencesPublisher {
 
     func triggerPreviewExperience(_ experienceId: String, _ queryItems: [URLQueryItem]) {
+        let previewSessionId = previewSessionTracker.begin()
         resetState { [weak self] in
-            guard let self else { return }
+            guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
             self.experienceStateManager.markPreviewMode()
             self.userpilotRemoteSource.fetchPreviewExperience(
                 params: PreviewExperienceQueryParams(
@@ -1064,24 +1093,34 @@ extension ExperiencesPublisher {
                     contentId: experienceId
                 ),
                 completion: { [weak self] result in
-                    guard let self else { return }
+                    guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
                     switch result {
                     case .success(let previewExperience):
-                        self.processPreviewExperience(previewExperience)
+                        self.processPreviewExperience(
+                            previewExperience,
+                            previewSessionId: previewSessionId
+                        )
                     case .failure(let error):
-                        self.showExperienceTriggeringDebugMessage(error.localizedDescription)
+                        self.showExperienceTriggeringDebugMessage(
+                            error.localizedDescription,
+                            previewSessionId: previewSessionId
+                        )
                     }
                 }
             )
         }
     }
 
-    private func processPreviewExperience(_ previewExperience: PreviewExperience) {
+    private func processPreviewExperience(
+        _ previewExperience: PreviewExperience,
+        previewSessionId: UInt64
+    ) {
         tryCatch {
+            guard previewSessionTracker.isCurrent(previewSessionId) else { return }
             guard let theme = previewExperience.theme,
                   previewExperience.flow != nil || previewExperience.survey != nil
             else {
-                resetProcessingPreviewExperienceStatus()
+                resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
                 return
             }
 
@@ -1095,21 +1134,27 @@ extension ExperiencesPublisher {
             }
 
             guard let experience else {
-                resetProcessingPreviewExperienceStatus()
+                resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
                 return
             }
 
             experienceQueue.async { [weak self] in
-                guard let self else { return }
-                self.pendingExperiences.append(experience)
+                guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
+                self.pendingExperiences.append(
+                    PendingExperience(content: experience, triggerType: .preview)
+                )
                 self.themeHandler.saveTheme(theme)
                 self.openExperienceFlow()
             }
         }
     }
 
-    private func showExperienceTriggeringDebugMessage(_ message: String) {
-        resetProcessingPreviewExperienceStatus()
+    private func showExperienceTriggeringDebugMessage(
+        _ message: String,
+        previewSessionId: UInt64
+    ) {
+        guard previewSessionTracker.isCurrent(previewSessionId) else { return }
+        resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
         performOn(.main) { [weak self] in
             guard
                 let self,
@@ -1135,6 +1180,17 @@ extension ExperiencesPublisher {
             }
 
             host.present(alert, animated: true, completion: nil)
+        }
+    }
+
+    private func resumePendingPreviewExperience() {
+        experienceQueue.async { [weak self] in
+            guard
+                let self,
+                case .pendingPreview = self.experienceStateManager.getCurrentState(),
+                self.pendingExperiences.first?.triggerType == .preview
+            else { return }
+            self.openExperienceFlow()
         }
     }
 }
