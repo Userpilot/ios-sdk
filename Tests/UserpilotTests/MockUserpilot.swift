@@ -334,6 +334,11 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onExperiencePublished?(experienceType, experienceId)
     }
 
+    var onIsExperienceSeen: ((ExperienceContent) -> Bool)?
+    func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool {
+        onIsExperienceSeen?(experienceContent) ?? false
+    }
+
     var isStartSession: Bool = false
 
     var screenEntity: ScreenViewEntity?

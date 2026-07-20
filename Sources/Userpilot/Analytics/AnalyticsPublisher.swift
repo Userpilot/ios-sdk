@@ -60,6 +60,16 @@ internal protocol AnalyticsPublishing: AnyObject {
         _ experienceId: Int
     )
 
+    /**
+     * Returns whether the experience was already displayed on the current screen entity.
+     *
+     * Flows use `seenExperiences`, Surveys use `seenSurveys`, and NPS returns `false` because NPS
+     * is deduplicated by `ExperiencesPublisher` using its last tracked screen. The screen entity
+     * retains seen ids when the same screen is reported again and starts with empty sets when the
+     * screen title changes.
+     */
+    func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool
+
     /// For experience which are come from start session
     var isStartSession: Bool { get }
 
@@ -980,6 +990,26 @@ extension AnalyticsPublisher {
             screenViewEntity?.updateSeenFlowExperiences(experienceId)
         } else {
             screenViewEntity?.updateSeenSurveyExperiences(experienceId)
+        }
+    }
+
+    /**
+     * Checks the current screen's type-specific seen set for the supplied experience.
+     *
+     * A Flow id is checked only in `seenExperiences`, and a Survey id only in `seenSurveys`, so a
+     * Flow and Survey with the same numeric id remain distinct. NPS always returns `false` here and
+     * continues through the existing per-screen NPS deduplication path in `ExperiencesPublisher`.
+     * If no screen entity exists, Flow and Survey are treated as unseen.
+     */
+    func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool {
+        switch experienceContent {
+        case .flow(let content):
+            return screenViewEntity?.seenExperiences.contains(content.id) == true
+        case .survey(let content):
+            return screenViewEntity?.seenSurveys.contains(content.id) == true
+        case .nps:
+            // NPS deduplication is managed by ExperiencesPublisher per screen.
+            return false
         }
     }
 

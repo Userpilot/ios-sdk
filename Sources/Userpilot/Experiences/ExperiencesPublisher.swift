@@ -483,9 +483,6 @@ extension ExperiencesPublisher: SocketSubscription {
     ) {
         experienceQueue.async { [weak self] in
             guard let self,
-                  // If there's an active experience, ignore new content
-                  !hasActiveExperience,
-                  !experienceStateManager.isActive(),
                   !experienceStateManager.isPreviewMode(),
                   !message.payload.isEmpty,
                   let response = message.payload.toJSONString()
@@ -499,38 +496,7 @@ extension ExperiencesPublisher: SocketSubscription {
                 self.themeHandler.saveTheme(themeData)
             }
 
-            // Process content from screen events and fetch experience content events
-            if eventName == EventType.screenEvent ||
-                eventName == SDKEventsName.fetchExperienceContent.rawValue {
-
-                // Determine the new experience based on response
-                let experience: ExperienceContent? = {
-                    if let flowContent = response.toFlowContent()?.flowContent {
-                        return .flow(content: flowContent)
-                    } else if let surveyContent = response.toSurveyContent()?.surveyContent {
-                        return .survey(content: surveyContent)
-                    } else if let npsContent = response.toNPSContent()?.npsContent {
-                        return .nps(content: npsContent)
-                    }
-                    return nil
-                }()
-
-                if let experience {
-                    let triggerType: TriggerType
-                    if eventName == SDKEventsName.fetchExperienceContent.rawValue {
-                        triggerType = .manual
-                        self.experienceStateManager.markManualTrigger(
-                            experience.experienceId().toString()
-                        )
-                    } else {
-                        triggerType = .automatic
-                        self.experienceStateManager.markAutomaticTrigger(experience)
-                    }
-                    self.pendingExperiences.append(
-                        PendingExperience(content: experience, triggerType: triggerType)
-                    )
-                }
-            }
+            self.processExperienceContentResponse(eventName, response)
 
             // Process the first pending experience
             if let pendingExperience = self.pendingExperiences.first {
@@ -541,6 +507,54 @@ extension ExperiencesPublisher: SocketSubscription {
                 }
             }
         }
+    }
+
+    /**
+     * Selects and queues one eligible experience from a screen or manual-content response.
+     *
+     * Responses are parsed in priority order: Flow, Survey, then NPS. Automatic screen responses
+     * select the first candidate that is not in the current screen entity's seen sets, allowing an
+     * unseen Survey or NPS to fall back when a Flow was already shown. Manual fetch responses select
+     * the first candidate without filtering by seen state.
+     *
+     * Preview responses and active/pending/cached duplicates are ignored. A distinct candidate is
+     * cached when another experience is active; otherwise the appropriate trigger state is set and
+     * the candidate is appended to `pendingExperiences`. Other socket event types and responses
+     * without valid candidates are ignored.
+     */
+    private func processExperienceContentResponse(_ eventName: String, _ response: String) {
+        guard eventName == EventType.screenEvent ||
+                eventName == SDKEventsName.fetchExperienceContent.rawValue
+        else { return }
+
+        let triggerType = triggerTypeForEvent(eventName)
+        let candidates = experienceCandidates(response)
+        let experience: ExperienceContent?
+        if triggerType == .automatic {
+            experience = candidates.first { !analyticsPublisher.isExperienceSeen($0) }
+        } else {
+            experience = candidates.first
+        }
+
+        guard let experience, !experienceStateManager.isPreviewMode() else { return }
+        if isDuplicateExperience(experience) {
+            logger.info("Ignoring duplicate experience: %@", experience.experienceId().toString())
+            return
+        }
+        if hasActiveExperience || experienceStateManager.isActive() {
+            experienceStateManager.markCachedAutomatic(experience)
+            logger.info("Experience cached - active experience in progress")
+            return
+        }
+
+        if triggerType == .manual {
+            experienceStateManager.markManualTrigger(experience.experienceId().toString())
+        } else {
+            experienceStateManager.markAutomaticTrigger(experience)
+        }
+        pendingExperiences.append(
+            PendingExperience(content: experience, triggerType: triggerType)
+        )
     }
 
     /**
@@ -1054,11 +1068,26 @@ extension ExperiencesPublisher {
         resetProcessingExperienceStatus()
     }
 
+    /**
+     * Processes the experience, if any, that was cached while another experience was active.
+     *
+     * An automatic cached experience is discarded if it became seen before replay; otherwise it is
+     * queued and resumes automatic processing. A cached manual id is retriggered through the public
+     * manual path. If the state contains neither cached case, processing returns to idle.
+     */
     private func processCachedExperienceAfterClose() {
         let state = experienceStateManager.getCurrentState()
         switch state {
         case .cachedPendingAutomatic(let experience):
             activeExperience = nil
+            if analyticsPublisher.isExperienceSeen(experience) {
+                logger.info(
+                    "Ignoring cached experience already seen: %@",
+                    experience.experienceId().toString()
+                )
+                resetProcessingExperienceStatus()
+                return
+            }
             pendingExperiences.append(
                 PendingExperience(content: experience, triggerType: .automatic)
             )
@@ -1072,6 +1101,76 @@ extension ExperiencesPublisher {
 
         default:
             resetProcessingExperienceStatus()
+        }
+    }
+
+    /**
+     * Parses every available response type in backend priority order: Flow, Survey, then NPS.
+     *
+     * Each decoder contributes only when its content exists and is valid. Returning all candidates,
+     * instead of stopping at the first decoded type, lets automatic selection continue past a seen
+     * higher-priority candidate.
+     */
+    private func experienceCandidates(_ response: String) -> [ExperienceContent] {
+        var candidates: [ExperienceContent] = []
+        if let flowContent = response.toFlowContent()?.flowContent {
+            candidates.append(.flow(content: flowContent))
+        }
+        if let surveyContent = response.toSurveyContent()?.surveyContent {
+            candidates.append(.survey(content: surveyContent))
+        }
+        if let npsContent = response.toNPSContent()?.npsContent {
+            candidates.append(.nps(content: npsContent))
+        }
+        return candidates
+    }
+
+    /**
+     * Maps the response event to its trigger provenance.
+     *
+     * `fetchExperienceContent` is a manual API response and bypasses seen-screen filtering. Screen
+     * and any other accepted response events are automatic and must select an unseen candidate.
+     */
+    private func triggerTypeForEvent(_ eventName: String) -> TriggerType {
+        eventName == SDKEventsName.fetchExperienceContent.rawValue ? .manual : .automatic
+    }
+
+    /**
+     * Returns whether the same content is already active, pending, or cached.
+     *
+     * This differs from a seen check: seen content was already displayed on the current screen,
+     * while duplicate content is another copy currently moving through the rendering lifecycle.
+     * Checking all three locations prevents repeated responses from replacing or requeuing work.
+     */
+    private func isDuplicateExperience(_ experience: ExperienceContent) -> Bool {
+        if sameExperience(experienceStateManager.getActiveContent(), experience) {
+            return true
+        }
+        if pendingExperiences.contains(where: { sameExperience($0.content, experience) }) {
+            return true
+        }
+        return sameExperience(experienceStateManager.getCachedExperienceContent(), experience)
+    }
+
+    /**
+     * Compares two experiences by type and that type's stable identifier.
+     *
+     * Flow and Survey compare numeric ids. NPS compares the survey key because its `experienceId()`
+     * is currently zero for every NPS. Different content types and a nil first value never match.
+     */
+    private func sameExperience(
+        _ first: ExperienceContent?,
+        _ second: ExperienceContent
+    ) -> Bool {
+        switch (first, second) {
+        case (.flow(let firstContent), .flow(let secondContent)):
+            return firstContent.id == secondContent.id
+        case (.survey(let firstContent), .survey(let secondContent)):
+            return firstContent.id == secondContent.id
+        case (.nps(let firstContent), .nps(let secondContent)):
+            return firstContent.content.survey.key == secondContent.content.survey.key
+        default:
+            return false
         }
     }
 }

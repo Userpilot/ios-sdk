@@ -368,6 +368,89 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
     }
 
+    func testOnSocketEventSent_shouldSelectSurvey_WhenHigherPriorityFlowWasSeen() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Unseen survey should be selected")
+        let message = Message(payload: makeFlowAndSurveyPayload())
+        userpilot.analyticsPublisher.onIsExperienceSeen = { experience in
+            if case .flow = experience { return true }
+            return false
+        }
+
+        // Act
+        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
+
+        // Assert
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard case .survey(let content) = self.experiencesPublisher.getActiveMobileContent() else {
+                XCTFail("Expected unseen survey content")
+                expectation.fulfill()
+                return
+            }
+            XCTAssertEqual(content.id, 20)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testOnSocketEventSent_shouldNotCacheDuplicateActiveExperience() throws {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Duplicate response should be ignored")
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        userpilot.experienceStateManager.markAutomaticTrigger(.flow(content: flow))
+        userpilot.experienceStateManager.markActiveFromCurrentState(content: .flow(content: flow))
+
+        // Act
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeFlowContentPayload()),
+            true
+        )
+
+        // Assert
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            XCTAssertNil(self.userpilot.experienceStateManager.getCachedExperienceContent())
+            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent())
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testPublishInternalSDKEvent_shouldIgnoreCachedAutomaticExperience_WhenSeenBeforeReplay() throws {
+        // Arrange
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        userpilot.analyticsPublisher.onIsExperienceSeen = { _ in true }
+        userpilot.experienceStateManager.markCachedAutomatic(.flow(content: flow))
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": flow.id]
+        )
+        closeEvent.isCloseEvent = true
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        // Assert
+        XCTAssertNil(userpilot.experienceStateManager.getCachedExperienceContent())
+        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
+        if case .idle = userpilot.experienceStateManager.getCurrentState() {
+            // Expected state.
+        } else {
+            XCTFail("Expected idle state after ignoring cached seen content")
+        }
+    }
+
     // MARK: - onNewMessage Tests
 
     func testOnNewMessage_shouldProcessFlowContent_WhenValidPayload() {
@@ -591,6 +674,22 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Assert
         wait(for: [reloadExpectation], timeout: 1.0)
         XCTAssertTrue(publishFakeReloadEventCalled)
+    }
+
+    private func makeFlowAndSurveyPayload() -> [String: Any] {
+        var payload = MockContentFactory.makeFlowContentPayload()
+        payload["surveys"] = [
+            "id": 20,
+            "type": "list",
+            "modules": [],
+            "metadata": NSNull(),
+            "theme_data": ["id": 22, "theme_data": NSNull()],
+            "screens": ["Home"],
+            "screen_type": "selected",
+            "locale_code": "en",
+            "time_delay": 0
+        ]
+        return payload
     }
 
     // MARK: - showThankYouMessage Tests

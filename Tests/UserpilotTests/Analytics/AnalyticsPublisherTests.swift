@@ -541,6 +541,31 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(analyticsPublisher.screenEntity?.seenSurveys.contains(456) ?? false)
     }
 
+    func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
+        // Arrange
+        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        let survey = MockContentFactory.makeSurveyContent(id: 456)
+
+        // Act
+        analyticsPublisher.experiencePublished(.flow, flow.id)
+        analyticsPublisher.experiencePublished(.survey, survey.id)
+
+        // Assert
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.survey(content: survey)))
+        XCTAssertFalse(
+            analyticsPublisher.isExperienceSeen(
+                .survey(content: MockContentFactory.makeSurveyContent(id: 999))
+            )
+        )
+    }
+
     // MARK: - Screen Event Setup Tests
 
     func testSetupScreenEvent_shouldCreateNewScreenEntityForDifferentScreen() {
