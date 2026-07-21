@@ -22,6 +22,8 @@ class MainViewController: BaseViewController {
 
     internal lazy var content: [Content] = [.identify, .screens, .events, .eventsLog, .autoCapture, .configurations]
 
+    private var didPresentInitialConfig = false
+
     // MARK: - Override
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,17 +37,15 @@ class MainViewController: BaseViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken),
-           appToken == nil {
-            showConfigurationDialog()
+        let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
+        if !didPresentInitialConfig, appToken?.isEmpty ?? true {
+            didPresentInitialConfig = true
+            openConfigScreen()
         }
     }
 
-    internal func showConfigurationDialog() {
-        DialogManager.shared().showConfigurationDialog { [weak self] in
-            guard self != nil else { return }
-            exit(0)
-        }
+    internal func openConfigScreen() {
+        FlowRoutingManager.shared.openViewController(ConfigViewController())
     }
 }
 

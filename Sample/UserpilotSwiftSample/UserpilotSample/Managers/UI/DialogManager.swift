@@ -46,19 +46,4 @@ class DialogManager {
         }
     }
 
-    // MARK: - Configuration Dialog
-    func showConfigurationDialog(doneButtonHandler: (() -> Void)?) {
-
-        let dialog = ConfigurationsDialogViewController(
-            doneButtonHandler: doneButtonHandler)
-
-        dialog.modalPresentationStyle = .overCurrentContext
-        dialog.modalTransitionStyle = .crossDissolve
-
-        if let topMostController = FlowRoutingManager.topMostController() {
-            if !topMostController.isKind(of: ConfigurationsDialogViewController.self) {
-                topMostController.present(dialog, animated: false, completion: nil)
-            }
-        }
-    }
 }

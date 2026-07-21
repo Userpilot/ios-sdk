@@ -37,13 +37,17 @@ class UserpilotManager {
     func initialize() {
         guard let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken) else { return }
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
-            .logging(enabled: true)
-            .enableUseInAppBrowser()
-            .enableScreenAutoCapture()
-            .enableInteractionAutoCapture()
-            .enableInteractionTextCapture()
-            .enableInteractionAccessibilityLabelCapture()
-            .enableInteractionValueCapture()
+            .logging(enabled: ConfigFlag.loggingEnabled.value)
+            .enableUseInAppBrowser(ConfigFlag.useInAppBrowser.value)
+            .allowReceiveEventsFromExternalSource(ConfigFlag.allowReceiveEventsFromExternalSource.value)
+            .disableRequestPushNotificationsPermission(
+                ConfigFlag.disableRequestPushNotificationsPermission.value)
+            .enableScreenAutoCapture(ConfigFlag.enableScreenAutoCapture.value)
+            .enableInteractionAutoCapture(ConfigFlag.enableInteractionAutoCapture.value)
+            .enableInteractionTextCapture(ConfigFlag.enableInteractionTextCapture.value)
+            .enableInteractionAccessibilityLabelCapture(
+                ConfigFlag.enableInteractionAccessibilityLabelCapture.value)
+            .enableInteractionValueCapture(ConfigFlag.enableInteractionValueCapture.value)
         )
         userpilot?.navigationDelegate = self
         userpilot?.analyticsDelegate = self
