@@ -74,6 +74,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
         // fires before the window is attached and UIKit drops the present
         // with "whose view is not in the window hierarchy".
         isHidden = false
+        UPOverlayVisibility.overlayVisibilityMayHaveChanged()
 
         // Observe scene disconnects so a dead `windowScene` (e.g. the user
         // closes an iPad window or the app drops a split-view scene) is detected
@@ -89,6 +90,16 @@ internal final class ExperienceOverlayWindow: UIWindow {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    /// Number of Userpilot overlay windows currently on screen across the whole process.
+    ///
+    /// Used to suppress Liquid Glass on card surfaces when two or more instances are showing
+    /// an experience at once: each instance owns its own overlay window, so two glass cards
+    /// would stack into the layered-glass appearance Apple advises against, with neither
+    /// instance having chosen it.
+    static func visibleWindowCount() -> Int {
+        UPOverlayVisibility.visibleCount
+    }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -130,6 +141,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
             windowLevel = Self.computeWindowLevel(for: owner)
         }
         isHidden = false
+        UPOverlayVisibility.overlayVisibilityMayHaveChanged()
     }
 
     /// Recomputes `windowLevel` so newly-registered sibling tenants (which would
@@ -145,6 +157,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
     func hideIfIdle() {
         guard rootViewController?.presentedViewController == nil else { return }
         isHidden = true
+        UPOverlayVisibility.overlayVisibilityMayHaveChanged()
     }
 
     // MARK: - Scene Lifecycle
@@ -160,6 +173,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
         guard let disconnected = note.object as? UIWindowScene,
               disconnected === windowScene else { return }
         isHidden = true
+        UPOverlayVisibility.overlayVisibilityMayHaveChanged()
     }
 
     // MARK: - Window Level

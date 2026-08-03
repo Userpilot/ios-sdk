@@ -96,6 +96,35 @@ internal extension UIColor {
         return luminance > 0.5
     }
 
+    /// A version of this colour one step "above" the surface it sits on, for a popup or menu that
+    /// needs to read as floating rather than painted on.
+    ///
+    /// Which direction is a step up depends on the surface: a dark card lifts by getting *lighter*,
+    /// the way the system's own menus do in dark mode, and a light card lifts by getting slightly
+    /// darker, since there is nowhere lighter than white to go. The shift is deliberately small —
+    /// enough to separate two surfaces, not enough to read as a different colour.
+    ///
+    /// - Parameter amount: How far to move, 0...1. The default is tuned to stay subtle on a
+    ///   mid-tone brand colour.
+    /// - Returns: The adjusted colour, or `self` if the components cannot be read.
+    func elevatedAsPopup(by amount: CGFloat = 0.10) -> UIColor {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return self }
+
+        // Toward white on a dark surface, toward black on a light one.
+        let target: CGFloat = isLightColor() ? 0 : 1
+        let shift = isLightColor() ? amount / 2 : amount
+        return UIColor(
+            red: red + (target - red) * shift,
+            green: green + (target - green) * shift,
+            blue: blue + (target - blue) * shift,
+            alpha: alpha
+        )
+    }
+
     func withOpacity(_ opacity: CGFloat) -> UIColor {
         return self.withAlphaComponent(opacity)
     }

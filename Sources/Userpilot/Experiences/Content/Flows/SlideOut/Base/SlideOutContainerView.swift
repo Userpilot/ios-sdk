@@ -21,8 +21,11 @@ internal class SlideOutContainerView: UIView {
     // MARK: - UI Components
 
     /// A container for the dismiss button, with a fixed height.
+    /// Holds the dismiss button, which is positioned past this view's trailing edge so it can sit
+    /// close to the card's edge. `UPOverflowTouchView` is what keeps that overhanging strip tappable —
+    /// a plain `UIView` rejects the touch before the button is ever asked.
     private lazy var buttonDismissContainerView: UIView = {
-        let view = UIView()
+        let view = UPOverflowTouchView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize + 10).isActive = true
         return view
@@ -78,6 +81,18 @@ internal class SlideOutContainerView: UIView {
     }()
 
     private weak var slideOutContainerViewDelegate: SlideOutContainerViewDelegate?
+
+    /// Decides whether Liquid Glass may be used by this view's chrome. Set by the owning
+    /// view controller before `bindStep(...)` runs, which is where the dismiss button is
+    /// created.
+    var glassResolver: GlassCapabilityResolving? {
+        didSet {
+            actionButton.glassResolver = glassResolver
+            // Fades slide-out content where it meets the action button.
+            scrollView.applyUPBottomScrollEdgeEffect(
+                allowsGlass: glassResolver?.allowsGlass(for: .chrome) ?? false)
+        }
+    }
 
     private var scrollViewHeightConstraint: NSLayoutConstraint?
     private var storedConstraints: [NSLayoutConstraint] = []
@@ -219,6 +234,7 @@ internal class SlideOutContainerView: UIView {
     private func setupDismissButton(_ theme: ExperienceTheme) {
         if theme.isDismissButtonEnabled {
             let buttonDismiss = UPDismissButton()
+            buttonDismiss.glassResolver = glassResolver
             buttonDismiss.setupView(theme: theme)
             buttonDismissContainerView.addSubview(buttonDismiss)
             buttonDismiss.translatesAutoresizingMaskIntoConstraints = false

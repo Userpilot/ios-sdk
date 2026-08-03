@@ -207,6 +207,12 @@ internal struct NPSTheme: Decodable {
     var borderRadius: CGFloat {
         CGFloat(box?.radius ?? 24)
     }
+
+    /// The theme's Liquid Glass request, or `nil` when it does not express one. Decoded from
+    /// `main.material`.
+    var surfaceMaterial: SurfaceMaterial? {
+        general?.material
+    }
 }
 
 // MARK: - NPSThemeGeneral
@@ -215,8 +221,12 @@ internal struct NPSThemeGeneral: Decodable {
     let logo: String?
     let primary: String?
 
+    /// See ``GeneralStyle/material``. NPS maps this block from the JSON key `main`, so the backend
+    /// field is `main.material`.
+    let material: SurfaceMaterial?
+
     enum CodingKeys: String, CodingKey {
-        case logo, primary
+        case logo, primary, material
         case backgroundColor = "background_color"
     }
 }

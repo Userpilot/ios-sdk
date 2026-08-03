@@ -71,6 +71,11 @@ internal struct ExperienceTheme: Decodable {
         general?.contentAlignment ?? .top
     }
 
+    /// The theme's Liquid Glass request, or `nil` when it does not express one.
+    var surfaceMaterial: SurfaceMaterial? {
+        general?.material
+    }
+
     var backgroundColor: UIColor {
         colors?.backgroundColor?.color ?? .white
     }
@@ -221,9 +226,15 @@ internal struct GeneralStyle: Decodable {
     let contentAlignment: ContentAlignmentType?
     let fontFamily: String?
 
+    /// Whether a themed floating surface asks for Liquid Glass. `nil` means the theme is silent,
+    /// which is not the same as asking for `.solid` — the resolver needs to tell those apart so a
+    /// silent theme can defer to the host's configuration.
+    let material: SurfaceMaterial?
+
     private enum CodingKeys: String, CodingKey {
         case contentAlignment = "content_alignment"
         case fontFamily = "font_family"
+        case material
     }
 }
 
@@ -268,6 +279,11 @@ internal struct SurveyTheme: Decodable {
 
     var backgroundColorAsString: String {
         general?.backgroundColor ?? "#ffffff"
+    }
+
+    /// The theme's Liquid Glass request, or `nil` when it does not express one.
+    var surfaceMaterial: SurfaceMaterial? {
+        general?.material
     }
 
     var isLightTheme: Bool {
@@ -355,7 +371,19 @@ internal struct SurveyTheme: Decodable {
 
     // Border
     var borderRadius: CGFloat {
-        CGFloat(general?.cornerRadius ?? 24)
+        guard let configured = general?.cornerRadius else {
+            // The pre-iOS 26 default, restored. A solid card has to look the same on iOS 26 as it
+            // does below it; the glass path never reads this value, because a glass sheet or dialog
+            // replaces the radius outright with its own measured geometry.
+            return ThemeHandler.DefaultValues.solidSurveyCornerRadius
+        }
+        return CGFloat(configured)
+    }
+
+    /// Whether the customer actually set a corner radius, as opposed to falling back to the
+    /// SDK default. Lets the sheet honour an explicit value while still modernising the default.
+    var hasExplicitCornerRadius: Bool {
+        general?.cornerRadius != nil
     }
 
 }
@@ -368,11 +396,15 @@ internal struct SurveyGeneral: Decodable {
     let backgroundColor: String?
     let cornerRadius: Int?
 
+    /// See ``GeneralStyle/material``.
+    let material: SurfaceMaterial?
+
     private enum CodingKeys: String, CodingKey {
         case position = "default_position"
         case primaryColor = "primary_color"
         case backgroundColor = "background_color"
         case cornerRadius = "corner_radius"
+        case material
     }
 }
 

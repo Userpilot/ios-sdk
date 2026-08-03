@@ -101,7 +101,8 @@ final class ThemeHandlerTests: XCTestCase {
                     position: .bottom,
                     primaryColor: "#basePrimary",
                     backgroundColor: "#baseBg",
-                    cornerRadius: 10
+                    cornerRadius: 10,
+                    material: nil
                 ),
                 font: SurveyFont(
                     fontFamily: "BaseFont",
@@ -126,7 +127,8 @@ final class ThemeHandlerTests: XCTestCase {
                 position: .center,
                 primaryColor: "#overridePrimary",
                 backgroundColor: nil,
-                cornerRadius: nil
+                cornerRadius: nil,
+                material: nil
             ),
             font: nil,
             progress: nil,

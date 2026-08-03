@@ -242,7 +242,8 @@ internal enum MockContentFactory {
                 position: .bottom,
                 primaryColor: "#007AFF",
                 backgroundColor: "#FFFFFF",
-                cornerRadius: 12
+                cornerRadius: 12,
+                material: nil
             ),
             font: SurveyFont(
                 fontFamily: "Arial",

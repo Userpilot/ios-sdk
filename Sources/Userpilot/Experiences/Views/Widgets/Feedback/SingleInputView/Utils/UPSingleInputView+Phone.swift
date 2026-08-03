@@ -32,12 +32,17 @@ extension UPSingleInputView {
             yPosition = textFieldFrame.maxY - (200 + 50 + 4)
         }
         // Create and configure the country picker popup menu
-        countryPickerPopupMenu = CountryPickerPopupMenu(frame: CGRect(
-            x: textFieldFrame.origin.x,
-            y: yPosition,  // Positioning the menu below or above the text field
-            width: textFieldFrame.width,
-            height: 200  // Set a fixed height for the popup
-        ), view: parentView)
+        countryPickerPopupMenu = CountryPickerPopupMenu(
+            frame: CGRect(
+                x: textFieldFrame.origin.x,
+                y: yPosition,  // Positioning the menu below or above the text field
+                width: textFieldFrame.width,
+                height: 200  // Set a fixed height for the popup
+            ),
+            view: parentView,
+            glassResolver: glassResolver,
+            themeBackground: surveyTheme?.backgroundColor
+        )
 
         // Define the behavior when a country is selected
         countryPickerPopupMenu?.onSelectCountry = { [weak self] dialCode in

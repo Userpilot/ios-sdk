@@ -39,11 +39,20 @@ class UserpilotManager {
         userpilot = Userpilot(config: Userpilot.Config(token: appToken)
             .logging(enabled: true)
             .enableUseInAppBrowser()
-            .enableScreenAutoCapture()
-            .enableInteractionAutoCapture()
-            .enableInteractionTextCapture()
-            .enableInteractionAccessibilityLabelCapture()
-            .enableInteractionValueCapture()
+            // Liquid Glass (iOS 26+). `liquidGlass` is ON by default, which covers chrome such
+            // as the dismiss button. Glass on *card surfaces* is opt-in and OFF by default, so
+            // it has to be requested explicitly — enabled here so the sample shows it.
+            .liquidGlassFullScreen()
+            // Full-screen carousel steps. Needed for the step's action button to *look* like
+            // glass — over an opaque card the glass has nothing to refract.
+            .liquidGlassSheetsAndDialogs()
+//            .liquidGlassMaskedBackdrop(false) // uncomment to compare without the backdrop cut-out
+//            .liquidGlass(false)               // uncomment to force the pre-iOS 26 appearance
+//            .enableScreenAutoCapture()
+//            .enableInteractionAutoCapture()
+//            .enableInteractionTextCapture()
+//            .enableInteractionAccessibilityLabelCapture()
+//            .enableInteractionValueCapture()
         )
         userpilot?.navigationDelegate = self
         userpilot?.analyticsDelegate = self

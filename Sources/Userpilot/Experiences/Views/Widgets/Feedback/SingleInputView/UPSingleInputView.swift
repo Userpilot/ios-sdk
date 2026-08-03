@@ -59,6 +59,13 @@ internal class UPSingleInputView: UIView {
     // View Margin left, right
     internal var margin = CGFloat(0)
 
+    /// Decides whether the transient chrome this input presents — the country picker popover
+    /// and the date picker dialog — renders as Liquid Glass.
+    ///
+    /// Set by whichever view builds this input. The input's own text field is content, not
+    /// chrome, so it is never glass: text over a refracting material is a legibility trap.
+    internal var glassResolver: GlassCapabilityResolving?
+
     // MARK: - Initializers
 
     init(margin: CGFloat) {

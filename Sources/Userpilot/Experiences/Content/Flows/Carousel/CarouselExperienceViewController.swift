@@ -11,32 +11,62 @@
 //  and a collection view to show the steps. The class integrates with the
 //  `ExperienceViewModel` to handle data binding and user interactions.
 //
+//  The view hierarchy is built in code, in `CarouselExperienceViewController+Layout`. It used to
+//  come from a XIB, which cost a `Userpilot.resourceBundle` lookup on a nib name no compiler checks,
+//  kept its own copies of values the SDK already has constants for, and carried a flow layout that
+//  `setupLocale()` replaced on every bind. Every other experience controller here is already
+//  programmatic.
+//
 
 import Foundation
 import UIKit
 
 internal class CarouselExperienceViewController: UIViewController {
 
-    // MARK: - IBOutlets
+    // MARK: - Views
+
     /// Container view for the dismiss button.
-    @IBOutlet internal weak var buttonDismissContainerView: UIView!
+    internal let buttonDismissContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
 
     /// Close button to dismiss the carousel experience.
-    @IBOutlet internal weak var buttonDismiss: UPDismissButton!
+    internal let buttonDismiss: UPDismissButton = {
+        let button = UPDismissButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
 
     /// View displaying the step progress indicator.
-    @IBOutlet internal weak var viewStepsProgress: UPStepsProgressView!
+    internal let viewStepsProgress: UPStepsProgressView = {
+        let view = UPStepsProgressView()
+        view.backgroundColor = .clear
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
 
     /// Collection view displaying the carousel steps.
-    @IBOutlet internal weak var collectionView: UICollectionView! {
-        didSet {
-            collectionView.register(StepCollectionViewCell.self,
-                                    forCellWithReuseIdentifier: StepCollectionViewCell.identifier)
-            collectionView.bounces = false
-            collectionView.alwaysBounceHorizontal = false
-            collectionView.alwaysBounceVertical = false
-        }
-    }
+    internal let collectionView: UICollectionView = {
+        let view = UICollectionView(
+            frame: .zero,
+            collectionViewLayout: CarouselExperienceViewController.makeStepsLayout()
+        )
+        view.register(StepCollectionViewCell.self,
+                      forCellWithReuseIdentifier: StepCollectionViewCell.identifier)
+        view.backgroundColor = .clear
+        view.isPagingEnabled = true
+        view.showsHorizontalScrollIndicator = false
+        view.showsVerticalScrollIndicator = false
+        view.clipsToBounds = true
+        view.bounces = false
+        view.alwaysBounceHorizontal = false
+        view.alwaysBounceVertical = false
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
 
     // MARK: - Properties
 
@@ -49,7 +79,7 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Initializes the view controller with the given view model.
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
-        super.init(nibName: "CarouselExperienceViewController", bundle: Userpilot.resourceBundle)
+        super.init(nibName: nil, bundle: nil)
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
@@ -63,6 +93,7 @@ internal class CarouselExperienceViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
+        buttonDismiss.glassResolver = experienceViewModel.glassResolver
         bindViewModel()
 
         if experienceViewModel.isRTL {
@@ -118,7 +149,7 @@ internal class CarouselExperienceViewController: UIViewController {
 
     /// Action handler for the close button. Dismisses the experience view.
     /// - Parameter sender: The button triggering the close action.
-    @IBAction func onCloseButtonClicked(_ sender: UIButton) {
+    @objc func onCloseButtonClicked(_ sender: UIButton) {
         closeExperience()
     }
 }

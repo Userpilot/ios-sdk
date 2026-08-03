@@ -15,13 +15,10 @@ import UIKit
 
 /// Extension providing corner radius utilities for UIView
 internal extension UIView {
-    /// Sets corner radius only on top corners of the view
-    /// - Parameter radius: The corner radius to apply
-    func setTopCornerRadius(_ radius: CGFloat) {
-        self.clipsToBounds = true
-        self.layer.cornerRadius = radius
-        self.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-    }
+    // Note: corner rounding lives in `applyCorners(_:edges:clip:)`
+    // (`Experiences/Theme/LiquidGlass/UIView+UPCornerConfiguration.swift`), which routes
+    // through `UICornerConfiguration` on iOS 26+ and `layer.cornerRadius` below.
+    // The former `setTopCornerRadius(_:)` is now `applyCorners(.fixed(r), edges: .top)`.
 
     // MARK: First Responder
 

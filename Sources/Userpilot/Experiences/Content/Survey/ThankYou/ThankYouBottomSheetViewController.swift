@@ -31,11 +31,19 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
         return thankYouView
     }()
 
+    /// Breathing room between the thank-you message and the action button.
+    ///
+    /// This used to `return thankYouView`, so `spaceView` *was* `thankYouView` — and a stack view given
+    /// the same view twice keeps one entry, which meant the spacer never existed and the 40 pt constraint
+    /// was activated on a view that was thrown away. The gap below the message was the stack's spacing
+    /// alone.
     private lazy var spaceView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        return thankYouView
+        view.backgroundColor = .clear
+        view.heightAnchor.constraint(
+            equalToConstant: ThemeHandler.DefaultValues.distanceBetweenSections).isActive = true
+        return view
     }()
 
     /// The action button at the bottom of the view.
@@ -60,6 +68,10 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
     // MARK: - Properties
     internal let surveyContent: SurveyContent
     internal let surveyTheme: SurveyTheme
+
+    // `glassResolver` is inherited from `BottomSheetViewController`. This controller is built
+    // directly by `ExperiencesPublisher` rather than from a view model, so the publisher
+    // injects the resolver after construction and before presentation.
     var actionButtonClicked: (String?) -> Void = { _ in }
     var onDismissCompleted: () -> Void = {}
 
@@ -103,6 +115,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
             self?.onDismissCompleted()
         }
     }
+
 }
 
 // MARK: - ViewModel Binding
@@ -131,6 +144,7 @@ extension ThankYouBottomSheetViewController {
 
     func setupCloseButton() {
         let buttonDismiss = UPDismissButton()
+        buttonDismiss.glassResolver = glassResolver
         buttonDismiss.setupView(theme: surveyTheme)
         buttonDismissContainerView.addSubview(buttonDismiss)
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false

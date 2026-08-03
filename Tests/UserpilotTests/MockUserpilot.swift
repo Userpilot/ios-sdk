@@ -51,6 +51,11 @@ class MockUserpilot: Userpilot {
         // above, so this is safe for tests that never touch autocapture.
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
+        // The real resolver is used rather than a stub: it is pure logic over `Config` and
+        // the environment, so it needs no test double. The view models resolve it eagerly
+        // in their initializers, so it must be registered here or they trap.
+        container.registerLazy(
+            GlassCapabilityResolving.self, initializer: GlassCapabilityResolver.init)
     }
 
     var onIdentify: ((String, Payload, Payload) -> Void)?

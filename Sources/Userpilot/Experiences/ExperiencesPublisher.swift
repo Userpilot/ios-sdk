@@ -821,6 +821,8 @@ extension ExperiencesPublisher {
             delayUtils.delayAction { [weak self] in
                 let thankYouBottomSheetViewController = ThankYouBottomSheetViewController(
                     surveyContent: surveyContent, surveyTheme: surveyTheme)
+                thankYouBottomSheetViewController.glassResolver =
+                    self?.container?.resolve(GlassCapabilityResolving.self)
                 thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
                     let eventExperienceSeen = ExperienceSurveyCompletedEvent(
                         surveyId: surveyContent.id,

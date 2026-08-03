@@ -23,6 +23,7 @@ internal class SurveyDialogViewController: DialogViewController {
     internal lazy var surveyContainerView: SurveyContainerView = {
         let surveyContainerView = SurveyContainerView()
         surveyContainerView.translatesAutoresizingMaskIntoConstraints = false
+        surveyContainerView.glassResolver = surveyViewModel.glassResolver
         return surveyContainerView
     }()
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
@@ -39,6 +40,8 @@ internal class SurveyDialogViewController: DialogViewController {
     init(surveyViewModel: SurveyViewModel) {
         self.surveyViewModel = surveyViewModel
         super.init(nibName: nil, bundle: nil)
+        glassResolver = surveyViewModel.glassResolver
+        dialogAnimation = surveyViewModel.dialogAnimation
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
@@ -50,7 +53,7 @@ internal class SurveyDialogViewController: DialogViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bindViewModel()
-        setContent(content: surveyContainerView, withMargin: CGFloat(-40))
+        setContent(content: surveyContainerView)
         appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
     }
 

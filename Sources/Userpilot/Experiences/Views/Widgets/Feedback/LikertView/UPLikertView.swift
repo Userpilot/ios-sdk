@@ -28,6 +28,11 @@ internal class UPLikertView: UIView {
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
+        // The height is pinned to exactly the rows it holds — 40 pt for one, 90 for two — and a
+        // scroll view clips to its bounds, which trimmed the tap animation's scale flat at the top
+        // and bottom. Safe to leave unclipped: every branch of `setupItemSize` sizes this view to fit
+        // its content, so it never scrolls and has nothing to spill.
+        collectionView.clipsToBounds = false
         return collectionView
     }()
 

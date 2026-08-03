@@ -10,18 +10,62 @@
 //  It contains UI components such as a dismiss button, action button, and questions.
 //  The class integrates with the `SurveyViewModel` to handle data binding and user interactions.
 //
+//  The view hierarchy is built in code, in `SurveyListViewController+Layout`. It used to come from
+//  a XIB, at the cost of a `Userpilot.resourceBundle` lookup on a nib name no compiler checks, its
+//  own copies of sizes the SDK already names, and a scroll content width that was wrong. Authoring
+//  it in code is also what let the floating action button ship: that layout has two shapes
+//  depending on whether Liquid Glass is in play, which a XIB cannot express.
+//
 
 import UIKit
 
 internal class SurveyListViewController: UIViewController {
 
-    // MARK: - IBOutlets
+    // MARK: - Views
 
-    /// UPDismissButton & UPButtonView & containerView
-    @IBOutlet internal weak var scrollView: UIScrollView!
-    @IBOutlet internal weak var buttonDismiss: UPDismissButton!
-    @IBOutlet internal weak var actionButton: UPButtonView!
-    @IBOutlet internal weak var containerView: UIStackView!
+    /// Row the dismiss button sits in. It also sets where the scrolling content starts.
+    internal let buttonDismissContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// Close button to dismiss the survey.
+    internal let buttonDismiss: UPDismissButton = {
+        let button = UPDismissButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    /// The survey's submit button.
+    internal let actionButton = UPButtonView()
+
+    /// Scrolls the questions when they outgrow the screen.
+    ///
+    /// `contentInsetAdjustmentBehavior` is pinned to `.always` rather than left at `.automatic`,
+    /// whose adjustment depends on whether the axis is currently scrollable. When the action button
+    /// floats, this scroll view reaches the display's bottom edge, and the home indicator's inset
+    /// has to be added to the button's clearance for the content to clear both.
+    internal let scrollView: UIScrollView = {
+        let view = UIScrollView()
+        view.showsHorizontalScrollIndicator = false
+        view.showsVerticalScrollIndicator = false
+        view.clipsToBounds = true
+        view.contentInsetAdjustmentBehavior = .always
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// Stacks the survey's questions.
+    internal let containerView: UIStackView = {
+        let view = UIStackView()
+        view.axis = .vertical
+        view.spacing = ThemeHandler.DefaultValues.surveyListQuestionSpacing
+        view.backgroundColor = .clear
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
 
     // MARK: - Properties
 
@@ -29,12 +73,16 @@ internal class SurveyListViewController: UIViewController {
     internal let surveyViewModel: SurveyViewModel
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
+    /// Glass background behind the survey, when the surface renders as glass. Held so it can be
+    /// replaced if the theme is re-applied.
+    internal var glassBackground: UPGlassEffectView?
+
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     init(surveyViewModel: SurveyViewModel) {
         self.surveyViewModel = surveyViewModel
-        super.init(nibName: "SurveyListViewController", bundle: Userpilot.resourceBundle)
+        super.init(nibName: nil, bundle: nil)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -102,7 +150,7 @@ internal class SurveyListViewController: UIViewController {
 
     /// Action handler for the close button. Dismisses the experience view.
     /// - Parameter sender: The button triggering the close action.
-    @IBAction func onCloseButtonClicked(_ sender: UIButton) {
+    @objc func onCloseButtonClicked(_ sender: UIButton) {
         closeExperience()
     }
 }

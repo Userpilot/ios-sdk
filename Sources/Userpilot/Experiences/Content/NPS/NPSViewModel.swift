@@ -32,6 +32,9 @@ internal class NPSViewModel {
     /// closure to observe the binding state of the content
     var bindData: ((Bool) -> Void)?
 
+    /// Decides whether Liquid Glass may be used by the views this view model drives.
+    let glassResolver: GlassCapabilityResolving
+
     // MARK: - Initializers
 
     /// Initializes the view model with a dependency injection container.
@@ -41,6 +44,7 @@ internal class NPSViewModel {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.imageLoader = container.resolve(ImageLoading.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
+        self.glassResolver = container.resolve(GlassCapabilityResolving.self)
     }
 
     // MARK: - View Lifecycle

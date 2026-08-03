@@ -21,15 +21,15 @@ internal class DatePickerDialog: UIView {
     // MARK: - Constants
     private let kDefaultButtonHeight: CGFloat = 50
     private let kDefaultButtonSpacerHeight: CGFloat = 1
-    private let kCornerRadius: CGFloat = 7
+    let kCornerRadius: CGFloat = 7
     private let kDoneButtonTag: Int = 1
 
     // MARK: - Views
     private var dialogView: UIView!
     private var titleLabel: UILabel!
     open var datePicker: UIDatePicker!
-    private var cancelButton: UIButton!
-    private var doneButton: UIButton!
+    private var cancelButton: UPAlertActionButton!
+    private var doneButton: UPAlertActionButton!
 
     // MARK: - Variables
     private var defaultDate: Date?
@@ -39,8 +39,27 @@ internal class DatePickerDialog: UIView {
     var locale: Locale?
 
     private var textColor: UIColor!
-    private var buttonColor: UIColor!
+    var buttonColor: UIColor!
     private var font: UIFont!
+
+    /// Decides whether this dialog's container renders as Liquid Glass.
+    ///
+    /// Assigned before `show(...)` because the container is styled during presentation.
+    internal var glassResolver: GlassCapabilityResolving? {
+        didSet {
+            rebuildForResolverChange(from: oldValue)
+        }
+    }
+
+    /// The survey card's background colour, which this dialog floats above.
+    ///
+    /// Taken from the card rather than the system, for the same reason the country picker menu does
+    /// it: a survey themed dark has a dark card whatever the device's appearance is, and a light
+    /// dialog over it reads as a hole. `nil` keeps the pre-existing grey treatment.
+    ///
+    /// An init parameter rather than a property because `setupView()` runs from `init`, so a value
+    /// assigned afterwards would arrive too late for the container it builds.
+    var themeBackground: UIColor?
 
     // MARK: - Dialog initialization
     @objc public init(
@@ -48,7 +67,8 @@ internal class DatePickerDialog: UIView {
         buttonColor: UIColor = .black,
         font: UIFont = .boldSystemFont(ofSize: 15),
         locale: Locale = Locale.current,
-        showCancelButton: Bool = true) {
+        showCancelButton: Bool = true,
+        themeBackground: UIColor? = nil) {
         let size = UIScreen.main.bounds.size
         super.init(frame: CGRect(x: 0, y: 0, width: size.width, height: size.height))
         self.textColor = textColor
@@ -56,6 +76,7 @@ internal class DatePickerDialog: UIView {
         self.font = font
         self.showCancelButton = showCancelButton
         self.locale = locale
+        self.themeBackground = themeBackground
         setupView()
     }
 
@@ -75,7 +96,7 @@ internal class DatePickerDialog: UIView {
         dialogView?.layer.opacity = 0.5
         dialogView?.layer.transform = CATransform3DMakeScale(1.3, 1.3, 1)
 
-        backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0)
+        backgroundColor = .clear
 
         if let dialogView = dialogView {
             addSubview(dialogView)
@@ -119,7 +140,7 @@ internal class DatePickerDialog: UIView {
             delay: 0,
             options: .curveEaseInOut,
             animations: {
-                self.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.4)
+                self.backgroundColor = self.backdropColor
                 self.dialogView?.layer.opacity = 1
                 self.dialogView?.layer.transform = CATransform3DMakeScale(1, 1, 1)
             }
@@ -141,7 +162,7 @@ internal class DatePickerDialog: UIView {
             delay: 0,
             options: [],
             animations: {
-                self.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0)
+                self.backgroundColor = .clear
                 let transform = CATransform3DConcat(currentTransform, CATransform3DMakeScale(0.6, 0.6, 1))
                 self.dialogView.layer.transform = transform
                 self.dialogView.layer.opacity = 0
@@ -173,30 +194,7 @@ internal class DatePickerDialog: UIView {
             height: dialogSize.height
         ))
 
-        // First, we style the dialog to match the iOS8 UIAlertView >>>
-        let gradient: CAGradientLayer = CAGradientLayer(layer: self.layer)
-        gradient.frame = container.bounds
-        gradient.colors = [
-            UIColor(red: 218/255, green: 218/255, blue: 218/255, alpha: 1).cgColor,
-            UIColor(red: 233/255, green: 233/255, blue: 233/255, alpha: 1).cgColor,
-            UIColor(red: 218/255, green: 218/255, blue: 218/255, alpha: 1).cgColor
-        ]
-
-        let cornerRadius = kCornerRadius
-        gradient.cornerRadius = cornerRadius
-        container.layer.insertSublayer(gradient, at: 0)
-
-        container.layer.cornerRadius = cornerRadius
-        container.layer.borderColor = UIColor(red: 198/255, green: 198/255, blue: 198/255, alpha: 1).cgColor
-        container.layer.borderWidth = 1
-        container.layer.shadowRadius = cornerRadius + 5
-        container.layer.shadowOpacity = 0.1
-        container.layer.shadowOffset = CGSize(width: 0 - (cornerRadius + 5) / 2, height: 0 - (cornerRadius + 5) / 2)
-        container.layer.shadowColor = UIColor.black.cgColor
-        container.layer.shadowPath = UIBezierPath(
-            roundedRect: container.bounds,
-            cornerRadius: container.layer.cornerRadius
-        ).cgPath
+        styleContainerBackground(container)
 
         // There is a line above the button
         let yPosition = container.bounds.size.height - kDefaultButtonHeight - kDefaultButtonSpacerHeight
@@ -207,7 +205,10 @@ internal class DatePickerDialog: UIView {
             height: kDefaultButtonSpacerHeight
         ))
 
-        lineView.backgroundColor = UIColor(red: 198/255, green: 198/255, blue: 198/255, alpha: 1)
+        // The old opaque grey separator was tuned for the removed grey gradient. On glass it
+        // reads as a hard bar across the material, so use the system separator, which is
+        // translucent and adapts to light/dark.
+        lineView.backgroundColor = separatorColor
         container.addSubview(lineView)
         // Title
         self.titleLabel = UILabel(frame: CGRect(x: 25, y: 10, width: 280, height: 30))
@@ -264,22 +265,37 @@ internal class DatePickerDialog: UIView {
         let interfaceLayoutDirection = UIApplication.shared.userInterfaceLayoutDirection
         let isLeftToRightDirection = interfaceLayoutDirection == .leftToRight
 
+        // Both actions share one colour and differ only in weight, which is how a system alert
+        // separates its preferred action from the rest. The rows themselves are square and
+        // full-bleed — the hairlines are what divide them, so a corner radius here would detach
+        // each button from the dividers it is supposed to meet.
         if showCancelButton {
-            self.cancelButton = UIButton(type: .custom) as UIButton
+            self.cancelButton = makeButton()
             self.cancelButton.frame = isLeftToRightDirection ? leftButtonFrame : rightButtonFrame
-            self.cancelButton.setTitleColor(UIColor.gray, for: .normal)
-            self.cancelButton.titleLabel?.font = self.font.withSize(14)
-            self.cancelButton.layer.cornerRadius = kCornerRadius
+            self.cancelButton.setTitleColor(actionTitleColor, for: .normal)
+            self.cancelButton.titleLabel?.font = .systemFont(ofSize: Self.actionFontSize)
             self.cancelButton.addTarget(self, action: .buttonTapped, for: .touchUpInside)
             container.addSubview(self.cancelButton)
+
+            // The divider between the two actions. A system alert with exactly two actions puts
+            // them side by side with a hairline between; without it the pair reads as one wide row.
+            let divider = UIView(frame: CGRect(
+                x: buttonWidth,
+                y: container.bounds.size.height - kDefaultButtonHeight,
+                width: kDefaultButtonSpacerHeight,
+                height: kDefaultButtonHeight
+            ))
+            divider.backgroundColor = separatorColor
+            container.addSubview(divider)
         }
 
-        self.doneButton = UIButton(type: .custom) as UIButton
+        self.doneButton = makeButton()
         self.doneButton.frame = isLeftToRightDirection ? rightButtonFrame : leftButtonFrame
         self.doneButton.tag = kDoneButtonTag
-        self.doneButton.setTitleColor(buttonColor, for: .normal)
-        self.doneButton.titleLabel?.font = self.font.withSize(14)
-        self.doneButton.layer.cornerRadius = kCornerRadius
+        self.doneButton.setTitleColor(actionTitleColor, for: .normal)
+        // Semibold marks it as the preferred action, the one difference the system draws between
+        // two alert actions.
+        self.doneButton.titleLabel?.font = .systemFont(ofSize: Self.actionFontSize, weight: .semibold)
         self.doneButton.addTarget(self, action: .buttonTapped, for: .touchUpInside)
         container.addSubview(self.doneButton)
     }

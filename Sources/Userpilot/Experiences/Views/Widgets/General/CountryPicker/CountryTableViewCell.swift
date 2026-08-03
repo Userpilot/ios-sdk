@@ -82,9 +82,17 @@ internal class CountryTableViewCell: UITableViewCell {
 
     /// Binds the cell with the country data to display the flag, country name, and dial code.
     /// - Parameter country: The `CountryEntity` containing the country's flag, name, and dial code.
-    func bindCell(with country: CountryEntity) {
+    /// - Parameters:
+    ///   - country: The row's country.
+    ///   - prefersLightContent: Whether the menu behind this cell is dark, in which case the text
+    ///     has to invert. The defaults are the colours this cell always used, so a caller that does
+    ///     not care about theming gets exactly the previous appearance.
+    func bindCell(with country: CountryEntity, prefersLightContent: Bool = false) {
         flagLabel.text = country.flag
         countryNameLabel.text = country.name
         countryCodeLabel.text = country.dialCode
+
+        countryCodeLabel.textColor = prefersLightContent ? .white : .black
+        countryNameLabel.textColor = prefersLightContent ? UIColor.white.withOpacity(0.7) : .gray43
     }
 }

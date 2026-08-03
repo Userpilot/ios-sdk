@@ -19,6 +19,17 @@ internal class UPDismissButton: UIButton {
 
     static let buttonSize = CGFloat(35)
 
+    /// Decides whether this button renders as Liquid Glass.
+    ///
+    /// The dismiss button is the SDK's strongest glass candidate: it floats above content,
+    /// is pure chrome, and carries no theme colour contract to break. Assigning a resolver
+    /// re-applies the configuration, so the owning view can set this at construction time
+    /// without caring whether `setupView(theme:)` has run yet — `tintColor` is applied
+    /// separately and survives a configuration change.
+    var glassResolver: GlassCapabilityResolving? {
+        didSet { applyConfiguration() }
+    }
+
     // MARK: - Initializers
 
     override init(frame: CGRect) {
@@ -41,7 +52,9 @@ internal class UPDismissButton: UIButton {
     /// Applies the UIButton configuration available for iOS 15 and later.
     private func applyConfiguration() {
         if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.plain()
+            // Glass when permitted, otherwise the plain configuration this button has
+            // always used — so behaviour below iOS 26 is unchanged.
+            var config = glassConfiguration() ?? .plain()
             config.image = UIImage.userpilotImage(named: "userpilot_icon_close")
             config.imagePlacement = .leading
             config.imagePadding = 0
@@ -52,6 +65,21 @@ internal class UPDismissButton: UIButton {
             self.contentHorizontalAlignment = .left
         }
         setTitle("", for: .normal)
+    }
+
+    /// Builds the glass configuration when the resolver permits it, else `nil`.
+    ///
+    /// Uses `.glass` rather than a `clear` variant, and `.capsule` so the 35 pt button reads
+    /// as a circle — matching how the system renders floating close affordances.
+    /// `contentInsets` are zeroed because the surrounding layout pins this button to a fixed
+    /// 35x35, and the glass configuration's default insets would otherwise squeeze the glyph.
+    @available(iOS 15.0, *)
+    private func glassConfiguration() -> UIButton.Configuration? {
+        guard let glassResolver, glassResolver.allowsGlass(for: .chrome) else { return nil }
+        guard var config = UIButton.Configuration.upGlass(.glass) else { return nil }
+        config.cornerStyle = .capsule
+        config.contentInsets = .zero
+        return config
     }
 
     // MARK: - Configuration Methods

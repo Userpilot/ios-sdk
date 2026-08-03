@@ -33,15 +33,43 @@ internal class CountryPickerPopupMenu: UIView {
     /// Closure called when the popup menu is dismissed.
     var onDismissMenu: (() -> Void)?
 
+    /// Whether this menu resolved to a Liquid Glass background. Read by the table view data
+    /// source so cells stay transparent and let the material through.
+    private var isRenderingGlass = false
+
+    /// The survey card's background colour, which this menu floats above.
+    ///
+    /// The menu takes its cue from the card rather than from the system: a survey themed dark has a
+    /// dark card whatever the device's appearance is, and a white popup over it reads as a hole.
+    /// `nil` keeps the pre-existing white treatment, for callers with no theme to offer.
+    private var themeBackground: UIColor?
+
+    /// Whether the menu is dark enough to need light text.
+    private var prefersLightContent: Bool {
+        guard let themeBackground else { return false }
+        return !themeBackground.isLightColor()
+    }
+
     // MARK: - Initializers
 
     /// Initializes the popup menu with a frame and parent view.
     /// - Parameters:
     ///   - frame: The frame for the popup menu.
     ///   - view: The parent view in which the popup menu will be displayed.
-    init(frame: CGRect, view: UIView) {
+    ///   - glassResolver: Decides whether the menu renders as Liquid Glass. Passed at
+    ///     construction because styling happens in `setupView()`, which runs here.
+    ///   - themeBackground: The survey card's background colour, so the menu can sit on a dark
+    ///     theme without punching a white hole in it. `nil` keeps the previous white treatment.
+    init(
+        frame: CGRect,
+        view: UIView,
+        glassResolver: GlassCapabilityResolving? = nil,
+        themeBackground: UIColor? = nil
+    ) {
         super.init(frame: frame)
         self.parentView = view
+        self.isRenderingGlass = glassResolver?.allowsGlass(for: .chrome) ?? false
+        self.themeBackground = themeBackground
         setupView()
     }
 
@@ -77,14 +105,72 @@ internal class CountryPickerPopupMenu: UIView {
         tableView.register(CountryTableViewCell.self, forCellReuseIdentifier: CountryTableViewCell.identifier)
         addSubview(tableView)
 
-        // Style the popup menu
-        backgroundColor = .white
+        applyBackgroundStyle()
+    }
+
+    /// Styles the popup's background.
+    ///
+    /// This menu is a popover, which Apple's guidance says should adopt Liquid Glass. When it
+    /// does, the hand-rolled shadow is deliberately **not** applied: glass renders its own
+    /// depth and edge treatment, and layering a manual shadow underneath it reads as a
+    /// double border. The corner radius also grows to match iOS 26 popover metrics.
+    ///
+    /// This file lays out with frames rather than Auto Layout, so the glass view is sized the
+    /// same way instead of being pinned with constraints.
+    private func applyBackgroundStyle() {
+        guard isRenderingGlass else {
+            applyLegacyBackgroundStyle()
+            return
+        }
+
+        // The material renders from the trait environment, not from the card's colour, so a menu
+        // over a dark survey would draw light glass unless the appearance is pinned to match — the
+        // same reasoning, and the same helper, that a glass card uses for the chrome inside it.
+        if let themeBackground {
+            overrideUserInterfaceStyle = UPGlassMeasuredMetrics.interfaceStyle(matching: themeBackground)
+        }
+
+        let glassBackground = UPGlassEffectView(
+            style: .regular,
+            allowsGlass: true,
+            fallbackBackgroundColor: themeBackground ?? .white
+        )
+        glassBackground.translatesAutoresizingMaskIntoConstraints = true
+        glassBackground.frame = bounds
+        glassBackground.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        insertSubview(glassBackground, at: 0)
+
+        backgroundColor = .clear
+        applyCorners(.fixed(CountryPickerPopupMenu.glassCornerRadius))
+        glassBackground.applyGlassCorners(.fixed(CountryPickerPopupMenu.glassCornerRadius))
+
+        // The table must be transparent or it paints over the material.
+        tableView.backgroundColor = .clear
+        tableView.backgroundView = nil
+    }
+
+    /// The pre-iOS 26 treatment: an opaque card with a shadow.
+    ///
+    /// Only a **dark** survey changes anything here. White over a dark card reads as a hole punched
+    /// in it, and the shadow cannot separate the two surfaces because a black shadow is invisible
+    /// against dark — so the fill becomes the card's own colour lifted one step, see
+    /// ``UIColor/elevatedAsPopup(by:)``.
+    ///
+    /// A light survey keeps the white popup the SDK has always shipped. There is nothing wrong with
+    /// white over a light card — the shadow does separate them — and leaving it alone means the
+    /// majority of themes render exactly as they did before.
+    private func applyLegacyBackgroundStyle() {
+        let isDarkTheme = themeBackground.map { !$0.isLightColor() } ?? false
+        backgroundColor = isDarkTheme ? themeBackground?.elevatedAsPopup() : .white
         layer.cornerRadius = 10
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowOpacity = 0.2
         layer.shadowOffset = CGSize(width: 0, height: 2)
         layer.shadowRadius = 4
     }
+
+    /// iOS 26 popovers use a noticeably larger radius than the 10 pt this menu used before.
+    private static let glassCornerRadius: CGFloat = 22
 
     // MARK: - Actions
 
@@ -119,7 +205,11 @@ extension CountryPickerPopupMenu: UITableViewDelegate, UITableViewDataSource {
         guard let cell = tableView.dequeueReusableCell(
             withIdentifier: CountryTableViewCell.identifier, for: indexPath) as? CountryTableViewCell
         else { return UITableViewCell() }
-        cell.bindCell(with: countriesList[indexPath.row])
+        cell.bindCell(with: countriesList[indexPath.row], prefersLightContent: prefersLightContent)
+        // Transparent either way: over glass an opaque cell paints over the material, and over the
+        // legacy fill the menu's own background is what should show.
+        cell.backgroundColor = .clear
+        cell.contentView.backgroundColor = .clear
         return cell
     }
 

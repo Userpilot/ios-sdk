@@ -24,7 +24,6 @@ Pod::Spec.new do |spec|
   spec.resource_bundles = {
       'Userpilot' => [
           'Sources/Userpilot/*.xcassets',
-          'Sources/Userpilot/**/*.xib',
           'Sources/Userpilot/Resources/countries.json'
       ]
   }

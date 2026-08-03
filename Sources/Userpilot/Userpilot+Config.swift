@@ -15,7 +15,39 @@ import os.log
 
 // swiftlint:disable file_length
 
+/// Default values for tunable Liquid Glass configuration, kept together so they are
+/// documented in one place rather than scattered as literals.
+///
+/// Declared at file scope rather than nested inside `Config`, which is itself nested in
+/// `Userpilot` — a third level would breach the `nesting` lint rule.
+private enum UPLiquidGlassConfigDefaults {
+
+    /// Tint alpha in light mode. Provisional; validated against real customer themes.
+    static let tintAlphaLight: CGFloat = 0.28
+
+    /// Tint alpha in dark mode. Higher than light: dark surfaces need more tint to hold
+    /// contrast against the content behind them.
+    static let tintAlphaDark: CGFloat = 0.40
+}
+
 extension Userpilot {
+
+    /// How a **centre dialog** enters and leaves the screen.
+    ///
+    /// Applies to centred dialogs only. Bottom sheets always slide, and full-screen experiences
+    /// use the system's own presentation.
+    @objc(UserpilotDialogAnimation)
+    public enum DialogAnimation: Int {
+
+        /// Cross-fade in place, with no movement at all. **The default.**
+        ///
+        /// Works on a Liquid Glass surface as well as a solid one — fading the dialog's container
+        /// takes the material with it.
+        case fade = 0
+
+        /// Slide in from the bottom edge and back out again, at full opacity throughout.
+        case slide = 1
+    }
 
     // The app framework used by the client application.
     // Used by the SDK for autocapture and lifecycle behavior.
@@ -156,6 +188,105 @@ extension Userpilot {
         /// forwarded event is delivered unchanged through this instance's publisher
         /// (associated with the host's user/session).
         var allowReceiveEventsFromExternalSource: Bool = false
+
+        // MARK: - Liquid Glass (iOS 26+)
+
+        /// Global switch for Liquid Glass. Defaults to `true`.
+        ///
+        /// When `false`, the SDK renders its pre-iOS 26 appearance everywhere — including
+        /// chrome — regardless of every other Liquid Glass option. Provided as an escape
+        /// hatch for hosts with a strict design system, and as a kill switch for us.
+        ///
+        /// Has no effect below iOS 26, or when the SDK was built with an Xcode that
+        /// predates the iOS 26 SDK, or when the host app sets
+        /// `UIDesignRequiresCompatibility`.
+        var liquidGlassEnabled: Bool = true
+
+        /// Whether **bottom sheet and centre dialog** backgrounds render as Liquid Glass
+        /// instead of an opaque themed fill.
+        ///
+        /// Covers the containers that float over a backdrop: surveys, NPS, thank-you and
+        /// slide-outs, in either presentation. Full-screen experiences are governed by
+        /// ``liquidGlassFullScreenEnabled`` instead.
+        ///
+        /// `nil` (never set) means "defer to the theme's `general.material`", which itself
+        /// defaults to solid. A non-`nil` value is an explicit host decision and takes
+        /// precedence over the theme. Stored as an optional precisely so that "not set" is
+        /// distinguishable from "explicitly set to `false`".
+        ///
+        /// When a surface does render as glass, the theme's `background_color` is applied
+        /// as the glass tint rather than being discarded — see
+        /// ``liquidGlassTintAlpha(light:dark:)``.
+        var liquidGlassSheetsAndDialogsEnabled: Bool?
+
+        /// Whether **full-screen** experience backgrounds render as Liquid Glass. Defaults to off.
+        ///
+        /// Covers carousel step cards and the full-screen survey list. Separate from
+        /// ``liquidGlassSheetsAndDialogsEnabled`` on purpose: a full-screen experience can hold
+        /// dense, multi-section content and has no backdrop separating it from the host app,
+        /// which is the most likely place for glass to hurt legibility. Enabling glass for
+        /// sheets and dialogs does **not** enable it here — this has to be asked for by name.
+        ///
+        /// Non-optional, unlike ``liquidGlassSheetsAndDialogsEnabled``: there is no third state to
+        /// represent. The theme cannot enable full-screen glass, so "not set" and "set to `false`"
+        /// mean exactly the same thing and the type should say so.
+        var liquidGlassFullScreenEnabled: Bool = false
+
+        // Whether the SDK adapts an already-presented experience to live accessibility and trait
+        // changes. Defaults to true.
+        //
+        // Governs only what the SDK draws itself: its own animations (dialog transitions, the
+        // Likert pulse), its tint, its backdrop, and re-resolving colors when the interface style
+        // changes. UIKit's own accessibility handling of a native `UIGlassEffect` is not affected
+        // by this and cannot be switched off by the SDK.
+        // swiftlint:disable:next identifier_name
+        var liquidGlassAccessibilityAdaptationEnabled: Bool = true
+
+        /// How centre dialogs enter and leave. Defaults to ``Userpilot/DialogAnimation/fade``.
+        ///
+        /// Centre dialogs only — bottom sheets always slide.
+        var dialogAnimationType: DialogAnimation = .fade
+
+        /// Whether the dimming backdrop has the card's shape cut out of it when the card
+        /// renders as Liquid Glass. Defaults to `true`.
+        ///
+        /// Without this, glass refracts the dimming scrim rather than the host app, so the
+        /// card renders muddy grey instead of glass — the two effects cancel out. Masking the
+        /// card's own rect out of the backdrop resolves it by removing a *region* rather than
+        /// changing a value, so whichever backdrop colour is in effect stays exactly as it is
+        /// everywhere the backdrop is still visible.
+        ///
+        /// Set to `false` only to compare against the unmasked appearance; there is no
+        /// production reason to prefer it.
+        var liquidGlassMaskedBackdropEnabled: Bool = true
+
+        /// Whether a glass card dims its background with **Apple's** value instead of the theme's
+        /// backdrop colour. Defaults to `true`, and only consulted while glass is actually in use.
+        ///
+        /// Measured from a real presented sheet and alert: black at `0.20` in light appearance and
+        /// `0.478` in dark. A theme that switches the backdrop *off* still gets no backdrop — this
+        /// replaces the colour, it never forces dimming on.
+        var liquidGlassDefaultBackdropEnabled: Bool = true
+
+        /// Whether a glass card uses **Apple's** sheet material instead of tinting itself with the
+        /// theme's `background_color`. Defaults to `true`, and only consulted while glass is in use.
+        ///
+        /// Apple's sheet background is not a colour — measured, it is translucent (~69% in light,
+        /// ~77% in dark), which is the signature of a material. So this renders untinted
+        /// `UIGlassEffect`, and the glass effect is actually visible; a tint at any real strength
+        /// is what was hiding it.
+        ///
+        /// The theme colour is not ignored entirely: its *luminance* still selects the light or the
+        /// dark variant of the material, so a customer who configured a dark card still gets one.
+        var liquidGlassDefaultBackgroundEnabled: Bool = true
+
+        /// Alpha applied to a theme's `background_color` when it tints a glass surface in
+        /// light mode. Defaults to `0.28`.
+        var liquidGlassTintAlphaLight: CGFloat = UPLiquidGlassConfigDefaults.tintAlphaLight
+
+        /// Alpha applied to a theme's `background_color` when it tints a glass surface in
+        /// dark mode. Defaults to `0.40` — dark surfaces need more tint to hold contrast.
+        var liquidGlassTintAlphaDark: CGFloat = UPLiquidGlassConfigDefaults.tintAlphaDark
 
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
@@ -349,6 +480,194 @@ extension Userpilot {
         @objc
         public func preferUIKitOverSwiftUIForNavigationBar(_ prefer: Bool = true) -> Self {
             preferUIKitOverSwiftUIForNavigationBar = prefer
+            return self
+        }
+
+        // MARK: - Liquid Glass setters
+
+        /// Enables or disables Liquid Glass for this instance. Enabled by default.
+        ///
+        /// Disabling is absolute: the SDK renders its pre-iOS 26 appearance everywhere,
+        /// and every other Liquid Glass option is ignored.
+        ///
+        /// - Parameter enabled: `false` to opt out of Liquid Glass entirely.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlass(_ enabled: Bool = true) -> Self {
+            liquidGlassEnabled = enabled
+            return self
+        }
+
+        /// Renders **bottom sheets and centre dialogs** as Liquid Glass instead of an opaque
+        /// themed fill, on iOS 26 and later.
+        ///
+        /// These are the containers that float over a backdrop: surveys, NPS, thank-you and
+        /// slide-outs. Full-screen experiences are not affected — see
+        /// ``liquidGlassFullScreen(_:)``.
+        ///
+        /// Calling this is an explicit host decision and overrides the theme's
+        /// `general.material`. Leave it uncalled to let the theme decide (which defaults to
+        /// the current opaque appearance).
+        ///
+        /// The theme's `background_color` is not discarded when glass is used — it becomes
+        /// the glass tint. Adjust its strength with ``liquidGlassTintAlpha(light:dark:)``.
+        ///
+        /// - Parameter enabled: `true` to render sheets and dialogs as glass.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassSheetsAndDialogs(_ enabled: Bool = true) -> Self {
+            liquidGlassSheetsAndDialogsEnabled = enabled
+            return self
+        }
+
+        /// Renders **full-screen experiences** as Liquid Glass, on iOS 26 and later. Off by
+        /// default.
+        ///
+        /// Covers carousel step cards and the full-screen survey list. Kept separate from
+        /// ``liquidGlassSheetsAndDialogs(_:)`` because a full-screen experience can hold dense,
+        /// multi-section content and has no backdrop separating it from the host app, which is
+        /// where glass is most likely to hurt legibility. Enabling glass for sheets and dialogs
+        /// does not enable it here. Check it against your own content before shipping.
+        ///
+        /// - Parameter enabled: `true` to render full-screen experiences as glass.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassFullScreen(_ enabled: Bool = true) -> Self {
+            liquidGlassFullScreenEnabled = enabled
+            return self
+        }
+
+        /// Adapts an already-presented experience to live accessibility and trait changes, on iOS 26
+        /// and later. On by default.
+        ///
+        /// With this on, the SDK honours Reduce Motion for its own animations, and re-resolves its
+        /// own tint, backdrop and colours when the interface style, Reduce Transparency or Increase
+        /// Contrast changes while an experience is on screen.
+        ///
+        /// Turning it off freezes a presented experience with the appearance it was built with. It
+        /// does **not** disable UIKit's own accessibility handling of the native glass material —
+        /// no SDK can switch that off, and this API does not claim to.
+        ///
+        /// - Parameter enabled: `false` to stop the SDK adapting a presented experience.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassAccessibilityAdaptation(_ enabled: Bool = true) -> Self {
+            liquidGlassAccessibilityAdaptationEnabled = enabled
+            return self
+        }
+
+        /// Sets how centre dialogs enter and leave the screen.
+        ///
+        /// Affects **centred dialogs only**. Bottom sheets always slide, and full-screen
+        /// experiences use the system's presentation.
+        ///
+        /// Both transitions are safe on a Liquid Glass surface: fading the dialog's container
+        /// removes the material with it.
+        ///
+        /// - Parameter animation: The transition to use.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func dialogAnimation(_ animation: DialogAnimation) -> Self {
+            dialogAnimationType = animation
+            return self
+        }
+
+        /// Controls whether the dimming backdrop is cut away behind a glass card.
+        ///
+        /// With glass surfaces enabled there are three resulting appearances:
+        /// - `liquidGlassSheetsAndDialogs(false)` — opaque card over the full themed backdrop
+        ///   (the pre-iOS 26 appearance).
+        /// - `liquidGlassSheetsAndDialogs(true)` + `liquidGlassMaskedBackdrop(false)` — glass card
+        ///   over the full themed backdrop. The glass refracts the backdrop, so it reads as
+        ///   muddy grey. Provided for comparison only.
+        /// - `liquidGlassSheetsAndDialogs(true)` + `liquidGlassMaskedBackdrop(true)` — **default** —
+        ///   glass card with its own shape cut out of the backdrop, so the glass refracts the
+        ///   host app. The backdrop keeps the customer's exact colour and opacity everywhere
+        ///   it remains visible.
+        ///
+        /// - Parameter enabled: `false` to leave the backdrop uncut behind glass cards.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassMaskedBackdrop(_ enabled: Bool = true) -> Self {
+            liquidGlassMaskedBackdropEnabled = enabled
+            return self
+        }
+
+        /// Dims behind bottom sheets and centre dialogs with **Apple's** value rather than the
+        /// theme's `backdrop_color`. On by default; ignored unless the card renders as glass.
+        ///
+        /// Apple's dim was measured from a real presented sheet and alert — black at `0.20` in
+        /// light appearance, `0.478` in dark. UIKit dims noticeably harder in dark mode, which is
+        /// why the two are not the same number.
+        ///
+        /// A theme that turns the backdrop off still gets no backdrop: this replaces the colour,
+        /// it does not force dimming on. Pass `false` to keep the theme's colour instead.
+        ///
+        /// - Parameter enabled: `false` to keep the theme's configured backdrop colour.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassDefaultBackdrop(_ enabled: Bool = true) -> Self {
+            liquidGlassDefaultBackdropEnabled = enabled
+            return self
+        }
+
+        /// Fills bottom sheets and centre dialogs with **Apple's** sheet material rather than
+        /// tinting them with the theme's `background_color`. On by default; ignored unless the card
+        /// renders as glass.
+        ///
+        /// Apple's sheet background is not a colour. Measured over a known backdrop it is
+        /// translucent — roughly 69% in light appearance and 77% in dark — which is a material, not
+        /// a fill. So this renders untinted `UIGlassEffect`, and the glass is actually visible: a
+        /// brand tint at any real strength is what obscures it.
+        ///
+        /// The theme colour is still read, for one thing: its luminance selects the light or the
+        /// dark variant of the material, so a card configured dark stays dark.
+        ///
+        /// Pass `false` to tint the glass with the theme's colour instead — see
+        /// ``liquidGlassTintAlpha(light:dark:)`` for the strength.
+        ///
+        /// - Parameter enabled: `false` to tint the surface with the theme's colour.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassDefaultBackground(_ enabled: Bool = true) -> Self {
+            liquidGlassDefaultBackgroundEnabled = enabled
+            return self
+        }
+
+        /// Sets the alpha applied to a theme's `background_color` when it tints a glass
+        /// surface, for both interface styles.
+        ///
+        /// - Parameter alpha: Tint alpha, clamped to `0...1`.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassTintAlpha(_ alpha: CGFloat) -> Self {
+            liquidGlassTintAlpha(light: alpha, dark: alpha)
+        }
+
+        /// Sets the alpha applied to a theme's `background_color` when it tints a glass
+        /// surface, per interface style.
+        ///
+        /// Defaults are `0.28` light / `0.40` dark. A higher value keeps more of the brand
+        /// colour and less of the underlying content; `0` is untinted glass.
+        ///
+        /// - Parameters:
+        ///   - light: Tint alpha in light mode, clamped to `0...1`.
+        ///   - dark: Tint alpha in dark mode, clamped to `0...1`.
+        /// - Returns: The configuration object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func liquidGlassTintAlpha(light: CGFloat, dark: CGFloat) -> Self {
+            liquidGlassTintAlphaLight = min(max(light, 0), 1)
+            liquidGlassTintAlphaDark = min(max(dark, 0), 1)
             return self
         }
 

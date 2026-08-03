@@ -221,6 +221,7 @@ public class Userpilot: NSObject {
         container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
+        container.registerLazy(GlassCapabilityResolving.self, initializer: GlassCapabilityResolver.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)

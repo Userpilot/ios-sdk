@@ -70,8 +70,31 @@ extension UPLikertView: UICollectionViewDataSource, UICollectionViewDelegateFlow
         // Notify the view state delegate about the validity of the answer
         viewStateProtocol?.onViewStateChanged(isValid: isValidAnswer())
 
-        // Reload the collection view to reflect the updated selection
-        collectionView.reloadData()
+        applySelection(in: collectionView, tapped: indexPath)
+    }
+
+    /// Reflects the new selection and gives the tap something to answer it.
+    ///
+    /// Deliberately not `reloadData()`. That replaces every cell, including the one that was just
+    /// tapped — so the pulse would be animating a cell that no longer exists a frame later, and the
+    /// fill would snap rather than fade. Rebinding the visible cells keeps them alive, which is what
+    /// lets either animation run at all.
+    ///
+    /// Cells outside the visible rect need no work: they are rebuilt from `ratingItems` by
+    /// `cellForItemAt` when they scroll in, and that data was already updated above.
+    private func applySelection(in collectionView: UICollectionView, tapped indexPath: IndexPath) {
+        for cell in collectionView.visibleCells {
+            guard
+                let likertCell = cell as? LikertCollectionViewCell,
+                let path = collectionView.indexPath(for: cell),
+                let item = ratingItems[safe: path.item]
+            else { continue }
+
+            likertCell.rebindWithCrossFade(
+                ratingItem: item, surveyTheme: surveyTheme, npsTheme: npsTheme)
+        }
+
+        (collectionView.cellForItem(at: indexPath) as? LikertCollectionViewCell)?.pulse()
     }
 
     /// Returns the size of each item in the collection view.

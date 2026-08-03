@@ -86,6 +86,24 @@ internal class ThemeHandler: ThemeHandling {
         static let carouselContentTopMargin = CGFloat(65)
 
         static let slideOutCornerRadius = CGFloat(12)
+
+        /// Solid survey/NPS card radius when the theme configures none: the pre-iOS 26 value, so a
+        /// solid card looks the same on iOS 26 as below it. Glass never reads it.
+        static let solidSurveyCornerRadius = CGFloat(24)
+
+        /// The container's radius **before a theme is applied**, and nothing else — every
+        /// presentation path then replaces it with the theme's radius, the surface's solid default,
+        /// or the measured glass geometry. Deliberately no longer the solid fallback: that was the
+        /// bug where a themed card with no radius rendered at 32 pt on iOS 26 even with
+        /// `liquidGlass(false)`. See ``slideOutCornerRadius`` / ``solidSurveyCornerRadius``.
+        static var cardCornerRadius: CGFloat {
+            #if compiler(>=6.2)
+            if #available(iOS 26.0, *) {
+                return CGFloat(32)
+            }
+            #endif
+            return slideOutCornerRadius
+        }
         static let blurImageSize = CGSize(width: 64, height: 64)
         static let iconImageSize = CGSize(width: iconImageDimensions, height: iconImageDimensions)
         static let defaultTextMargin = "   "
@@ -95,6 +113,13 @@ internal class ThemeHandler: ThemeHandling {
         static let iconImageDimensions = 38
         static let npsImageDimensions = 100
 
+        /// Distance from the safe area's top edge to the row the dismiss button sits in. Shared by
+        /// the full-screen experiences — the carousel and the survey list place it identically.
+        static let dismissRowTopMargin = CGFloat(20)
+
+        /// Carousel step progress bar: its height, and its distance from the safe area's bottom.
+        static let stepsProgressHeight = CGFloat(15)
+        static let stepsProgressBottomMargin = CGFloat(20)
         /// Survey
         static let surveyItemRatingMinWidth: Int = 80
         static let surveyContentTopMargin: Int = 16
@@ -111,6 +136,13 @@ internal class ThemeHandler: ThemeHandling {
         static let surveyLikertViewMaxCount: Int = 10
         static let surveyOpenTextEditTextHeight: Int = 80
         static let surveyTextSize = 14
+
+        /// Survey list layout. The gap below the dismiss row keeps the first question from touching
+        /// the close button; the spacing is used both between questions and between the last
+        /// question and the submit button, which is what makes the two reads as one rhythm.
+        static let surveyListContentTopMargin = CGFloat(12)
+        static let surveyListQuestionSpacing = CGFloat(24)
+        static let surveyListButtonBottomMargin = CGFloat(16)
 
         static let surveySingleTextDefaultCountryCode: String = "+1"
         static let surveySingleTextMaxLength: Int = 50
@@ -225,7 +257,10 @@ internal class ThemeHandler: ThemeHandling {
                         ?? baseTheme?.carousel?.general?.contentAlignment,
                     fontFamily: stepTheme?.general?.fontFamily
                         ?? globalTheme?.general?.fontFamily
-                        ?? baseTheme?.carousel?.general?.fontFamily
+                        ?? baseTheme?.carousel?.general?.fontFamily,
+                    material: stepTheme?.general?.material
+                        ?? globalTheme?.general?.material
+                        ?? baseTheme?.carousel?.general?.material
                 ),
                 progress: ProgressStyle(
                     color: stepTheme?.progress?.color
@@ -288,7 +323,10 @@ internal class ThemeHandler: ThemeHandling {
                         ?? baseTheme?.slideOut?.general?.contentAlignment,
                     fontFamily: stepTheme?.general?.fontFamily
                         ?? globalTheme?.general?.fontFamily
-                        ?? baseTheme?.slideOut?.general?.fontFamily
+                        ?? baseTheme?.slideOut?.general?.fontFamily,
+                    material: stepTheme?.general?.material
+                        ?? globalTheme?.general?.material
+                        ?? baseTheme?.slideOut?.general?.material
                 ),
                 backdrop: Backdrop(
                     color: stepTheme?.backdrop?.color
@@ -327,7 +365,9 @@ internal class ThemeHandler: ThemeHandling {
                 backgroundColor: surveyTheme?.general?.backgroundColor
                     ?? baseTheme?.survey?.general?.backgroundColor,
                 cornerRadius: surveyTheme?.general?.cornerRadius
-                    ?? baseTheme?.survey?.general?.cornerRadius
+                    ?? baseTheme?.survey?.general?.cornerRadius,
+                material: surveyTheme?.general?.material
+                    ?? baseTheme?.survey?.general?.material
             ),
             font: SurveyFont(
                 fontFamily: surveyTheme?.font?.fontFamily

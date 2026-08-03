@@ -52,6 +52,13 @@ internal class ExperienceViewModel {
     /// closure to observe the binding state of the content
     var bindData: ((Bool) -> Void)?
 
+    /// Decides whether Liquid Glass may be used by the views this view model drives.
+    /// Exposed for the view layer the same way `imageLoader` is.
+    let glassResolver: GlassCapabilityResolving
+
+    /// How centre dialogs animate, from `Config.dialogAnimation(_:)`.
+    let dialogAnimation: Userpilot.DialogAnimation
+
     // MARK: - Initializers
 
     /// Initializes the view model with a dependency injection container.
@@ -63,6 +70,8 @@ internal class ExperienceViewModel {
         self.storage = container.resolve(DataStoring.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
         self.imageLoader = container.resolve(ImageLoading.self)
+        self.glassResolver = container.resolve(GlassCapabilityResolving.self)
+        self.dialogAnimation = container.resolve(Userpilot.Config.self).dialogAnimationType
     }
 
     // MARK: - View Lifecycle
@@ -326,9 +335,15 @@ internal class ExperienceViewModel {
         experiencesPublisher.triggerDeepLink(url: url)
     }
 
-    // MARK: - Logging
+}
 
-    private func logExperience(
+// MARK: - Logging
+
+// Extracted into an extension rather than kept in the type body: these are pure emit-only
+// helpers that hold no state, and the type was already at the `type_body_length` limit.
+private extension ExperienceViewModel {
+
+    func logExperience(
         state: String,
         experienceId: Int
     ) {
@@ -340,7 +355,7 @@ internal class ExperienceViewModel {
         )
     }
 
-    private func logStep(
+    func logStep(
         state: String,
         experienceId: Int,
         stepId: Int,

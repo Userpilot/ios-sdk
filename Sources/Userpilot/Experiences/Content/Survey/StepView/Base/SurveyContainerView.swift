@@ -14,8 +14,11 @@ internal class SurveyContainerView: UIView {
     // MARK: - UI Components
 
     /// A container for the dismiss button, with a fixed height.
+    /// Holds the dismiss button, which is positioned past this view's trailing edge so it can sit
+    /// close to the card's edge. `UPOverflowTouchView` is what keeps that overhanging strip tappable —
+    /// a plain `UIView` rejects the touch before the button is ever asked.
     private lazy var buttonDismissContainerView: UIView = {
-        let view = UIView()
+        let view = UPOverflowTouchView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize + 10).isActive = true
         return view
@@ -26,8 +29,26 @@ internal class SurveyContainerView: UIView {
         let button = UPDismissButton()
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(buttonDismissClicked), for: .touchUpInside)
+        button.glassResolver = glassResolver
         return button
     }()
+
+    /// Decides whether Liquid Glass may be used by this view's chrome.
+    ///
+    /// Forwarded on assignment rather than read at build time: `buttonDismiss` is lazy and
+    /// may already have been created by the time the owning view controller sets this.
+    var glassResolver: GlassCapabilityResolving? {
+        didSet { applyGlassStyling() }
+    }
+
+    /// Pushes the resolver's verdict into the chrome this view owns.
+    private func applyGlassStyling() {
+        let allowsGlass = glassResolver?.allowsGlass(for: .chrome) ?? false
+        buttonDismiss.glassResolver = glassResolver
+        actionButton.glassResolver = glassResolver
+        // Fades survey content where it meets the action button instead of cutting it off.
+        scrollView.applyUPBottomScrollEdgeEffect(allowsGlass: allowsGlass)
+    }
 
     /// The action button at the bottom of the view.
     private lazy var actionButton: UPButtonView = {
@@ -45,6 +66,18 @@ internal class SurveyContainerView: UIView {
         progressView.heightAnchor.constraint(equalToConstant: 5).isActive = true
         return progressView
     }()
+
+    /// The progress bar's own constraints, held so the card can move it onto its top border.
+    /// See ``UPCardEdgeAware``.
+    private lazy var barTopConstraint = barStepsProgressView.topAnchor.constraint(
+        equalTo: safeAreaLayoutGuide.topAnchor)
+    private lazy var barLeadingConstraint = barStepsProgressView.leadingAnchor.constraint(
+        equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20)
+    private lazy var barTrailingConstraint = barStepsProgressView.trailingAnchor.constraint(
+        equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20)
+
+    /// The card's geometry, once it has told us. `nil` until then, and on any card that does not.
+    private var cardEdge: UPCardEdge?
 
     private lazy var stepsProgressView: UPStepsProgressView = {
         let progressView = UPStepsProgressView()
@@ -173,11 +206,18 @@ internal class SurveyContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
-                barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
-                barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
+                // Held, because where they belong depends on the card: a card that reports its
+                // geometry through `applyCardEdge(_:)` moves the bar onto its top border, and one
+                // that does not leaves it flush with the top of the content area.
+                barTopConstraint,
+                barLeadingConstraint,
+                barTrailingConstraint,
 
-                contentStackView.topAnchor.constraint(equalTo: barStepsProgressView.bottomAnchor),
+                // Flush to the top, like every other content view. Pinning this to the progress
+                // bar's bottom reserved 25 pt for a 5 pt bar that is hidden more often than not —
+                // and the space was reserved either way, since a plain hidden view still occupies
+                // its constraints. The bar keeps its own position and overlays, as it does in NPS.
+                contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
                 contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
                 contentStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
                 contentStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
@@ -374,6 +414,7 @@ internal class SurveyContainerView: UIView {
             newView = openTextView
         case .singleInput:
             let singleInputView = UPSingleInputView()
+            singleInputView.glassResolver = glassResolver
             singleInputView.setupView(
                 surveyStep: contentStep,
                 surveyTheme: theme,
@@ -511,4 +552,27 @@ extension SurveyContainerView: ViewStateDelegate {
     }
 
 }
+
+// MARK: - UPCardEdgeAware
+
+extension SurveyContainerView: UPCardEdgeAware {
+
+    /// Moves the step progress bar onto the card's top border.
+    ///
+    /// The bar is meant to sit *on* the border, not inside the card's padding, so it escapes the
+    /// content area's top inset and pulls its ends in far enough to stay within the corner curve.
+    /// Without a card to measure against it stays flush with the top of the content area, which is
+    /// the layout it was built with.
+    func applyCardEdge(_ edge: UPCardEdge?) {
+        guard cardEdge != edge else { return }
+        cardEdge = edge
+
+        barTopConstraint.constant = edge?.topOffset ?? 0
+        // −20 keeps the pre-card behaviour: full-bleed across the content area and past its padding.
+        barLeadingConstraint.constant = edge?.horizontalInset ?? -20
+        barTrailingConstraint.constant = -(edge?.horizontalInset ?? -20)
+        setNeedsLayout()
+    }
+}
+
 // swiftlint:enable all

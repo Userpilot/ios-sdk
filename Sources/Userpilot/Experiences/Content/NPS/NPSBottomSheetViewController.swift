@@ -14,6 +14,7 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     internal lazy var npsContainerView: NPSContainerView = {
         let npsContainerView = NPSContainerView()
         npsContainerView.translatesAutoresizingMaskIntoConstraints = false
+        npsContainerView.glassResolver = npsViewModel.glassResolver
         return npsContainerView
     }()
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
@@ -30,6 +31,7 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     init(npsViewModel: NPSViewModel) {
         self.npsViewModel = npsViewModel
         super.init(nibName: nil, bundle: nil)
+        glassResolver = npsViewModel.glassResolver
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
@@ -41,7 +43,7 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bindViewModel()
-        setContent(content: npsContainerView, withoutMargin: true)
+        setContent(content: npsContainerView)
         registerKeyboardNotifications()
         ExternalKeyboardManagerCompat.disableIQKeyboardManager(for: [NPSBottomSheetViewController.self])
     }

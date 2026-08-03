@@ -41,6 +41,12 @@ internal class SurveyViewModel {
     var bindNextSurveyStep: (() -> Void)?
     let submissionId: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
 
+    /// Decides whether Liquid Glass may be used by the views this view model drives.
+    let glassResolver: GlassCapabilityResolving
+
+    /// How centre dialogs animate, from `Config.dialogAnimation(_:)`.
+    let dialogAnimation: Userpilot.DialogAnimation
+
     // MARK: - Initializers
 
     /// Initializes the view model with a dependency injection container.
@@ -50,6 +56,8 @@ internal class SurveyViewModel {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.themeHandler = container.resolve(ThemeHandling.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
+        self.glassResolver = container.resolve(GlassCapabilityResolving.self)
+        self.dialogAnimation = container.resolve(Userpilot.Config.self).dialogAnimationType
     }
 
     // MARK: - View Lifecycle

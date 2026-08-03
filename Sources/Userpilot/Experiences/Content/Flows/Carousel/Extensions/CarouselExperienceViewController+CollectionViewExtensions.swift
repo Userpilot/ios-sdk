@@ -45,6 +45,10 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
             return UICollectionViewCell()
         }
 
+        // Must be set before `bindStep`, which builds the constraints that decide whether the
+        // action button floats over the scrolling content.
+        stepCollectionViewCell.glassResolver = experienceViewModel.glassResolver
+
         // Bind the step data to the cell
         stepCollectionViewCell.bindStep(step,
                                         withTheme: theme,

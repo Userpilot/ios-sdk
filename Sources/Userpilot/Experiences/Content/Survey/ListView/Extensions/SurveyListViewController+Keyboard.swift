@@ -43,9 +43,15 @@ extension SurveyListViewController {
         let bottomSafeAreaInset = view.safeAreaInsets.bottom
         let adjustmentHeight = keyboardHeight - bottomSafeAreaInset - 70 // 70 is action button with its margin
 
+        // What the bottom inset is when no keyboard is up: zero, or the floating action button's
+        // clearance. Everything below reads and writes relative to it — comparing against zero
+        // instead would read the clearance as "keyboard already handled" and skip the adjustment
+        // entirely, leaving the field the user is typing in behind the keyboard.
+        let baseInset = scrollViewBottomClearance
+
         if !isHiding {
             // Return if the keyboard is already visible
-            if scrollView.contentInset.bottom > 0 { return }
+            if scrollView.contentInset.bottom > baseInset { return }
 
             if let activeField = view.firstResponder as? UIView {
                 let fieldFrameInScrollView = scrollView.convert(activeField.frame, from: activeField.superview)
@@ -69,21 +75,27 @@ extension SurveyListViewController {
                 if offsetY > 0 {
                     UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut, animations: {
                         // Adjust content inset and scroll in the same animation block
-                        self.scrollView.contentInset.bottom = adjustmentHeight
-                        self.scrollView.verticalScrollIndicatorInsets.bottom = adjustmentHeight
+                        self.setScrollViewBottomInset(max(baseInset, adjustmentHeight))
                         self.scrollView.setContentOffset(CGPoint(x: 0, y: offsetY), animated: false)
                     })
                     return
                 }
             }
             // Only adjust content inset if no scrolling is needed
-            scrollView.contentInset.bottom = adjustmentHeight
-            scrollView.verticalScrollIndicatorInsets.bottom = adjustmentHeight
+            setScrollViewBottomInset(max(baseInset, adjustmentHeight))
         } else {
             UIView.animate(withDuration: 0.2) { [weak self] in
-                self?.scrollView.contentInset.bottom = 0
-                self?.scrollView.verticalScrollIndicatorInsets.bottom = 0
+                guard let self else { return }
+                // Back to the baseline, not to zero: the floating button's clearance has to
+                // survive the keyboard going away.
+                self.setScrollViewBottomInset(baseInset)
             }
         }
+    }
+
+    /// Keeps the content inset and the scroll indicator's inset in step.
+    private func setScrollViewBottomInset(_ inset: CGFloat) {
+        scrollView.contentInset.bottom = inset
+        scrollView.verticalScrollIndicatorInsets.bottom = inset
     }
 }

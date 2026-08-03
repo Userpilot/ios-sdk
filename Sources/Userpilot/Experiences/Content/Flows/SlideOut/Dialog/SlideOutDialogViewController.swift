@@ -21,6 +21,7 @@ internal class SlideOutDialogViewController: DialogViewController {
     internal lazy var slideOutContainerView: SlideOutContainerView = {
         let slideOutContainerView = SlideOutContainerView()
         slideOutContainerView.translatesAutoresizingMaskIntoConstraints = false
+        slideOutContainerView.glassResolver = experienceViewModel.glassResolver
         return slideOutContainerView
     }()
 
@@ -36,6 +37,8 @@ internal class SlideOutDialogViewController: DialogViewController {
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: nil, bundle: nil)
+        glassResolver = experienceViewModel.glassResolver
+        dialogAnimation = experienceViewModel.dialogAnimation
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.

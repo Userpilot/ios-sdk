@@ -22,6 +22,7 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
     internal lazy var surveyContainerView: SurveyContainerView = {
         let surveyContainerView = SurveyContainerView()
         surveyContainerView.translatesAutoresizingMaskIntoConstraints = false
+        surveyContainerView.glassResolver = surveyViewModel.glassResolver
         return surveyContainerView
     }()
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
@@ -38,6 +39,7 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
     init(surveyViewModel: SurveyViewModel) {
         self.surveyViewModel = surveyViewModel
         super.init(nibName: nil, bundle: nil)
+        glassResolver = surveyViewModel.glassResolver
     }
 
     /// Required initializer with a coder, not implemented for programmatic instantiation.
@@ -49,7 +51,7 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bindViewModel()
-        setContent(content: surveyContainerView, withoutMargin: true)
+        setContent(content: surveyContainerView)
         registerKeyboardNotifications()
         ExternalKeyboardManagerCompat.disableIQKeyboardManager(for: [SurveyBottomSheetViewController.self])
         appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)

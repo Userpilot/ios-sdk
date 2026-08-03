@@ -25,6 +25,7 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
     private lazy var slideOutContainerView: SlideOutContainerView = {
         let slideOutContainerView = SlideOutContainerView()
         slideOutContainerView.translatesAutoresizingMaskIntoConstraints = false
+        slideOutContainerView.glassResolver = experienceViewModel.glassResolver
         return slideOutContainerView
     }()
 
@@ -43,6 +44,7 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
     init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: nil, bundle: nil)
+        glassResolver = experienceViewModel.glassResolver
     }
 
     /// This initializer should not be used and will throw a fatal error if called.

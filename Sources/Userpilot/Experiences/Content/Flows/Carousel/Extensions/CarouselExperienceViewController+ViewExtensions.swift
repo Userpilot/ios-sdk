@@ -20,16 +20,12 @@ extension CarouselExperienceViewController {
     /// Configures general views constraints.
     func setupViews() {
         isModalInPresentation = true
+        buildViewHierarchy()
     }
 
     /// Setup UI locale depending on Experience content
     func setupLocale() {
-        let collectionViewLayout = UPCollectionViewLayout()
-        collectionViewLayout.sectionInset = UIEdgeInsets.zero
-        collectionViewLayout.minimumLineSpacing = 0
-        collectionViewLayout.minimumInteritemSpacing = 0
-        collectionViewLayout.scrollDirection = .horizontal
-        collectionView.collectionViewLayout = collectionViewLayout
+        collectionView.collectionViewLayout = CarouselExperienceViewController.makeStepsLayout()
         if experienceViewModel.isRTL {
             buttonDismissContainerView.semanticContentAttribute = .forceRightToLeft
             collectionView.semanticContentAttribute = .forceRightToLeft

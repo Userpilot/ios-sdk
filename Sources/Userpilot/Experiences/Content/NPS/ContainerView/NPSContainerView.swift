@@ -12,12 +12,29 @@ internal class NPSContainerView: UIView {
     
     // MARK: - UI Components
 
+    /// Height of the "Ask Me Later" button. A text button, so shorter than the square dismiss
+    /// buttons the other content views use.
+    private static let dismissButtonHeight: CGFloat = 30
+
+    #if DEBUG
+    /// Exposed so a test can assert this view's dismiss row lines up with the other content views'.
+    #endif
+
     /// A container for the dismiss button, with a fixed height.
+    ///
+    /// The button plus the 10 pt above it, matching `SlideOutContainerView` and
+    /// `SurveyContainerView`, which both size this container as their button plus 10. It used to be
+    /// a flat 45 with the button pushed 10 pt *past* the container's bottom, which put the button's
+    /// top 25 pt down instead of 10 — 15 pt more space above it than the carousel or a survey has.
+    /// Holds the dismiss button, which is positioned past this view's trailing edge so it can sit
+    /// close to the card's edge. `UPOverflowTouchView` is what keeps that overhanging strip tappable —
+    /// a plain `UIView` rejects the touch before the button is ever asked.
     private lazy var buttonDismissContainerView: UIView = {
-        let view = UIView()
+        let view = UPOverflowTouchView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
+        view.heightAnchor.constraint(
+            equalToConstant: Self.dismissButtonHeight + 10).isActive = true
         return view
     }()
     
@@ -30,6 +47,9 @@ internal class NPSContainerView: UIView {
     /// The update score button
     private lazy var updateAnswerButton: UPButtonView = {
         let button = UPButtonView()
+        // Built on first use, which is after `glassResolver` was set — so it has to read it here
+        // rather than wait for the `didSet` that already ran.
+        button.glassResolver = glassResolver
         button.translatesAutoresizingMaskIntoConstraints = false
         button.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
         return button
@@ -64,6 +84,18 @@ internal class NPSContainerView: UIView {
     }()
     
     /// The steps progess view
+    /// The progress bar's own constraints, held so the card can move it onto its top border.
+    /// See ``UPCardEdgeAware``.
+    private lazy var barTopConstraint = barStepsProgressView.topAnchor.constraint(
+        equalTo: safeAreaLayoutGuide.topAnchor)
+    private lazy var barLeadingConstraint = barStepsProgressView.leadingAnchor.constraint(
+        equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20)
+    private lazy var barTrailingConstraint = barStepsProgressView.trailingAnchor.constraint(
+        equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20)
+
+    /// The card's geometry, once it has told us. `nil` until then, and on any card that does not.
+    private var cardEdge: UPCardEdge?
+
     private lazy var stepsProgressView: UPStepsProgressView = {
         let progressView = UPStepsProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
@@ -79,10 +111,26 @@ internal class NPSContainerView: UIView {
         return view
     }()
     
+    /// Breathing room below the content on a step that ends with it.
+    ///
+    /// The thank-you step usually has no button, so its message is the last thing in the stack and sits
+    /// on the card's bottom padding alone. Hidden on every other step, where the footer buttons or the
+    /// step progress already provide the gap.
+    private lazy var bottomSpaceView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        view.isHidden = true
+        view.heightAnchor.constraint(
+            equalToConstant: ThemeHandler.DefaultValues.distanceBetweenSections).isActive = true
+        return view
+    }()
+
     /// A vertical stack view to manage parent views.
     private lazy var contentStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [
-            buttonDismissContainerView, spaceView, scrollView, footerButtonsContianer, stepsProgressView])
+            buttonDismissContainerView, spaceView, scrollView, footerButtonsContianer,
+            stepsProgressView, bottomSpaceView])
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
@@ -147,6 +195,31 @@ internal class NPSContainerView: UIView {
     private var npsContent: NPSContent!
     private var isRTL = false
     private weak var npsContainerViewDelegate: NPSContainerViewDelegate?
+
+    /// Decides whether Liquid Glass may be used by this view's chrome. Set by the owning
+    /// view controller at construction.
+    var glassResolver: GlassCapabilityResolving? {
+        didSet {
+            // Fades NPS content where it meets the footer action buttons.
+            scrollView.applyUPBottomScrollEdgeEffect(
+                allowsGlass: glassResolver?.allowsGlass(for: .chrome) ?? false)
+            propagateGlassResolver()
+        }
+    }
+
+    /// Hands the resolver to the buttons this view owns.
+    ///
+    /// Needed in both directions. The resolver arrives once, at construction — but these buttons are
+    /// built and rebuilt per step (`getActionButton()`, `getCloseButton()`), so a button created later
+    /// never saw it, and `UPButtonView` renders its legacy fill when it has no resolver. That is why no
+    /// NPS button had glass: not the follow-up step's Submit and Update score, not the dismiss button,
+    /// not the thank-you button. The factories assign it at creation; this covers whatever already
+    /// exists when the resolver changes.
+    private func propagateGlassResolver() {
+        buttonDismiss?.glassResolver = glassResolver
+        actionButton?.glassResolver = glassResolver
+        updateAnswerButton.glassResolver = glassResolver
+    }
 
     private var currentStep = 0
     private var viewHeight = CGFloat(0)
@@ -222,9 +295,12 @@ internal class NPSContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
-                barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
-                barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
+                // Held, because where they belong depends on the card: a card that reports its
+                // geometry through `applyCardEdge(_:)` moves the bar onto its top border, and one
+                // that does not leaves it flush with the top of the content area.
+                barTopConstraint,
+                barLeadingConstraint,
+                barTrailingConstraint,
 
                 contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
                 contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
@@ -379,7 +455,7 @@ internal class NPSContainerView: UIView {
                 newView.alpha = 1
             }
         }
-        
+
         delay(0.2) { [weak self] in
             UIView.animate(withDuration: 0.2) { [weak self] in
                 self?.buttonDismissContainerView.alpha = 1
@@ -503,6 +579,7 @@ extension NPSContainerView {
         setupDismissButton(for: currentStep)
 
         // Set up action button and update for each step
+        bottomSpaceView.isHidden = true
         switch currentStep {
         case 0:
             buttonDismiss?.setupViews(
@@ -526,12 +603,15 @@ extension NPSContainerView {
     private func getCloseButton() -> UPButtonView {
         buttonDismiss?.removeFromSuperview()
         let buttonDismiss = UPButtonView()
+        buttonDismiss.glassResolver = glassResolver
         buttonDismissContainerView.addSubview(buttonDismiss)
         buttonDismiss.backgroundColor = .clear
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            buttonDismiss.heightAnchor.constraint(equalToConstant: 30),
-            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor, constant: 10),
+            buttonDismiss.heightAnchor.constraint(equalToConstant: Self.dismissButtonHeight),
+            // Flush with the container's bottom, as in the other two content views. The +10 that
+            // was here pushed the button below its own container.
+            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor, constant: 20)
         ])
         return buttonDismiss
@@ -540,6 +620,7 @@ extension NPSContainerView {
     private func getActionButton() -> UPButtonView {
         actionButton?.removeFromSuperview()
         let button = UPButtonView()
+        button.glassResolver = glassResolver
         button.backgroundColor = .clear
         button.translatesAutoresizingMaskIntoConstraints = false
         button.heightAnchor.constraint(equalToConstant: UPButtonView.buttonHeight).isActive = true
@@ -577,17 +658,18 @@ extension NPSContainerView {
         actionButton = getActionButton()
         footerButtonsStackView.addArrangedSubviews([updateAnswerButton, actionButton!])
 
+        // Two compact buttons side by side rather than one full-width CTA: they wrap their titles and
+        // read as pills. The stack is pinned trailing-only, so hugging widths right-align the pair.
+        actionButton?.wrapsContentWidth = true
+        updateAnswerButton.wrapsContentWidth = true
+
         actionButton?.setupViews(
             title: npsContent.content.followUp.submit ?? "Submit",
             npsTheme: theme,
             isSecondaryButton: false,
             isDismissButton: false
         ) { [weak self] _ in
-            self?.getFollowUpAnswer()
-            self?.npsContainerViewDelegate?.onNPSSubmitted(self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
-            self?.currentStep = 2
-            self?.bindSurveyViews()
-            self?.setupActionButton()
+            self?.submitFollowUp()
         }
         
         updateAnswerButton.setupViews(
@@ -602,12 +684,30 @@ extension NPSContainerView {
         }
     }
 
+    /// Submits the follow-up answer and advances to the thank-you state.
+    ///
+    /// Kept as one action boundary so the button callback and component tests exercise the same
+    /// transition instead of duplicating the state changes at the call site.
+    func submitFollowUp() {
+        getFollowUpAnswer()
+        npsContainerViewDelegate?.onNPSSubmitted(
+            userAnswer,
+            userFollowUpKey,
+            userFollowUp
+        )
+        currentStep = 2
+        bindSurveyViews()
+        setupActionButton()
+    }
+
     private func setupThankYouButtons() {
         if let completedData = getThankYouMessage() {
             stepsProgressView.isHidden = true
             barStepsProgressView.isHidden = true
             if !completedData.button.enabled {
+                // Nothing follows the message, so it would otherwise rest on the card's padding alone.
                 footerButtonsContianer.isHidden = true
+                bottomSpaceView.isHidden = false
                 return
             }
             footerButtonsStackView.clearViews()
@@ -654,4 +754,27 @@ extension NPSContainerView {
         }
     }
 }
+
+// MARK: - UPCardEdgeAware
+
+extension NPSContainerView: UPCardEdgeAware {
+
+    /// Moves the step progress bar onto the card's top border.
+    ///
+    /// The bar is meant to sit *on* the border, not inside the card's padding, so it escapes the
+    /// content area's top inset and pulls its ends in far enough to stay within the corner curve.
+    /// Without a card to measure against it stays flush with the top of the content area, which is
+    /// the layout it was built with.
+    func applyCardEdge(_ edge: UPCardEdge?) {
+        guard cardEdge != edge else { return }
+        cardEdge = edge
+
+        barTopConstraint.constant = edge?.topOffset ?? 0
+        // −20 keeps the pre-card behaviour: full-bleed across the content area and past its padding.
+        barLeadingConstraint.constant = edge?.horizontalInset ?? -20
+        barTrailingConstraint.constant = -(edge?.horizontalInset ?? -20)
+        setNeedsLayout()
+    }
+}
+
 // swiftlint:enable all

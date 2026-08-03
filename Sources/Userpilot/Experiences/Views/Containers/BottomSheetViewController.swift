@@ -18,18 +18,21 @@ internal class BottomSheetViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// Main bottom sheet container view with a rounded top and clipped corners
-    private lazy var mainContainerView: UIView = {
-        let view = UIView()
+    /// Main bottom sheet container view with a rounded top and clipped corners.
+    /// Not private: styled from `BottomSheetViewController+Glass.swift`.
+    lazy var mainContainerView: UPCardView = {
+        let view = UPCardView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .white
-        view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
-        view.clipsToBounds = true
+        view.applyCorners(.fixed(ThemeHandler.DefaultValues.cardCornerRadius))
         return view
     }()
 
-    /// View to hold dynamic content for the bottom sheet
-    private lazy var contentView: UIView = {
+    /// View to hold dynamic content for the bottom sheet.
+    ///
+    /// This is where the card's padding is applied — see ``UPCardMetrics``. Content added through
+    /// `setContent(content:)` is pinned flush inside it.
+    lazy var contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -43,8 +46,9 @@ internal class BottomSheetViewController: UIViewController {
         return view
     }()
 
-    /// Dimmed background view that appears behind the bottom sheet
-    private lazy var dimmedView: UIView = {
+    /// Dimmed background view that appears behind the bottom sheet.
+    /// Not private: masked from `BottomSheetViewController+Glass.swift`.
+    lazy var dimmedView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
@@ -63,12 +67,88 @@ internal class BottomSheetViewController: UIViewController {
     private var minTopSpacing: CGFloat = 100
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
+    // MARK: - Liquid Glass
+
+    /// Decides whether this sheet's surface renders as Liquid Glass. Set by the subclass from
+    /// its view model, before the theme is applied.
+    var glassResolver: GlassCapabilityResolving?
+
+    /// The glass background installed behind the sheet's content, when glass is in use.
+    /// Read by `BottomSheetViewController+Glass.swift`.
+    var glassBackground: UPGlassEffectView?
+
+    /// Radius currently applied to the sheet's **bottom** corners, needed to cut a matching hole in
+    /// the backdrop. This is the display-concentric value when the sheet renders as glass.
+    var appliedCornerRadius = ThemeHandler.DefaultValues.cardCornerRadius
+
+    /// Radius currently applied to the sheet's **top** corners.
+    ///
+    /// Separate from the bottom pair because a sheet sits against the display at the bottom and
+    /// against nothing at the top, so one radius cannot be right for both — which is why UIKit's own
+    /// sheet uses ~36 pt on top against ~53 pt below.
+    var appliedTopCornerRadius = ThemeHandler.DefaultValues.cardCornerRadius
+
+    /// The radius the theme asked for, kept as the floor when the display-concentric radius is
+    /// measured. See `glassCornerRadius()`.
+    var themeCornerRadius = ThemeHandler.DefaultValues.cardCornerRadius
+
+    /// The appearance resolved for this sheet, held so a later layout pass can re-apply it without
+    /// re-deciding anything. See `GlassCapabilityResolving.surfaceStyle(...)`.
+    var surfaceStyle: UPSurfaceStyle?
+
+    /// Whether the backdrop should have the sheet's shape cut out of it.
+    var masksBackdrop = false
+
+    /// The inputs the current surface was resolved from, so it can be resolved again.
+    var lastSurfaceInputs: UPSurfaceInputs?
+
+    /// The card-shaped hole cut out of the backdrop, owned so repeated layout reuses it.
+    let backdropMask = UPBackdropMask()
+
+    /// Suppresses the backdrop mask while the sheet is moving.
+    ///
+    /// The mask is a static path cut at the sheet's frame, but the sheet animates in and out
+    /// under a transform. An un-suppressed mask would sit at the sheet's *resting* position
+    /// while the sheet is still travelling — showing an undimmed, card-shaped ghost during
+    /// presentation, and leaving one behind after dismissal.
+    ///
+    /// Starts `true` so nothing is cut until the sheet has settled.
+    var suspendsBackdropMask = true
+
+    /// Edge constraints, held so the sheet can be inset from the display edges when it renders
+    /// as glass. See `applyGlassInset(_:)`.
+    /// Top inset of the content inside the sheet.
+    ///
+    /// The content was previously pinned flush to the container's top. That was fine at a 12 pt
+    /// radius but clipped the dismiss button against the much rounder iOS 26 corners — the case
+    /// Apple's guidance covers when it says to check for "content and controls that might appear
+    /// too close to rounder sheet corners".
+    var contentTopConstraint: NSLayoutConstraint?
+
+    /// Horizontal content constraints, held because the content is re-parented into the glass
+    /// effect's content view when the surface renders as glass. See `hostContent(usesGlass:)`.
+    var contentLeadingConstraint: NSLayoutConstraint?
+    var contentTrailingConstraint: NSLayoutConstraint?
+
+    var leadingInsetConstraint: NSLayoutConstraint?
+    var trailingInsetConstraint: NSLayoutConstraint?
+    var bottomInsetConstraint: NSLayoutConstraint?
+
+    /// The content's bottom measured from the safe area — used while the sheet is solid, and so
+    /// flush with the screen edge.
+    var contentBottomSafeAreaConstraint: NSLayoutConstraint?
+
+    /// The content's bottom measured from the card's own edge — used while the sheet is glass, and
+    /// so floating above the safe area. Exactly one of these two is ever active.
+    var contentBottomCardConstraint: NSLayoutConstraint?
+
     // MARK: - View Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
         setupViews()
+        observeSurfaceInvalidations()
         // setupGestures()
         // This flag tells automatic screen tracking to ignore screens that the SDK is presenting
         objc_setAssociatedObject(
@@ -84,12 +164,35 @@ internal class BottomSheetViewController: UIViewController {
         animatePresent()
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // The display's curvature can only be measured once the sheet is in a window, which it is
+        // by now but was not when the theme was applied. Must run before the mask, which is cut
+        // from the radius this may change.
+        refreshGlassCornerRadiusIfNeeded()
+        // The backdrop mask is cut from the sheet's resolved frame, so it has to be recomputed
+        // whenever that frame changes — rotation, keyboard, or content-driven height changes.
+        updateBackdropMask()
+    }
+
     override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         guard flag else {
             super.dismiss(animated: false, completion: completion)
             return
         }
         dismissBottomSheet(completion: completion)
+    }
+
+    /// Re-resolves the surface when the interface style changes under a presented experience: the
+    /// theme's colours, the glass tint and the backdrop are all resolved for one appearance, so a
+    /// light card left on screen through a switch to dark would keep light values. Gated on
+    /// `Config.liquidGlassAccessibilityAdaptation(_:)`.
+    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+        super.traitCollectionDidChange(previous)
+        guard glassResolver?.adaptsToAccessibilityChanges == true,
+              traitCollection.userInterfaceStyle != previous?.userInterfaceStyle
+        else { return }
+        reapplySurfaceStyle()
     }
 
     deinit {
@@ -118,12 +221,15 @@ private extension BottomSheetViewController {
 
         // Add bottom sheet container view
         view.addSubview(mainContainerView)
+        leadingInsetConstraint = mainContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
+        trailingInsetConstraint = mainContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        bottomInsetConstraint = mainContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         NSLayoutConstraint.activate([
-            mainContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            mainContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            mainContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            leadingInsetConstraint,
+            trailingInsetConstraint,
+            bottomInsetConstraint,
             mainContainerView.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor, constant: minTopSpacing)
-        ])
+        ].compactMap { $0 })
 
         // Add top draggable bar view
 //        mainContainerView.addSubview(topBarView)
@@ -134,20 +240,30 @@ private extension BottomSheetViewController {
 //            topBarView.heightAnchor.constraint(equalToConstant: 20)
 //        ])
 
-        // Add content view
+        // Add content view. Every one of these is held by reference because the content is
+        // re-parented into the glass effect's content view when the surface resolves glass, which
+        // means the same equations are rebuilt against a coincident host — see
+        // `hostContent(usesGlass:)`. Two references for the bottom, one active at a time: a solid
+        // sheet is flush with the screen so it measures from the safe area, a glass sheet floats
+        // above it so it measures from its own edge.
         mainContainerView.addSubview(contentView)
-        NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(
-                equalTo: mainContainerView.leadingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
-            contentView.trailingAnchor.constraint(
-                equalTo: mainContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative),
-            contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
-            contentView.bottomAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
-        ])
+        contentTopConstraint = contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor)
+        contentLeadingConstraint = contentView.leadingAnchor.constraint(
+            equalTo: mainContainerView.leadingAnchor,
+            constant: UPCardMetrics.contentHorizontal)
+        contentTrailingConstraint = contentView.trailingAnchor.constraint(
+            equalTo: mainContainerView.trailingAnchor,
+            constant: UPCardMetrics.contentHorizontal.negative)
+        contentBottomSafeAreaConstraint = contentView.bottomAnchor.constraint(
+            equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+            constant: UPCardMetrics.sheetContentBottom.negative)
+        contentBottomCardConstraint = contentView.bottomAnchor.constraint(
+            equalTo: mainContainerView.bottomAnchor,
+            constant: UPCardMetrics.sheetGlassContentBottom.negative)
+        NSLayoutConstraint.activate(
+            [contentTopConstraint, contentLeadingConstraint, contentTrailingConstraint,
+             contentBottomSafeAreaConstraint].compactMap { $0 }
+        )
 
         /// prepare the view for slide in animation
         dimmedView.alpha = 0
@@ -205,9 +321,30 @@ extension BottomSheetViewController {
 
     /// Animate the presentation of the bottom sheet
     func animatePresent() {
-        UIView.animate(withDuration: 0.2) { [weak self] in
-            self?.mainContainerView.transform = .identity
+        // Reduce Motion: arrive in place rather than travelling. The sheet is already positioned
+        // under a transform, so dropping it with no animation is the whole substitution.
+        if glassResolver?.reducesSDKMotion == true {
+            mainContainerView.transform = .identity
+            mainContainerView.alpha = 0
+            UIView.animate(withDuration: 0.2, animations: { [weak self] in
+                self?.mainContainerView.alpha = 1
+                self?.dimmedView.alpha = 1
+            }, completion: { [weak self] _ in
+                self?.suspendsBackdropMask = false
+                self?.updateBackdropMask()
+            })
+            return
         }
+
+        UIView.animate(withDuration: 0.2, animations: { [weak self] in
+            self?.mainContainerView.transform = .identity
+        }, completion: { [weak self] _ in
+            // The sheet slides in under a transform, so its frame is only final once the
+            // animation settles. Cutting the mask earlier would show an undimmed card-shaped
+            // hole at the resting position while the sheet is still travelling.
+            self?.suspendsBackdropMask = false
+            self?.updateBackdropMask()
+        })
         UIView.animate(withDuration: 0.4) { [weak self] in
             self?.dimmedView.alpha = 1
         }
@@ -215,10 +352,22 @@ extension BottomSheetViewController {
 
     /// Dismiss the bottom sheet with an animation
     func dismissBottomSheet(completion: (() -> Void)? = nil) {
+        // The sheet leaves by *sliding*, which glass handles correctly — the material travels with
+        // the container. Nothing about the surface is touched here: swapping it to an opaque fill
+        // would flash the themed colour for the whole animation.
+        suspendsBackdropMask = true
+        updateBackdropMask()
+
+        let reducesMotion = glassResolver?.reducesSDKMotion ?? false
         UIView.animate(withDuration: 0.2, animations: { [weak self] in
-            self?.dimmedView.alpha = 0
-            self?.mainContainerView.transform = CGAffineTransform(
-                translationX: 0, y: self?.mainContainerView.frame.height ?? 0)
+            guard let self else { return }
+            self.dimmedView.alpha = 0
+            if reducesMotion {
+                self.mainContainerView.alpha = 0
+            } else {
+                self.mainContainerView.transform = CGAffineTransform(
+                    translationX: 0, y: self.mainContainerView.frame.height)
+            }
         }, completion: { [weak self] _ in
             self?.dismiss(animated: false, completion: completion)
         })
@@ -230,55 +379,21 @@ extension BottomSheetViewController {
 extension BottomSheetViewController {
 
     /// Set the dynamic content for the bottom sheet
-    func setContent(
-        content: UIView,
-        withoutMargin: Bool = false
-    ) {
+    /// Fills the sheet with a content view.
+    ///
+    /// The content is pinned flush — the sheet's padding is applied once, to `contentView`, and comes
+    /// from ``UPCardMetrics``. There is deliberately no per-call-site offset: the parameter that used
+    /// to exist (`withoutMargin`, meaning −20) was cancelling out padding that survey and NPS content
+    /// views added themselves, which is how four experience types ended up with four different top
+    /// insets in the same card.
+    func setContent(content: UIView) {
         contentView.addSubview(content)
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: withoutMargin ? -20 : 0),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor),
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         view.layoutIfNeeded()
-    }
-
-    /// Customize the background color of the bottom sheet for `ExperienceTheme`
-    func setBackgroundColor(_ theme: ExperienceTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        dimmedView.isHidden = !theme.backdropEnabled
-        if theme.backdropEnabled {
-            dimmedView.backgroundColor = theme.backdropBackground
-        }
-    }
-
-    /// Customize the background color of the bottom sheet for `SurveyTheme`
-    func setBackgroundColor(_ theme: SurveyTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        mainContainerView.setTopCornerRadius(theme.borderRadius)
-        dimmedView.isHidden = !theme.backdropEnabled
-        if theme.backdropEnabled {
-            dimmedView.backgroundColor = theme.backdropBackground
-        }
-    }
-
-    /// Customize the background color of the bottom sheet for `SurveyTheme`
-    func setBackgroundColor(_ theme: NPSTheme) {
-        mainContainerView.backgroundColor = theme.backgroundColor
-        mainContainerView.setTopCornerRadius(theme.borderRadius)
-        dimmedView.isHidden = false
-        dimmedView.backgroundColor = .black.withOpacity(0.4)
-    }
-}
-
-// MARK: - Show BottomSheet view controller
-
-internal extension UIViewController {
-
-    /// Present a `BottomSheetViewController` modally
-    func presentBottomSheet(viewController: UIViewController) {
-        viewController.modalPresentationStyle = .overFullScreen
-        present(viewController, animated: false, completion: nil)
     }
 }
