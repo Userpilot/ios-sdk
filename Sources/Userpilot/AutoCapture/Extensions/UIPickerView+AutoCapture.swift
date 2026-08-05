@@ -107,9 +107,9 @@ internal extension UIPickerView {
         // `UILabel`), and may also use `attributedTitleForRow:forComponent:`. Try all three
         // so `selected_value` is populated for both UIKit and SwiftUI pickers.
         if config.enableInteractionValueCapture,
-           let title = userpilotResolvedSelectedTitle(forRow: row, component: component) {
-            payload.sourceProperties[AutoCaptureConstants.selectedValue] =
-                shouldRedactText() ? AutoCaptureConstants.reductText : title
+           let title = userpilotResolvedSelectedTitle(forRow: row, component: component),
+           let sanitized = resolvedInteractionText(title) {
+            payload.sourceProperties[AutoCaptureConstants.selectedValue] = sanitized
         }
 
         // View path and accessibility

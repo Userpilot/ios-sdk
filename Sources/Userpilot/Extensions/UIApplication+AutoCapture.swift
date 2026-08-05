@@ -199,7 +199,7 @@ extension UIApplication {
         if let target = target {
             payload.ownerTargetClass = String(describing: type(of: target))
         }
-        if !config.enableInteractionTextCapture {
+        if config.enableInteractionTextCapture {
             payload.elementText = menuAction.title
         }
         payload.accessibilityIdentifier = menuAction.identifier.rawValue
@@ -222,7 +222,7 @@ extension UIApplication {
         if let target = target {
             payload.ownerTargetClass = String(describing: type(of: target))
         }
-        if !config.enableInteractionTextCapture {
+        if config.enableInteractionTextCapture {
             payload.elementText = menu.title
         }
         payload.accessibilityIdentifier = menu.identifier.rawValue
@@ -281,10 +281,10 @@ extension UIApplication {
         if let target = target {
             payload.ownerTargetClass = String(describing: type(of: target))
         }
-        if !config.enableInteractionTextCapture {
+        if config.enableInteractionTextCapture {
             payload.elementText = item.title
         }
-        if !config.enableInteractionAccessibilityLabelCapture {
+        if config.enableInteractionAccessibilityLabelCapture {
             payload.accessibilityLabel = item.accessibilityLabel
         }
         payload.accessibilityIdentifier = item.accessibilityIdentifier

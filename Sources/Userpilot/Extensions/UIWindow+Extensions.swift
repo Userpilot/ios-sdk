@@ -208,9 +208,9 @@ extension UIWindow {
             if let labelViewType = capture.viewType {
                 eventProperties[AutoCaptureConstants.targetClass] = labelViewType
             }
-            eventProperties[AutoCaptureConstants.targetText] = capture.labeledView.shouldRedactText()
-                ? AutoCaptureConstants.reductText
-                : capture.label
+            if let text = capture.labeledView.resolvedInteractionText(capture.label) {
+                eventProperties[AutoCaptureConstants.targetText] = text
+            }
         } else if useRedactedInner {
             eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
         } else {

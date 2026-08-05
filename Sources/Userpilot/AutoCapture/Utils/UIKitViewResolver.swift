@@ -307,24 +307,48 @@ internal extension UIView {
         return false
     }
 
-    /// Checks if text should be redacted: Config (`enableInteractionTextCapture`)
-    /// and API (userpilotRedactText on responder chain).
-    /// - Returns: True if text should be redacted
+    /// Checks if text should be hidden for this view: Config (`enableInteractionTextCapture`)
+    /// is off, or `userpilotRedactText` is set on the responder chain.
+    ///
+    /// Prefer ``resolvedInteractionText(_:)`` / ``getTextContent()`` when publishing `target_text`:
+    /// those **omit** the field when capture is disabled and only emit the redaction placeholder
+    /// for the per-view redact opt-in.
+    /// - Returns: True if text should be hidden
     func shouldRedactText() -> Bool {
+        isInteractionTextCaptureDisabled() || hasUserpilotRedactTextOptIn()
+    }
+
+    /// True when the owning instance has `enableInteractionTextCapture` set to `false`.
+    func isInteractionTextCaptureDisabled() -> Bool {
         // Resolve the OWNING Userpilot instance from this view so the redaction
         // policy follows that tenant's config, not the host's. Critical for
         // multi-instance integrations: the host might allow text capture while
         // the embedded SDK requires redaction (or vice versa).
-        if let config = InstanceResolver.shared.target(forSource: self)?.config,
-           !config.enableInteractionTextCapture {
-            return true
+        if let config = InstanceResolver.shared.target(forSource: self)?.config {
+            return !config.enableInteractionTextCapture
         }
+        return false
+    }
+
+    /// True when `userpilotRedactText` is set on this responder or an ancestor.
+    func hasUserpilotRedactTextOptIn() -> Bool {
         var responder: UIResponder? = self
         while let current = responder {
             if current.userpilotRedactText { return true }
             responder = current.next
         }
         return false
+    }
+
+    /// Applies text-capture policy to a raw string for autocapture payloads.
+    /// - Global text capture off → `nil` (omit `target_text`)
+    /// - `userpilotRedactText` on the responder chain → redaction placeholder
+    /// - otherwise → `raw`
+    func resolvedInteractionText(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        if isInteractionTextCaptureDisabled() { return nil }
+        if hasUserpilotRedactTextOptIn() { return AutoCaptureConstants.reductText }
+        return raw
     }
 
     /// Checks if accessibility labels should be redacted:
@@ -385,12 +409,15 @@ internal extension UIView {
         return nil
     }
 
-    /// Returns the text content of this view, redacted if necessary.
+    /// Returns the text content of this view, applying text-capture policy.
     /// Falls back to searching subviews for a UILabel when the view itself
     /// is a private/unknown type (e.g., _UIAlertControllerActionView).
-    /// - Returns: The text content or redacted placeholder
+    /// - Returns: The text content, redaction placeholder, or `nil` when omitted
     func getTextContent() -> String? {
-        if shouldRedactText() {
+        if isInteractionTextCaptureDisabled() {
+            return nil
+        }
+        if hasUserpilotRedactTextOptIn() {
             return AutoCaptureConstants.reductText
         }
 

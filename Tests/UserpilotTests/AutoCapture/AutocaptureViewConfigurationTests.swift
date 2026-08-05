@@ -74,6 +74,14 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         XCTAssertNil(dialogText.message)
     }
 
+    func testResolvedInteractionTextOmitsWhenCaptureDisabledWithoutOwner() {
+        let view = UIView()
+        // Without a resolvable Userpilot owner, capture defaults to enabled — opt-in still redacts.
+        XCTAssertEqual(view.resolvedInteractionText("Visible"), "Visible")
+        view.userpilotRedactText = true
+        XCTAssertEqual(view.resolvedInteractionText("Visible"), AutoCaptureConstants.reductText)
+    }
+
     func testResponderClassDefaultsAreUsedUntilExplicitlyOverridden() {
         let view = DefaultIgnoredView()
 

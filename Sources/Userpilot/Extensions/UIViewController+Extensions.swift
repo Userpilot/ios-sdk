@@ -186,17 +186,20 @@ internal extension UIAlertController {
 
     /// The title / message published as the text of the `view_presented` autocapture event.
     ///
-    /// They are captured text, so they follow the same redaction rules as any other captured text:
-    /// the owning instance's `enableInteractionTextCapture` flag and `userpilotRedactText` anywhere
-    /// on the alert's responder chain. `nil` values stay `nil`, so redaction never adds a property
-    /// that would not have been published in the first place.
+    /// They are captured text, so they follow the same policy as any other captured text:
+    /// omitted when the owning instance's `enableInteractionTextCapture` is off, replaced with the
+    /// redaction placeholder when `userpilotRedactText` is set on the alert's responder chain.
+    /// `nil` values stay `nil`, so policy never adds a property that would not have been published.
     func userpilotDialogText() -> (title: String?, message: String?) {
-        guard view.shouldRedactText() else {
-            return (title, message)
+        if view.isInteractionTextCaptureDisabled() {
+            return (nil, nil)
         }
-        return (
-            title == nil ? nil : AutoCaptureConstants.reductText,
-            message == nil ? nil : AutoCaptureConstants.reductText
-        )
+        if view.hasUserpilotRedactTextOptIn() {
+            return (
+                title == nil ? nil : AutoCaptureConstants.reductText,
+                message == nil ? nil : AutoCaptureConstants.reductText
+            )
+        }
+        return (title, message)
     }
 }

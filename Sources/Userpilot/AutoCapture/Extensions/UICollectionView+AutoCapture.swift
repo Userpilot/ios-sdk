@@ -49,9 +49,7 @@ internal extension UICollectionViewCell {
             if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
                 payload.targetClass = labelViewType
             }
-            payload.elementText = (touchedView ?? self).shouldRedactText()
-                ? AutoCaptureConstants.reductText
-                : userpilotLabel
+            payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
         } else if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
             payload.elementText = AutoCaptureConstants.reductText
