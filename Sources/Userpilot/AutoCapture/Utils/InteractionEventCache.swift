@@ -95,6 +95,17 @@ internal enum InteractionEventCache {
         lastDeliveredLock.unlock()
     }
 
+    /// Publishes any debounced interaction that is still waiting for its quiet period.
+    ///
+    /// Called before a manual `screen` event so a text change the user made on the previous screen is
+    /// published first, instead of arriving after the screen event and being attributed to the screen
+    /// the user navigated to. The debouncer is process-wide, so this also delivers pending
+    /// interactions belonging to other instances — each one still resolves its own owner at delivery
+    /// time, they are simply published a little earlier than their debounce would have.
+    static func flushPendingInteractions() {
+        debouncer.flushPending()
+    }
+
     private static func debounceKey(for view: UIView) -> String {
         "interaction_debounce_\(ObjectIdentifier(view))"
     }

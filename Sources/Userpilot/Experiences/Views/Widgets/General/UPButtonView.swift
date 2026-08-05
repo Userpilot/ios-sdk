@@ -135,27 +135,87 @@ internal class UPButtonView: UIButton {
             titleLabel?.font = UIFont.matching(
                 fontName: npsTheme.fontFamily,
                 fontWeight: !isDismissButton ? [.traitBold] : [],
-                fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
+                fontSize: npsFontSize(isSecondaryButton: isSecondaryButton, isDismissButton: isDismissButton)
             )
-
-            if isSecondaryButton {
-                setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
-            } else {
-                setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
-            }
 
             setTitle(title, for: .normal)
             contentHorizontalAlignment = .center
 
-            tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
-            backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+            if isDismissButton {
+                applyNPSDismissButtonStyle(with: npsTheme)
+            } else {
+                if isSecondaryButton {
+                    setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
+                } else {
+                    setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
+                }
 
-            layer.cornerRadius = 12
-            layer.borderWidth = 1
-            layer.borderColor = (isSecondaryButton && !isDismissButton) ?
-            ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
+                tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+                backgroundColor = isSecondaryButton ? .clear : npsTheme.primaryColor
+
+                layer.cornerRadius = 12
+                layer.borderWidth = 1
+                layer.borderColor = isSecondaryButton ?
+                ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
+            }
 
             self.callback = callback
+    }
+
+    /// The opacity of the NPS dismiss (close) button chip overlay, based on the NPS background brightness.
+    private func npsDismissButtonOverlayOpacity(
+        backgroundBrightness: CGFloat,
+        isDarkBackground: Bool
+    ) -> CGFloat {
+        if isDarkBackground {
+            return ThemeHandler.DefaultValues.npsDismissButtonLightenOpacity
+        }
+        // A near white background only needs a light gray chip
+        if backgroundBrightness > ThemeHandler.DefaultValues.npsDismissLightBackgroundBrightness {
+            return ThemeHandler.DefaultValues.npsDismissButtonSoftDarkenOpacity
+        }
+        return ThemeHandler.DefaultValues.npsDismissButtonDarkenOpacity
+    }
+
+    /// The title font size of an NPS button, based on its role.
+    private func npsFontSize(isSecondaryButton: Bool, isDismissButton: Bool) -> CGFloat {
+        if isDismissButton {
+            return ThemeHandler.DefaultValues.npsDismissButtonTextSize
+        }
+        return isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
+    }
+
+    /**
+     Styles the NPS dismiss (close) button as a translucent chip, so it reads as a tappable button on top
+     of any NPS background color.
+
+     The chip darkens the NPS background — softly on near white backgrounds — and lightens it instead
+     when that background is already too dark to be darkened further. The title color follows the color
+     the translucent chip resolves to on that background, so it stays readable either way.
+
+     - Parameter npsTheme: The theme providing the NPS background color and corner radius.
+     */
+    private func applyNPSDismissButtonStyle(with npsTheme: NPSTheme) {
+        let backgroundBrightness = npsTheme.backgroundColor.perceivedBrightness()
+        let isDarkBackground = backgroundBrightness
+        < ThemeHandler.DefaultValues.npsDismissDarkBackgroundBrightness
+        let overlayColor: UIColor = isDarkBackground ? .white : .black
+        let overlayOpacity = npsDismissButtonOverlayOpacity(
+            backgroundBrightness: backgroundBrightness,
+            isDarkBackground: isDarkBackground)
+
+        let resolvedChipColor = npsTheme.backgroundColor.overlaying(overlayColor, opacity: overlayOpacity)
+        setTitleColor(resolvedChipColor.isLightColor() ? .black : .white, for: .normal)
+
+        tintColor = .clear
+        backgroundColor = overlayColor.withAlphaComponent(overlayOpacity)
+
+        // Match the NPS bottom sheet corner radius, capped so the chip never goes past a pill
+        layer.cornerRadius = min(
+            npsTheme.borderRadius,
+            ThemeHandler.DefaultValues.npsDismissButtonHeight / 2)
+        layer.borderWidth = 0
+        layer.borderColor = UIColor.clear.cgColor
     }
 
     /// Applies font.

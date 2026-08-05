@@ -37,6 +37,43 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         XCTAssertFalse(view.userpilotRedactAccessibilityLabel)
     }
 
+    func testDialogTextIsPublishedRawWhenRedactionIsNotRequested() {
+        let alert = UIAlertController(
+            title: "Delete account?",
+            message: "This cannot be undone",
+            preferredStyle: .alert
+        )
+
+        let dialogText = alert.userpilotDialogText()
+
+        XCTAssertEqual(dialogText.title, "Delete account?")
+        XCTAssertEqual(dialogText.message, "This cannot be undone")
+    }
+
+    func testDialogTextIsRedactedWhenRedactTextIsSetOnTheAlert() {
+        let alert = UIAlertController(
+            title: "Delete account?",
+            message: "This cannot be undone",
+            preferredStyle: .alert
+        )
+        alert.view.userpilotRedactText = true
+
+        let dialogText = alert.userpilotDialogText()
+
+        XCTAssertEqual(dialogText.title, AutoCaptureConstants.reductText)
+        XCTAssertEqual(dialogText.message, AutoCaptureConstants.reductText)
+    }
+
+    func testDialogTextKeepsNilFieldsWhenRedacted() {
+        let alert = UIAlertController(title: "Delete account?", message: nil, preferredStyle: .alert)
+        alert.view.userpilotRedactText = true
+
+        let dialogText = alert.userpilotDialogText()
+
+        XCTAssertEqual(dialogText.title, AutoCaptureConstants.reductText)
+        XCTAssertNil(dialogText.message)
+    }
+
     func testResponderClassDefaultsAreUsedUntilExplicitlyOverridden() {
         let view = DefaultIgnoredView()
 

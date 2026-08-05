@@ -149,6 +149,7 @@ internal extension UIViewController {
     private func buildScreenTrackingPayload(config: Userpilot.Config) -> ScreenTrackingPayload {
 
         if let alert = self as? UIAlertController {
+            let dialogText = alert.userpilotDialogText()
             var payload = ScreenTrackingPayload(
                 currentScreen: resolvedScreenNameForCapture(),
                 screenClass: screenClassName,
@@ -158,8 +159,8 @@ internal extension UIViewController {
                 vcAccessibilityIdentifier: view.accessibilityIdentifier,
                 vcAccessibilityLabel: view.accessibilityLabel,
                 isDialogPresentation: true,
-                alertTitle: alert.title,
-                alertMessage: alert.message
+                alertTitle: dialogText.title,
+                alertMessage: dialogText.message
             )
             payload.appFramework = config.appFramework
             return payload
@@ -176,5 +177,26 @@ internal extension UIViewController {
         )
         payload.appFramework = config.appFramework
         return payload
+    }
+}
+
+// MARK: - Dialog Text Redaction
+
+internal extension UIAlertController {
+
+    /// The title / message published as the text of the `view_presented` autocapture event.
+    ///
+    /// They are captured text, so they follow the same redaction rules as any other captured text:
+    /// the owning instance's `enableInteractionTextCapture` flag and `userpilotRedactText` anywhere
+    /// on the alert's responder chain. `nil` values stay `nil`, so redaction never adds a property
+    /// that would not have been published in the first place.
+    func userpilotDialogText() -> (title: String?, message: String?) {
+        guard view.shouldRedactText() else {
+            return (title, message)
+        }
+        return (
+            title == nil ? nil : AutoCaptureConstants.reductText,
+            message == nil ? nil : AutoCaptureConstants.reductText
+        )
     }
 }
