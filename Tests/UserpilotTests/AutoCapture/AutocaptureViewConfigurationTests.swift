@@ -82,6 +82,17 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         XCTAssertEqual(view.resolvedInteractionText("Visible"), AutoCaptureConstants.reductText)
     }
 
+    func testAccessibilityLabelContentUsesOptInPlaceholderAndOmitsNilOwnerDefaults() {
+        let view = UIView()
+        view.accessibilityLabel = "Accessible Field"
+
+        // Without a resolvable owner, capture defaults to enabled.
+        XCTAssertEqual(view.getAccessibilityLabelContent(), "Accessible Field")
+
+        view.userpilotRedactAccessibilityLabel = true
+        XCTAssertEqual(view.getAccessibilityLabelContent(), AutoCaptureConstants.reductText)
+    }
+
     func testResponderClassDefaultsAreUsedUntilExplicitlyOverridden() {
         let view = DefaultIgnoredView()
 

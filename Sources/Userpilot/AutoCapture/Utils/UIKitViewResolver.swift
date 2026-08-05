@@ -351,16 +351,28 @@ internal extension UIView {
         return raw
     }
 
-    /// Checks if accessibility labels should be redacted:
-    /// Config (`enableInteractionAccessibilityLabelCapture`) and API
-    /// (userpilotRedactAccessibilityLabel on responder chain).
-    /// - Returns: True if accessibility labels should be redacted
+    /// Checks if accessibility labels should be hidden: Config
+    /// (`enableInteractionAccessibilityLabelCapture`) is off, or
+    /// `userpilotRedactAccessibilityLabel` is set on the responder chain.
+    ///
+    /// Prefer ``getAccessibilityLabelContent()`` when publishing `accessibility_label`: that
+    /// **omits** the field when capture is disabled and only emits the redaction placeholder for
+    /// the per-view redact opt-in.
+    /// - Returns: True if accessibility labels should be hidden
     func shouldRedactAccessibilityLabel() -> Bool {
-        // Same reasoning as `shouldRedactText`: route via the owning instance.
-        if let config = InstanceResolver.shared.target(forSource: self)?.config,
-           !config.enableInteractionAccessibilityLabelCapture {
-            return true
+        isInteractionAccessibilityLabelCaptureDisabled() || hasUserpilotRedactAccessibilityLabelOptIn()
+    }
+
+    /// True when the owning instance has `enableInteractionAccessibilityLabelCapture` set to `false`.
+    func isInteractionAccessibilityLabelCaptureDisabled() -> Bool {
+        if let config = InstanceResolver.shared.target(forSource: self)?.config {
+            return !config.enableInteractionAccessibilityLabelCapture
         }
+        return false
+    }
+
+    /// True when `userpilotRedactAccessibilityLabel` is set on this responder or an ancestor.
+    func hasUserpilotRedactAccessibilityLabelOptIn() -> Bool {
         var responder: UIResponder? = self
         while let current = responder {
             if current.userpilotRedactAccessibilityLabel { return true }
@@ -448,10 +460,13 @@ internal extension UIView {
         return nil
     }
 
-    /// Returns the accessibility label of this view, redacted if necessary
-    /// - Returns: The accessibility label or redacted placeholder
+    /// Returns the accessibility label of this view, applying accessibility-capture policy.
+    /// - Returns: The label, redaction placeholder for opt-in, or `nil` when omitted
     func getAccessibilityLabelContent() -> String? {
-        if shouldRedactAccessibilityLabel() {
+        if isInteractionAccessibilityLabelCaptureDisabled() {
+            return nil
+        }
+        if hasUserpilotRedactAccessibilityLabelOptIn() {
             return AutoCaptureConstants.reductText
         }
 
