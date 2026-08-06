@@ -77,6 +77,68 @@ final class EventDebounceTests: XCTestCase {
         wait(for: [inverted], timeout: 0.2)
     }
 
+    func testFlushPendingDeliversBufferedValuesImmediately() {
+        var delivered: [String] = []
+        let debounce = EventDebounce<String>(
+            delay: 5,
+            deliveryQueue: .main
+        ) { value in
+            delivered.append(value)
+        }
+
+        debounce.schedule(key: "field", value: "first")
+        debounce.schedule(key: "field", value: "latest")
+        // Let the scheduling hop onto the internal queue before flushing.
+        let scheduled = expectation(description: "scheduled")
+        DispatchQueue.main.async { scheduled.fulfill() }
+        wait(for: [scheduled], timeout: 1)
+
+        debounce.flushPending()
+
+        // Called from the main thread with a main delivery queue, so delivery is inline: the caller can
+        // publish its own event next and stay ordered after the flushed value.
+        XCTAssertEqual(delivered, ["latest"])
+    }
+
+    func testFlushPendingWithNothingPendingDeliversNothing() {
+        let inverted = expectation(description: "does not deliver")
+        inverted.isInverted = true
+        let debounce = EventDebounce<String>(
+            delay: 0.05,
+            deliveryQueue: .main
+        ) { _ in
+            inverted.fulfill()
+        }
+
+        debounce.flushPending()
+
+        wait(for: [inverted], timeout: 0.2)
+    }
+
+    func testFlushPendingClearsPendingWorkSoValuesDeliverOnce() {
+        var delivered: [String] = []
+        let debounce = EventDebounce<String>(
+            delay: 0.05,
+            deliveryQueue: .main
+        ) { value in
+            delivered.append(value)
+        }
+
+        debounce.schedule(key: "field", value: "A")
+        let scheduled = expectation(description: "scheduled")
+        DispatchQueue.main.async { scheduled.fulfill() }
+        wait(for: [scheduled], timeout: 1)
+
+        debounce.flushPending()
+
+        // Wait past the original delay: the cancelled timer must not deliver a second time.
+        let settled = expectation(description: "settled")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { settled.fulfill() }
+        wait(for: [settled], timeout: 1)
+
+        XCTAssertEqual(delivered, ["A"])
+    }
+
     func testDeliveryUsesConfiguredQueue() {
         let expectation = expectation(description: "delivers on configured queue")
         let queueKey = DispatchSpecificKey<String>()

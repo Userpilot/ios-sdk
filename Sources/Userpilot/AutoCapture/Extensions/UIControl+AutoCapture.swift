@@ -112,8 +112,7 @@ internal extension UIControl {
             if config.enableInteractionValueCapture {
                 payload.sourceProperties[AutoCaptureConstants.selectedIndex] = segmentedControl.selectedSegmentIndex
                 let raw = segmentedControl.titleForSegment(at: segmentedControl.selectedSegmentIndex)
-                let title: String? = shouldRedactText() ? (raw != nil ? AutoCaptureConstants.reductText : nil) : raw
-                if let title {
+                if let title = resolvedInteractionText(raw) {
                     payload.sourceProperties[AutoCaptureConstants.selectedValue] = title
                 }
             }
@@ -158,7 +157,7 @@ internal extension UIControl {
             payload.elementText = getTextContent()
         }
 
-        // Add common properties (getters return "****" when redaction/config disables capture)
+        // Add common properties (getters omit / redact per capture policy)
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
 
@@ -174,16 +173,14 @@ internal extension UIControl {
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = AutoCaptureConstants.reductText
+            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
         }
 
         if let userpilotLabel = resolveUserpilotLabel() {
             if let labelViewType = resolveUserpilotLabelViewType() {
                 payload.targetClass = labelViewType
             }
-            payload.elementText = shouldRedactText()
-                ? AutoCaptureConstants.reductText
-                : userpilotLabel
+            payload.elementText = resolvedInteractionText(userpilotLabel)
         }
 
         // IBOutlet reference name (e.g., "submitButton", "searchTextField")

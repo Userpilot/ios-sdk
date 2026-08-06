@@ -149,6 +149,7 @@ internal extension UIViewController {
     private func buildScreenTrackingPayload(config: Userpilot.Config) -> ScreenTrackingPayload {
 
         if let alert = self as? UIAlertController {
+            let dialogText = alert.userpilotDialogText()
             var payload = ScreenTrackingPayload(
                 currentScreen: resolvedScreenNameForCapture(),
                 screenClass: screenClassName,
@@ -158,8 +159,8 @@ internal extension UIViewController {
                 vcAccessibilityIdentifier: view.accessibilityIdentifier,
                 vcAccessibilityLabel: view.accessibilityLabel,
                 isDialogPresentation: true,
-                alertTitle: alert.title,
-                alertMessage: alert.message
+                alertTitle: dialogText.title,
+                alertMessage: dialogText.message
             )
             payload.appFramework = config.appFramework
             return payload
@@ -176,5 +177,29 @@ internal extension UIViewController {
         )
         payload.appFramework = config.appFramework
         return payload
+    }
+}
+
+// MARK: - Dialog Text Redaction
+
+internal extension UIAlertController {
+
+    /// The title / message published as the text of the `view_presented` autocapture event.
+    ///
+    /// They are captured text, so they follow the same policy as any other captured text:
+    /// omitted when the owning instance's `enableInteractionTextCapture` is off, replaced with the
+    /// redaction placeholder when `userpilotRedactText` is set on the alert's responder chain.
+    /// `nil` values stay `nil`, so policy never adds a property that would not have been published.
+    func userpilotDialogText() -> (title: String?, message: String?) {
+        if view.isInteractionTextCaptureDisabled() {
+            return (nil, nil)
+        }
+        if view.hasUserpilotRedactTextOptIn() {
+            return (
+                title == nil ? nil : AutoCaptureConstants.reductText,
+                message == nil ? nil : AutoCaptureConstants.reductText
+            )
+        }
+        return (title, message)
     }
 }

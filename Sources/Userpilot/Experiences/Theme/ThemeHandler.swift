@@ -94,6 +94,19 @@ internal class ThemeHandler: ThemeHandling {
         static let iconImageDimensions = 38
         static let npsImageDimensions = 100
 
+        /// NPS dismiss (close) button chip styling.
+        /// The chip is a translucent overlay on top of the NPS background: it darkens that background —
+        /// more softly on near white backgrounds (brightness above 85%), where a light gray chip is enough
+        /// — and lightens it instead when the background is already too dark to be darkened further
+        /// (brightness below 25%). The title color follows the color the chip resolves to.
+        static let npsDismissButtonDarkenOpacity = CGFloat(0.35)
+        static let npsDismissButtonSoftDarkenOpacity = CGFloat(0.16)
+        static let npsDismissButtonLightenOpacity = CGFloat(0.15)
+        static let npsDismissLightBackgroundBrightness = CGFloat(0.85)
+        static let npsDismissDarkBackgroundBrightness = CGFloat(0.25)
+        static let npsDismissButtonHeight = CGFloat(34)
+        static let npsDismissButtonTextSize = CGFloat(14)
+
         /// Survey
         static let surveyItemRatingMinWidth: Int = 80
         static let surveyContentTopMargin: Int = 16
