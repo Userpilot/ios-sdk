@@ -351,6 +351,16 @@ internal extension UIView {
         return raw
     }
 
+    /// Text published when capture resolves to an ignore-inner-hierarchy ancestor.
+    ///
+    /// When text capture is enabled, the leaf text is masked with the redaction placeholder so
+    /// inner content stays hidden. When text capture is disabled, returns `nil` so `target_text`
+    /// is omitted — same omit policy as ``resolvedInteractionText(_:)`` / ``getTextContent()``.
+    func ignoreInnerHierarchyTextPlaceholder() -> String? {
+        if isInteractionTextCaptureDisabled() { return nil }
+        return AutoCaptureConstants.reductText
+    }
+
     /// Checks if accessibility labels should be hidden: Config
     /// (`enableInteractionAccessibilityLabelCapture`) is off, or
     /// `userpilotRedactAccessibilityLabel` is set on the responder chain.

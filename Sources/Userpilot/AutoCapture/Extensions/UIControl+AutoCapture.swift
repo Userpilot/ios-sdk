@@ -157,7 +157,7 @@ internal extension UIControl {
             payload.elementText = getTextContent()
         }
 
-        // Add common properties (getters return "****" when redaction/config disables capture)
+        // Add common properties (getters omit / redact per capture policy)
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
 
@@ -173,7 +173,7 @@ internal extension UIControl {
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = AutoCaptureConstants.reductText
+            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
         }
 
         if let userpilotLabel = resolveUserpilotLabel() {

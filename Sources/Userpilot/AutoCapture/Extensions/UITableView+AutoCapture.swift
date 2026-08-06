@@ -52,7 +52,7 @@ internal extension UITableViewCell {
             payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
         } else if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = AutoCaptureConstants.reductText
+            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
         } else {
             payload.elementText = touchedView?.getTextContent()
             payload.accessibilityIdentifier = accessibilityIdentifier

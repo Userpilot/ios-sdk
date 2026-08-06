@@ -254,7 +254,7 @@ extension UIApplication {
         payload.hierarchy = path
 
         if useRedactedInner {
-            payload.elementText = AutoCaptureConstants.reductText
+            payload.elementText = view.ignoreInnerHierarchyTextPlaceholder()
         } else {
             payload.elementText = view.getTextContent()
             payload.accessibilityIdentifier = view.accessibilityIdentifier
@@ -320,7 +320,7 @@ extension UIApplication {
         payload.hierarchy = path
 
         if useRedactedInner {
-            payload.elementText = AutoCaptureConstants.reductText
+            payload.elementText = view.ignoreInnerHierarchyTextPlaceholder()
         } else {
             payload.elementText = view.getTextContent()
             payload.accessibilityIdentifier = view.accessibilityIdentifier

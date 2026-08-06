@@ -93,6 +93,12 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         XCTAssertEqual(view.getAccessibilityLabelContent(), AutoCaptureConstants.reductText)
     }
 
+    func testIgnoreInnerHierarchyPlaceholderUsesRedactionWhenCaptureDefaultsEnabled() {
+        let view = UIView()
+        // Without a resolvable owner, text capture defaults to enabled.
+        XCTAssertEqual(view.ignoreInnerHierarchyTextPlaceholder(), AutoCaptureConstants.reductText)
+    }
+
     func testResponderClassDefaultsAreUsedUntilExplicitlyOverridden() {
         let view = DefaultIgnoredView()
 

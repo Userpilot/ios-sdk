@@ -212,7 +212,9 @@ extension UIWindow {
                 eventProperties[AutoCaptureConstants.targetText] = text
             }
         } else if useRedactedInner {
-            eventProperties[AutoCaptureConstants.targetText] = AutoCaptureConstants.reductText
+            if let text = view.ignoreInnerHierarchyTextPlaceholder() {
+                eventProperties[AutoCaptureConstants.targetText] = text
+            }
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
                 eventProperties[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
