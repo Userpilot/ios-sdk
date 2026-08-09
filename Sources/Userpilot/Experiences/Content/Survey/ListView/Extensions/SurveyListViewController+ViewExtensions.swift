@@ -73,7 +73,8 @@ extension SurveyListViewController {
         let resolver = surveyViewModel.glassResolver
         buttonDismiss.glassResolver = resolver
         actionButton.glassResolver = resolver
-        scrollView.applyUPBottomScrollEdgeEffect(allowsGlass: floatsActionButton)
+        scrollView.applyUPBottomScrollEdgeEffect(allowsGlass: floatsChrome)
+        scrollView.applyUPTopScrollEdgeEffect(allowsGlass: floatsChrome)
 
         // Without this the last question would rest permanently underneath the button. The
         // keyboard handling adjusts from this value rather than from zero.
@@ -81,10 +82,21 @@ extension SurveyListViewController {
         scrollView.contentInset.bottom = clearance
         scrollView.verticalScrollIndicatorInsets.bottom = clearance
 
+        // And the same at the top, so the first question still starts below the dismiss button
+        // rather than behind it while at rest.
+        let topClearance = scrollViewTopClearance
+        scrollView.contentInset.top = topClearance
+        scrollView.verticalScrollIndicatorInsets.top = topClearance
+
         actionButton.registerUPScrollEdgeContainer(
             for: scrollView,
             edge: .bottom,
-            allowsGlass: floatsActionButton
+            allowsGlass: floatsChrome
+        )
+        buttonDismissContainerView.registerUPScrollEdgeContainer(
+            for: scrollView,
+            edge: .top,
+            allowsGlass: floatsChrome
         )
     }
 

@@ -305,9 +305,11 @@ internal class SlideOutContainerView: UIView {
                 stepSectionsStackView.addArrangedSubview(paragraph)
 
             case .image:
-                let size = getImageSize(for: firstLine)
+                // No height constraint here: only the view itself can know the fitted height, because
+                // it depends on the width its container gives it. This used to pin the *capped* height
+                // from `getImageSize`, computed against the full screen width — right for the carousel
+                // and wrong inside the slide-out's inset card.
                 let image = UPImageView(frame: .zero)
-                image.heightAnchor.constraint(equalToConstant: size.height).isActive = true
                 image.setupView(line: firstLine, imageLoader: imageLoader)
                 stepSectionsStackView.addArrangedSubview(image)
 

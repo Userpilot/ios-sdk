@@ -57,6 +57,16 @@ extension CarouselExperienceViewController: UICollectionViewDataSource,
         stepCollectionViewCell.actionButtonClicked = { [weak self] action in
             self?.onActionButtonClicked(action)
         }
+
+        // The dismiss button lives on the view controller while the scrolling content lives in the
+        // cell, so the top edge's container registration has to be made from here and re-pointed at
+        // whichever step is on screen. `registerUPScrollEdgeContainer` updates the interaction in
+        // place rather than stacking a new one per bind.
+        buttonDismissContainerView.registerUPScrollEdgeContainer(
+            for: stepCollectionViewCell.stepScrollView,
+            edge: .top,
+            allowsGlass: experienceViewModel.glassResolver.allowsGlass(for: .chrome)
+        )
         return stepCollectionViewCell
     }
 

@@ -224,7 +224,7 @@ extension SocketManager {
             socketState = .connecting
 
             let socketProperties: [String: Any] = [
-                SocketManager.tokenKey: Environment.getClientToken(storage: storage),
+                SocketManager.tokenKey: Environment.getClientToken(config: config),
                 SocketManager.userIdKey: storage.userId,
                 SocketManager.sdkVersionKey: userpilot?.version() ?? "",
                 SocketManager.autoPropertiesKey: autoProperties,

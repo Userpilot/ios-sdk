@@ -161,9 +161,11 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 stackView.addArrangedSubview(paragraph)
 
             case .image:
-                let size = getImageSize(for: firstLine)
+                // No height constraint here: only the view itself can know the fitted height, because
+                // it depends on the width its container gives it. This used to pin the *capped* height
+                // from `getImageSize`, computed against the full screen width — right for the carousel
+                // and wrong inside the slide-out's inset card.
                 let image = UPImageView(frame: .zero)
-                image.heightAnchor.constraint(equalToConstant: size.height).isActive = true
                 image.setupView(line: firstLine, imageLoader: imageLoader)
                 stackView.addArrangedSubview(image)
 
@@ -224,78 +226,6 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         cardGlassBackground = UPGlassEffectView.install(style.fill, in: contentView)
     }
 
-    /// Where the scrolling content stops.
-    ///
-    /// On iOS 26 with Liquid Glass the content runs all the way to the display's bottom edge and
-    /// the action button **floats over it**, which is what Apple's scroll edge effect needs in
-    /// order to render at all — with the content stopping above the button there is nothing
-    /// passing underneath to fade, and the effect draws nothing (verified during the iOS 26 spike).
-    ///
-    /// The edge rather than the safe area, per Apple's guidance that content fills the display and
-    /// passes behind the chrome while *controls* stay inside the safe area. The home indicator's
-    /// inset is added back as content inset by `.always`, so the content still clears the button.
-    ///
-    /// Otherwise the content stops above the button exactly as before.
-    private func scrollViewBottomConstraint() -> NSLayoutConstraint {
-        guard floatsActionButton else {
-            return theScrollView.bottomAnchor.constraint(
-                equalTo: actionButton.topAnchor,
-                constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative
-            )
-        }
-        return theScrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-    }
-
-    /// Whether the action button floats over the scrolling content.
-    private var floatsActionButton: Bool {
-        glassResolver?.allowsGlass(for: .chrome) ?? false
-    }
-
-    /// The band at the bottom of the scroll view that the floating button occupies, and that the
-    /// content therefore has to keep clear of. Zero when the button is not floating, because then
-    /// the scroll view stops above it and there is nothing to clear.
-    private func floatingButtonClearance(theme: ExperienceTheme) -> CGFloat {
-        guard floatsActionButton else { return 0 }
-
-        let buttonMargin = theme.isStepsProgressEnabled
-            ? ThemeHandler.DefaultValues.buttonBottomMarginWithStepProgress
-            : ThemeHandler.DefaultValues.buttonBottomMarginWithoutStepProgress
-        return UPButtonView.buttonHeight
-            + buttonMargin
-            + ThemeHandler.DefaultValues.distanceBetweenSections
-    }
-
-    /// Applies the scroll edge effect and gives the content room to clear the floating button.
-    ///
-    /// Without the inset the last section would sit permanently underneath the button.
-    private func applyFloatingActionButtonChrome(theme: ExperienceTheme) {
-        actionButton.glassResolver = glassResolver
-        theScrollView.applyUPBottomScrollEdgeEffect(allowsGlass: floatsActionButton)
-
-        guard floatsActionButton else {
-            theScrollView.contentInset.bottom = 0
-            theScrollView.verticalScrollIndicatorInsets.bottom = 0
-            actionButton.removeUPScrollEdgeContainer()
-            return
-        }
-
-        // `setupUI` adds `actionButton` before `theScrollView`, so the scroll view sits on top in
-        // z-order. That was harmless while the two were adjacent, but now the scroll view extends
-        // underneath the button — and would swallow its taps. Raising the button both fixes
-        // hit-testing and is required for it to be visible over the content at all.
-        contentView.bringSubviewToFront(actionButton)
-
-        let clearance = floatingButtonClearance(theme: theme)
-        theScrollView.contentInset.bottom = clearance
-        theScrollView.verticalScrollIndicatorInsets.bottom = clearance
-
-        actionButton.registerUPScrollEdgeContainer(
-            for: theScrollView,
-            edge: .bottom,
-            allowsGlass: true
-        )
-    }
-
     // swiftlint:disable:next function_body_length
     private func setupUI(withTheme theme: ExperienceTheme) {
         tryCatch {
@@ -336,9 +266,12 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             // guide is used because insets are not known when the cell is built and change on
             // rotation, so a constant computed here would be wrong twice over; only its *height* is
             // referenced, which is independent of `contentOffset`.
+            // Both clearances, for the same reason: a short step stretches this container to fill the
+            // visible area, so any band reserved by content inset has to come off its height too —
+            // otherwise the step gains exactly that much phantom scroll despite fitting on screen.
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
                 equalTo: theScrollView.safeAreaLayoutGuide.heightAnchor,
-                constant: floatingButtonClearance(theme: theme).negative)
+                constant: (floatingButtonClearance(theme: theme) + floatingDismissClearance).negative)
             contentViewHeightConstraint.priority = .defaultLow
 
             // Define layout constraints for the scroll view and its content
@@ -352,8 +285,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                                                      constant:
                   theme.isStepsProgressEnabled ? ThemeHandler.DefaultValues.buttonBottomMarginWithStepProgress.negative
                     : ThemeHandler.DefaultValues.buttonBottomMarginWithoutStepProgress.negative),
-                theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
-                  constant: ThemeHandler.DefaultValues.carouselContentTopMargin),
+                scrollViewTopConstraint(),
                 theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
                   constant: ThemeHandler.DefaultValues.leftRightMargin),
                 theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,

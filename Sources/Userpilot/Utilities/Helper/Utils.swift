@@ -48,70 +48,66 @@ internal func delay(
         execute: closure)
 }
 
-/**
- * Image View Size Handling in SDK
- *
- * This function calculates the size of an image view dynamically based on the device type, screen dimensions,
- * and user-specified attributes. The goal is to ensure consistent rendering across various devices while
- * maintaining the original aspect ratio of the image.
- *
- * **Default Screen Width Calculation:**
- * - **Phones:** Default Screen Width = Device Screen Width × 0.8
- * - **Tablets:** Default Screen Width = Device Screen Width × 0.6
- *
- * **Behavior Based on User-Specified Dimensions:**
- *
- * 1. **When User Specifies "Auto" for Width and Height:**
- *    - Case 1: If the actual image width is less than or equal to the default screen width:
- *      - The image size is set to the actual width and height of the image.
- *    - Case 2: If the actual image width is greater than the default screen width:
- *      - The image width is set to the default screen width.
- *      - The image height is calculated to maintain the original aspect ratio using the formula:
- *        `New Image Height = (Actual Image Height / Actual Image Width) * Default Screen Width`
- *
- * 2. **When User Specifies Both Width and Height:**
- *    - Case 1: If the specified width is less than or equal to the default screen width:
- *      - The image size is directly set to the user-provided width and height.
- *    - Case 2: If the specified width is greater than the default screen width:
- *      - The image width is set to the default screen width.
- *      - The image height is recalculated using the same aspect ratio formula as above:
- *        `New Image Height = (Actual Image Height / Actual Image Width) * Default Screen Width`
- *
- * 3. **Fallback Behavior:**
- *    - If no specific size is provided (width or height is missing or `nil`), the image size defaults
- *      to a preconfigured value defined as `defaultSize`.
- *
- * @param actualWidth The actual width of the image provided by the user or derived from the image itself.
- * @param actualHeight The actual height of the image provided by the user or derived from the image itself.
- * @param screenWidth The calculated screen width based on the device type (phone or tablet).
- * @return A `CGSize` representing the calculated width and height of the image.
- */
+/// The size the backend asks an image to be, in points — **uncapped**.
+///
+/// Fitting it to the space that actually exists is ``UPImageView``'s job, and only it can do that
+/// correctly: this function has no idea which container the image will end up in.
+///
+/// The cap used to live here, as `screenWidth - contentMargin * 2`. That silently assumed every host
+/// was the carousel's full-bleed content area, and `SlideOutContainerView` puts the same image inside
+/// a card that is itself inset from the screen edges — so the figure over-estimated the room there and
+/// a wide image overflowed its card. Ported from the Android SDK, which made the same correction, so
+/// both platforms resolve an image to the same size.
+///
+/// The backend expresses sizes in CSS px, mapped 1:1 onto points — deliberate, and what keeps an image
+/// the same *physical* size across screen scales rather than shrinking as pixels get smaller.
+///
+/// **Behaviour by what the backend supplied:**
+///
+/// 1. **`style.width` and `style.height` both `"auto"`** — the image renders at its own `actual_size`.
+///    It is never enlarged to fill its container; an image narrower than its host stays narrow and is
+///    centred. This is the common case, and why a small image does not run edge to edge.
+/// 2. **Both explicitly given** — that box is used verbatim.
+/// 3. **Anything else** (either missing, or unparseable) — a square of `imageSize`.
+///
+/// - Parameter line: The line whose `attrs` carry `style` and `actual_size`.
+/// - Returns: The requested width and height in points, before any fitting.
 internal func getImageSize(for line: Line) -> CGSize {
     let defaultSize = ThemeHandler.DefaultValues.imageSize
-    let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
-    let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
-    let screenWidth = screenWidth - (ThemeHandler.DefaultValues.contentMargin * 2)
 
     if line.attrs?.style?.width == "auto" && line.attrs?.style?.height == "auto" {
-        if actualWidth > screenWidth {
-            let newHeight = (screenWidth * actualHeight) / actualWidth
-            return CGSize(width: screenWidth, height: newHeight)
-        } else {
-            return CGSize(width: actualWidth, height: actualHeight)
-        }
-    } else {
-        if let width = line.attrs?.style?.width?.toSize,
-           let height = line.attrs?.style?.height?.toSize {
-            if width > screenWidth {
-                let newHeight = (screenWidth * actualHeight) / actualWidth
-                return CGSize(width: screenWidth, height: newHeight)
-            } else {
-                return CGSize(width: width, height: height)
-            }
-        } else {
-            return CGSize(width: defaultSize, height: defaultSize)
-        }
+        let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
+        let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
+        return CGSize(width: actualWidth, height: actualHeight)
     }
+
+    if let width = line.attrs?.style?.width?.toSize,
+       let height = line.attrs?.style?.height?.toSize {
+        return CGSize(width: width, height: height)
+    }
+
+    return CGSize(width: defaultSize, height: defaultSize)
+}
+
+/// Height ÷ width of the *source* image, used to recompute the height when a requested size has to be
+/// shrunk to fit its container.
+///
+/// The source ratio rather than the requested box's, because that is the ratio the image is shrunk by —
+/// including when the backend asked for a box of a different shape.
+///
+/// The guard matters: computing `actualHeight / actualWidth` directly makes an `actual_size` of
+/// `{"width": 0}` a division by zero. Falls back to the requested box's own ratio, then to square.
+internal func sourceAspect(for line: Line, imageSize: CGSize) -> CGFloat {
+    let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? 0)
+    let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? 0)
+
+    if actualWidth > 0, actualHeight > 0 {
+        return actualHeight / actualWidth
+    }
+    if imageSize.width > 0 {
+        return imageSize.height / imageSize.width
+    }
+    return 1
 }
 
 /// Returns the width of the device's screen in points.

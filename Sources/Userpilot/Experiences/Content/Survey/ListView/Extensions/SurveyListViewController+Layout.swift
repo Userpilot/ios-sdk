@@ -18,13 +18,13 @@ import UIKit
 
 extension SurveyListViewController {
 
-    /// Whether the action button floats over the scrolling content.
+    /// Whether the chrome floats over the scrolling content, at both edges.
     ///
     /// Same gate as the rest of the chrome, and the same arrangement the carousel step uses: on
-    /// iOS 26 the content runs to the safe area and the button sits on top of it, which is what
+    /// iOS 26 the content runs to the display edge and the chrome sits on top of it, which is what
     /// Apple's scroll edge effect needs in order to render at all — with the content stopping
-    /// above the button there is nothing passing underneath to fade, and the effect draws nothing
-    internal var floatsActionButton: Bool {
+    /// short of the chrome there is nothing passing underneath to fade, and the effect draws nothing
+    internal var floatsChrome: Bool {
         surveyViewModel.glassResolver.allowsGlass(for: .chrome)
     }
 
@@ -37,10 +37,40 @@ extension SurveyListViewController {
     /// reserves below the scroll view (24 gap + 50 button + 16 margin), so the reachable content
     /// is unchanged; only what is painted behind the button changes.
     internal var scrollViewBottomClearance: CGFloat {
-        guard floatsActionButton else { return 0 }
+        guard floatsChrome else { return 0 }
         return ThemeHandler.DefaultValues.surveyListQuestionSpacing
             + UPButtonView.buttonHeight
             + ThemeHandler.DefaultValues.surveyListButtonBottomMargin
+    }
+
+    /// The band at the top of the scroll view the dismiss row occupies, and that the content has to
+    /// be able to clear. Zero when the chrome does not float, because then the scroll view starts
+    /// below the dismiss row and there is nothing to clear.
+    ///
+    /// Comes to the same offset the non-floating layout puts between the safe area and the first
+    /// question (20 row margin + 35 button + 12 gap), so the content still begins in the same place;
+    /// only what is painted behind the dismiss button changes.
+    internal var scrollViewTopClearance: CGFloat {
+        guard floatsChrome else { return 0 }
+        return ThemeHandler.DefaultValues.dismissRowTopMargin
+            + UPDismissButton.buttonSize
+            + ThemeHandler.DefaultValues.surveyListContentTopMargin
+    }
+
+    /// Where the scrolling content starts: at the display's top edge under the floating dismiss
+    /// button, or below the dismiss row as before.
+    ///
+    /// The display edge rather than the safe area, for the same reason as the bottom: content fills
+    /// the display and passes behind the chrome, while the controls stay inside the safe area. The
+    /// status bar inset is added back as content inset by `.always`, on top of
+    /// ``scrollViewTopClearance``.
+    private func scrollViewTopConstraint() -> NSLayoutConstraint {
+        guard floatsChrome else {
+            return scrollView.topAnchor.constraint(
+                equalTo: buttonDismissContainerView.bottomAnchor,
+                constant: ThemeHandler.DefaultValues.surveyListContentTopMargin)
+        }
+        return scrollView.topAnchor.constraint(equalTo: view.topAnchor)
     }
 
     /// Where the scrolling content stops: at the display's bottom edge under the floating button,
@@ -58,7 +88,7 @@ extension SurveyListViewController {
     /// view with seven vertical constraints and `hasAmbiguousLayout == true` — the reason it was
     /// reverted. Choosing the constraint while the layout is authored is what removes the ambiguity.
     private func scrollViewBottomConstraint() -> NSLayoutConstraint {
-        guard floatsActionButton else {
+        guard floatsChrome else {
             return actionButton.topAnchor.constraint(
                 equalTo: scrollView.bottomAnchor,
                 constant: ThemeHandler.DefaultValues.surveyListQuestionSpacing)
@@ -107,11 +137,10 @@ extension SurveyListViewController {
             buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
             buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
 
-            // A gap below the dismiss row, so the first question does not start flush against the
-            // close button. The XIB had the two touching.
-            scrollView.topAnchor.constraint(
-                equalTo: buttonDismissContainerView.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.surveyListContentTopMargin),
+            // Below the dismiss row, or behind it when the chrome floats — see
+            // `scrollViewTopConstraint()`. Chosen here, while the layout is authored, so there is
+            // exactly one vertical top constraint either way.
+            scrollViewTopConstraint(),
             scrollView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
             scrollViewBottomConstraint(),
