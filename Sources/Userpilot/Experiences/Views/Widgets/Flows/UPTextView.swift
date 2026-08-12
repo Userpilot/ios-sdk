@@ -46,11 +46,14 @@ internal class UPTextView: UILabel {
      - Parameters:
        - line: The `Line` object containing the text content and styling information.
        - theme: The `ExperienceTheme` that provides styling attributes for the text.
-       - experienceContentProtocol: A listener for handling link clicks.
+       - alignmentDefault: What to align to when `line` carries no `text_align`. Required rather
+         than defaulted so a new call site has to state which behaviour it wants; ask the flow via
+         ``UPTextAlignmentDefault/forFlow(resolver:isRTL:)``.
      */
     func setupView(
         line: Line,
-        theme: ExperienceTheme
+        theme: ExperienceTheme,
+        alignmentDefault: UPTextAlignmentDefault
     ) {
         let attributedString = NSMutableAttributedString()
 
@@ -75,8 +78,10 @@ internal class UPTextView: UILabel {
             }
         }
 
-        // Set text alignment based on the line attributes
-        textAlignment = line.attrs?.textAlign?.textAlignment() ?? .center
+        // Set text alignment based on the line attributes, falling back to the flow's default when
+        // the content does not specify one. An explicit value still wins, and still means the
+        // absolute edge it always did.
+        textAlignment = line.attrs?.textAlign?.textAlignment() ?? alignmentDefault.resolved
         attributedText = attributedString
     }
 

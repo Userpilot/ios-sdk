@@ -43,13 +43,16 @@ internal class UPIconTextContainerView: UIStackView {
      - Parameters:
         - lines: A list of `Line` objects representing the content to be displayed.
         - theme: The `ExperienceTheme` used to style each `UPIconTextView` child in the container.
-        - experienceContentListener: An event listener to handle interactions with each `UPIconTextView`.
+        - imageLoader: Object responsible for loading each row's icon.
+        - alignmentDefault: Passed through to each row for the lines that carry no `text_align` of
+          their own. Also carries the experience's direction, so no separate `isRTL` travels
+          alongside it.
      */
     func setupView(
         lines: [Line],
         theme: ExperienceTheme,
         imageLoader: ImageLoading,
-        isRTL: Bool
+        alignmentDefault: UPTextAlignmentDefault
     ) {
         // Remove existing views before adding new ones.
         clearViews()
@@ -61,7 +64,7 @@ internal class UPIconTextContainerView: UIStackView {
             iconText.setupView(line: line,
                                theme: theme,
                                imageLoader: imageLoader,
-                               isRTL: isRTL)
+                               alignmentDefault: alignmentDefault)
             addArrangedSubview(iconText)
         }
     }

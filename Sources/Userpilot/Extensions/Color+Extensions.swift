@@ -129,6 +129,54 @@ internal extension UIColor {
         return self.withAlphaComponent(opacity)
     }
 
+    /// This colour composited over `background`, so a translucent fill can be reasoned about as
+    /// the single colour it actually renders as.
+    ///
+    /// Needed because a theme's tint is applied at low opacity: `primary` at 20% is not what the
+    /// eye sees, the blend of it with the card is, and that blend is what has to be checked for
+    /// contrast.
+    func flattened(over background: UIColor) -> UIColor {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        var backRed: CGFloat = 0, backGreen: CGFloat = 0, backBlue: CGFloat = 0, backAlpha: CGFloat = 0
+        guard
+            getRed(&red, green: &green, blue: &blue, alpha: &alpha),
+            background.getRed(&backRed, green: &backGreen, blue: &backBlue, alpha: &backAlpha)
+        else { return self }
+
+        return UIColor(
+            red: backRed + (red - backRed) * alpha,
+            green: backGreen + (green - backGreen) * alpha,
+            blue: backBlue + (blue - backBlue) * alpha,
+            alpha: 1
+        )
+    }
+
+    /// WCAG relative luminance, `0` for black and `1` for white.
+    ///
+    /// The gamma-corrected form rather than the weighted-average one ``isLightColor()`` uses: this
+    /// feeds ``upContrastRatio(against:)``, where the shortcut version misjudges saturated
+    /// mid-tones badly enough to pass a fill that is not actually distinguishable.
+    private var relativeLuminance: CGFloat {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        guard getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return 0 }
+
+        let linear: (CGFloat) -> CGFloat = { channel in
+            channel <= 0.03928 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+    }
+
+    /// The WCAG contrast ratio between this colour and `other`, from `1` (identical) to `21`
+    /// (black against white).
+    ///
+    /// Both colours are assumed opaque — composite a translucent one with
+    /// ``flattened(over:)`` first, or the alpha is silently ignored.
+    func upContrastRatio(against other: UIColor) -> CGFloat {
+        let lighter = max(relativeLuminance, other.relativeLuminance)
+        let darker = min(relativeLuminance, other.relativeLuminance)
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
     func toHexStringWithAlpha(alpha: CGFloat) -> String {
         let clampedAlpha = max(0.0, min(1.0, alpha)) // Clamp alpha to 0-1
         var red: CGFloat = 0

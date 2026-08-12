@@ -585,8 +585,7 @@ extension NPSContainerView {
             buttonDismiss?.setupViews(
                 title: npsContent.content.survey.askMeLater ?? "Ask me later",
                 npsTheme: theme,
-                isSecondaryButton: true,
-                isDismissButton: true
+                role: .tertiary
             ) { [weak self] _ in
                 self?.npsContainerViewDelegate?.onNPSDismissed()
             }
@@ -633,8 +632,7 @@ extension NPSContainerView {
             buttonDismiss?.setupViews(
                 title: npsContent.content.followUp.close,
                 npsTheme: theme,
-                isSecondaryButton: true,
-                isDismissButton: true
+                role: .tertiary
             ) { [weak self] _ in
                 self?.npsContainerViewDelegate?.onNPSSubmitted(self?.userAnswer ?? 0, self?.userFollowUpKey ?? "", self?.userFollowUp ?? "")
                 self?.npsContainerViewDelegate?.onEndNPS(completedData: nil)
@@ -644,8 +642,7 @@ extension NPSContainerView {
                 buttonDismiss?.setupViews(
                     title: completedData.button.close ?? "Close",
                     npsTheme: theme,
-                    isSecondaryButton: true,
-                    isDismissButton: true
+                    role: .tertiary
                 ) { [weak self] _ in
                     self?.npsContainerViewDelegate?.onEndNPS(completedData: nil)
                 }
@@ -663,20 +660,20 @@ extension NPSContainerView {
         actionButton?.wrapsContentWidth = true
         updateAnswerButton.wrapsContentWidth = true
 
+        // The one step in the SDK that shows two tiers next to each other: Submit confirms, Update
+        // score steps back. Same hue, 100% against 20%, which is what separates them.
         actionButton?.setupViews(
             title: npsContent.content.followUp.submit ?? "Submit",
             npsTheme: theme,
-            isSecondaryButton: false,
-            isDismissButton: false
+            role: .primary
         ) { [weak self] _ in
             self?.submitFollowUp()
         }
-        
+
         updateAnswerButton.setupViews(
             title: npsContent.content.followUp.updateScore ?? "Update score",
             npsTheme: theme,
-            isSecondaryButton: true,
-            isDismissButton: false
+            role: .secondary
         ) { [weak self] _ in
             self?.currentStep = 0
             self?.bindSurveyViews()
@@ -716,8 +713,7 @@ extension NPSContainerView {
             actionButton?.setupViews(
                 title: completedData.button.buttonText ?? "Done",
                 npsTheme: theme,
-                isSecondaryButton: false,
-                isDismissButton: false
+                role: .primary
             ) { [weak self] _ in
                 self?.npsContainerViewDelegate?.onEndNPS(completedData: completedData)
             }

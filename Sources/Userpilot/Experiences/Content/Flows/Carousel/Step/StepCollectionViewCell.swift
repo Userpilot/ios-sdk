@@ -147,17 +147,22 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             self?.actionButtonClicked(action)
         }
 
+        // Where text starts when the content does not say. See ``UPTextAlignmentDefault``.
+        let alignmentDefault = UPTextAlignmentDefault.forFlow(resolver: glassResolver, isRTL: isRTL)
+
         step.sections.forEach { section in
             guard let firstLine = section.lines.first else { return }
             switch firstLine.type {
             case .heading:
                 let header = UPTextView()
-                header.setupView(line: firstLine, theme: theme)
+                header.setupView(line: firstLine, theme: theme, alignmentDefault: alignmentDefault)
                 stackView.addArrangedSubview(header)
 
             case .paragraph:
                 let paragraph = UPTextContainerView()
-                paragraph.setupView(lines: section.lines, theme: theme)
+                paragraph.setupView(lines: section.lines,
+                                    theme: theme,
+                                    alignmentDefault: alignmentDefault)
                 stackView.addArrangedSubview(paragraph)
 
             case .image:
@@ -174,7 +179,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 iconText.setupView(lines: section.lines,
                                    theme: theme,
                                    imageLoader: imageLoader,
-                                   isRTL: isRTL)
+                                   alignmentDefault: alignmentDefault)
                 stackView.addArrangedSubview(iconText)
             default:
                 break

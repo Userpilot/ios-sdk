@@ -22,6 +22,10 @@ internal class UPButtonView: UIButton {
     /// Read from `UPButtonView+Shape.swift`, which owns the sizing.
     static let wrappedContentPadding = CGFloat(48)
 
+    /// Corner radius for NPS buttons. NPS has no per-button radius in its theme — `box.radius`
+    /// belongs to the card — so this is the SDK's own value, unchanged from the literal it replaces.
+    private static let npsCornerRadius = CGFloat(12)
+
     /// The action to be triggered when the button is tapped.
     private var action: ButtonAction?
 
@@ -45,6 +49,13 @@ internal class UPButtonView: UIButton {
     /// Not private: `UPButtonView+Shape.swift` reads it to restore the theme's radius when a button
     /// stops being inside a glass card.
     var pendingFill: Fill?
+
+    /// Whether this button's tier in the action hierarchy may render as Liquid Glass.
+    ///
+    /// Set from ``UPButtonRoleStyle/allowsGlass`` by the role-based `setupViews`. `true` for every
+    /// other entry point, which is what keeps flow and survey buttons behaving exactly as before —
+    /// they have no role and their eligibility is still decided by their fill alone.
+    private var roleAllowsGlass = true
 
     /// A fill request, independent of how it ends up being rendered.
     struct Fill {
@@ -151,40 +162,43 @@ internal class UPButtonView: UIButton {
         applyFill(color: theme.primaryColor, cornerRadius: 12, borderColor: theme.primaryColor)
     }
 
+    /**
+     Sets up the button for a place in the NPS action hierarchy.
+
+     - Parameters:
+       - title: The button title.
+       - npsTheme: The `NPSTheme` supplying every colour and the font family.
+       - role: Which tier of the hierarchy this button occupies. See ``UPButtonRole``.
+       - callback: Optional callback function to handle button actions.
+     */
     func setupViews(
         title: String?,
         npsTheme: NPSTheme,
-        isSecondaryButton: Bool,
-        isDismissButton: Bool,
+        role: UPButtonRole,
         callback: ((ButtonAction?) -> Void)?
     ) {
-            // Apply theme-based styling properties to the button
-            titleLabel?.font = UIFont.matching(
-                fontName: npsTheme.fontFamily,
-                fontWeight: !isDismissButton ? [.traitBold] : [],
-                fontSize: isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
-            )
+        let style = role.style(for: npsTheme)
+        roleAllowsGlass = style.allowsGlass
 
-            if isSecondaryButton {
-                setTitleColor(npsTheme.backgroundColorAsString.invertColor().color, for: .normal)
-            } else {
-                setTitleColor(npsTheme.primaryColorAsString.invertColor().color, for: .normal)
-            }
+        titleLabel?.font = UIFont.matching(
+            fontName: npsTheme.fontFamily,
+            fontWeight: style.fontTraits,
+            fontSize: style.fontSize
+        )
 
-            setTitle(title, for: .normal)
-            contentHorizontalAlignment = .center
+        setTitle(title, for: .normal)
+        setTitleColor(style.titleColor, for: .normal)
+        contentHorizontalAlignment = .center
 
-            tintColor = isSecondaryButton ? .clear : npsTheme.primaryColor
-            applyFill(
-                color: isSecondaryButton ? .clear : npsTheme.primaryColor,
-                cornerRadius: 12,
-                borderColor: (isSecondaryButton && !isDismissButton)
-                    ? ThemeHandler.DefaultValues.grayColor
-                    : .clear,
-                borderWidth: 1
-            )
+        tintColor = style.fill
+        applyFill(
+            color: style.fill,
+            cornerRadius: Self.npsCornerRadius,
+            borderColor: style.borderColor,
+            borderWidth: style.borderWidth
+        )
 
-            self.callback = callback
+        self.callback = callback
     }
 
     /// Applies font.
@@ -286,6 +300,10 @@ internal class UPButtonView: UIButton {
             #available(iOS 15.0, *),
             isEnabled,
             hasFill,
+            // The tertiary tier declines the material outright rather than relying on its
+            // transparent fill to disqualify it — a text button is not a surface, whatever it
+            // happens to be filled with.
+            roleAllowsGlass,
             glassResolver?.allowsGlass(for: .chrome) == true,
             var glass = UIButton.Configuration.upGlass(.prominentGlass)
         else {

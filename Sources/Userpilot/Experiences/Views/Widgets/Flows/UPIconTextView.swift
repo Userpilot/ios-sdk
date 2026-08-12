@@ -66,23 +66,22 @@ internal class UPIconTextView: UIStackView {
      - Parameters:
         - line: The data representing the content and styling for the icon and text.
         - theme: The `ExperienceTheme` instance that defines the style attributes for the text and icon.
-        - experienceContentListener: The listener to handle interactions and events with this content.
+        - imageLoader: Object responsible for loading the icon.
+        - alignmentDefault: What the text half aligns to when the line carries no `text_align`, and the
+          single source of the experience's direction — which also decides whether the icon leads or
+          trails. The callers all derived it from the same `isRTL`, so taking that separately only
+          created a way for the two to disagree.
      */
     func setupView(
         line: Line,
         theme: ExperienceTheme,
         imageLoader: ImageLoading,
-        isRTL: Bool) {
-        // Add the subviews to the stack view
-        if isRTL && isAppRTL {
+        alignmentDefault: UPTextAlignmentDefault) {
+        // The icon leads unless the experience's direction and the app's disagree — in which case the
+        // stack view is already mirroring, and putting the text first cancels that back out.
+        if alignmentDefault.isRTL == isAppRTL {
             addArrangedSubview(imageView)
             addArrangedSubview(textView)
-        } else if !isRTL && !isAppRTL {
-            addArrangedSubview(imageView)
-            addArrangedSubview(textView)
-        } else if isRTL && !isAppRTL {
-            addArrangedSubview(textView)
-            addArrangedSubview(imageView)
         } else {
             addArrangedSubview(textView)
             addArrangedSubview(imageView)
@@ -92,6 +91,6 @@ internal class UPIconTextView: UIStackView {
         imageView.setupView(line: line, imageLoader: imageLoader)
 
         // Configure the textView using the line data, style, and listener.
-        textView.setupView(line: line, theme: theme)
+        textView.setupView(line: line, theme: theme, alignmentDefault: alignmentDefault)
     }
 }

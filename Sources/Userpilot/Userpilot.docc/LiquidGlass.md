@@ -125,6 +125,7 @@ Once a card renders as glass, some theme values are deliberately superseded by A
 | `corner_radius` / `border_radius` | Replaced. Sheets get Apple's asymmetry — 36 pt on the top pair, the display-concentric radius on the bottom pair. Dialogs get Apple's alert radius (27 pt), uniform. |
 | `button_border_radius` | Replaced by a capsule — UIKit's own default shape for a glass control. |
 | `button_border_color` / `button_border_width` | Dropped on **filled** buttons — the material draws its own edge, and a solid stroke over it paints a second outline. Kept on **outline** buttons (transparent fill), where the border is the only thing drawing the control. |
+| `text_align`, when **absent** on a flow's text | Falls back to the leading edge instead of centre, in carousel and slide-out content. An explicit value is still honoured exactly as before. See <doc:LiquidGlass#Flow-text-starts-at-the-leading-edge>. |
 | every other value — colours, fonts, text, spacing | Untouched. |
 
 Disabled buttons never render as glass, whatever the configuration: the material signals interactivity, and it renders almost invisibly once UIKit applies its own disabled dimming on top of the theme's disabled fill.
@@ -147,9 +148,51 @@ Where the action button floats — full-screen carousels and the full-screen sur
 
 The content is inset so it can still be scrolled clear of both the button and the home indicator, so nothing becomes unreachable. This is gated on chrome glass, which means it is **active by default on iOS 26** — set `liquidGlass(false)` for the previous layout, where content stops above the button.
 
+### Flow text starts at the leading edge
+
+Text in a **flow** experience — carousel and slide-out headers, paragraphs, and the text half of an icon-text row — now starts at the leading edge when its content carries no alignment of its own. It was centred before. This follows iOS 26, where leading is the system's default for body text.
+
+Only the *unset* case changes:
+
+| `text_align` in your content | On iOS 26, glass on | Glass off, or iOS 25 and below |
+|---|---|---|
+| *not set* | Leading — left, or **right** for a right-to-left locale | Centre, as before |
+| `left` | Left | Left |
+| `right` | Right | Right |
+| `center` | Centre | Centre |
+
+An explicit alignment you set in the dashboard is never reinterpreted: `left` still means the left edge, on right-to-left content too. Set one on any text you want centred and it will stay centred on every OS.
+
+Right-to-left comes from the **experience's** locale, not the device's — an Arabic flow reads right-to-left inside an English app.
+
+Because this is gated on chrome glass, it is **active by default on iOS 26**. `liquidGlass(false)` restores centred text everywhere.
+
+Surveys and NPS are unaffected. Their titles and descriptions have always resolved their own leading edge and did not change.
+
 ---
 
 ## Things To Know
+
+### NPS buttons follow the system emphasis ladder
+
+> Note: Unlike everything else on this page, this is **not** gated on Liquid Glass. It applies on every OS and whatever `liquidGlass(_:)` is set to.
+
+An NPS step can show up to three actions at once, and they now read as three tiers of emphasis rather than three unrelated styles:
+
+| Tier | Which buttons | Appearance |
+|---|---|---|
+| Primary | Submit, and the thank-you step's button | Filled with your `primary` colour |
+| Secondary | Update score | Filled with the same colour at low opacity |
+| Tertiary | Close, Ask me later | Text only, in your `primary` colour |
+
+Every colour still comes from your theme — this changes which of your colours each button uses, not the palette. Two visible differences:
+
+- **Update score** was an outlined button with a fixed grey border. It is now a filled, borderless pill in your own colour, which is what places it below Submit and above Close.
+- **Close** and **Ask me later** were drawn in the text colour. They now use your `primary` colour, so they read as tappable rather than as a label.
+
+Where your `primary` colour is too close to your `background_color` for either to be legible, the SDK falls back — to a neutral fill for Update score, and to your text colour for Close. So a theme whose primary is nearly the colour of its own card keeps visible buttons instead of losing them.
+
+On iOS 26 with glass on, Submit and Update score render as the same material at full and low tint, which is what separates them.
 
 ### Glass refracts your app's content
 
