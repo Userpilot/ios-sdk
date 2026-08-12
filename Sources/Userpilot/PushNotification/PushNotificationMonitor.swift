@@ -27,6 +27,12 @@ internal protocol PushNotificationMonitoring: AnyObject {
     /// - Parameter deviceToken: The device token received from APNs.
     func setPushToken(_ deviceToken: Data?)
 
+    /// Re-publishes the current device token even when its value has not changed.
+    ///
+    /// `setPushToken(_:)` is value-guarded and is therefore a no-op for a returning user whose
+    /// token is unchanged. This re-asserts the token ↔ user pairing on the backend.
+    func resyncPushToken()
+
     /// Refreshes the push authorization status and calls the completion handler with the updated status.
     ///
     /// - Parameter completion: A closure that is called with the updated authorization status.
@@ -100,20 +106,49 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         // Cache the token in all cases so in next identify in same session, we will sync it
         cachedToken = deviceToken
         guard
-            let newToken = deviceToken?.map({ String(format: "%02x", $0) }).joined(),
+            let newToken = deviceToken.map(hexString(from:)),
             storage.pushToken != newToken
         else {
             return
         }
 
         if analyticsPublisher.canRequestEvent {
-            analyticsPublisher.publishInternalSDKEvent(
-                PushNotificationTokenEvent(
-                    appToken: config.token,
-                    userId: storage.userId,
-                    token: newToken),
-                socketSubscription: self)
+            publishTokenEvent(newToken)
         }
+    }
+
+    /// Re-publishes the current device token even when its value has not changed.
+    ///
+    /// `setPushToken(_:)` is value-guarded, so a returning user whose APNs token did not change
+    /// would otherwise never re-pair token ↔ user on the backend. Driven by `AnalyticsPublisher`
+    /// after it forwards an identify that carries no new user data.
+    func resyncPushToken() {
+        // Prefer the token the OS handed us this launch; fall back to the persisted one for a warm
+        // start where `didRegisterForRemoteNotificationsWithDeviceToken` has not fired yet.
+        guard
+            let token = cachedToken.map(hexString(from:)) ?? storage.pushToken,
+            token.isNotEmpty,
+            analyticsPublisher.canRequestEvent
+        else {
+            return
+        }
+
+        publishTokenEvent(token)
+    }
+
+    /// Hex representation of a raw APNs device token.
+    private func hexString(from deviceToken: Data) -> String {
+        deviceToken.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Publishes the `user_token` event for the given hex token.
+    private func publishTokenEvent(_ token: String) {
+        analyticsPublisher.publishInternalSDKEvent(
+            PushNotificationTokenEvent(
+                appToken: config.token,
+                userId: storage.userId,
+                token: token),
+            socketSubscription: self)
     }
 
     /// Handles the socket event for sending the push token.

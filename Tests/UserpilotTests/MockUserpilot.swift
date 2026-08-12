@@ -346,6 +346,11 @@ class MockPushNotificationMonitor: PushNotificationMonitoring {
         onSetPushToken?(deviceToken)
     }
 
+    var onResyncPushToken: (() -> Void)?
+    func resyncPushToken() {
+        onResyncPushToken?()
+    }
+
     var onRefreshPushStatus: (() -> Void)?
     func refreshPushStatus(completion: ((UNAuthorizationStatus) -> Void)?) {
         onRefreshPushStatus?()
