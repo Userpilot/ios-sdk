@@ -157,6 +157,12 @@ internal class AnalyticsPublisher {
     /// Manages socket connections and event publishing over web socket.
     private let socketManager: SocketEvents
 
+    /// Debugger event bus. Emit is a no-op when the debugger is not started.
+    private let debugEventBus: DebugEventBusing
+
+    /// Maps analytics payloads into debugger events.
+    private let debugEventMapper: DebugEventMapping
+
     // MARK: - Properties
 
     /// Queue to hold events waiting to be sent
@@ -200,6 +206,8 @@ internal class AnalyticsPublisher {
         self.socketManager = container.resolve(SocketEvents.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
+        self.debugEventBus = container.resolve(DebugEventBusing.self)
+        self.debugEventMapper = container.resolve(DebugEventMapping.self)
 
         // Register socket event callback
         self.socketManager.registerCallback(self)
@@ -314,6 +322,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func publish(_ event: Event) {
         tryCatch {
+            debugEventBus.emit(debugEventMapper.fromAnalytics(event))
+
             // Handle app state - cache events when app is not in active state
             guard sessionMonitorer?.isAppActive ?? false else {
                 cacheEvent(event)
@@ -909,6 +919,7 @@ extension AnalyticsPublisher {
         socketSubscription: SocketSubscription?
     ) {
         tryCatch {
+            debugEventBus.emit(debugEventMapper.fromInternal(sdkEvent))
             guard canRequestEvent else { return }
             socketManager.publish(
                 sdkEvent.eventName,

@@ -56,6 +56,13 @@ class MockUserpilot: Userpilot {
         // in their initializers, so it must be registered here or they trap.
         container.registerLazy(
             GlassCapabilityResolving.self, initializer: GlassCapabilityResolver.init)
+        container.register(DebugEventBusing.self, value: debugEventBus)
+        container.register(DebugEventMapping.self, value: debugEventMapper)
+        container.register(DebugEventStoring.self, value: debugEventStore)
+        container.register(DebugFontCataloging.self, value: debugFontCatalog)
+        container.register(DebugConfigSnapshotMaking.self, value: debugConfigFactory)
+        container.register(DebugUserSnapshotMaking.self, value: debugUserFactory)
+        container.register(UserpilotDebuggerManaging.self, value: debuggerManager)
     }
 
     var onIdentify: ((String, Payload, Payload) -> Void)?
@@ -77,6 +84,18 @@ class MockUserpilot: Userpilot {
     var linkOpener = MockLinkOpening()
     var experienceStateManager: ExperienceStateManaging!
     var mockLogger = MockLogger()
+    var debugEventBus = DebugEventBus()
+    var debugEventMapper = DebugEventMapper()
+    lazy var debugEventStore = DebugEventStore(bus: debugEventBus)
+    var debugFontCatalog = DebugFontCatalog()
+    lazy var debugConfigFactory = DebugConfigSnapshotFactory(
+        config: config,
+        storage: storage,
+        fontCatalog: debugFontCatalog,
+        owner: self
+    )
+    lazy var debugUserFactory = DebugUserSnapshotFactory(storage: storage)
+    var debuggerManager = MockUserpilotDebuggerManager()
 }
 
 // MARK: - Mock Image Loader
@@ -510,6 +529,26 @@ class MockUPExperience: UIViewController, UPExperience {
     ) {
         onTriggerClose?(manualClose)
         completion?()
+    }
+}
+
+// MARK: - Mock Debugger Manager
+
+class MockUserpilotDebuggerManager: UserpilotDebuggerManaging {
+    var showCount = 0
+    var resetCount = 0
+    var hideCount = 0
+
+    func show() {
+        showCount += 1
+    }
+
+    func reset() {
+        resetCount += 1
+    }
+
+    func hide() {
+        hideCount += 1
     }
 }
 

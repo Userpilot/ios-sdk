@@ -79,6 +79,11 @@ class UserpilotManager {
     func logout() {
         userpilot?.logout()
     }
+
+    /// Shows the in-app debugger overlay.
+    func debug() {
+        userpilot?.debug()
+    }
     
     /// Track screens
     func screen(_ screenTitle: String) {

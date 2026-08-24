@@ -80,9 +80,28 @@ internal class UPTextView: UILabel {
 
         // Set text alignment based on the line attributes, falling back to the flow's default when
         // the content does not specify one. An explicit value still wins, and still means the
-        // absolute edge it always did.
-        textAlignment = line.attrs?.textAlign?.textAlignment() ?? alignmentDefault.resolved
+        // absolute edge it always did. The paragraph style has to carry the same alignment:
+        // `UILabel` measures attributed text from that, not from `textAlignment`, and a mismatch
+        // after the leading-edge default made slide-out sheets report a huge intrinsic height.
+        let alignment = line.attrs?.textAlign?.textAlignment() ?? alignmentDefault.resolved
+        textAlignment = alignment
+        if attributedString.length > 0 {
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = alignment
+            attributedString.addAttribute(
+                .paragraphStyle,
+                value: paragraph,
+                range: NSRange(location: 0, length: attributedString.length)
+            )
+        }
         attributedText = attributedString
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if preferredMaxLayoutWidth != bounds.width {
+            preferredMaxLayoutWidth = bounds.width
+        }
     }
 
     // MARK: - Private Helper Methods

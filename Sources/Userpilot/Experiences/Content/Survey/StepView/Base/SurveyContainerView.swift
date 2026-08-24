@@ -202,6 +202,8 @@ internal class SurveyContainerView: UIView {
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
                 equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
             contentViewHeightConstraint.priority = .defaultLow
+            let hugContentHeight = scrollView.heightAnchor.constraint(equalTo: contentContainerView.heightAnchor)
+            hugContentHeight.priority = .defaultHigh
 
             // Define constraints
             storedConstraints.append(contentsOf: [
@@ -237,9 +239,10 @@ internal class SurveyContainerView: UIView {
                 stepSectionsStackView.trailingAnchor.constraint(
                     equalTo: contentContainerView.trailingAnchor,
                     constant: 0),
-                stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
+                stepSectionsStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
 
-                // Content container view height constraint
+                // Hug content up to the max height so the sheet sizes to the step.
+                hugContentHeight,
                 contentViewHeightConstraint
             ])
 

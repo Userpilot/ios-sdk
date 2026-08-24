@@ -43,6 +43,13 @@ struct ContentView: View {
                             gradient: [.blue, .cyan],
                             action: { showScreensFlow = true }
                         )
+                        sampleRow(
+                            title: "Debugger",
+                            subtitle: "Open the in-app overlay to inspect config, user, and live events.",
+                            icon: "ladybug.fill",
+                            gradient: [.purple, .indigo],
+                            action: { UserpilotManager.shared.debug() }
+                        )
                     }
 
                     sampleSection(

@@ -161,6 +161,8 @@ internal class SlideOutContainerView: UIView {
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
                 equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
             contentViewHeightConstraint.priority = .defaultLow
+            let hugContentHeight = scrollView.heightAnchor.constraint(equalTo: contentContainerView.heightAnchor)
+            hugContentHeight.priority = .defaultHigh
 
             // Define constraints
             storedConstraints.append(contentsOf: [
@@ -177,7 +179,9 @@ internal class SlideOutContainerView: UIView {
                 contentContainerView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
                 contentContainerView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
 
-                // Step section stack view inside content container
+                // Step section stack view inside content container. Equal, not ≤: a loose bottom
+                // plus the low-priority "container = frame" stretch left a gap above the action
+                // button once leading-aligned labels reported a different intrinsic size.
                 stepSectionsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
                 stepSectionsStackView.leadingAnchor.constraint(
                     equalTo: contentContainerView.leadingAnchor,
@@ -185,9 +189,11 @@ internal class SlideOutContainerView: UIView {
                 stepSectionsStackView.trailingAnchor.constraint(
                     equalTo: contentContainerView.trailingAnchor,
                     constant: 0),
-                stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
+                stepSectionsStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
 
-                // Content container view height constraint
+                // Hug content up to the max height so the sheet sizes to the step instead of
+                // expanding the scroll view to 55% of the screen.
+                hugContentHeight,
                 contentViewHeightConstraint
             ])
 

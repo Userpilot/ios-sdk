@@ -236,6 +236,14 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(userpilot.storage.pushToken)
         XCTAssertEqual(userpilot.storage.userId, "")
         XCTAssertEqual(userpilot.storage.user, "")
+        XCTAssertEqual(userpilot.debuggerManager.resetCount, 1)
+    }
+
+    // MARK: - Debugger
+
+    func testDebug_showsDebuggerManager() {
+        userpilot.debug()
+        XCTAssertEqual(userpilot.debuggerManager.showCount, 1)
     }
 
     // MARK: - Clean

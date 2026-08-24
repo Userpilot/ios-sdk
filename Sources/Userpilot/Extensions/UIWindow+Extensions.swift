@@ -23,7 +23,7 @@ public extension UIWindow {
     /// internally by `ExperienceOverlayWindow`'s scene resolver to avoid
     /// picking its own scene as the fallback host.
     var isUserpilotWindow: Bool {
-        return self is ExperienceOverlayWindow
+        return self is ExperienceOverlayWindow || self is DebugUIWindow
     }
 }
 

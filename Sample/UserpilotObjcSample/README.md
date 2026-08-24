@@ -8,7 +8,7 @@ This example app requires you to fill in an Userpilot Token before the app will 
 
 ## ✨ Functionality
 
-The example app demonstrates the core functionality of the Userpilot iOS SDK across 4 screens.
+The example app demonstrates the core functionality of the Userpilot iOS SDK across 4 screens. The home screen also has a **Debugger** button that calls `[[Userpilot shared] debug]` to open the in-app overlay.
 
 ### Identify Screen
 

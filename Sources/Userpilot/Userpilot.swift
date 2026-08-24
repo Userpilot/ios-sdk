@@ -96,6 +96,9 @@ public class Userpilot: NSObject {
     /// Lazy loading SDK logger
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
+    /// Lazy loading in-app debugger
+    private lazy var debuggerManager = container.resolve(UserpilotDebuggerManaging.self)
+
     /// Lazy-instantiated overlay window used to present experiences for this instance.
     ///
     /// Each `Userpilot` instance owns one. The window is created on first
@@ -229,6 +232,13 @@ public class Userpilot: NSObject {
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
         container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
+        container.registerLazy(DebugEventBusing.self) { DebugEventBus(container: $0) }
+        container.registerLazy(DebugEventMapping.self) { DebugEventMapper(container: $0) }
+        container.registerEager(DebugEventStoring.self) { DebugEventStore(container: $0) }
+        container.registerLazy(DebugFontCataloging.self) { DebugFontCatalog(container: $0) }
+        container.registerLazy(DebugConfigSnapshotMaking.self) { DebugConfigSnapshotFactory(container: $0) }
+        container.registerLazy(DebugUserSnapshotMaking.self) { DebugUserSnapshotFactory(container: $0) }
+        container.registerEager(UserpilotDebuggerManaging.self) { UserpilotDebuggerManager(container: $0) }
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
@@ -381,7 +391,19 @@ extension Userpilot {
         storage.temporaryUser = nil
         storage.user = ""
         analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
+        debuggerManager.reset()
         clean()
+    }
+
+    /**
+     Starts the in-app debugger overlay.
+
+     A floating button is shown over the host UI. Tapping it opens a panel with SDK
+     configuration, cached user data, and live manual / autocapture / internal events.
+     */
+    @objc
+    public func debug() {
+        debuggerManager.show()
     }
 
     /**

@@ -468,3 +468,5 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 | Suppress interaction events for a view or subtree | ``userpilotIgnoreInteractions(_:)`` |
 
 For manual tracking (e.g. custom events or screens), continue to use ``Userpilot/track(_:properties:)`` and ``Userpilot/screen(_:)`` as described in the [iOS SDK installation](https://userpilot-feature-mobile-revamped.mintlify.app/developer/installation/mobile/ios/installation) guide.
+
+To inspect captured screens and interactions while developing, see <doc:Debugging>.

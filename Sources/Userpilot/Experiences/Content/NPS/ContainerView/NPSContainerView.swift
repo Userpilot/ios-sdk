@@ -291,6 +291,8 @@ internal class NPSContainerView: UIView {
             let contentViewHeightConstraint = contentContainerView.heightAnchor.constraint(
                 equalTo: frameLayoutGuide.heightAnchor, constant: 0.0)
             contentViewHeightConstraint.priority = .defaultLow
+            let hugContentHeight = scrollView.heightAnchor.constraint(equalTo: contentContainerView.heightAnchor)
+            hugContentHeight.priority = .defaultHigh
 
             // Define constraints
             storedConstraints.append(contentsOf: [
@@ -322,7 +324,7 @@ internal class NPSContainerView: UIView {
                 stepSectionsStackView.trailingAnchor.constraint(
                     equalTo: contentContainerView.trailingAnchor,
                     constant: 0),
-                stepSectionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor),
+                stepSectionsStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
 
                 footerButtonsStackView.trailingAnchor.constraint(
                     equalTo: footerButtonsContianer.trailingAnchor),
@@ -332,7 +334,7 @@ internal class NPSContainerView: UIView {
                 imageView.centerYAnchor.constraint(equalTo: imageContainerView.centerYAnchor),
                 imageView.centerXAnchor.constraint(equalTo: imageContainerView.centerXAnchor),
                 
-                // Content container view height constraint
+                hugContentHeight,
                 contentViewHeightConstraint
             ])
 

@@ -63,6 +63,11 @@ class UserpilotManager {
         userpilot?.logout()
     }
 
+    /// Shows the in-app debugger overlay.
+    func debug() {
+        userpilot?.debug()
+    }
+
     /// Track screens (manual). When `enableScreenAutoCapture` is on, the SDK ignores manual `screen` calls.
     func screen(_ screenTitle: String) {
         userpilot?.screen(screenTitle)

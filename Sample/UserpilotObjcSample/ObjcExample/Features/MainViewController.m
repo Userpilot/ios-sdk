@@ -20,4 +20,9 @@
     [[Userpilot shared] screen:@"main"];
 }
 
+- (IBAction)debugTapped:(UIButton *)sender {
+    // Host singleton from Userpilot+Shared, not the SDK registry default.
+    [[Userpilot shared] debug];
+}
+
 @end

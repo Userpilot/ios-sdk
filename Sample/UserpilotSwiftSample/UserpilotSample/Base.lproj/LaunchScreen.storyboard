@@ -16,14 +16,15 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="userpilot" translatesAutoresizingMaskIntoConstraints="NO" id="Idn-UT-3RR">
-                                <rect key="frame" x="78.666666666666671" y="375.66666666666669" width="235.66666666666663" height="101"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="launchIcon" translatesAutoresizingMaskIntoConstraints="NO" id="Idn-UT-3RR">
+                                <rect key="frame" x="146" y="375.5" width="101" height="101"/>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
-                            <constraint firstItem="Idn-UT-3RR" firstAttribute="width" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.6" id="JdC-Sn-2DQ"/>
+                            <constraint firstItem="Idn-UT-3RR" firstAttribute="width" constant="101" id="JdC-Sn-2DQ"/>
+                            <constraint firstItem="Idn-UT-3RR" firstAttribute="height" constant="101" id="mTF-56-Bcz"/>
                             <constraint firstItem="Idn-UT-3RR" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="i84-vw-QIW"/>
                             <constraint firstItem="Idn-UT-3RR" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="tWd-eL-EBb"/>
                         </constraints>
@@ -35,7 +36,7 @@
         </scene>
     </scenes>
     <resources>
-        <image name="userpilot" width="420" height="101"/>
+        <image name="launchIcon" width="101" height="101"/>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>

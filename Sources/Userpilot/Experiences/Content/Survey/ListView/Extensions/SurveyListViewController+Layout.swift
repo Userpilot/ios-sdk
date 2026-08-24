@@ -112,10 +112,12 @@ extension SurveyListViewController {
 
         buttonDismiss.addTarget(self, action: #selector(onCloseButtonClicked(_:)), for: .touchUpInside)
 
-        view.addSubview(buttonDismissContainerView)
-        buttonDismissContainerView.addSubview(buttonDismiss)
+        // Scroll view first: when chrome floats it reaches the display edges, so the dismiss
+        // row and action button have to be added after it or they lose their taps.
         view.addSubview(scrollView)
         scrollView.addSubview(containerView)
+        view.addSubview(buttonDismissContainerView)
+        buttonDismissContainerView.addSubview(buttonDismiss)
         view.addSubview(actionButton)
 
         let safeArea = view.safeAreaLayoutGuide

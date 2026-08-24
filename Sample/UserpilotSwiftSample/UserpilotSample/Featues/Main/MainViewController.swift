@@ -27,7 +27,8 @@ class MainViewController: BaseViewController {
         .eventsLog,
         .configurations,
         .autoCapture,
-        .configurations
+        .configurations,
+        .debugger
     ]
 
     // MARK: - Override

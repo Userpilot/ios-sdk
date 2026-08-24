@@ -101,7 +101,11 @@ final class ProgrammaticExperienceViewTests: XCTestCase {
         ])
 
         let scrollIndex = try XCTUnwrap(controller.view.subviews.firstIndex(of: controller.scrollView))
+        let dismissIndex = try XCTUnwrap(
+            controller.view.subviews.firstIndex(of: controller.buttonDismissContainerView)
+        )
         let buttonIndex = try XCTUnwrap(controller.view.subviews.firstIndex(of: controller.actionButton))
+        XCTAssertLessThan(scrollIndex, dismissIndex, "The dismiss button must remain tappable above content.")
         XCTAssertLessThan(scrollIndex, buttonIndex, "The action button must remain tappable above content.")
     }
 

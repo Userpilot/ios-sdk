@@ -222,7 +222,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillProportionally" spacingType="standard" translatesAutoresizingMaskIntoConstraints="NO" id="YmD-oR-GnA">
-                                <rect key="frame" x="40" y="380" width="334" height="136"/>
+                                <rect key="frame" x="40" y="356" width="334" height="184"/>
                                 <subviews>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="2UD-MM-w6v">
                                         <rect key="frame" x="0.0" y="0.0" width="334" height="40"/>
@@ -258,6 +258,18 @@
                                         <buttonConfiguration key="configuration" style="filled" title="Track"/>
                                         <connections>
                                             <segue destination="IV4-7k-Qev" kind="show" id="JaH-Wd-yA8"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Dbg-01-btn">
+                                        <rect key="frame" x="0.0" y="144" width="334" height="40"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="40" id="Dbg-h-40"/>
+                                        </constraints>
+                                        <color key="tintColor" name="AccentColor"/>
+                                        <state key="normal" title="Button"/>
+                                        <buttonConfiguration key="configuration" style="filled" title="Debugger"/>
+                                        <connections>
+                                            <action selector="debugTapped:" destination="fJ4-u7-a2k" eventType="touchUpInside" id="Dbg-act"/>
                                         </connections>
                                     </button>
                                 </subviews>
