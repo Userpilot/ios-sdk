@@ -37,6 +37,68 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         XCTAssertFalse(view.userpilotRedactAccessibilityLabel)
     }
 
+    func testDialogTextIsPublishedRawWhenRedactionIsNotRequested() {
+        let alert = UIAlertController(
+            title: "Delete account?",
+            message: "This cannot be undone",
+            preferredStyle: .alert
+        )
+
+        let dialogText = alert.userpilotDialogText()
+
+        XCTAssertEqual(dialogText.title, "Delete account?")
+        XCTAssertEqual(dialogText.message, "This cannot be undone")
+    }
+
+    func testDialogTextIsRedactedWhenRedactTextIsSetOnTheAlert() {
+        let alert = UIAlertController(
+            title: "Delete account?",
+            message: "This cannot be undone",
+            preferredStyle: .alert
+        )
+        alert.view.userpilotRedactText = true
+
+        let dialogText = alert.userpilotDialogText()
+
+        XCTAssertEqual(dialogText.title, AutoCaptureConstants.reductText)
+        XCTAssertEqual(dialogText.message, AutoCaptureConstants.reductText)
+    }
+
+    func testDialogTextKeepsNilFieldsWhenRedacted() {
+        let alert = UIAlertController(title: "Delete account?", message: nil, preferredStyle: .alert)
+        alert.view.userpilotRedactText = true
+
+        let dialogText = alert.userpilotDialogText()
+
+        XCTAssertEqual(dialogText.title, AutoCaptureConstants.reductText)
+        XCTAssertNil(dialogText.message)
+    }
+
+    func testResolvedInteractionTextOmitsWhenCaptureDisabledWithoutOwner() {
+        let view = UIView()
+        // Without a resolvable Userpilot owner, capture defaults to enabled — opt-in still redacts.
+        XCTAssertEqual(view.resolvedInteractionText("Visible"), "Visible")
+        view.userpilotRedactText = true
+        XCTAssertEqual(view.resolvedInteractionText("Visible"), AutoCaptureConstants.reductText)
+    }
+
+    func testAccessibilityLabelContentUsesOptInPlaceholderAndOmitsNilOwnerDefaults() {
+        let view = UIView()
+        view.accessibilityLabel = "Accessible Field"
+
+        // Without a resolvable owner, capture defaults to enabled.
+        XCTAssertEqual(view.getAccessibilityLabelContent(), "Accessible Field")
+
+        view.userpilotRedactAccessibilityLabel = true
+        XCTAssertEqual(view.getAccessibilityLabelContent(), AutoCaptureConstants.reductText)
+    }
+
+    func testIgnoreInnerHierarchyPlaceholderUsesRedactionWhenCaptureDefaultsEnabled() {
+        let view = UIView()
+        // Without a resolvable owner, text capture defaults to enabled.
+        XCTAssertEqual(view.ignoreInnerHierarchyTextPlaceholder(), AutoCaptureConstants.reductText)
+    }
+
     func testResponderClassDefaultsAreUsedUntilExplicitlyOverridden() {
         let view = DefaultIgnoredView()
 

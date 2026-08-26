@@ -530,9 +530,11 @@ extension NPSContainerView {
         buttonDismiss.backgroundColor = .clear
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            buttonDismiss.heightAnchor.constraint(equalToConstant: 30),
+            buttonDismiss.heightAnchor.constraint(
+                equalToConstant: ThemeHandler.DefaultValues.npsDismissButtonHeight),
             buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor, constant: 10),
-            buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor, constant: 20)
+            // Keep the chip inside the content margins, otherwise its trailing edge sits flush with the screen
+            buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor)
         ])
         return buttonDismiss
     }
