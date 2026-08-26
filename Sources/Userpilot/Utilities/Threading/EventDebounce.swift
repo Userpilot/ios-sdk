@@ -25,6 +25,10 @@ internal final class EventDebounce<Value> {
     private let deliveryQueue: DispatchQueue
     private let onDeliver: (Value) -> Void
 
+    /// `true` when `deliveryQueue` is the main queue, so `flushPending()` can deliver inline
+    /// when it is already called from the main thread.
+    private let deliversOnMainQueue: Bool
+
     /// Serial queue that owns all mutable state. Every read/write of
     /// `workItems` and `latestValues` must happen on this queue.
     private let queue = DispatchQueue(label: Constants.DispatchQueues.debounceQueue)
@@ -50,6 +54,7 @@ internal final class EventDebounce<Value> {
         self.delay = delay
         self.deliveryQueue = deliveryQueue
         self.onDeliver = onDeliver
+        self.deliversOnMainQueue = deliveryQueue === DispatchQueue.main
     }
 
     // MARK: - Public Methods
@@ -88,6 +93,32 @@ internal final class EventDebounce<Value> {
         cancelAll()
     }
 
+    /// Delivers every buffered value right away and clears the pending state.
+    ///
+    /// The opposite of `cancelAll()`: values are delivered instead of dropped. Use it when the caller
+    /// is about to publish an event that the pending values must precede — e.g. a manual `screen`
+    /// call must not overtake a text change the user made on the previous screen.
+    ///
+    /// When `deliveryQueue` is the main queue and the caller is already on the main thread, the
+    /// handler runs inline, so the caller keeps the ordering guarantee. Otherwise delivery is
+    /// dispatched onto `deliveryQueue` as usual.
+    func flushPending() {
+        let pending: [Value] = queue.sync {
+            drainPendingLocked()
+        }
+        guard !pending.isEmpty else { return }
+
+        if deliversOnMainQueue, Thread.isMainThread {
+            pending.forEach { onDeliver($0) }
+            return
+        }
+
+        deliveryQueue.async { [weak self] in
+            guard let self else { return }
+            pending.forEach { self.onDeliver($0) }
+        }
+    }
+
     // MARK: - Private Methods
 
     /// Must be called on `queue`.
@@ -122,11 +153,20 @@ internal final class EventDebounce<Value> {
 
     /// Must be called on `queue`.
     private func cancelAllLocked() {
+        _ = drainPendingLocked()
+    }
+
+    /// Cancels every pending work item and returns the buffered values.
+    /// Must be called on `queue`.
+    private func drainPendingLocked() -> [Value] {
         for (_, item) in workItems {
             item.cancel()
         }
         workItems.removeAll()
+
+        let pending = Array(latestValues.values)
         latestValues.removeAll()
+        return pending
     }
 
     /// Hops to `deliveryQueue` and invokes the caller-supplied handler.

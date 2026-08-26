@@ -189,6 +189,14 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
             guard !isStopped else { return }
             guard !shouldSuppressScreenAutoCapture else { return }
 
+            // Interaction autocapture debounces text-field / text-view changes, so a change the
+            // user made right before navigating would otherwise be published after this screen
+            // event and attributed to the new screen. Flush pending captures first (same as the
+            // manual `Userpilot.screen(_:)` path).
+            if config.enableInteractionAutoCapture {
+                InteractionEventCache.flushPendingInteractions()
+            }
+
             if screen.isDialogPresentation {
                 publishDialogPresentedAutocapture(from: screen)
                 return

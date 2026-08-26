@@ -28,6 +28,10 @@ internal struct Event {
     /// Auto-capture interaction category sent as `InteractionEventName`.
     var interactionEventName: String?
 
+    /// True when this identify carries no new user data and is forwarded only so the backend
+    /// re-affirms the user (once per screen). Not persisted through offline Codable round-trips.
+    var isIdentifyRefresh: Bool = false
+
     // MARK: - EventType helpers
 
     var isIdentifyEvent: Bool {

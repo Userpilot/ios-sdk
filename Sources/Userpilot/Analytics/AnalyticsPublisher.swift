@@ -117,6 +117,15 @@ internal class AnalyticsPublisher {
         return container?.resolve(SessionMonitoring.self)
     }
 
+    /// Push notification monitoring, used to re-assert the device token for a returning user.
+    ///
+    /// `AnalyticsPublishing` is registered *before* `PushNotificationMonitoring` in
+    /// `initializeContainer()`, and `PushNotificationMonitor.init` resolves this publisher, so this
+    /// must never be resolved from `init` — only on demand.
+    private weak var pushNotificationMonitor: PushNotificationMonitoring? {
+        return container?.resolve(PushNotificationMonitoring.self)
+    }
+
     /// The screen name tracker.
     private let screenNameTracker: ScreenNameTracking
 
@@ -131,6 +140,9 @@ internal class AnalyticsPublisher {
 
     /// The user session state machine.
     private let userSessionStateMachine: UserSessionStateManaging
+
+    /// Once-per-screen policy for unchanged identify events and their push-token re-assert.
+    private let identifyRefreshStateMachine = IdentifyRefreshStateMachine()
 
     // MARK: - Queues & State
 
@@ -267,6 +279,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
         // Reset start session for next login user
         startSession = true
+        // A new user starts with a fresh refresh allowance and owes no push-token sync
+        identifyRefreshStateMachine.onUserChanged()
         // Reset content states
         experiencesPublisher?.logout()
         // Clear seen contents from screenSessionStateMachine
@@ -297,6 +311,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func reset() {
         startSession = true
         eventThrottle.clear()
+        identifyRefreshStateMachine.onUserChanged()
     }
 
     /**
@@ -318,7 +333,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      *
      * Routing order:
      * 1. Drop while the app is not active.
-     * 2. Ignore same-user identify; cache new-user identify.
+     * 2. Identify refresh policy (suppress / refresh once per screen / carries new data).
      * 3. Hold in `initialQueue` until network readiness is known (NWPathMonitor is async).
      * 4. Persist to local storage when the network is known unavailable.
      * 5. Drop during socket shutdown.
@@ -332,6 +347,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     func publish(_ event: Event, isInternalEvent: Bool) {
         tryCatch {
+            var event = event
+
             // Keep experience targeting on the current screen immediately — events
             // queue now, and targeting must not lag behind navigation.
             if let screenTitle = event.screenTitle {
@@ -341,8 +358,14 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Handle app state - drop events when app is not in active state
             guard sessionMonitorer?.isAppActive ?? false else { return }
 
-            // Cache identify event or return when its same user
-            guard !didHandleIdentifyEvent(event) else { return }
+            // Run identify events through the refresh policy. Non-identify events skip this.
+            if event.isIdentifyEvent {
+                let refreshDecision = handleIdentifyEvent(event)
+                guard refreshDecision != .suppress else { return }
+                if refreshDecision == .refresh {
+                    event.isIdentifyRefresh = true
+                }
+            }
 
             // Hold events while network monitor is still resolving initial state
             if !networkMonitor.isReady {
@@ -397,23 +420,39 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     * Handles identify events by checking for duplicate users and caching the event.
+     * Builds the refresh request from the collaborators `IdentifyRefreshStateMachine` deliberately
+     * does not own.
+     *
+     * - Parameter event: The identify event to classify
+     * - Returns: The facts the refresh policy needs to decide
+     */
+    private func identifyRefreshRequest(for event: Event) -> IdentifyRefreshRequest {
+        IdentifyRefreshRequest(
+            carriesNoNewData: storage.user.isNotEmpty
+                && User.fromJson(storage.user).isSameIdentifyEvent(event: event),
+            isAnonymousUser: storage.anonymousUserId.isNotEmpty
+                && event.userId == storage.anonymousUserId,
+            // A pending identify has not reached the backend yet, so this is `onSocketClosed`
+            // replaying it, not a fresh host-app call.
+            isPendingReplay: storage.temporaryUser != nil && !socketManager.isSocketOpened
+        )
+    }
+
+    /**
+     * Runs an identify event through the refresh policy and, unless it is suppressed, caches it as
+     * the pending identify event.
      *
      * - Parameter event: The identify event to handle
-     * - Returns: true if the event should be ignored (same user), false if processing should continue
+     * - Returns: The policy decision for this event
      */
-    private func didHandleIdentifyEvent(_ event: Event) -> Bool {
-        guard event.isIdentifyEvent else { return false }
-
-        // When same user, return true to stop and ignore event
-        guard !(storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event)) else {
-            return true
-        }
+    private func handleIdentifyEvent(_ event: Event) -> IdentifyRefreshDecision {
+        let decision = identifyRefreshStateMachine.transition(identifyRefreshRequest(for: event))
+        guard decision != .suppress else { return decision }
 
         // Update temporary cached user in storage
         storage.temporaryUser = event.toUser().toJson()
 
-        return false
+        return decision
     }
 
     /**
@@ -442,7 +481,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         // When socket is closed then handle user session state
         if event.isIdentifyEvent {
             if storage.userId == event.userId {
-                userSessionStateMachine.markAwaitingInitialScreen()
+                // Refresh identifies skip the post-identify fake-reload screen event
+                if !event.isIdentifyRefresh {
+                    userSessionStateMachine.markAwaitingInitialScreen()
+                }
             } else {
                 userSessionStateMachine.markUserSwitch()
             }
@@ -505,12 +547,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Priority 3: process the live queue head
             guard let event = eventsQueue.getFirst() else {
                 handleEmptyEventQueue()
-                return
-            }
-
-            // Double check user - queued identify could have become same-user
-            if didHandleIdentifyEvent(event) {
-                skipHeadEvent()
                 return
             }
 
@@ -610,8 +646,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             return true
         }
 
-        // Socket is connected with the same user id
-        userSessionStateMachine.markAwaitingInitialScreen()
+        // Offline restore drops `isIdentifyRefresh`; re-detect same-user no-op identifies here.
+        let isIdentifyRefresh = event.isIdentifyRefresh
+            || (storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event))
+
         var payload: [String: Any] = [
             Constants.Analytics.metaDataProperty: event.properties ?? [:]
         ]
@@ -619,7 +657,30 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             payload[Constants.Analytics.identifyCompanyProperty] = company
         }
         socketManager.publish(event.eventName, payload: payload)
+
+        if isIdentifyRefresh {
+            // Nothing about the user changed, so the backend has nothing to re-evaluate:
+            // send the identify alone and skip the fake reload screen event.
+            syncPushTokenIfNeeded()
+            return true
+        }
+
+        // Socket is connected with the same user id — request post-identify screen
+        userSessionStateMachine.markAwaitingInitialScreen()
         return true
+    }
+
+    /**
+     * Re-publishes the device push token owed by a forwarded identify refresh.
+     *
+     * `PushNotificationMonitor.setPushToken` only publishes when the token value changes, so a
+     * returning user whose token is unchanged would otherwise never re-pair token ↔ user on the
+     * backend. Called after the identify is on the wire so the backend sees the user first.
+     */
+    private func syncPushTokenIfNeeded() {
+        // Check the socket first: the obligation must not be consumed while it cannot be fulfilled.
+        guard canRequestEvent, identifyRefreshStateMachine.consumePushTokenSync() else { return }
+        pushNotificationMonitor?.resyncPushToken()
     }
 
     /**
@@ -752,6 +813,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             if isScreenTitleChanged {
                 isNewScreen = true
 
+                // A genuinely new screen re-opens the identify refresh allowance
+                identifyRefreshStateMachine.onScreenChanged()
+
                 // New screen: start with an empty set of seen experiences
                 screenSessionStateMachine = ScreenSessionStateMachine(
                     event: event,
@@ -840,6 +904,9 @@ extension AnalyticsPublisher: SocketSubscription {
     func onSocketOpened() {
         tryCatch {
             processEvent()
+            // Cold start path: an identify refresh flushed when the socket opened may still owe
+            // a push-token re-assert if identify() could not fulfill it yet.
+            syncPushTokenIfNeeded()
         }
     }
 
@@ -1230,6 +1297,10 @@ extension AnalyticsPublisher {
 
     func mockGetInitialQueue() -> [Event] {
         return initialQueue.getAll()
+    }
+
+    func mockIdentifyRefreshState() -> IdentifyRefreshStateMachine.State {
+        return identifyRefreshStateMachine.state
     }
 }
 #endif

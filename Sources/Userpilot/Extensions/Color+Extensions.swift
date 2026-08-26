@@ -80,7 +80,8 @@ internal extension UIColor {
         return UIColor(red: red, green: green, blue: blue, alpha: 1.0)
     }
 
-    func isLightColor() -> Bool {
+    /// The perceived brightness of the color, in the `0...1` range.
+    func perceivedBrightness() -> CGFloat {
         // Get the red, green, blue, and alpha components of the color
         var red: CGFloat = 0
         var green: CGFloat = 0
@@ -90,10 +91,34 @@ internal extension UIColor {
         self.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
 
         // Calculate luminance using the same formula
-        let luminance = (0.299 * red + 0.587 * green + 0.114 * blue)
+        return (0.299 * red + 0.587 * green + 0.114 * blue)
+    }
 
-        // Return true if the color is dark, false otherwise
-        return luminance > 0.5
+    func isLightColor() -> Bool {
+        // Return true if the color is light, false otherwise
+        return perceivedBrightness() > 0.5
+    }
+
+    /// The opaque color that results from drawing `overlay` at `opacity` on top of this color.
+    func overlaying(_ overlay: UIColor, opacity: CGFloat) -> UIColor {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+
+        var overlayRed: CGFloat = 0
+        var overlayGreen: CGFloat = 0
+        var overlayBlue: CGFloat = 0
+        var overlayAlpha: CGFloat = 0
+        overlay.getRed(&overlayRed, green: &overlayGreen, blue: &overlayBlue, alpha: &overlayAlpha)
+
+        return UIColor(
+            red: red + (overlayRed - red) * opacity,
+            green: green + (overlayGreen - green) * opacity,
+            blue: blue + (overlayBlue - blue) * opacity,
+            alpha: 1.0
+        )
     }
 
     func withOpacity(_ opacity: CGFloat) -> UIColor {
