@@ -313,11 +313,17 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
     }
   }
 
+  /// Captures the current `task` on the calling thread rather than reading `self.task` from inside
+  /// the detached `Task`. `connect()` reassigns `self.task` from another queue, so reading it inside
+  /// the receive loop was an unsynchronized read of a strong reference being replaced concurrently -
+  /// the same hazard `notifyDelegate` documents above. Each recursion re-captures the live task, and
+  /// `receiveMessageTask`'s `didSet` still cancels a superseded loop.
   private func receive() {
+    guard let currentTask = self.task else { return }
     receiveMessageTask = Task { [weak self] in
       guard let self else { return }
         do {
-            let message = try await task?.receive()
+            let message = try await currentTask.receive()
             switch message {
             case .data:
                 print("Data received. This method is unsupported by the Client")
