@@ -60,6 +60,7 @@ final class SocketManagerTests: XCTestCase {
         socketManager = makeSocketManager()
 
         socketManager.connect()
+        drainMainQueue()
 
         XCTAssertTrue(transports.isEmpty)
         XCTAssertFalse(socketManager.isJoiningSocket)
@@ -74,6 +75,7 @@ final class SocketManagerTests: XCTestCase {
         socketManager = makeSocketManager()
 
         socketManager.connect()
+        drainMainQueue()
 
         XCTAssertTrue(transports.isEmpty)
         XCTAssertFalse(socketManager.isJoiningSocket)
@@ -91,11 +93,13 @@ final class SocketManagerTests: XCTestCase {
 
         socketManager.connect()
         socketManager.connect()
+        drainMainQueue()
 
         XCTAssertEqual(fetchCount, 1)
         XCTAssertTrue(transports.isEmpty)
 
         completions.first?(.success(()))
+        drainMainQueue()
 
         XCTAssertEqual(transports.count, 1)
     }
@@ -110,6 +114,7 @@ final class SocketManagerTests: XCTestCase {
 
         socketManager.connect()
         socketManager.connect()
+        drainMainQueue()
 
         XCTAssertEqual(fetchCount, 2)
         XCTAssertTrue(transports.isEmpty)
@@ -266,11 +271,26 @@ final class SocketManagerTests: XCTestCase {
         }
     }
 
+    /// Yields one main-queue turn.
+    ///
+    /// `SocketManager` serializes all Phoenix lifecycle work onto the main queue (see `openSocket`),
+    /// so the socket and transport are created a turn after `connect()` returns. The main queue is
+    /// FIFO, so once this block runs the deferred lifecycle work has already run.
+    private func drainMainQueue(
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let drained = expectation(description: "main queue drained")
+        DispatchQueue.main.async { drained.fulfill() }
+        wait(for: [drained], timeout: 1.0)
+    }
+
     private func openAndJoinSocket(
         file: StaticString = #filePath,
         line: UInt = #line
     ) throws -> FakePhoenixTransport {
         socketManager.connect()
+        drainMainQueue(file: file, line: line)
         let transport = try XCTUnwrap(transports.last, file: file, line: line)
         transport.open()
         let joinPush = try XCTUnwrap(

@@ -93,11 +93,56 @@ internal class SocketManager {
 
     typealias SocketFactory = (_ endpoint: String, _ params: SwiftPhoenixClientPayload?) -> Socket
 
+    /// Guards `storedPhoenixSocket` / `storedPhoenixChannel`.
+    ///
+    /// Both are replaced on the main queue by `createAndConnectSocket()` while the state getters
+    /// read them from other queues (the analytics watchdog, the experience queue). As plain stored
+    /// properties that was a load-then-retain race: the reader loads the pointer, the writer
+    /// releases the last reference, and the reader dereferences freed memory. Reading under the lock
+    /// hands the caller its own strong reference for the duration of the access.
+    ///
+    /// The setters hand the replaced value out of the critical section before releasing it:
+    /// `NSLock` is not recursive, so a `deinit` running under the lock that reached back into
+    /// either accessor would deadlock instead of crashing.
+    private let phoenixLock = NSLock()
+
+    private var storedPhoenixSocket: Socket?
+
+    private var storedPhoenixChannel: Channel?
+
     /// The WebSocket instance for handling connections.
-    private var phoenixSocket: Socket?
+    private var phoenixSocket: Socket? {
+        get {
+            phoenixLock.lock()
+            defer { phoenixLock.unlock() }
+            return storedPhoenixSocket
+        }
+        set {
+            phoenixLock.lock()
+            let previous = storedPhoenixSocket
+            storedPhoenixSocket = newValue
+            phoenixLock.unlock()
+            // Released here, with the lock already dropped.
+            _ = previous
+        }
+    }
 
     /// The channel within the WebSocket connection.
-    private var phoenixChannel: Channel?
+    private var phoenixChannel: Channel? {
+        get {
+            phoenixLock.lock()
+            defer { phoenixLock.unlock() }
+            return storedPhoenixChannel
+        }
+        set {
+            phoenixLock.lock()
+            let previous = storedPhoenixChannel
+            storedPhoenixChannel = newValue
+            phoenixLock.unlock()
+            // Released here, with the lock already dropped.
+            _ = previous
+        }
+    }
 
     /// SDK instance.
     private weak var userpilot: Userpilot?
@@ -174,15 +219,41 @@ extension SocketManager {
 
      - Parameter completion: A closure that is called when the connection attempt completes.
      */
-    // swiftlint:disable:next function_body_length
+    /// Always hops to the main queue before touching Phoenix.
+    ///
+    /// Phoenix drives its reconnect timer and heartbeat on main, forwards every transport delegate
+    /// callback to main, and `closeSocket()` hops to main - so main is the queue that already
+    /// serializes its state machine. `fetchSettings` delivers its completion on the URLSession
+    /// delegate queue, so without this hop `connect()` runs concurrently with
+    /// `disconnect()`/`teardown()` and the socket is torn down mid-connect.
     private func openSocket() {
+        performOn(.main) { [weak self] in
+            guard let self else { return }
+            // A teardown was requested while the settings request was in flight - do not reopen.
+            // Release the single-flight gate too, or no later connect() could ever claim it.
+            if self.isShutdownState {
+                self.isFetchingSocketSettings.value = false
+                return
+            }
+            self.createAndConnectSocket()
+        }
+    }
+
+    // Creates the socket and channel and starts connecting.
+    // Must only be called on the main queue.
+    // swiftlint:disable:next function_body_length
+    private func createAndConnectSocket() {
         guard
             storage.socketURL.isNotEmpty,
             config.token.isNotEmpty,
             storage.userId.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
-        else { return }
+        else {
+            // Nothing to dial - release the gate so a later attempt is not blocked forever.
+            isFetchingSocketSettings.value = false
+            return
+        }
         tryCatch {
             quarantinePreviousSocket()
 
@@ -287,6 +358,7 @@ extension SocketManager {
     /// cannot fire stale close/error events into subscribers, then disconnect it.
     /// Captures the instance locally and tears down synchronously — race-free
     /// against a replacement, and a no-op for an already-closed socket.
+    /// Must only be called on the main queue - it tears the transport down.
     private func quarantinePreviousSocket() {
         guard let oldSocket = phoenixSocket else { return }
         if let oldChannel = phoenixChannel {
@@ -357,9 +429,12 @@ extension SocketManager: SocketManaging {
             return
         }
         // Half-open transport (connected, channel never joined) passes the gate
-        // above — recover by abandoning it before dialing fresh.
+        // above — recover by abandoning it before dialing fresh. Hops to main: this tears the
+        // transport down, so it must not run concurrently with the rest of the lifecycle.
         if isSocketConnectedWithUnknownChannel {
-            quarantinePreviousSocket()
+            performOn(.main) { [weak self] in
+                self?.quarantinePreviousSocket()
+            }
         }
         if !isFetchingSocketSettings.compareAndSet(expected: false, new: true) {
             return
@@ -385,6 +460,13 @@ extension SocketManager: SocketManaging {
     }
 
     /// Implementation to publish an event over the WebSocket
+    ///
+    /// Runs on the caller's queue - unlike the connect/teardown paths, which are all serialized on
+    /// main. That is safe for the transport itself (`sendBuffer` is a `SynchronizedArray` and a send
+    /// on a cancelled task just fails its completion), but `Socket.makeRef()` increments a plain
+    /// `UInt64`, so a push racing the main-queue heartbeat can duplicate a message ref and misroute
+    /// its ACK. Hopping to main would fix that; it would also reorder pushes relative to the caller,
+    /// so it is left alone deliberately rather than by omission.
     func publish(
         _ eventName: String,
         payload: Payload

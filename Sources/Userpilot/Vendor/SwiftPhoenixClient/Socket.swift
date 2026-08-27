@@ -165,8 +165,38 @@ public class Socket: PhoenixTransportDelegate {
   /// Close status
   var closeStatus: CloseStatus = .unknown
   
+  /// Guards `_connection`.
+  ///
+  /// `teardown()` sets the connection to `nil` on the main queue, releasing the last reference to
+  /// the transport, while other queues read socket state through `connectionState`. A plain stored
+  /// property made that a load-then-retain race: the reader loaded the pointer, the writer freed the
+  /// object, and the reader then dereferenced it - `EXC_BAD_ACCESS` in `readyState`. Reading under
+  /// the lock hands the caller its own strong reference, so the transport cannot be deallocated
+  /// while it is being used.
+  ///
+  /// The setter hands the replaced transport out of the critical section before releasing it:
+  /// `NSLock` is not recursive, so a `deinit` running under the lock that reached back into this
+  /// accessor would deadlock instead of crashing.
+  private let connectionLock = NSLock()
+
+  private var _connection: PhoenixTransport? = nil
+
   /// The connection to the server
-  var connection: PhoenixTransport? = nil
+  var connection: PhoenixTransport? {
+    get {
+      connectionLock.lock()
+      defer { connectionLock.unlock() }
+      return _connection
+    }
+    set {
+      connectionLock.lock()
+      let previous = _connection
+      _connection = newValue
+      connectionLock.unlock()
+      // Released here, with the lock already dropped.
+      _ = previous
+    }
+  }
   
   
   //----------------------------------------------------------------------
