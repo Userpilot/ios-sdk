@@ -24,6 +24,7 @@ final class EventDebounceTests: XCTestCase {
 
         wait(for: [expectation], timeout: 1)
         XCTAssertEqual(delivered, ["second"])
+        debounce.shutdown()
     }
 
     func testIndependentKeysBothDeliver() {
@@ -43,6 +44,7 @@ final class EventDebounceTests: XCTestCase {
 
         wait(for: [expectation], timeout: 1)
         XCTAssertEqual(delivered, ["A", "B"])
+        debounce.shutdown()
     }
 
     func testCancelAllPreventsDelivery() {
@@ -98,6 +100,7 @@ final class EventDebounceTests: XCTestCase {
         // Called from the main thread with a main delivery queue, so delivery is inline: the caller can
         // publish its own event next and stay ordered after the flushed value.
         XCTAssertEqual(delivered, ["latest"])
+        debounce.shutdown()
     }
 
     func testFlushPendingWithNothingPendingDeliversNothing() {
@@ -117,26 +120,32 @@ final class EventDebounceTests: XCTestCase {
 
     func testFlushPendingClearsPendingWorkSoValuesDeliverOnce() {
         var delivered: [String] = []
+        // The delay must be comfortably longer than the time it takes this test to reach
+        // `flushPending()`. With a 0.05s delay the debounce timer could win that race under load,
+        // so the test would silently exercise the timer path instead of the flush path it names —
+        // and the timer would still be in flight when the test ended.
+        let delay: TimeInterval = 0.5
         let debounce = EventDebounce<String>(
-            delay: 0.05,
+            delay: delay,
             deliveryQueue: .main
         ) { value in
             delivered.append(value)
         }
 
         debounce.schedule(key: "field", value: "A")
-        let scheduled = expectation(description: "scheduled")
-        DispatchQueue.main.async { scheduled.fulfill() }
-        wait(for: [scheduled], timeout: 1)
-
+        // `flushPending()` takes `queue.sync`, so it is already ordered behind `schedule()`'s hop
+        // onto the internal queue — no extra synchronization is needed for the value to be seen.
         debounce.flushPending()
+
+        XCTAssertEqual(delivered, ["A"], "flushPending should deliver the buffered value inline")
 
         // Wait past the original delay: the cancelled timer must not deliver a second time.
         let settled = expectation(description: "settled")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { settled.fulfill() }
-        wait(for: [settled], timeout: 1)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay + 0.2) { settled.fulfill() }
+        wait(for: [settled], timeout: delay + 2)
 
-        XCTAssertEqual(delivered, ["A"])
+        XCTAssertEqual(delivered, ["A"], "cancelled timer must not deliver again")
+        debounce.shutdown()
     }
 
     func testDeliveryUsesConfiguredQueue() {
@@ -155,5 +164,6 @@ final class EventDebounceTests: XCTestCase {
         debounce.schedule(key: "a", value: "A")
 
         wait(for: [expectation], timeout: 1)
+        debounce.shutdown()
     }
 }
