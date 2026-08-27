@@ -46,7 +46,11 @@ internal enum ExperienceFlowState {
     case active(triggerType: TriggerType, content: ExperienceContent)
 
     /// Thank you message is displayed after survey completion.
-    case showingThankYou
+    ///
+    /// Carries the preview flag forward: the thank-you state replaces the `active` state that knew
+    /// its `triggerType`, so without it a previewed survey's thank-you screen looks like a real one
+    /// and publishes real events.
+    case showingThankYou(isPreview: Bool)
 
     /// Manual experience cached because another experience is in progress.
     case cachedPendingManual(experienceId: String)
@@ -78,6 +82,8 @@ extension ExperienceFlowState {
             return true
         case .waitingDelay(let triggerType), .active(let triggerType, _):
             return triggerType == .preview
+        case .showingThankYou(let isPreview):
+            return isPreview
         default:
             return false
         }
@@ -136,8 +142,8 @@ extension ExperienceFlowState: CustomStringConvertible {
             return "WaitingDelay(\(triggerType))"
         case .active(let triggerType, let content):
             return "Active(\(triggerType), content=\(type(of: content)))"
-        case .showingThankYou:
-            return "ShowingThankYou"
+        case .showingThankYou(let isPreview):
+            return "ShowingThankYou(preview=\(isPreview))"
         case .cachedPendingManual(let experienceId):
             return "CachedPendingManual(id=\(experienceId))"
         case .cachedPendingAutomatic:
@@ -297,8 +303,11 @@ extension ExperienceStateMachine: ExperienceStateManaging {
     }
 
     func markShowingThankYou() {
-        state.value = .showingThankYou
-        logger.info("Experience state: ShowingThankYou")
+        // Read the flag before overwriting the state — the outgoing `active`/`waitingDelay` state is
+        // the only thing that knows this was a preview.
+        let isPreview = state.value.isPreviewMode()
+        state.value = .showingThankYou(isPreview: isPreview)
+        logger.info("Experience state: ShowingThankYou(preview=%@)", String(isPreview))
     }
 
     func markCachedManual(_ experienceId: String) {
