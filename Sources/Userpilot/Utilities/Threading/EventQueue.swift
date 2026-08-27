@@ -13,7 +13,10 @@ import Foundation
 
 internal class EventQueue {
     private var queue: [Event] = []
-    private let dispatchQueue = DispatchQueue(label: "events_queue", attributes: .concurrent)
+    private let dispatchQueue = DispatchQueue(
+        label: Constants.DispatchQueues.eventQueue,
+        attributes: .concurrent
+    )
 
     // MARK: - Write operations (exclusive)
 

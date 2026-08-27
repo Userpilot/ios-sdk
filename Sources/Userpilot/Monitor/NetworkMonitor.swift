@@ -82,7 +82,7 @@ internal class NetworkMonitor: NetworkMonitoring {
     )
 
     private let stateQueue = DispatchQueue(
-        label: "com.userpilot.network.state", attributes: .concurrent)
+        label: Constants.DispatchQueues.networkMonitorState, attributes: .concurrent)
 
     private var pathMonitor: NWPathMonitor?
     private var debounceWorkItem: DispatchWorkItem?

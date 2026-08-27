@@ -96,6 +96,9 @@ internal enum Constants {
     enum DispatchQueues {
         static let database = "com.userpilot.database-queue"
         static let networkMonitor = "com.userpilot.network-monitor-queue"
+        static let networkMonitorState = "com.userpilot.network-monitor-state-queue"
+        static let offlineEvents = "com.userpilot.offline-events-queue"
+        static let background = "com.userpilot.background-queue"
         static let analyticsWatchdog = "com.userpilot.analytics-watchdog-queue"
         static let eventQueue = "com.userpilot.event-queue"
         static let experienceQueue = "com.userpilot.experience-queue"

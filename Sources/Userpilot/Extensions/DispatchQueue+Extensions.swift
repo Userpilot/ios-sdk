@@ -32,7 +32,7 @@ internal enum QueueType {
         case .main:
             return DispatchQueue.main
         case .background:
-            return DispatchQueue(label: "com.app.queue",
+            return DispatchQueue(label: Constants.DispatchQueues.background,
                                  qos: .background,
                                  target: nil)
         case .lowPriority:

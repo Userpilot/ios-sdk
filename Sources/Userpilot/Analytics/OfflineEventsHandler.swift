@@ -62,7 +62,7 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
 
     /// Serial background queue for processing offline events
     private let offlineEventsQueue = DispatchQueue(
-        label: "com.userpilot.offlineevents",
+        label: Constants.DispatchQueues.offlineEvents,
         qos: .utility
     )
 
