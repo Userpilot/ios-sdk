@@ -10,8 +10,6 @@
 
 import Foundation
 
-typealias AutoCaptureConstants = Constants.AutoCapture
-
 extension Constants {
 
     /// Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).

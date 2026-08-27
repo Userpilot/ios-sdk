@@ -97,7 +97,7 @@ internal enum UIKitViewResolver {
             if let label = node.accessibilityLabel?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !label.isEmpty,
-               label != AutoCaptureConstants.reductText,
+               label != Constants.AutoCapture.reductText,
                !accessibilityRedacted {
                 attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
@@ -105,7 +105,7 @@ internal enum UIKitViewResolver {
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !id.isEmpty,
-               id != AutoCaptureConstants.reductText,
+               id != Constants.AutoCapture.reductText,
                !accessibilityRedacted {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
@@ -347,7 +347,7 @@ internal extension UIView {
     func resolvedInteractionText(_ raw: String?) -> String? {
         guard let raw, !raw.isEmpty else { return nil }
         if isInteractionTextCaptureDisabled() { return nil }
-        if hasUserpilotRedactTextOptIn() { return AutoCaptureConstants.reductText }
+        if hasUserpilotRedactTextOptIn() { return Constants.AutoCapture.reductText }
         return raw
     }
 
@@ -358,7 +358,7 @@ internal extension UIView {
     /// is omitted — same omit policy as ``resolvedInteractionText(_:)`` / ``getTextContent()``.
     func ignoreInnerHierarchyTextPlaceholder() -> String? {
         if isInteractionTextCaptureDisabled() { return nil }
-        return AutoCaptureConstants.reductText
+        return Constants.AutoCapture.reductText
     }
 
     /// Checks if accessibility labels should be hidden: Config
@@ -440,7 +440,7 @@ internal extension UIView {
             return nil
         }
         if hasUserpilotRedactTextOptIn() {
-            return AutoCaptureConstants.reductText
+            return Constants.AutoCapture.reductText
         }
 
         if let direct = userpilotRawDirectText(
@@ -477,7 +477,7 @@ internal extension UIView {
             return nil
         }
         if hasUserpilotRedactAccessibilityLabelOptIn() {
-            return AutoCaptureConstants.reductText
+            return Constants.AutoCapture.reductText
         }
 
         guard let label = accessibilityLabel, !label.isEmpty else {

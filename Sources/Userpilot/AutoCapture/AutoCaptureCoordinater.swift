@@ -736,7 +736,7 @@ extension AutoCaptureCoordinater {
         screenNameTracker.updateScreen(with: screenPayload)
         let event = Event(
             type: .screen(title),
-            properties: [AutoCaptureConstants.source: AutoCaptureConstants.autoCaptureSourceValue]
+            properties: [Constants.AutoCapture.source: Constants.AutoCapture.autoCaptureSourceValue]
         )
         analyticsPublisher.publish(event)
 

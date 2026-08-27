@@ -105,7 +105,7 @@ internal final class ScreenNameTracker: ScreenNameTracking {
 
         // Common (always included)
         var screen: [String: String] = [
-            AutoCaptureConstants.screenTitle: payload.screenClass
+            Constants.AutoCapture.screenTitle: payload.screenClass
         ]
 
         return screen
