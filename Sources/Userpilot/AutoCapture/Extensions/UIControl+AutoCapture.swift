@@ -112,7 +112,7 @@ internal extension UIControl {
             if config.enableInteractionValueCapture {
                 payload.sourceProperties[Constants.AutoCapture.selectedIndex] = segmentedControl.selectedSegmentIndex
                 let raw = segmentedControl.titleForSegment(at: segmentedControl.selectedSegmentIndex)
-                let title: String? = shouldRedactText() ? (raw != nil ? Constants.AutoCapture.reductText : nil) : raw
+                let title = resolvedInteractionText(raw)
                 if let title {
                     payload.sourceProperties[Constants.AutoCapture.selectedValue] = title
                 }
@@ -174,16 +174,14 @@ internal extension UIControl {
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
         if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = Constants.AutoCapture.reductText
+            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
         }
 
         if let userpilotLabel = resolveUserpilotLabel() {
             if let labelViewType = resolveUserpilotLabelViewType() {
                 payload.targetClass = labelViewType
             }
-            payload.elementText = shouldRedactText()
-                ? Constants.AutoCapture.reductText
-                : userpilotLabel
+            payload.elementText = resolvedInteractionText(userpilotLabel)
         }
 
         // IBOutlet reference name (e.g., "submitButton", "searchTextField")

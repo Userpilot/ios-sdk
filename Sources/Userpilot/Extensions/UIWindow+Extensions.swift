@@ -208,11 +208,13 @@ extension UIWindow {
             if let labelViewType = capture.viewType {
                 eventProperties[Constants.AutoCapture.targetClass] = labelViewType
             }
-            eventProperties[Constants.AutoCapture.targetText] = capture.labeledView.shouldRedactText()
-                ? Constants.AutoCapture.reductText
-                : capture.label
+            if let resolvedLabel = capture.labeledView.resolvedInteractionText(capture.label) {
+                eventProperties[Constants.AutoCapture.targetText] = resolvedLabel
+            }
         } else if useRedactedInner {
-            eventProperties[Constants.AutoCapture.targetText] = Constants.AutoCapture.reductText
+            if let placeholder = view.ignoreInnerHierarchyTextPlaceholder() {
+                eventProperties[Constants.AutoCapture.targetText] = placeholder
+            }
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
                 eventProperties[Constants.AutoCapture.accessibilityIdentifier] = accessibilityIdentifier
