@@ -421,6 +421,72 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertFalse(didPublishEvent)
     }
 
+    func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
+        // Arrange — the screen session (which owns the seen sets) is only created once the
+        // screen event actually goes out, which requires an open socket.
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        let survey = MockContentFactory.makeSurveyContent(id: 456)
+
+        // Act
+        analyticsPublisher.experiencePublished(.flow, flow.id)
+        analyticsPublisher.experiencePublished(.survey, survey.id)
+
+        // Assert — each type reads its own seen set, and an unseen id stays unseen
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.survey(content: survey)))
+        XCTAssertFalse(
+            analyticsPublisher.isExperienceSeen(
+                .survey(content: MockContentFactory.makeSurveyContent(id: 999))
+            )
+        )
+    }
+
+    func testIsExperienceSeen_shouldNotCrossTypesForTheSameNumericId() throws {
+        // Arrange — the screen session (which owns the seen sets) is only created once the
+        // screen event actually goes out, which requires an open socket.
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+
+        // Act — only the Flow is marked seen
+        analyticsPublisher.experiencePublished(.flow, flow.id)
+
+        // Assert — a Survey sharing that id must not inherit the Flow's seen state
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+        XCTAssertFalse(
+            analyticsPublisher.isExperienceSeen(
+                .survey(content: MockContentFactory.makeSurveyContent(id: flow.id))
+            )
+        )
+    }
+
+    func testIsExperienceSeen_shouldReturnFalseForNPS() throws {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        let nps = try XCTUnwrap(
+            MockContentFactory.makeNPSContentPayload()
+                .toJSONString()?
+                .toNPSContent()?
+                .npsContent
+        )
+
+        // Assert — NPS dedup is owned by ExperiencesPublisher, so this always reports unseen
+        XCTAssertFalse(analyticsPublisher.isExperienceSeen(.nps(content: nps)))
+    }
+
     func testPublishFakeReloadScreenEvent_shouldPublishWhenScreenSessionStateMachineExists() {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
@@ -575,7 +641,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
     private func makeAutoCaptureEvent(
         properties: Payload = nil,
-        screen: Payload = [AutoCaptureConstants.screenClass: "HomeViewController"],
+        screen: Payload = [Constants.AutoCapture.screenClass: "HomeViewController"],
         interactionEventName: String = "tap"
     ) -> Event {
         return Event(
@@ -587,6 +653,14 @@ class AnalyticsPublisherTests: XCTestCase {
     }
 
     /// Counts socket publishes triggered by publishing the given events back-to-back.
+    ///
+    /// The pipeline is ACK-gated: `processEvent` claims a single-flight gate and only releases it
+    /// when the socket resolves the in-flight head through `onSocketEventSent`. `MockSocketManager`
+    /// has no backend, so the ACK is simulated here — asynchronously, the way the real push receipt
+    /// arrives. Without it only the first event is ever published and every later one waits for the
+    /// `pushTimeout + 2` (12s) watchdog, so any multi-event expectation fails on timeout, and any
+    /// single-event expectation passes for the wrong reason (the gate caps it at one regardless of
+    /// whether the throttle works).
     private func publishAndCountSocketPublishes(
         _ events: [Event],
         expectedCount: Int,
@@ -598,9 +672,12 @@ class AnalyticsPublisherTests: XCTestCase {
         let expectation = XCTestExpectation(description: "events flushed to socket")
         expectation.expectedFulfillmentCount = expectedCount
         expectation.assertForOverFulfill = false
-        userpilot.socketManager.onPublish = { _, _ in
+        userpilot.socketManager.onPublish = { [weak self] eventName, payload in
             publishCount += 1
             expectation.fulfill()
+            DispatchQueue.main.async {
+                self?.analyticsPublisher.onSocketEventSent(eventName, payload, Message(), true)
+            }
         }
 
         events.forEach { analyticsPublisher.publish($0) }
@@ -626,17 +703,17 @@ class AnalyticsPublisherTests: XCTestCase {
         let hierarchy = "UIAlertController:attr__index=\"0\";HomeViewController"
         let deleteDialog = makeAutoCaptureEvent(
             properties: [
-                AutoCaptureConstants.hierarchy: hierarchy,
-                AutoCaptureConstants.rawInteractionType: "view_presented",
-                AutoCaptureConstants.dialogTitle: "Delete item?"
+                Constants.AutoCapture.hierarchy: hierarchy,
+                Constants.AutoCapture.rawInteractionType: "view_presented",
+                Constants.AutoCapture.dialogTitle: "Delete item?"
             ],
             interactionEventName: "view_presented"
         )
         let logoutDialog = makeAutoCaptureEvent(
             properties: [
-                AutoCaptureConstants.hierarchy: hierarchy,
-                AutoCaptureConstants.rawInteractionType: "view_presented",
-                AutoCaptureConstants.dialogTitle: "Log out?"
+                Constants.AutoCapture.hierarchy: hierarchy,
+                Constants.AutoCapture.rawInteractionType: "view_presented",
+                Constants.AutoCapture.dialogTitle: "Log out?"
             ],
             interactionEventName: "view_presented"
         )
@@ -649,13 +726,13 @@ class AnalyticsPublisherTests: XCTestCase {
     func testTrackEvent_autoCaptureUnresolvableScreenName_shouldStillUseOtherDiscriminators() {
         // Screen dict is non-empty (passes the flush guard) but has no
         // class/title/name, so the screen segment cannot be resolved
-        let screen: Payload = [AutoCaptureConstants.screenType: "modal"]
+        let screen: Payload = [Constants.AutoCapture.screenType: "modal"]
         let saveTap = makeAutoCaptureEvent(
-            properties: [AutoCaptureConstants.targetText: "Save"],
+            properties: [Constants.AutoCapture.targetText: "Save"],
             screen: screen
         )
         let cancelTap = makeAutoCaptureEvent(
-            properties: [AutoCaptureConstants.targetText: "Cancel"],
+            properties: [Constants.AutoCapture.targetText: "Cancel"],
             screen: screen
         )
 
@@ -667,9 +744,9 @@ class AnalyticsPublisherTests: XCTestCase {
     func testTrackEvent_autoCaptureIdenticalEvents_secondShouldThrottle() {
         let tap = makeAutoCaptureEvent(
             properties: [
-                AutoCaptureConstants.hierarchy: "UIButton:attr__index=\"0\";HomeViewController",
-                AutoCaptureConstants.rawInteractionType: "tap",
-                AutoCaptureConstants.targetText: "Save"
+                Constants.AutoCapture.hierarchy: "UIButton:attr__index=\"0\";HomeViewController",
+                Constants.AutoCapture.rawInteractionType: "tap",
+                Constants.AutoCapture.targetText: "Save"
             ]
         )
 
@@ -681,17 +758,17 @@ class AnalyticsPublisherTests: XCTestCase {
     func testTrackEvent_autoCaptureTabEvents_differentTabsShouldBothPublish() {
         let homeTab = makeAutoCaptureEvent(
             properties: [
-                AutoCaptureConstants.tabName: "Home",
-                AutoCaptureConstants.tabIndex: 0,
-                AutoCaptureConstants.rawInteractionType: "tab_selected"
+                Constants.AutoCapture.tabName: "Home",
+                Constants.AutoCapture.tabIndex: 0,
+                Constants.AutoCapture.rawInteractionType: "tab_selected"
             ],
             interactionEventName: "tab_selected"
         )
         let profileTab = makeAutoCaptureEvent(
             properties: [
-                AutoCaptureConstants.tabName: "Profile",
-                AutoCaptureConstants.tabIndex: 1,
-                AutoCaptureConstants.rawInteractionType: "tab_selected"
+                Constants.AutoCapture.tabName: "Profile",
+                Constants.AutoCapture.tabIndex: 1,
+                Constants.AutoCapture.rawInteractionType: "tab_selected"
             ],
             interactionEventName: "tab_selected"
         )
