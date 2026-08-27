@@ -70,3 +70,6 @@ fastlane/test_output
 .cursor/
 AGENTS.md
 CLAUDE.md
+
+# Locally generated agent specs/plans — not project documentation
+docs/superpowers/
