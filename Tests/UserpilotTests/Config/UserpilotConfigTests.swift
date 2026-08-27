@@ -24,7 +24,7 @@ final class UserpilotConfigTests: XCTestCase {
         XCTAssertFalse(config.enableInteractionAutoCapture)
         XCTAssertTrue(config.enableInteractionTextCapture)
         XCTAssertTrue(config.enableInteractionAccessibilityLabelCapture)
-        XCTAssertFalse(config.enableInteractionValueCapture)
+        XCTAssertTrue(config.enableInteractionValueCapture)
         XCTAssertTrue(config.ignoreTapForTextInputEditingActions)
         XCTAssertTrue(config.preferUIKitOverSwiftUIForNavigationBar)
         XCTAssertTrue(config.isDefault)

@@ -92,7 +92,7 @@ extension Userpilot {
         /// - UIStepper: captures the selected step value
         /// - UIPickerView: captures the selected value
         /// - UIDatePicker: captures the selected date/time value
-        var enableInteractionValueCapture: Bool = false
+        var enableInteractionValueCapture: Bool = true
 
         /// When true (default), a tap event is not sent for UITextField/UITextView when the action is
         /// a text-editing action (e.g. textChanged:, editingChanged:). Only the text_field_changed /
