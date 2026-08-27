@@ -97,7 +97,7 @@ internal enum UIKitViewResolver {
             if let label = node.accessibilityLabel?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !label.isEmpty,
-               label != Constants.AutoCapture.reductText,
+               label != AutoCaptureConstants.reductText,
                !accessibilityRedacted {
                 attributes += "attr__accessibility_label=\"\(label.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
@@ -105,7 +105,7 @@ internal enum UIKitViewResolver {
             if let id = node.accessibilityIdentifier?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !id.isEmpty,
-               id != Constants.AutoCapture.reductText,
+               id != AutoCaptureConstants.reductText,
                !accessibilityRedacted {
                 attributes += "attr__id=\"\(id.replacingOccurrences(of: "\"", with: "\\\""))\""
             }
@@ -307,18 +307,31 @@ internal extension UIView {
         return false
     }
 
-    /// Checks if text should be redacted: Config (`enableInteractionTextCapture`)
-    /// and API (userpilotRedactText on responder chain).
-    /// - Returns: True if text should be redacted
+    /// Checks if text should be hidden for this view: Config (`enableInteractionTextCapture`)
+    /// is off, or `userpilotRedactText` is set on the responder chain.
+    ///
+    /// Prefer ``resolvedInteractionText(_:)`` / ``getTextContent()`` when publishing `target_text`:
+    /// those **omit** the field when capture is disabled and only emit the redaction placeholder
+    /// for the per-view redact opt-in.
+    /// - Returns: True if text should be hidden
     func shouldRedactText() -> Bool {
+        isInteractionTextCaptureDisabled() || hasUserpilotRedactTextOptIn()
+    }
+
+    /// True when the owning instance has `enableInteractionTextCapture` set to `false`.
+    func isInteractionTextCaptureDisabled() -> Bool {
         // Resolve the OWNING Userpilot instance from this view so the redaction
         // policy follows that tenant's config, not the host's. Critical for
         // multi-instance integrations: the host might allow text capture while
         // the embedded SDK requires redaction (or vice versa).
-        if let config = InstanceResolver.shared.target(forSource: self)?.config,
-           !config.enableInteractionTextCapture {
-            return true
+        if let config = InstanceResolver.shared.target(forSource: self)?.config {
+            return !config.enableInteractionTextCapture
         }
+        return false
+    }
+
+    /// True when `userpilotRedactText` is set on this responder or an ancestor.
+    func hasUserpilotRedactTextOptIn() -> Bool {
         var responder: UIResponder? = self
         while let current = responder {
             if current.userpilotRedactText { return true }
@@ -327,16 +340,49 @@ internal extension UIView {
         return false
     }
 
-    /// Checks if accessibility labels should be redacted:
-    /// Config (`enableInteractionAccessibilityLabelCapture`) and API
-    /// (userpilotRedactAccessibilityLabel on responder chain).
-    /// - Returns: True if accessibility labels should be redacted
+    /// Applies text-capture policy to a raw string for autocapture payloads.
+    /// - Global text capture off → `nil` (omit `target_text`)
+    /// - `userpilotRedactText` on the responder chain → redaction placeholder
+    /// - otherwise → `raw`
+    func resolvedInteractionText(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        if isInteractionTextCaptureDisabled() { return nil }
+        if hasUserpilotRedactTextOptIn() { return AutoCaptureConstants.reductText }
+        return raw
+    }
+
+    /// Text published when capture resolves to an ignore-inner-hierarchy ancestor.
+    ///
+    /// When text capture is enabled, the leaf text is masked with the redaction placeholder so
+    /// inner content stays hidden. When text capture is disabled, returns `nil` so `target_text`
+    /// is omitted — same omit policy as ``resolvedInteractionText(_:)`` / ``getTextContent()``.
+    func ignoreInnerHierarchyTextPlaceholder() -> String? {
+        if isInteractionTextCaptureDisabled() { return nil }
+        return AutoCaptureConstants.reductText
+    }
+
+    /// Checks if accessibility labels should be hidden: Config
+    /// (`enableInteractionAccessibilityLabelCapture`) is off, or
+    /// `userpilotRedactAccessibilityLabel` is set on the responder chain.
+    ///
+    /// Prefer ``getAccessibilityLabelContent()`` when publishing `accessibility_label`: that
+    /// **omits** the field when capture is disabled and only emits the redaction placeholder for
+    /// the per-view redact opt-in.
+    /// - Returns: True if accessibility labels should be hidden
     func shouldRedactAccessibilityLabel() -> Bool {
-        // Same reasoning as `shouldRedactText`: route via the owning instance.
-        if let config = InstanceResolver.shared.target(forSource: self)?.config,
-           !config.enableInteractionAccessibilityLabelCapture {
-            return true
+        isInteractionAccessibilityLabelCaptureDisabled() || hasUserpilotRedactAccessibilityLabelOptIn()
+    }
+
+    /// True when the owning instance has `enableInteractionAccessibilityLabelCapture` set to `false`.
+    func isInteractionAccessibilityLabelCaptureDisabled() -> Bool {
+        if let config = InstanceResolver.shared.target(forSource: self)?.config {
+            return !config.enableInteractionAccessibilityLabelCapture
         }
+        return false
+    }
+
+    /// True when `userpilotRedactAccessibilityLabel` is set on this responder or an ancestor.
+    func hasUserpilotRedactAccessibilityLabelOptIn() -> Bool {
         var responder: UIResponder? = self
         while let current = responder {
             if current.userpilotRedactAccessibilityLabel { return true }
@@ -385,13 +431,16 @@ internal extension UIView {
         return nil
     }
 
-    /// Returns the text content of this view, redacted if necessary.
+    /// Returns the text content of this view, applying text-capture policy.
     /// Falls back to searching subviews for a UILabel when the view itself
     /// is a private/unknown type (e.g., _UIAlertControllerActionView).
-    /// - Returns: The text content or redacted placeholder
+    /// - Returns: The text content, redaction placeholder, or `nil` when omitted
     func getTextContent() -> String? {
-        if shouldRedactText() {
-            return Constants.AutoCapture.reductText
+        if isInteractionTextCaptureDisabled() {
+            return nil
+        }
+        if hasUserpilotRedactTextOptIn() {
+            return AutoCaptureConstants.reductText
         }
 
         if let direct = userpilotRawDirectText(
@@ -421,11 +470,14 @@ internal extension UIView {
         return nil
     }
 
-    /// Returns the accessibility label of this view, redacted if necessary
-    /// - Returns: The accessibility label or redacted placeholder
+    /// Returns the accessibility label of this view, applying accessibility-capture policy.
+    /// - Returns: The label, redaction placeholder for opt-in, or `nil` when omitted
     func getAccessibilityLabelContent() -> String? {
-        if shouldRedactAccessibilityLabel() {
-            return Constants.AutoCapture.reductText
+        if isInteractionAccessibilityLabelCaptureDisabled() {
+            return nil
+        }
+        if hasUserpilotRedactAccessibilityLabelOptIn() {
+            return AutoCaptureConstants.reductText
         }
 
         guard let label = accessibilityLabel, !label.isEmpty else {
