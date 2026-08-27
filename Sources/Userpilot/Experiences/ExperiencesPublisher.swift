@@ -123,6 +123,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Queue to track pending experience content waiting to be displayed
     private var pendingExperiences: [ExperienceContent] = []
 
+    /// Rejects preview responses that were overtaken by a newer preview or a lifecycle reset.
+    private let previewSessionTracker = PreviewSessionTracker()
+
     /// Utility for managing display delays for surveys and NPS experiences
     private lazy var delayUtils = DelayUtils()
 
@@ -199,6 +202,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         return requestFakeScreenReloadEventDate?.isMoreThanOneSecond(from: Date()) ?? true
             && !hasActiveExperience
             && !experienceStateMachine.isActive()
+            // A preview being set up is not yet "active", but requesting screen events during it
+            // would drive normal content on top of the draft being previewed.
+            && !isPreviewExperienceMode()
             && !experienceStateMachine.hasCachedExperience()
     }
 
@@ -347,7 +353,9 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
 
     /// Preview mode suppresses normal analytics while draft content is being rendered.
     func isPreviewExperienceMode() -> Bool {
-        experienceStateMachine.isPreviewMode()
+        // The tracker covers the window before the state machine is marked: a preview is already
+        // in flight while `resetState` and the fetch are still running.
+        experienceStateMachine.isPreviewMode() || previewSessionTracker.isActive()
     }
 
     // MARK: - Deep Link Handling
@@ -447,7 +455,25 @@ extension ExperiencesPublisher: SocketSubscription {
         tryCatch {
             if currentScreen == screenName { return }
             currentScreen = screenName
+            // A preview renders on whatever screen the deep link landed on, so the screen change
+            // that reveals it must resume it instead of resetting it away.
+            if isPreviewExperienceMode() {
+                resumePendingPreviewExperience()
+                return
+            }
             resetState()
+        }
+    }
+
+    /// Re-opens a preview that was waiting for the screen it was triggered from.
+    private func resumePendingPreviewExperience() {
+        experienceQueue.async { [weak self] in
+            guard
+                let self,
+                case .pendingPreview = self.experienceStateMachine.getCurrentState(),
+                !self.pendingExperiences.isEmpty
+            else { return }
+            self.openExperienceFlow()
         }
     }
 
@@ -495,20 +521,23 @@ extension ExperiencesPublisher: SocketSubscription {
             if eventName == Constants.Event.screenEvent ||
                 eventName == SDKEventsName.fetchExperienceContent.rawValue {
 
-                // Determine the new experience based on response
-                let experience: ExperienceContent? = {
-                    if let flowContent = response.toFlowContent()?.flowContent {
-                        return .flow(content: flowContent)
-                    } else if let surveyContent = response.toSurveyContent()?.surveyContent {
-                        return .survey(content: surveyContent)
-                    } else if let npsContent = response.toNPSContent()?.npsContent {
-                        return .nps(content: npsContent)
-                    }
-                    return nil
-                }()
+                // Decode every type the response carries instead of stopping at the first, so
+                // automatic selection can skip past a candidate that was already seen.
+                let triggerType = self.triggerTypeForEvent(eventName)
+                let candidates = self.experienceCandidates(response)
+                let experience: ExperienceContent? = triggerType == .automatic
+                    ? candidates.first { !self.analyticsPublisher.isExperienceSeen($0) }
+                    : candidates.first
 
                 if let experience {
-                    if eventName == SDKEventsName.fetchExperienceContent.rawValue {
+                    if self.isDuplicateExperience(experience) {
+                        self.logger.info(
+                            "Ignoring duplicate experience: %@",
+                            experience.experienceId().toString()
+                        )
+                        return
+                    }
+                    if triggerType == .manual {
                         self.experienceStateMachine.markManualTrigger(
                             experience.experienceId().toString()
                         )
@@ -986,6 +1015,12 @@ extension ExperiencesPublisher {
             if pendingExperiences.isEmpty { return }
             experienceQueue.async { [weak self] in
                 guard let self else { return }
+                // A live preview owns the queue: re-assert preview mode instead of draining the
+                // pending experience out from under it.
+                if self.previewSessionTracker.isActive() {
+                    self.experienceStateMachine.markPreviewMode()
+                    return
+                }
                 self.resetProcessingExperienceStatus()
                 if self.pendingExperiences.count == 1 {
                     self.pendingExperiences.removeAll()
@@ -1006,6 +1041,8 @@ extension ExperiencesPublisher {
      * becomes invalid from view models.
      */
     private func resetState() {
+        // A lifecycle reset abandons any preview in flight; its late response must not render.
+        previewSessionTracker.cancel()
         resetState(completion: nil)
     }
 
@@ -1031,7 +1068,76 @@ extension ExperiencesPublisher {
         experienceStateMachine.markIdle()
     }
 
-    private func resetProcessingPreviewExperienceStatus() {
+    /**
+     * Decodes every experience type present in the response, in Flow → Survey → NPS order.
+     *
+     * Returning all of them (rather than stopping at the first that decodes) is what lets automatic
+     * selection fall through to an unseen Survey or NPS when the Flow was already shown on this
+     * screen.
+     */
+    private func experienceCandidates(_ response: String) -> [ExperienceContent] {
+        var candidates: [ExperienceContent] = []
+        if let flowContent = response.toFlowContent()?.flowContent {
+            candidates.append(.flow(content: flowContent))
+        }
+        if let surveyContent = response.toSurveyContent()?.surveyContent {
+            candidates.append(.survey(content: surveyContent))
+        }
+        if let npsContent = response.toNPSContent()?.npsContent {
+            candidates.append(.nps(content: npsContent))
+        }
+        return candidates
+    }
+
+    /// `fetchExperienceContent` is a manual API response and bypasses seen-screen filtering; screen
+    /// events are automatic and must select an unseen candidate.
+    private func triggerTypeForEvent(_ eventName: String) -> TriggerType {
+        eventName == SDKEventsName.fetchExperienceContent.rawValue ? .manual : .automatic
+    }
+
+    /**
+     * Whether this experience is already active, queued, or cached.
+     *
+     * Distinct from a seen check: seen content was already displayed on this screen, whereas a
+     * duplicate is the same content arriving twice before it has been shown.
+     */
+    private func isDuplicateExperience(_ experience: ExperienceContent) -> Bool {
+        if sameExperience(experienceStateMachine.getActiveContent(), experience) {
+            return true
+        }
+        if pendingExperiences.contains(where: { sameExperience($0, experience) }) {
+            return true
+        }
+        return sameExperience(experienceStateMachine.getCachedExperienceContent(), experience)
+    }
+
+    /// Identity comparison per type — a Flow and a Survey sharing a numeric id are not the same
+    /// experience, and NPS is identified by its survey key rather than an id.
+    private func sameExperience(
+        _ first: ExperienceContent?,
+        _ second: ExperienceContent
+    ) -> Bool {
+        switch (first, second) {
+        case (.flow(let firstContent), .flow(let secondContent)):
+            return firstContent.id == secondContent.id
+        case (.survey(let firstContent), .survey(let secondContent)):
+            return firstContent.id == secondContent.id
+        case (.nps(let firstContent), .nps(let secondContent)):
+            return firstContent.content.survey.key == secondContent.content.survey.key
+        default:
+            return false
+        }
+    }
+
+    /// - Parameter previewSessionId: When given, the reset only applies if that session is still the
+    ///   active one — a superseded preview must not tear down the one that replaced it. When `nil`
+    ///   the caller is abandoning whatever preview is active.
+    private func resetProcessingPreviewExperienceStatus(previewSessionId: UInt64? = nil) {
+        if let previewSessionId {
+            guard previewSessionTracker.finish(previewSessionId) else { return }
+        } else {
+            previewSessionTracker.cancel()
+        }
         resetProcessingExperienceStatus()
     }
 
@@ -1040,6 +1146,16 @@ extension ExperiencesPublisher {
         switch state {
         case .cachedPendingAutomatic(let experience):
             activeExperience = nil
+            // It waited behind another experience; if it was shown in the meantime, replaying it
+            // would show the same content twice on one screen.
+            if analyticsPublisher.isExperienceSeen(experience) {
+                logger.info(
+                    "Ignoring cached experience already seen: %@",
+                    experience.experienceId().toString()
+                )
+                resetProcessingExperienceStatus()
+                return
+            }
             pendingExperiences.append(experience)
             experienceStateMachine.markAutomaticTrigger(experience)
             checkCachedThemes(experience.experienceThemeId())
@@ -1060,8 +1176,11 @@ extension ExperiencesPublisher {
 extension ExperiencesPublisher {
 
     func triggerPreviewExperience(_ experienceId: String, _ queryItems: [URLQueryItem]) {
+        // Claim the session before `resetState` — that call is asynchronous, so a second deep link
+        // arriving during it must supersede this attempt rather than race it.
+        let previewSessionId = previewSessionTracker.begin()
         resetState { [weak self] in
-            guard let self else { return }
+            guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
             self.experienceStateMachine.markPreviewMode()
             self.userpilotRemoteSource.fetchPreviewExperience(
                 params: PreviewExperienceQueryParams(
@@ -1071,24 +1190,34 @@ extension ExperiencesPublisher {
                     contentId: experienceId
                 ),
                 completion: { [weak self] result in
-                    guard let self else { return }
+                    guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
                     switch result {
                     case .success(let previewExperience):
-                        self.processPreviewExperience(previewExperience)
+                        self.processPreviewExperience(
+                            previewExperience,
+                            previewSessionId: previewSessionId
+                        )
                     case .failure(let error):
-                        self.showExperienceTriggeringDebugMessage(error.localizedDescription)
+                        self.showExperienceTriggeringDebugMessage(
+                            error.localizedDescription,
+                            previewSessionId: previewSessionId
+                        )
                     }
                 }
             )
         }
     }
 
-    private func processPreviewExperience(_ previewExperience: PreviewExperience) {
+    private func processPreviewExperience(
+        _ previewExperience: PreviewExperience,
+        previewSessionId: UInt64
+    ) {
         tryCatch {
+            guard previewSessionTracker.isCurrent(previewSessionId) else { return }
             guard let theme = previewExperience.theme,
                   previewExperience.flow != nil || previewExperience.survey != nil
             else {
-                resetProcessingPreviewExperienceStatus()
+                resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
                 return
             }
 
@@ -1102,12 +1231,12 @@ extension ExperiencesPublisher {
             }
 
             guard let experience else {
-                resetProcessingPreviewExperienceStatus()
+                resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
                 return
             }
 
             experienceQueue.async { [weak self] in
-                guard let self else { return }
+                guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
                 self.pendingExperiences.append(experience)
                 self.themeHandler.saveTheme(theme)
                 self.openExperienceFlow()
@@ -1115,8 +1244,12 @@ extension ExperiencesPublisher {
         }
     }
 
-    private func showExperienceTriggeringDebugMessage(_ message: String) {
-        resetProcessingPreviewExperienceStatus()
+    private func showExperienceTriggeringDebugMessage(
+        _ message: String,
+        previewSessionId: UInt64
+    ) {
+        guard previewSessionTracker.isCurrent(previewSessionId) else { return }
+        resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
         performOn(.main) { [weak self] in
             guard
                 let self,

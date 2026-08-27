@@ -622,6 +622,83 @@ final class ExperiencesPublisherTests: XCTestCase {
         }
         wait(for: [resultExpectation], timeout: 1.0)
     }
+
+    // MARK: - Preview session tracking
+
+    func testCanRequestScreenEvent_shouldReturnFalse_WhenPreviewIsPending() {
+        // Arrange
+        userpilot.experienceStateMachine.markPreviewMode()
+
+        // Act
+        let result = experiencesPublisher.canRequestScreenEvent()
+
+        // Assert
+        XCTAssertFalse(result)
+    }
+
+    func testUpdateScreen_shouldPreservePendingPreview() {
+        // Arrange
+        userpilot.experienceStateMachine.markPreviewMode()
+
+        // Act
+        experiencesPublisher.updateScreen("PreviewScreen")
+
+        // Assert — a screen change must not cancel a preview that is still being set up
+        XCTAssertTrue(userpilot.experienceStateMachine.isPreviewMode())
+    }
+
+    func testTriggerPreviewExperience_shouldIgnoreStaleResponse_WhenNewerPreviewStarts() throws {
+        // Arrange — hold both fetch completions so they can be resolved out of order
+        let fetchExpectation = XCTestExpectation(description: "both preview fetches requested")
+        fetchExpectation.expectedFulfillmentCount = 2
+        var completions: [
+            String: (Result<PreviewExperience, RemoteSourceError>) -> Void
+        ] = [:]
+        userpilot.remoteSource.onFetchPreviewExperience = { params, completion in
+            completions[params.contentId] = completion
+            fetchExpectation.fulfill()
+        }
+
+        let latestThemeSaved = XCTestExpectation(description: "latest preview theme saved")
+        var savedThemeIds: [Int] = []
+        userpilot.themeHandler.onSaveTheme = { theme in
+            if let id = theme.id {
+                savedThemeIds.append(id)
+                if id == 22 {
+                    latestThemeSaved.fulfill()
+                }
+            }
+        }
+
+        // Act — the second preview supersedes the first, then the stale one answers
+        experiencesPublisher.triggerPreviewExperience("first", [])
+        experiencesPublisher.triggerPreviewExperience("second", [])
+        wait(for: [fetchExpectation], timeout: 1.0)
+        completions["first"]?(.success(try makePreviewExperience(themeId: 11)))
+        completions["second"]?(.success(try makePreviewExperience(themeId: 22)))
+
+        // Assert — only the current preview renders; the abandoned one is dropped
+        wait(for: [latestThemeSaved], timeout: 1.0)
+        XCTAssertFalse(savedThemeIds.contains(11))
+    }
+
+    private func makePreviewExperience(themeId: Int) throws -> PreviewExperience {
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        return PreviewExperience(
+            flow: flow,
+            survey: nil,
+            contentType: "flow",
+            theme: ThemeContent(
+                id: themeId,
+                themeData: ThemeData(carousel: nil, slideOut: nil, survey: nil)
+            )
+        )
+    }
 }
 
 // swiftlint:disable all
