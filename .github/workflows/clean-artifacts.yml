@@ -6,6 +6,12 @@ on:
   # 🕐 Schedule the workflow to run daily at 1:00 AM UTC
   schedule:
     - cron: '0 1 * * *'
+  # 🎛️ Allow manual cleanup runs from the GitHub UI
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   remove-old-artifacts:
