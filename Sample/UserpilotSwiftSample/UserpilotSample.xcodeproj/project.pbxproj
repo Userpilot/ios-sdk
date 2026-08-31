@@ -21,9 +21,10 @@
 		AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB3D7E1F2D1413EA00FC4ECF /* Userpilot */; };
 		AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB46B0A32D07134B0054D249 /* Userpilot */; };
 		AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */; };
-		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
-		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
+		FACF000000000000000000B1 /* ConfigViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A1 /* ConfigViewController.swift */; };
+		FACF000000000000000000B2 /* ConfigFlag.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A2 /* ConfigFlag.swift */; };
+		FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */; };
 		AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */; };
 		AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */; };
 		AB6ABAAC2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */; };
@@ -102,9 +103,10 @@
 		AB1942CC2CD2626C00924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventTableViewCell.xcstrings; sourceTree = "<group>"; };
 		AB2564922DB4F55000393126 /* UserpilotSample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UserpilotSample.entitlements; sourceTree = "<group>"; };
 		AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+PushNotification.swift"; sourceTree = "<group>"; };
-		AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationsDialogViewController.swift; sourceTree = "<group>"; };
-		AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ConfigurationsDialogViewController.xib; sourceTree = "<group>"; };
 		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A1 /* ConfigViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigViewController.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A2 /* ConfigFlag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlag.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlagTableViewCell.swift; sourceTree = "<group>"; };
 		AB585F672CD79EF400E2A66D /* Dev.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Dev.xcconfig; sourceTree = "<group>"; };
 		AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaddingLabel.swift; sourceTree = "<group>"; };
 		AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventsViewController.swift; sourceTree = "<group>"; };
@@ -206,15 +208,6 @@
 			path = Properties;
 			sourceTree = "<group>";
 		};
-		AB585F602CD79C1100E2A66D /* Configurations */ = {
-			isa = PBXGroup;
-			children = (
-				AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */,
-				AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */,
-			);
-			path = Configurations;
-			sourceTree = "<group>";
-		};
 		AB6ABAA42CE8890700FB72A8 /* SDKEvents */ = {
 			isa = PBXGroup;
 			children = (
@@ -258,6 +251,7 @@
 		AB6DBD352C68CD3B0009BB11 /* Featues */ = {
 			isa = PBXGroup;
 			children = (
+				FACF000000000000000000C1 /* Config */,
 				ABEB31742F73F58400E1789D /* AutoCapture */,
 				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
@@ -356,10 +350,35 @@
 		ABACA85E2C96E0C2006C9B77 /* Dialogs */ = {
 			isa = PBXGroup;
 			children = (
-				AB585F602CD79C1100E2A66D /* Configurations */,
 				AB585F5F2CD79C0400E2A66D /* Properties */,
 			);
 			path = Dialogs;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C1 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000C2 /* Models */,
+				FACF000000000000000000C3 /* Cells */,
+				FACF000000000000000000A1 /* ConfigViewController.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C2 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000A2 /* ConfigFlag.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C3 /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */,
+			);
+			path = Cells;
 			sourceTree = "<group>";
 		};
 		ABACA8632C96E3E9006C9B77 /* UI */ = {
@@ -643,9 +662,8 @@
 				ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */,
 				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
 				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
-				AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
-				AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */,
-				AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
+			AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
+			AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
 				AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */,
 				AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */,
 				C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */,
@@ -703,7 +721,9 @@
 				ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */,
 				ABF38C812C73719300013F18 /* Content.swift in Sources */,
 				ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */,
-				AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */,
+				FACF000000000000000000B1 /* ConfigViewController.swift in Sources */,
+				FACF000000000000000000B2 /* ConfigFlag.swift in Sources */,
+				FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */,
 				ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */,
 				ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
