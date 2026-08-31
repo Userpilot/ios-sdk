@@ -359,6 +359,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         XCTAssertEqual(result?.contentType, "survey")
         XCTAssertNotNil(result?.survey)
         XCTAssertNotNil(result?.theme)
+        assertRemoteLogsDoNotExposePreviewRequest()
     }
 
     func testFetchPreviewExperience_failsWithDecodingError_whenInvalidJson() {
@@ -439,6 +440,17 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         } else {
             XCTFail("Expected httpError")
         }
+        assertRemoteLogsDoNotExposePreviewRequest()
+    }
+
+    /// Preview URL includes `app_token` as a query item; never log it or the content host.
+    private func assertRemoteLogsDoNotExposePreviewRequest() {
+        let allLogs =
+            logger.loggedDebugs + logger.loggedInfos + logger.loggedLogs + logger.loggedErrors
+            + logger.loggedFaults
+        XCTAssertFalse(allLogs.contains(where: { $0.contains("Request URL") }))
+        XCTAssertFalse(allLogs.contains(where: { $0.contains(RemoteSource.experienceBaseURL) }))
+        XCTAssertFalse(allLogs.contains(where: { $0.contains(userpilot.config.token) }))
     }
 }
 // swiftlint:enable all
