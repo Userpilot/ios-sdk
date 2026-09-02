@@ -174,7 +174,7 @@ extension User {
     }
 }
 
-enum ComparisonStrategy {
+internal enum ComparisonStrategy {
     case exactMatch      // Both objects must be identical
     case partialUpdate   // Event can be a subset of stored user
     case ignoreEmpty     // Ignore empty values in comparison

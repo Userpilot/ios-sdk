@@ -25,6 +25,7 @@ internal class SurveyDialogViewController: DialogViewController {
         surveyContainerView.translatesAutoresizingMaskIntoConstraints = false
         return surveyContainerView
     }()
+    private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Properties
 
@@ -50,11 +51,29 @@ internal class SurveyDialogViewController: DialogViewController {
         super.viewDidLoad()
         bindViewModel()
         setContent(content: surveyContainerView, withMargin: CGFloat(-40))
+        appSemanticContentAttribute = UIView.userInterfaceLayoutDirection(for: view.semanticContentAttribute)
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         surveyViewModel.onExperienceSeen()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if surveyViewModel.isRTL {
+            UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if let appSemanticContentAttribute {
+            UIView.appearance().semanticContentAttribute = appSemanticContentAttribute == .leftToRight
+            ? .forceLeftToRight : .forceRightToLeft
+        }
     }
 
     /// Handle screen rotation

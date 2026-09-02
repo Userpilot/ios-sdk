@@ -150,7 +150,7 @@ internal class SurveyViewModel {
             experienceId: NSNumber(value: surveyContent.id),
             experienceState: .started
         )
-        logExperience(state: "Started", experienceId: surveyContent.id)
+        logExperience(state: UserpilotExperienceState.started.rawValueString, experienceId: surveyContent.id)
 
         let eventExperienceSeen = ExperienceSurveySeenEvent(surveyId: surveyContent.id, submissionId: submissionId)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
@@ -175,7 +175,7 @@ internal class SurveyViewModel {
             experienceId: NSNumber(value: surveyContent.id),
             experienceState: .completed
         )
-        logExperience(state: "Completed", experienceId: surveyContent.id)
+        logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: surveyContent.id)
 
         let eventExperienceSeen = ExperienceSurveyCompletedEvent(
             surveyId: surveyContent.id,
@@ -199,7 +199,7 @@ internal class SurveyViewModel {
                 experienceId: NSNumber(value: surveyContent.id),
                 experienceState: .completed
             )
-            logExperience(state: "Completed", experienceId: surveyContent.id)
+            logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: surveyContent.id)
 
             let eventExperienceSeen = ExperienceSurveyCompletedEvent(
                 surveyId: surveyContent.id,
@@ -213,7 +213,7 @@ internal class SurveyViewModel {
                 experienceId: NSNumber(value: surveyContent.id),
                 experienceState: .dismissed
             )
-            logExperience(state: "Dismissed", experienceId: surveyContent.id)
+            logExperience(state: UserpilotExperienceState.dismissed.rawValueString, experienceId: surveyContent.id)
 
             let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
                 surveyId: surveyContent.id,
@@ -236,7 +236,7 @@ internal class SurveyViewModel {
             totalSteps: nil
         )
         logStep(
-            state: "Started",
+            state: UserpilotExperienceState.started.rawValueString,
             experienceId: surveyContent.id,
             stepId: surveyStep.id
         )
@@ -260,7 +260,7 @@ internal class SurveyViewModel {
             experienceId: NSNumber(value: surveyContent.id),
             experienceState: .submitted
         )
-        logExperience(state: "Submitted", experienceId: surveyContent.id)
+        logExperience(state: UserpilotExperienceState.submitted.rawValueString, experienceId: surveyContent.id)
 
         let eventContentSubmitted = ExperienceSurveySubmittedEvent(
             surveyId: surveyContent.id,
@@ -282,7 +282,7 @@ internal class SurveyViewModel {
             totalSteps: nil
         )
         logStep(
-            state: "Submitted",
+            state: UserpilotExperienceState.submitted.rawValueString,
             experienceId: surveyContent.id,
             stepId: surveyStep.id
         )
@@ -309,7 +309,7 @@ internal class SurveyViewModel {
             totalSteps: nil
         )
         logStep(
-            state: "Skipped",
+            state: UserpilotExperienceState.skipped.rawValueString,
             experienceId: surveyContent.id,
             stepId: surveyStep.id
         )
@@ -339,7 +339,7 @@ internal class SurveyViewModel {
         _ answer: Any?,
         _ answerPayload: Payload
     ) {
-        guard  let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
+        guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
         // We are on the last step, close the survey
         if isLastStep(), surveyStep.type == .completed {
             onDeepLinkTriggered()
@@ -407,7 +407,8 @@ internal class SurveyViewModel {
         stepId: Int
     ) {
         logger.info(
-            "🌠 Userpilot experience step -> type: Survey, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
+            "🌠 Userpilot experience step -> type: %{public}@, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
+            UserpilotExperienceType.survey.rawValueString,
             String(experienceId),
             state,
             String(stepId)

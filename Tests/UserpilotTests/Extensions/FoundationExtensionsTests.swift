@@ -18,10 +18,10 @@ final class FoundationExtensionsTests: XCTestCase {
     }
 
     func testURLHttpSchemeDetection() throws {
-        XCTAssertTrue(try XCTUnwrap(URL(string: "http://example.com")).isHttpOrHttps)
-        XCTAssertTrue(try XCTUnwrap(URL(string: "https://example.com")).isHttpOrHttps)
-        XCTAssertFalse(try XCTUnwrap(URL(string: "ftp://example.com")).isHttpOrHttps)
-        XCTAssertFalse(try XCTUnwrap(URL(string: "mailto:test@example.com")).isHttpOrHttps)
+        XCTAssertTrue(try XCTUnwrap(URL(string: "http://example.com")).isWebLink)
+        XCTAssertTrue(try XCTUnwrap(URL(string: "https://example.com")).isWebLink)
+        XCTAssertFalse(try XCTUnwrap(URL(string: "ftp://example.com")).isWebLink)
+        XCTAssertFalse(try XCTUnwrap(URL(string: "mailto:test@example.com")).isWebLink)
     }
 
     func testHTTPURLResponseSuccessStatusCodeRange() throws {

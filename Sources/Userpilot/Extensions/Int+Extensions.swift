@@ -17,6 +17,10 @@ internal extension Int {
     mutating func increment(by value: Int = 1) {
         self += value
     }
+
+    func toString() -> String {
+        return String(self)
+    }
 }
 
 internal extension CGFloat {

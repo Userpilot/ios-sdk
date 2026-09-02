@@ -18,6 +18,13 @@ on:
           - beta
           - rc
 
+concurrency:
+  group: bump-version-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
   bump:
     runs-on: macos-latest  # macOS is used because sed behaves differently here
@@ -25,7 +32,7 @@ jobs:
     steps:
       # 📥 Checkout the latest source code from the repo
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # ⚙️ Set up Git user identity for commits
       - name: Set up Git config
@@ -118,22 +125,3 @@ jobs:
         run: |
           git tag ${{ steps.bump_version.outputs.new_version }}
           git push origin ${{ steps.bump_version.outputs.new_version }}
-
-      # 📝 Update the README with the new version badge
-      - name: Update README with version badge
-        run: |
-          badge_url="https://img.shields.io/github/v/tag/${{ github.repository }}?label=version"
-            
-          # Debug: print README before modification
-          echo "Before sed: $(cat README.md)"
-          
-          # Replace placeholder with badge image
-          sed -i '' "s|<!-- VERSION_BADGE -->|![version]($badge_url)|" README.md
-          
-          # Debug: print README after modification
-          echo "After sed: $(cat README.md)"
-            
-          # Commit the updated README if there are changes
-          git add README.md
-          git commit -m "📝 update version badge in README" || echo "No changes to commit"
-          git push

@@ -62,3 +62,13 @@ fastlane/test_output
 
 # Mac OS X
 *.DS_Store
+
+# AI agent tooling (Cursor / Claude / local agent memory)
+.agents/
+.claude/
+.cursor/
+AGENTS.md
+CLAUDE.md
+
+# Locally generated agent specs/plans — not project documentation
+docs/superpowers/

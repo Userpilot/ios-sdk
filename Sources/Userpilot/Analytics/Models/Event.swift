@@ -77,7 +77,7 @@ internal struct Event {
     }
 }
 
-internal extension Event {
+extension Event {
     func toUser() -> User {
         return User(userId: userId ?? "",
                     properties: properties ?? [:],

@@ -12,7 +12,7 @@
 import UIKit
 
 // MARK: - Country Picker Popup Menu Management for UPSingleInputView
-internal extension UPSingleInputView {
+extension UPSingleInputView {
 
     // MARK: - Popup Menu Display
 

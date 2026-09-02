@@ -38,10 +38,13 @@ class MockUserpilot: Userpilot {
         container.register(PushNotificationMonitoring.self, value: pushNotificationMonitor)
         container.register(SocketEvents.self, value: socketManager)
         container.register(ExperiencesPublishing.self, value: experiencesPublisher)
+        container.register(UserpilotRemoteSourcing.self, value: remoteSource)
         container.register(AutoPropertyDecoratoring.self, value: autoPropertyDecorator)
-        container.register(SDKSettingsDetectoring.self, value: sdkSettingsDetectorer)
         container.register(ThemeHandling.self, value: themeHandler)
         container.register(ImageLoading.self, value: imageLoader)
+        container.register(LinkOpening.self, value: linkOpener)
+        experienceStateManager = ExperienceStateManager(container: container)
+        container.register(ExperienceStateManaging.self, value: experienceStateManager)
         // Real screen tracker + autocapture coordinator (lazy: only built when a test
         // resolves `autoCaptureCoordinator`). `ScreenNameTracker.init` ignores its
         // container, and `AutoCaptureCoordinater.init` resolves the mocks registered
@@ -62,10 +65,12 @@ class MockUserpilot: Userpilot {
     var pushNotificationMonitor = MockPushNotificationMonitor()
     var socketManager = MockSocketManager()
     var experiencesPublisher = MockExperiencesPublisher()
+    var remoteSource = MockUserpilotRemoteSource()
     var autoPropertyDecorator = MockAutoPropertyDecoratorer()
-    var sdkSettingsDetectorer = MockSDKSettingsDetectorer()
     var themeHandler = MockThemeHandler()
     var imageLoader = MockImageLoader()
+    var linkOpener = MockLinkOpening()
+    var experienceStateManager: ExperienceStateManaging!
     var mockLogger = MockLogger()
 }
 
@@ -117,17 +122,6 @@ class MockThemeHandler: ThemeHandling {
 
 }
 
-// MARK: - Mock DKSettings Detectorer
-
-class MockSDKSettingsDetectorer: SDKSettingsDetectoring {
-
-    var onFetchSettings: (() -> Void)?
-    func fetchSettings(callback: @escaping () -> Void) {
-        onFetchSettings?()
-        callback()
-    }
-}
-
 // MARK: - Mock Auto Property Decoratorer
 
 class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
@@ -149,6 +143,11 @@ class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
 // MARK: - Mock Experiences Publisher
 
 class MockExperiencesPublisher: ExperiencesPublishing {
+    var previewExperienceMode = false
+    func isPreviewExperienceMode() -> Bool {
+        return previewExperienceMode
+    }
+
     var onGetActiveMobileContent: (() -> ExperienceContent)?
     func getActiveMobileContent() -> ExperienceContent? {
         return onGetActiveMobileContent?() ?? nil
@@ -162,6 +161,11 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     var onTriggerExperience: ((String) -> Void)?
     func triggerExperience(_ experienceId: String) {
         onTriggerExperience?(experienceId)
+    }
+
+    var onTriggerPreviewExperience: ((String, [URLQueryItem]) -> Void)?
+    func triggerPreviewExperience(_ experienceId: String, _ queryItems: [URLQueryItem]) {
+        onTriggerPreviewExperience?(experienceId, queryItems)
     }
 
     var onEndExperience: ((Bool) -> Void)?
@@ -204,6 +208,33 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         onLogout?()
     }
 
+}
+
+// MARK: - Mock Userpilot Remote Source
+
+class MockUserpilotRemoteSource: UserpilotRemoteSourcing {
+    var onFetchSettings: ((@escaping (Result<Void, RemoteSourceError>) -> Void) -> Void)?
+    func fetchSettings(completion: @escaping (Result<Void, RemoteSourceError>) -> Void) {
+        onFetchSettings?(completion) ?? completion(.success(()))
+    }
+
+    var onFetchPreviewExperience:
+        ((PreviewExperienceQueryParams, @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void) -> Void)?
+    func fetchPreviewExperience(
+        params: PreviewExperienceQueryParams,
+        completion: @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void
+    ) {
+        onFetchPreviewExperience?(params, completion) ?? completion(.failure(.emptyResponse))
+    }
+}
+
+// MARK: - Mock Link Opening
+
+class MockLinkOpening: LinkOpening {
+    var onHandleURL: ((URL) -> Void)?
+    func handleURL(_ url: URL) {
+        onHandleURL?(url)
+    }
 }
 
 // MARK: - Mock Socket Manager
@@ -289,14 +320,23 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onPublishInternalSDKEvent?(sdkEvent, socketSubscription)
     }
 
-    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?) -> Void)?
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
-        onPublishFakeReloadScreenEvent?(experienceType, experienceId)
+    var onPublishFakeReloadScreenEvent: ((ExperienceType, Int?, Bool) -> Void)?
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int?,
+        _ markExperienceAsSeen: Bool
+    ) {
+        onPublishFakeReloadScreenEvent?(experienceType, experienceId, markExperienceAsSeen)
     }
 
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?
     func experiencePublished(_ experienceType: ExperienceType, _ experienceId: Int) {
         onExperiencePublished?(experienceType, experienceId)
+    }
+
+    var onIsExperienceSeen: ((ExperienceContent) -> Bool)?
+    func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool {
+        onIsExperienceSeen?(experienceContent) ?? false
     }
 
     var isStartSession: Bool = false

@@ -109,7 +109,15 @@ class UserpilotManager {
     ) -> Bool {
         return userpilot?.didReceiveNotification(response: response, completionHandler: completionHandler) ?? false
     }
-    
+
+    public func didHandleURL(_ url: URL) -> Bool {
+        return userpilot?.didHandleURL(url) ?? false
+    }
+
+    public func filterAndHandle(_ URLContexts: Set<UIOpenURLContext>) -> Set<UIOpenURLContext> {
+        return userpilot?.filterAndHandle(URLContexts) ?? Set()
+    }
+
 }
 
 // MARK: - UserpilotNavigationDelegate

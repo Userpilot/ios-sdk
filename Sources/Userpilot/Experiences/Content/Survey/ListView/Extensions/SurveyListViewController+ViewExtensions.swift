@@ -14,7 +14,7 @@
 import Foundation
 import UIKit
 
-internal extension SurveyListViewController {
+extension SurveyListViewController {
 
     /// Configures general views constraints.
     func setupViews() {
@@ -95,7 +95,7 @@ internal extension SurveyListViewController {
 
 // MARK: - Bind custom views to the survey list view
 
-internal extension SurveyListViewController {
+extension SurveyListViewController {
     // swiftlint:disable:next function_body_length
     func bindSurveyViews() {
         guard

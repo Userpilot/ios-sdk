@@ -42,9 +42,7 @@ final class PushNotificationDeferredTests: PushNotificationMonitorTestCase {
             completionHandler: completion
         )
 
-        let navigationDelegate = MockNavigationDelegate()
-        userpilot.navigationDelegate = navigationDelegate
-        navigationDelegate.onNavigate = { url in
+        userpilot.linkOpener.onHandleURL = { url in
             XCTAssertEqual(url.absoluteString, "app://some-link")
             linkCompletionExpectation.fulfill()
         }

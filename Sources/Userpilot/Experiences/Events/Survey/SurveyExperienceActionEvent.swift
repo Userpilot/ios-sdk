@@ -21,7 +21,7 @@ import Foundation
 internal class SurveyExperienceActionEvent: SDKEvent {
     /// Experience Id
     let surveyId: Int
-    // Submission Id
+    /// Submission Id
     let submissionId: Int64
     /// Has deeplink to open it
     let hasDeepLinkContent: Bool

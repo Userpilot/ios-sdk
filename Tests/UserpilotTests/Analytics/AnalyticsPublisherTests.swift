@@ -466,7 +466,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Act (add delay before publishing, cause of throttling logic)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
+            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, true)
         }
 
         // Assert (wait for the delayed call)
@@ -484,11 +484,37 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { _, _, _ in publishScreenEventCalled = true }
 
         // Act
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, true)
 
         // Assert
         // Would need to verify socket manager publish was called with fake reload flag
         XCTAssertFalse(publishScreenEventCalled)
+    }
+
+    func testPublishFakeReloadScreenEvent_shouldNotAddSeenContent_WhenMarkSeenIsFalse() {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = true
+        let screenEvent = Event(type: .screen("Test Screen"))
+        analyticsPublisher.publish(screenEvent)
+
+        let expectation = XCTestExpectation(description: "Wait for delayed fake reload publish")
+        var fakeReloadPayload: Payload = nil
+        userpilot.socketManager.onPublish = { _, payload, _ in
+            fakeReloadPayload = payload
+            expectation.fulfill()
+        }
+
+        // Act (add delay before publishing, cause of throttling logic)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, false)
+        }
+
+        // Assert
+        wait(for: [expectation], timeout: 1.0)
+        let metadata = fakeReloadPayload?[AnalyticsPublisher.metaDataProperty] as? [String: Any]
+        let seenContents = metadata?[AnalyticsPublisher.seenContents] as? [Int]
+        XCTAssertFalse(seenContents?.contains(10) ?? false)
+        XCTAssertFalse(analyticsPublisher.screenEntity?.seenExperiences.contains(10) ?? false)
     }
 
     func testExperiencePublished_shouldUpdateSeenExperiences() {
@@ -513,6 +539,31 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Assert
         XCTAssertTrue(analyticsPublisher.screenEntity?.seenSurveys.contains(456) ?? false)
+    }
+
+    func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
+        // Arrange
+        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        let survey = MockContentFactory.makeSurveyContent(id: 456)
+
+        // Act
+        analyticsPublisher.experiencePublished(.flow, flow.id)
+        analyticsPublisher.experiencePublished(.survey, survey.id)
+
+        // Assert
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.survey(content: survey)))
+        XCTAssertFalse(
+            analyticsPublisher.isExperienceSeen(
+                .survey(content: MockContentFactory.makeSurveyContent(id: 999))
+            )
+        )
     }
 
     // MARK: - Screen Event Setup Tests

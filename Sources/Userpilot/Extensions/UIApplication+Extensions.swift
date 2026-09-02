@@ -1,21 +1,28 @@
 //
-//  UIApplication+Extension.swift
+//  UIApplication+TopViewController.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 20/08/2024.
+//  Created by Userpilot on 2025-10-16.
+//  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  UIApplication+Extension file contains an extension of the `UIApplication` class, providing helper methods
-//  for retrieving the top-most view controller and managing active window scenes.
+//  Utilities to get the top view controller and open URLs.
 //
 
-import Foundation
 import UIKit
 
-internal extension UIApplication {
+internal protocol TopControllerGetting {
+    var hasActiveWindowScenes: Bool { get }
 
-    // MARK: - Active Window Scenes
+    func topViewController() -> UIViewController?
+}
 
-    /// Returns all active window scenes in the foreground.
+internal protocol URLOpening {
+    func open(_ url: URL)
+}
+
+extension UIApplication: TopControllerGetting {
+
     @available(iOS 13.0, *)
     var activeWindowScenes: [UIWindowScene] {
         self.connectedScenes
@@ -23,7 +30,14 @@ internal extension UIApplication {
             .compactMap { $0 as? UIWindowScene }
     }
 
-    /// Checks if there are any active window scenes.
+    // Prefer the active window scene, but in the case where there's no active scene, use
+    // the one from the main app window.
+    @available(iOS 13.0, *)
+    var mainWindowScene: UIWindowScene? {
+        activeWindowScenes.first
+    }
+
+    // We expose this property because a unit test cannot init a UIWindowScene for mocking different states.
     var hasActiveWindowScenes: Bool {
         if #available(iOS 13.0, *) {
             return !activeWindowScenes.isEmpty
@@ -32,7 +46,8 @@ internal extension UIApplication {
         }
     }
 
-    /// Returns the active key window, considering iOS versions and multitasking.
+    // Note: multitasking with two instances of the same app side by side will have both
+    // designated as `.foregroundActive`, and as a result the returned window may not be the one expected.
     private var activeKeyWindow: UIWindow? {
         if #available(iOS 13.0, *) {
             return self.activeWindowScenes
@@ -43,66 +58,48 @@ internal extension UIApplication {
         }
     }
 
-    // MARK: - Public API
-
-    /// Retrieves the top-most view controller, ensuring it is executed on the main thread.
-    func fetchTopViewController(completion: @escaping (UIViewController?) -> Void) {
-        if Thread.isMainThread {
-            completion(resolveTopViewController())
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                completion(self?.resolveTopViewController())
-            }
-        }
-    }
-
-    // MARK: - Private Helpers
-
-    /// Resolves the top-most view controller starting from the root view controller.
-    /// - Returns: The top-most `UIViewController`, or `nil` if none is found.
-    func resolveTopViewController() -> UIViewController? {
-        var window: UIWindow? = activeKeyWindow
-
-        if window == nil {
-            if #available(iOS 15.0, *) {
-                if let windowScene = UIApplication.shared.connectedScenes
-                    .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                    window = windowScene.windows.first
-                }
-            } else {
-                window = UIApplication.shared.windows.first
-            }
-        }
-
+    func topViewController() -> UIViewController? {
+        let window: UIWindow? = activeKeyWindow
         guard let rootViewController = window?.rootViewController else { return nil }
-        return findTopViewController(from: rootViewController)
+        let topVC = topViewController(controller: rootViewController)
+
+        // Return nil if a UIAlertController is currently being presented
+        // Cause showing Userpilot experience could lead to pushing the UIAlert view out
+        // of screen bounds!
+        if topVC is UIAlertController {
+            return nil
+        }
+
+        return topVC
     }
 
-    /// Recursively finds the top-most view controller starting from a given controller.
-    /// - Parameter controller: The `UIViewController` to start the search from.
-    /// - Returns: The top-most `UIViewController`.
-    private func findTopViewController(from controller: UIViewController) -> UIViewController {
+    private func topViewController(controller: UIViewController) -> UIViewController {
         if let navigationController = controller as? UINavigationController,
            let visibleViewController = navigationController.visibleViewController {
             if !visibleViewController.isBeingDismissed {
-                return findTopViewController(from: visibleViewController)
+                return topViewController(controller: visibleViewController)
             } else if let topStack = navigationController.viewControllers.last {
-                return findTopViewController(from: topStack)
+                // This gets the VC under what is being dismissed
+                return topViewController(controller: topStack)
             } else {
-                return findTopViewController(from: visibleViewController)
+                return topViewController(controller: visibleViewController)
             }
         }
-
         if let tabController = controller as? UITabBarController,
-           let selectedViewController = tabController.selectedViewController {
-            return findTopViewController(from: selectedViewController)
+           let selected = tabController.selectedViewController {
+            return topViewController(controller: selected)
         }
-
-        if let presentedViewController = controller.presentedViewController,
-           !presentedViewController.isBeingDismissed {
-            return findTopViewController(from: presentedViewController)
+        if let presented = controller.presentedViewController, !presented.isBeingDismissed {
+            return topViewController(controller: presented)
         }
-
         return controller
     }
+}
+
+extension UIApplication: URLOpening {
+
+    func open(_ url: URL) {
+        open(url, options: [:])
+    }
+
 }

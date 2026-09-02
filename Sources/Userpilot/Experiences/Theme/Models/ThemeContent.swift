@@ -355,7 +355,7 @@ internal struct SurveyTheme: Decodable {
 
     // Border
     var borderRadius: CGFloat {
-        CGFloat(general?.cornerRadius ?? 12)
+        CGFloat(general?.cornerRadius ?? 24)
     }
 
 }

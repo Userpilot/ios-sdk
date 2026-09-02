@@ -73,6 +73,8 @@ internal class SurveyListViewController: UIViewController {
         super.viewWillAppear(animated)
         if surveyViewModel.isRTL {
             UIView.appearance().semanticContentAttribute = .forceRightToLeft
+        } else {
+            UIView.appearance().semanticContentAttribute = .forceLeftToRight
         }
     }
 
@@ -112,6 +114,16 @@ extension SurveyListViewController: UPExperience {
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
-        closeExperience(completion: completion)
+        if manualClose {
+            closeExperience(completion: completion)
+        } else {
+            dismiss(animated: true) { [weak self] in
+                if let completion {
+                    completion()
+                } else {
+                    self?.surveyViewModel.onExperienceDismissalCompleted()
+                }
+            }
+        }
     }
 }

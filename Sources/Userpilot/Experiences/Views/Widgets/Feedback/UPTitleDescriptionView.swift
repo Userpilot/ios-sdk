@@ -18,6 +18,10 @@ internal class UPTitleDescriptionView: UIView {
     private let titleLabel = UILabel()
     private let descriptionLabel = UILabel()
 
+    private var descriptionTopConstraint: NSLayoutConstraint?
+    private var descriptionBottomConstraint: NSLayoutConstraint?
+    private var titleBottomConstraint: NSLayoutConstraint?
+
     // MARK: - Initializers
 
     override init(frame: CGRect) {
@@ -49,16 +53,21 @@ internal class UPTitleDescriptionView: UIView {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // Activate constraints for the title and description labels
+        // Store constraints that will be conditionally activated
+        descriptionTopConstraint = descriptionLabel.topAnchor.constraint(
+            equalTo: titleLabel.bottomAnchor, constant: 4)
+        descriptionBottomConstraint = descriptionLabel.bottomAnchor.constraint(
+            equalTo: bottomAnchor)
+        titleBottomConstraint = titleLabel.bottomAnchor.constraint(equalTo: bottomAnchor)
+
+        // Activate fixed constraints for the title and description labels
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: topAnchor),
             titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
             titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
 
-            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
             descriptionLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            descriptionLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            descriptionLabel.bottomAnchor.constraint(equalTo: bottomAnchor)
+            descriptionLabel.trailingAnchor.constraint(equalTo: trailingAnchor)
         ])
     }
 
@@ -147,7 +156,10 @@ internal class UPTitleDescriptionView: UIView {
             fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize)
         )
 
-        if let subHeader, !subHeader.isEmpty {
+        // Check if description has text
+        let hasDescription = subHeader?.trim().isNotEmpty == true
+
+        if hasDescription, let subHeader = subHeader {
             descriptionLabel.text = subHeader
             descriptionLabel.textColor = textColor
             descriptionLabel.font = UIFont.matching(
@@ -155,13 +167,27 @@ internal class UPTitleDescriptionView: UIView {
                 fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize)
             )
             descriptionLabel.isHidden = false
+
+            // Activate description constraints
+            titleBottomConstraint?.isActive = false
+            descriptionTopConstraint?.isActive = true
+            descriptionBottomConstraint?.isActive = true
         } else {
+            descriptionLabel.text = nil
             descriptionLabel.isHidden = true
+
+            // Deactivate description constraints and anchor title to bottom
+            descriptionTopConstraint?.isActive = false
+            descriptionBottomConstraint?.isActive = false
+            titleBottomConstraint?.isActive = true
         }
 
         if isRTL {
             titleLabel.textAlignment = .right
             descriptionLabel.textAlignment = .right
+        } else {
+            titleLabel.textAlignment = .left
+            descriptionLabel.textAlignment = .left
         }
     }
 

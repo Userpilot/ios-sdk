@@ -35,4 +35,12 @@ final class EnvironmentTests: XCTestCase {
         // Assert
         XCTAssertEqual(result, "NX-00000")
     }
+
+    func test_getExperienceContentUrl_returnsProductionHostInProduction() {
+        // Act
+        let result = Environment.getExperienceContentUrl()
+
+        // Assert
+        XCTAssertEqual(result, "https://appex.userpilot.io/api/v1/public/content")
+    }
 }

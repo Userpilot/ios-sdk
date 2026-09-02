@@ -118,6 +118,8 @@ internal class UPSingleInputView: UIView {
 
         if isRTL {
             textField.textAlignment = .right
+        } else {
+            textField.textAlignment = .left
         }
     }
 }

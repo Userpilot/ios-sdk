@@ -31,6 +31,12 @@ internal struct GeneralConstants {
     static let CONFIGURATION_DURATION = TimeInterval(30 * 60)
 }
 
+internal struct RemoteSource {
+    static let settingsBaseURL = "https://find.userpilot.io/v1/lookups/"
+    static let socketPath = "/mobile/v1/events/websocket"
+    static let configurationDuration = TimeInterval(30 * 60)  // 30 minutes
+}
+
 internal struct WrapperSDKConstants {
     static let pluginType = "PluginType"
     static let pluginTypeReactNative = "ReactNative"

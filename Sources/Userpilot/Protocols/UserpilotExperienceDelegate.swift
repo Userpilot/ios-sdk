@@ -13,33 +13,6 @@ import Foundation
 
 // swiftlint:disable all
 
-/// The Userpilot experience type.
-@objc
-public enum UserpilotExperienceType: Int {
-    case flow
-    case survey
-    case nps
-}
-
-/// The various states of a Userpilot experience.
-@objc
-public enum UserpilotExperienceState: Int {
-    /// Indicates that the  experience/step has started.
-    case started
-
-    /// Indicates that the  experience/step has been completed successfully.
-    case completed
-
-    /// Indicates that the  experience/step was dismissed before completion.
-    case dismissed
-
-    /// Indicates that the  experience/step was skipped.
-    case skipped
-
-    /// Indicates that the experience/step was Submitted.
-    case submitted
-}
-
 /// A protocol to observe and respond to state changes in Userpilot experiences.
 @objc
 public protocol UserpilotExperienceDelegate: AnyObject {
@@ -73,6 +46,62 @@ public protocol UserpilotExperienceDelegate: AnyObject {
         step: NSNumber?,
         totalSteps: NSNumber?
     )
+}
+
+
+/// The Userpilot experience type.
+@objc
+public enum UserpilotExperienceType: Int {
+    case flow
+    case survey
+    case nps
+    
+    /// Converts the analytic type to its string representation.
+    public var rawValueString: String {
+        switch self {
+        case .flow:
+            return "Flow"
+        case .survey:
+            return "Survey"
+        case .nps:
+            return "NPS"
+        }
+    }
+}
+
+/// The various states of a Userpilot experience.
+@objc
+public enum UserpilotExperienceState: Int {
+    /// Indicates that the  experience/step has started.
+    case started
+
+    /// Indicates that the  experience/step has been completed successfully.
+    case completed
+
+    /// Indicates that the  experience/step was dismissed before completion.
+    case dismissed
+
+    /// Indicates that the  experience/step was skipped.
+    case skipped
+
+    /// Indicates that the experience/step was Submitted.
+    case submitted
+    
+    /// Converts the analytic type to its string representation.
+    public var rawValueString: String {
+        switch self {
+        case .started:
+            return "Started"
+        case .completed:
+            return "Completed"
+        case .dismissed:
+            return "Dismissed"
+        case .skipped:
+            return "Skipped"
+        case .submitted:
+            return "Submitted"
+        }
+    }
 }
 
 // swiftlint:enable all

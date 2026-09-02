@@ -20,6 +20,9 @@ internal extension Optional where Wrapped == String {
         return !(self?.isEmpty ?? true)
     }
 
+    func orEmpty() -> String {
+        return self ?? ""
+    }
 }
 
 internal extension String {

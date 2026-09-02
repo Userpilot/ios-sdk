@@ -15,7 +15,7 @@
 import Foundation
 import UIKit
 
-internal extension CarouselExperienceViewController {
+extension CarouselExperienceViewController {
 
     /// Configures general views constraints.
     func setupViews() {
@@ -33,6 +33,9 @@ internal extension CarouselExperienceViewController {
         if experienceViewModel.isRTL {
             buttonDismissContainerView.semanticContentAttribute = .forceRightToLeft
             collectionView.semanticContentAttribute = .forceRightToLeft
+        } else {
+            buttonDismissContainerView.semanticContentAttribute = .forceLeftToRight
+            collectionView.semanticContentAttribute = .forceLeftToRight
         }
     }
 

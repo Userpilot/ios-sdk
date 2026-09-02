@@ -46,10 +46,10 @@ internal class ThemeHandler: ThemeHandling {
     // MARK: - Nested Types
 
     /// Default values for various text styles and attributes.
-    struct DefaultValues {
+    enum DefaultValues {
         // Carousels & Slide out
         static let delayTimeForExperience = 0.5
-        static let delayTimeForDeepLink = 0.5
+        static let delayTimeForDeepLink = 0.3
         static let headerTextSize = 16
         static let normalTextSize = 16
         static let dimSlideOutDegree = 40
@@ -77,12 +77,13 @@ internal class ThemeHandler: ThemeHandling {
         static let distanceBetweenSections = CGFloat(12)
         static let smallDistanceBetweenSections = CGFloat(8)
         static let contentMargin = CGFloat(20)
+        static let contentTopMargin = CGFloat(10)
         static let contentBottomMargin = UIDevice.current.userInterfaceIdiom == .pad ? CGFloat(30) : CGFloat(20)
         static let buttonBottomMarginWithStepProgress = UIDevice.current.userInterfaceIdiom == .pad
         ? CGFloat(62) : CGFloat(52)
         static let buttonBottomMarginWithoutStepProgress = UIDevice.current.userInterfaceIdiom == .pad
         ? CGFloat(35) : CGFloat(25)
-        static let carouselContentTopMargin = CGFloat(55)
+        static let carouselContentTopMargin = CGFloat(65)
 
         static let slideOutCornerRadius = CGFloat(12)
         static let blurImageSize = CGSize(width: 64, height: 64)
@@ -131,7 +132,7 @@ internal class ThemeHandler: ThemeHandling {
     }
 
     /// Style names used for text formatting in themes.
-    struct StyleName {
+    enum StyleName {
         static let textStyle = "textStyle"
         static let textLink = "link"
         static let textBold = "bold"
@@ -139,7 +140,7 @@ internal class ThemeHandler: ThemeHandling {
     }
 
     /// Additional style values.
-    struct StyleValues {
+    enum StyleValues {
         static let manual = "manual"
         static let borderRadius = 0
     }

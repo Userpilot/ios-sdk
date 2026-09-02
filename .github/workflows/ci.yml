@@ -1,0 +1,127 @@
+# ✅ The PR gate for the Userpilot iOS SDK.
+#
+# Same steps as `scripts/release-preflight.sh` (`pre-release-check` skill).
+# The package declares only .iOS(.v13) and depends on UIKit, so `swift build` /
+# `swift test` do NOT work here — everything must go through xcodebuild against
+# an iOS Simulator, using the shared `Userpilot` scheme.
+#
+#   environment   .PRODUCTION, placeholders, no NX- in SocketManager, Version.swift == podspec
+#   test          xcodebuild test  (compiles + runs UserpilotTests)
+#   lint          swiftlint --strict
+#   xcframework   build-xcframework.sh (device + simulator Release)
+#
+# Jobs run in parallel; Green gate is the one required status check — it names
+# every job that did not pass.
+#
+# Only the SDK is built here — the Sample/ apps are covered by publish-sample.yml.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# 🛑 A new push to the same PR/branch supersedes the previous run
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 🔒 Stops a DEVELOPMENT/STAGING build, a hardcoded NX- token/socket, or version drift merging
+  environment:
+    name: Environment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check environment config
+        run: bash scripts/release-preflight.sh --only environment
+
+  # 🧪 Compiles the SDK and runs the full XCTest suite on a simulator
+  test:
+    name: Build & test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Run unit tests
+        env:
+          RESULT_BUNDLE_PATH: ${{ runner.temp }}/Userpilot.xcresult
+        run: bash scripts/release-preflight.sh --only test
+
+      # 📊 The .xcresult carries the failing assertions and is the only useful
+      # artifact when a test fails on a runner you cannot attach to
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult
+          path: ${{ runner.temp }}/Userpilot.xcresult
+          retention-days: 7
+
+  # 🔍 SwiftLint, scoped by .swiftlint.yml to Sources/Userpilot + Tests/UserpilotTests
+  # (Vendor/ is excluded there). --strict makes warnings fail the build.
+  lint:
+    name: SwiftLint
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: bash scripts/release-preflight.sh --only lint
+
+  # 📦 Proves the binary artifact still builds (device + simulator Release).
+  # A one-line xcodebuild is not enough — see build-xcframework.sh.
+  xcframework:
+    name: XCFramework
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build xcframework
+        run: bash scripts/release-preflight.sh --only xcframework
+
+  # 🚦 One status check to protect `main` with. Names every job that failed.
+  green-gate:
+    name: Green gate
+    runs-on: ubuntu-latest
+    needs: [environment, test, lint, xcframework]
+    if: always()
+    steps:
+      - name: Verify every job passed
+        env:
+          RESULTS: >-
+            environment=${{ needs.environment.result }}
+            test=${{ needs.test.result }}
+            lint=${{ needs.lint.result }}
+            xcframework=${{ needs.xcframework.result }}
+        run: |
+          echo "$RESULTS" | tr ' ' '\n'
+          failed=0
+          for pair in $RESULTS; do
+            name="${pair%%=*}"
+            result="${pair##*=}"
+            case "$result" in
+              success|skipped) ;;
+              *) echo "::error::$name did not pass (result: $result)"; failed=1 ;;
+            esac
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "Green gate failed — see the failing job above."
+            exit 1
+          fi
+          echo "Green gate passed"

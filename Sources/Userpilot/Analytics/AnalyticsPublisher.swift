@@ -48,13 +48,27 @@ internal protocol AnalyticsPublishing: AnyObject {
     )
 
     /// publish fake reload event
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?)
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int?,
+        _ markExperienceAsSeen: Bool
+    )
 
     /// update seen experiences
     func experiencePublished(
         _ experienceType: ExperienceType,
         _ experienceId: Int
     )
+
+    /**
+     * Returns whether the experience was already displayed on the current screen entity.
+     *
+     * Flows use `seenExperiences`, Surveys use `seenSurveys`, and NPS returns `false` because NPS
+     * is deduplicated by `ExperiencesPublisher` using its last tracked screen. The screen entity
+     * retains seen ids when the same screen is reported again and starts with empty sets when the
+     * screen title changes.
+     */
+    func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool
 
     /// For experience which are come from start session
     var isStartSession: Bool { get }
@@ -850,7 +864,7 @@ private extension AnalyticsPublisher {
 }
 
 #if DEBUG
-internal extension AnalyticsPublisher {
+extension AnalyticsPublisher {
     func mockGetCachedEvent() -> Event? {
         return cachedEvent
     }
@@ -911,16 +925,20 @@ extension AnalyticsPublisher {
      * - Parameter experienceType: The type of experience (FLOW or SURVEY)
      * - Parameter experienceId: The ID of the experience being shown
      */
-    func publishFakeReloadScreenEvent(_ experienceType: ExperienceType, _ experienceId: Int?) {
+    func publishFakeReloadScreenEvent(
+        _ experienceType: ExperienceType,
+        _ experienceId: Int?,
+        _ markExperienceAsSeen: Bool
+    ) {
         tryCatch {
-            guard
-                experienceId != nil,
-                canRequestEvent
-            else { return }
+            guard canRequestEvent else { return }
             if let screenViewEntity {
                 // update the seen content to make sure it contains the dismissed content that
                 // trigger this fake reload
-                experiencePublished(experienceType, experienceId!)
+                if markExperienceAsSeen {
+                    guard let experienceId else { return }
+                    experiencePublished(experienceType, experienceId)
+                }
                 if eventThrottle.shouldThrottleScreenEvent(screenTitle: screenViewEntity.event.screenTitle ?? "") {
                     return
                 }
@@ -975,11 +993,31 @@ extension AnalyticsPublisher {
         }
     }
 
+    /**
+     * Checks the current screen's type-specific seen set for the supplied experience.
+     *
+     * A Flow id is checked only in `seenExperiences`, and a Survey id only in `seenSurveys`, so a
+     * Flow and Survey with the same numeric id remain distinct. NPS always returns `false` here and
+     * continues through the existing per-screen NPS deduplication path in `ExperiencesPublisher`.
+     * If no screen entity exists, Flow and Survey are treated as unseen.
+     */
+    func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool {
+        switch experienceContent {
+        case .flow(let content):
+            return screenViewEntity?.seenExperiences.contains(content.id) == true
+        case .survey(let content):
+            return screenViewEntity?.seenSurveys.contains(content.id) == true
+        case .nps:
+            // NPS deduplication is managed by ExperiencesPublisher per screen.
+            return false
+        }
+    }
+
 }
 
 // MARK: - Event Broadcasting
 
-internal extension AnalyticsPublisher {
+extension AnalyticsPublisher {
 
     /**
      * Broadcasts events to analytics listeners for external consumption.
