@@ -1186,7 +1186,7 @@ extension ExperiencesPublisher {
             self.experienceStateManager.markPreviewMode()
             self.userpilotRemoteSource.fetchPreviewExperience(
                 params: PreviewExperienceQueryParams(
-                    baseUrl: RemoteSource.experienceBaseURL,
+                    baseUrl: Environment.getExperienceContentUrl(),
                     appToken: self.config.token,
                     contentType: queryItems.first(where: { $0.name == "type" })?.value ?? "",
                     contentId: experienceId

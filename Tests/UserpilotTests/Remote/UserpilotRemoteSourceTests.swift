@@ -331,7 +331,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
                 """.utf8
             ),
             HTTPURLResponse(
-                url: URL(string: RemoteSource.experienceBaseURL)!,
+                url: URL(string: Environment.getExperienceContentUrl())!,
                 statusCode: 200,
                 httpVersion: nil,
                 headerFields: nil
@@ -340,7 +340,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         )
 
         let params = PreviewExperienceQueryParams(
-            baseUrl: RemoteSource.experienceBaseURL,
+            baseUrl: Environment.getExperienceContentUrl(),
             appToken: userpilot.config.token,
             contentType: "survey",
             contentId: "123"
@@ -370,7 +370,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         URLProtocolStub.response = (
             Data("invalid json".utf8),
             HTTPURLResponse(
-                url: URL(string: RemoteSource.experienceBaseURL)!,
+                url: URL(string: Environment.getExperienceContentUrl())!,
                 statusCode: 200,
                 httpVersion: nil,
                 headerFields: nil
@@ -379,7 +379,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         )
 
         let params = PreviewExperienceQueryParams(
-            baseUrl: RemoteSource.experienceBaseURL,
+            baseUrl: Environment.getExperienceContentUrl(),
             appToken: userpilot.config.token,
             contentType: "survey",
             contentId: "123"
@@ -410,7 +410,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         URLProtocolStub.response = (
             nil,
             HTTPURLResponse(
-                url: URL(string: RemoteSource.experienceBaseURL)!,
+                url: URL(string: Environment.getExperienceContentUrl())!,
                 statusCode: 404,
                 httpVersion: nil,
                 headerFields: nil
@@ -419,7 +419,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         )
 
         let params = PreviewExperienceQueryParams(
-            baseUrl: RemoteSource.experienceBaseURL,
+            baseUrl: Environment.getExperienceContentUrl(),
             appToken: userpilot.config.token,
             contentType: "survey",
             contentId: "999"
@@ -449,7 +449,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
             logger.loggedDebugs + logger.loggedInfos + logger.loggedLogs + logger.loggedErrors
             + logger.loggedFaults
         XCTAssertFalse(allLogs.contains(where: { $0.contains("Request URL") }))
-        XCTAssertFalse(allLogs.contains(where: { $0.contains(RemoteSource.experienceBaseURL) }))
+        XCTAssertFalse(allLogs.contains(where: { $0.contains(Environment.getExperienceContentUrl()) }))
         XCTAssertFalse(allLogs.contains(where: { $0.contains(userpilot.config.token) }))
     }
 }

@@ -739,7 +739,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertEqual(capturedParams?.appToken, userpilot.config.token)
         XCTAssertEqual(capturedParams?.contentType, "survey")
         XCTAssertEqual(capturedParams?.contentId, "preview-123")
-        XCTAssertEqual(capturedParams?.baseUrl, RemoteSource.experienceBaseURL)
+        XCTAssertEqual(capturedParams?.baseUrl, Environment.getExperienceContentUrl())
     }
 
     func testTriggerPreviewExperience_shouldEnterPreviewModeBeforeFetching() {
