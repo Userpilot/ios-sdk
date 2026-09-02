@@ -299,7 +299,11 @@ extension SocketManager {
             storage.userId.isNotEmpty,
             let autoProperties = autoPropertyDecorator.autoProperties.toJSONString(),
             let appProperties = autoPropertyDecorator.appProperties.toJSONString()
-        else { return }
+        else {
+            // Nothing to dial - release the gate so a later attempt is not blocked forever.
+            isFetchingSocketSettings.value = false
+            return
+        }
         tryCatch {
             socketState = .connecting
 
@@ -317,6 +321,7 @@ extension SocketManager {
 
             guard let phoenixSocket else {
                 socketState = .closed
+                isFetchingSocketSettings.value = false
                 return
             }
 
@@ -335,8 +340,8 @@ extension SocketManager {
                     self.channelJoined = false
                     self.channelJoining = false
                 }
-                self.updateSocketState(.closed)
                 if self.socketState != .shuttingDown {
+                    self.updateSocketState(.closed)
                     self.$socketSubscription.invoke { $0.onSocketClosed() }
                 }
             }
@@ -476,6 +481,9 @@ extension SocketManager: SocketEvents {
                 return
             }
             if socketStateValue == newSocketState || socketStateValue == .error { return }
+            // Keep shuttingDown until a later connect() force-clears it; otherwise close()
+            // and transport callbacks would reopen during teardown.
+            if socketStateValue == .shuttingDown { return }
             socketStateValue = newSocketState
         }
     }
@@ -489,6 +497,10 @@ extension SocketManager: SocketEvents {
     func connect() {
         if config.token.isEmpty || storage.userId.isEmpty || isSocketOpened || isJoiningSocket {
             return
+        }
+        // Resume/identify after flush or logout must be able to dial again.
+        if isShutdownState {
+            updateSocketState(.closed, forceUpdateState: true)
         }
         // `compareAndSet` is the single-flight gate: it supersedes the locked state claim the
         // hotfix added on main, since it already prevents two queues from both dialling.
@@ -512,7 +524,11 @@ extension SocketManager: SocketEvents {
 
     /// Implementation to close the WebSocket connection
     func close() {
-        updateSocketState(.closed)
+        // Do not clobber shuttingDown: an in-flight fetchSettings callback checks that
+        // marker in `openSocket()` and must not create a new socket during teardown.
+        if socketState != .shuttingDown {
+            updateSocketState(.closed)
+        }
         closeSocket()
     }
 
