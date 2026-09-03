@@ -54,6 +54,17 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertTrue(result)
     }
 
+    func testCanRequestScreenEvent_shouldReturnFalse_WhenPreviewIsPending() {
+        // Arrange
+        userpilot.experienceStateMachine.markPreviewMode()
+
+        // Act
+        let result = experiencesPublisher.canRequestScreenEvent()
+
+        // Assert
+        XCTAssertFalse(result)
+    }
+
     // MARK: - triggerExperience Tests
 
     func testTriggerExperience_shouldPublishEvent_WhenNoActiveExperience() {
@@ -345,6 +356,89 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
     }
 
+    func testOnSocketEventSent_shouldSelectSurvey_WhenHigherPriorityFlowWasSeen() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Unseen survey should be selected")
+        let message = Message(payload: makeFlowAndSurveyPayload())
+        userpilot.analyticsPublisher.onIsExperienceSeen = { experience in
+            if case .flow = experience { return true }
+            return false
+        }
+
+        // Act
+        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
+
+        // Assert
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard case .survey(let content) = self.experiencesPublisher.getActiveMobileContent() else {
+                XCTFail("Expected unseen survey content")
+                expectation.fulfill()
+                return
+            }
+            XCTAssertEqual(content.id, 20)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testOnSocketEventSent_shouldNotCacheDuplicateActiveExperience() throws {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Duplicate response should be ignored")
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        userpilot.experienceStateMachine.markAutomaticTrigger(.flow(content: flow))
+        userpilot.experienceStateMachine.markActiveFromCurrentState(content: .flow(content: flow))
+
+        // Act
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeFlowContentPayload()),
+            true
+        )
+
+        // Assert
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            XCTAssertNil(self.userpilot.experienceStateMachine.getCachedExperienceContent())
+            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent())
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testPublishInternalSDKEvent_shouldIgnoreCachedAutomaticExperience_WhenSeenBeforeReplay() throws {
+        // Arrange
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        userpilot.analyticsPublisher.onIsExperienceSeen = { _ in true }
+        userpilot.experienceStateMachine.markCachedAutomatic(.flow(content: flow))
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": flow.id]
+        )
+        closeEvent.isCloseEvent = true
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        // Assert
+        XCTAssertNil(userpilot.experienceStateMachine.getCachedExperienceContent())
+        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
+        if case .idle = userpilot.experienceStateMachine.getCurrentState() {
+            // Expected state.
+        } else {
+            XCTFail("Expected idle state after ignoring cached seen content")
+        }
+    }
+
     // MARK: - onNewMessage Tests
 
     func testOnNewMessage_shouldProcessFlowContent_WhenValidPayload() {
@@ -448,6 +542,52 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertNil(publishedEvent)
     }
 
+    func testPublishInternalSDKEvent_shouldSuppressCompletedSurvey_WhenPreviewThankYouIsShowing() {
+        // Arrange
+        var publishedEvent: SDKEvent?
+        userpilot.experienceStateMachine.markPreviewMode()
+        userpilot.experienceStateMachine.markActiveFromCurrentState(
+            content: .survey(content: MockContentFactory.makeSurveyContent())
+        )
+        userpilot.experienceStateMachine.markShowingThankYou()
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            publishedEvent = event
+        }
+        let completedSurveyEvent = ExperienceSurveyCompletedEvent(
+            surveyId: 10,
+            submissionId: 20
+        )
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
+
+        // Assert
+        XCTAssertNil(publishedEvent)
+        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
+    }
+
+    func testPublishInternalSDKEvent_shouldPublishCompletedSurvey_WhenThankYouIsNotPreview() {
+        // Arrange
+        var publishedEvent: SDKEvent?
+        userpilot.experienceStateMachine.markShowingThankYou()
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            publishedEvent = event
+        }
+        let completedSurveyEvent = ExperienceSurveyCompletedEvent(
+            surveyId: 10,
+            submissionId: 20
+        )
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
+
+        // Assert
+        XCTAssertEqual(
+            publishedEvent?.eventName,
+            SDKEventsName.surveyExperienceCompleted.rawValue
+        )
+    }
+
     func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
         // Arrange
         userpilot.experienceStateMachine.markPreviewMode()
@@ -526,6 +666,22 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertTrue(publishFakeReloadEventCalled)
     }
 
+    private func makeFlowAndSurveyPayload() -> [String: Any] {
+        var payload = MockContentFactory.makeFlowContentPayload()
+        payload["surveys"] = [
+            "id": 20,
+            "type": "list",
+            "modules": [],
+            "metadata": NSNull(),
+            "theme_data": ["id": 22, "theme_data": NSNull()],
+            "screens": ["Home"],
+            "screen_type": "selected",
+            "locale_code": "en",
+            "time_delay": 0
+        ]
+        return payload
+    }
+
     // MARK: - showThankYouMessage Tests
 
     func testShowThankYouMessage_shouldTriggerThankYouView() {
@@ -573,7 +729,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertEqual(capturedParams?.appToken, userpilot.config.token)
         XCTAssertEqual(capturedParams?.contentType, "survey")
         XCTAssertEqual(capturedParams?.contentId, "preview-123")
-        XCTAssertEqual(capturedParams?.baseUrl, Constants.RemoteSource.experienceBaseURL)
+        XCTAssertEqual(capturedParams?.baseUrl, Environment.getExperienceContentUrl())
     }
 
     func testTriggerPreviewExperience_shouldEnterPreviewModeBeforeFetching() {
@@ -624,17 +780,6 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     // MARK: - Preview session tracking
-
-    func testCanRequestScreenEvent_shouldReturnFalse_WhenPreviewIsPending() {
-        // Arrange
-        userpilot.experienceStateMachine.markPreviewMode()
-
-        // Act
-        let result = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertFalse(result)
-    }
 
     func testUpdateScreen_shouldPreservePendingPreview() {
         // Arrange

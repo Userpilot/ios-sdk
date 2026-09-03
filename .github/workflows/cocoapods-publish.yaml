@@ -3,75 +3,127 @@
 name: Release and Publish to CocoaPods
 
 on:
-  # 🔄 Trigger workflow on push to 'release/release-*' paths
-  push:
-    branches:
-      - 'release/release-*'
+  # 🎛️ Manual only. A CocoaPods trunk push is irreversible — a published version can
+  # only be deprecated, never removed — so it must be a deliberate act, not a side
+  # effect of pushing a branch.
+  #
+  # Run it from Actions → "Release and Publish to CocoaPods" → Run workflow,
+  # selecting the branch to release from (`main` or a `release/*` branch) and the
+  # version bump to apply.
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump for this release'
+        required: true
+        default: 'beta'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - beta
+          - rc
+
+# 🛑 Never run two releases against the same branch at once
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
-  # 🔖 First job: Trigger the bump version workflow and wait for completion
+  # ✅ First job: reject the wrong branch before anything is mutated.
+  # This must precede the bump — a manual dispatch can select ANY branch, and bumping
+  # first would leave a stray version commit and tag on a branch we then reject.
+  validate-branch:
+    name: Validate branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Validate branch
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "$BRANCH" != "main" && "$BRANCH" != release/* ]]; then
+            echo "::error::Must release from 'main' or a 'release/*' branch. Selected: $BRANCH"
+            exit 1
+          fi
+          echo "Branch validation passed: $BRANCH"
+
+  # 🔖 Second job: Trigger the bump version workflow and wait for completion
   bump-version:
+    needs: validate-branch
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version.outputs.version }}
     steps:
-      # 🧩 Trigger the bump version workflow
-      - name: Trigger bump version workflow
-        uses: actions/github-script@v6
+      # 🧩 Trigger the bump version workflow and wait for THIS dispatch to finish.
+      # We record the dispatch timestamp first, then only accept a run created after
+      # it — otherwise a previously completed bump run satisfies the poll instantly
+      # and we would publish an un-bumped version.
+      - name: Trigger bump version workflow and wait
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.NPM_TOKEN }}
           script: |
-            const result = await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'bump-version.yml',
-              ref: context.ref
-              // No inputs needed - will use default from bump-version.yml
-            });
-            console.log('Bump version workflow triggered');
+            const workflow_id = 'bump-version.yml';
+            const { owner, repo } = context.repo;
 
-      # 🕐 Wait for the bump version workflow to complete
-      - name: Wait for bump version workflow completion
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.NPM_TOKEN }}
-          script: |
-            const maxAttempts = 30; // Wait up to 15 minutes (30 * 30 seconds)
-            let attempts = 0;
-            
-            while (attempts < maxAttempts) {
-              const runs = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'bump-version.yml',
-                per_page: 1,
-                status: 'completed'
-              });
-              
-              if (runs.data.workflow_runs.length > 0) {
-                const latestRun = runs.data.workflow_runs[0];
-                console.log(`Latest bump workflow status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
-                
-                if (latestRun.conclusion === 'success') {
-                  console.log('Bump version workflow completed successfully');
-                  break;
-                } else if (latestRun.conclusion === 'failure' || latestRun.conclusion === 'cancelled') {
-                  throw new Error(`Bump version workflow failed with conclusion: ${latestRun.conclusion}`);
+            // Timestamp just before dispatch (minus a small skew allowance)
+            const dispatchedAt = new Date(Date.now() - 10_000);
+
+            // Pass through the bump chosen when this release was dispatched
+            const bump = '${{ inputs.bump }}';
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner, repo, workflow_id,
+              ref: context.ref,
+              inputs: { bump },
+            });
+            console.log(`Bump version workflow dispatched (bump=${bump}) at ${dispatchedAt.toISOString()}`);
+
+            const maxAttempts = 40; // up to ~20 minutes (40 * 30 seconds)
+            let runId = null;
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              await new Promise(r => setTimeout(r, 30_000));
+
+              // Find OUR run: created after dispatch
+              if (runId === null) {
+                const { data } = await github.rest.actions.listWorkflowRuns({
+                  owner, repo, workflow_id, per_page: 20,
+                });
+                const mine = data.workflow_runs
+                  .filter(r => new Date(r.created_at) >= dispatchedAt)
+                  .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+                if (!mine) {
+                  console.log(`Bump run not visible yet... (attempt ${attempt}/${maxAttempts})`);
+                  continue;
                 }
+                runId = mine.id;
+                console.log(`Tracking bump run #${runId} (${mine.html_url})`);
               }
-              
-              attempts++;
-              if (attempts >= maxAttempts) {
-                throw new Error('Timeout waiting for bump version workflow to complete');
-              }
-              
-              console.log(`Waiting for bump version workflow... (attempt ${attempts}/${maxAttempts})`);
-              await new Promise(resolve => setTimeout(resolve, 30000)); // Wait 30 seconds
+
+              const { data: run } = await github.rest.actions.getWorkflowRun({
+                owner, repo, run_id: runId,
+              });
+              console.log(`Run #${runId}: status=${run.status}, conclusion=${run.conclusion}`);
+
+              if (run.status !== 'completed') continue;
+              if (run.conclusion === 'success') return;
+              throw new Error(`Bump version workflow failed with conclusion: ${run.conclusion}`);
             }
+
+            throw new Error('Timeout waiting for bump version workflow to complete');
 
       # 📥 Checkout the updated code after version bump
       - name: Checkout updated code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -93,26 +145,6 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "Bumped version: $version"
 
-  # ✅ Second job: Validate branch
-  validate-branch:
-    needs: bump-version
-    runs-on: macOS-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ref: ${{ github.ref }}
-
-      - name: Validate branch
-        run: |
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "$BRANCH" != "main" && "$BRANCH" != release/* ]]; then
-            echo "Error: Must be on 'main' or 'release/*' branch. Current: $BRANCH"
-            exit 1
-          fi
-          echo "Branch validation passed: $BRANCH"
-
   # 📝 Third job: Create GitHub Release
   create-release:
     needs: [bump-version, validate-branch]
@@ -120,7 +152,7 @@ jobs:
     steps:
       # 📥 Checkout code with the latest changes including version bump
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -148,7 +180,7 @@ jobs:
 
       # 📝 Create GitHub Release using the bumped version
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.bump-version.outputs.version }}
           name: ${{ needs.bump-version.outputs.version }}
@@ -166,7 +198,7 @@ jobs:
     steps:
       # 📥 Checkout code with the latest changes including version bump
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -182,42 +214,37 @@ jobs:
       - name: Install CocoaPods
         run: gem install cocoapods
 
-      # ✅ Validate podspec before publishing
-      - name: Validate podspec
-        run: |
-          # Find the podspec file (assuming it's in the root directory)
-          PODSPEC=$(find . -name "*.podspec" -maxdepth 1 | head -n 1)
-          if [ -z "$PODSPEC" ]; then
-            echo "Error: No .podspec file found in root directory"
-            exit 1
-          fi
-          echo "Found podspec: $PODSPEC"
-          
-          # Validate the podspec
-          pod spec lint "$PODSPEC" --allow-warnings
-          echo "Podspec validation passed"
-
-      # 🔧 Update podspec version (if needed)
+      # 🔧 Update podspec version FIRST. `pod spec lint` resolves
+      # spec.source's `:tag => "#{spec.version}"`, so linting before this step
+      # would validate the PREVIOUS release's tag and tell us nothing about the
+      # version we are about to publish.
       - name: Update podspec version
         run: |
           VERSION="${{ needs.bump-version.outputs.version }}"
           PODSPEC=$(find . -name "*.podspec" -maxdepth 1 | head -n 1)
-          
-          if [ -n "$PODSPEC" ]; then
-            # Update version in podspec file
-            sed -i '' "s/s\.version[[:space:]]*=[[:space:]]*['\"][^'\"]*['\"]/s.version = '$VERSION'/" "$PODSPEC"
-            echo "Updated podspec version to $VERSION"
-            
-            # Show the updated line for verification
-            grep "s\.version" "$PODSPEC" || echo "Version line not found in podspec"
+          if [ -z "$PODSPEC" ]; then
+            echo "::error::No .podspec file found in root directory"
+            exit 1
+          fi
+          echo "Found podspec: $PODSPEC"
+
+          # Update version in podspec file
+          sed -i '' "s/spec\.version[[:space:]]*=[[:space:]]*['\"][^'\"]*['\"]/spec.version       = \"$VERSION\"/" "$PODSPEC"
+          echo "Updated podspec version to $VERSION"
+          grep "spec\.version" "$PODSPEC"
+
+          # The podspec version drives the git tag it resolves — they must agree
+          if ! grep -q "\"$VERSION\"" "$PODSPEC"; then
+            echo "::error::podspec version did not update to $VERSION"
+            exit 1
           fi
 
-      # 📄 Commit podspec changes if any
+      # 📄 Commit podspec changes so the tag's tree carries the right version
       - name: Commit podspec changes
         run: |
           git config user.name "motasem-userpilot"
           git config user.email "motasem@userpilot.co"
-          
+
           if git diff --quiet; then
             echo "No changes to commit"
           else
@@ -225,6 +252,13 @@ jobs:
             git commit -m "📦 update podspec version to ${{ needs.bump-version.outputs.version }}"
             git push
           fi
+
+      # ✅ Validate the podspec we are actually about to publish
+      - name: Validate podspec
+        run: |
+          PODSPEC=$(find . -name "*.podspec" -maxdepth 1 | head -n 1)
+          pod lib lint "$PODSPEC" --allow-warnings
+          echo "Podspec validation passed"
 
       # 🚀 Deploy to CocoaPods using the action
       - name: Deploy to CocoaPods

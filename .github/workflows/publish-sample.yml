@@ -16,25 +16,18 @@ on:
           - UserpilotSample
           - UserpilotSample Dev
 
-# 🛡️ Set default permissions needed for canceling workflows and reading repository contents
+# 🛑 Native cancellation of superseded runs (replaces styfle/cancel-workflow-action,
+# which needed a PAT and write-all permissions)
+concurrency:
+  group: publish-sample-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  actions: write
   contents: read
 
 jobs:
-  # 🔴 Cancel any previously running workflow runs (for this workflow) on the same branch  
-  cancel_previous:
-    runs-on: ubuntu-latest
-    permissions: write-all
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ secrets.NPM_TOKEN }}
-
   # 🛠️ Build the selected iOS scheme into an .ipa file
   build_sample_app:
-    needs: cancel_previous
     runs-on: macos-latest
 
     steps:
@@ -44,7 +37,7 @@ jobs:
 
       # 📥 Checkout the source code from the repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 🔐 Setup signing credentials (certificate & provisioning profile)
       - name: Setup Secrets
@@ -84,16 +77,12 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
 
-      # ✅ Install SwiftLint for static code analysis (optional)
-      - name: Install SwiftLint
-        run: brew install swiftlint
-
       # 🏗️ Build the selected scheme into an .xcarchive
       - name: Build selected scheme archive
         run: |
           ARCHIVE_PATH="$RUNNER_TEMP/${{ github.event.inputs.scheme }}.xcarchive"
 
-          xcodebuild -project ./Sample/UserpilotSample/UserpilotSample.xcodeproj \
+          xcodebuild -project ./Sample/UserpilotSwiftSample/UserpilotSample.xcodeproj \
           -scheme "${{ github.event.inputs.scheme }}" \
           -archivePath "$ARCHIVE_PATH" \
           -sdk iphoneos \
@@ -123,13 +112,13 @@ jobs:
 
   # ☁️ Upload the built .ipa file to Firebase App Distribution
   upload_to_firebase:
-    needs: [cancel_previous, build_sample_app]
+    needs: build_sample_app
     runs-on: ubuntu-latest
 
     steps:
       # 📥 Checkout the repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -140,34 +129,21 @@ jobs:
           name: ${{ github.event.inputs.scheme }}.ipa
           path: ./build
 
-      # 🧳 Fetch base and head branches (only needed for PRs)
-      - name: Fetch base and head branches
-        if: github.event_name == 'pull_request'
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-          git fetch origin ${{ github.event.pull_request.head.ref }}
-
-      # 📝 Generate dynamic release notes
+      # 📝 Generate release notes from the commits on the dispatched ref.
+      # This workflow is workflow_dispatch-only, so there is no pull_request /
+      # head_commit / before / after context to read — those are always null here.
       - name: Generate release notes
         run: |
-          echo "📱 Firebase Release Notes" > release-notes.txt
-          echo "" >> release-notes.txt
-          
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "📦 PR Title: ${{ github.event.pull_request.title }}" >> release-notes.txt
-            echo "🔗 PR Link: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}" >> release-notes.txt
-            echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
-            echo "" >> release-notes.txt
-            echo "📋 Commits in this PR:" >> release-notes.txt
-            git log origin/${{ github.event.pull_request.base.ref }}..origin/${{ github.event.pull_request.head.ref }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
-          else
-            echo "📦 Commit Message: ${{ github.event.head_commit.message }}" >> release-notes.txt
-            echo "🔗 Commit Link: https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> release-notes.txt
-            echo "👤 Triggered by: ${{ github.actor }}" >> release-notes.txt
-            echo "" >> release-notes.txt
-            echo "📋 Commits in this Push:" >> release-notes.txt
-            git log ${{ github.event.before }}..${{ github.event.after }} --pretty=format:"* %h - %s (by %an)" >> release-notes.txt
-          fi
+          {
+            echo "📱 Firebase Release Notes"
+            echo ""
+            echo "🌿 Branch: ${{ github.ref_name }} (${{ github.event.inputs.scheme }})"
+            echo "🔗 Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+            echo "👤 Triggered by: ${{ github.actor }}"
+            echo ""
+            echo "📋 Recent commits:"
+            git log -n 20 --pretty=format:"* %h - %s (by %an)"
+          } > release-notes.txt
 
       # 🚀 Upload the .ipa to Firebase App Distribution
       - name: Upload .ipa to Firebase App Distribution

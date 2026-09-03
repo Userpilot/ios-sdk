@@ -120,8 +120,6 @@ internal enum Constants {
     enum RemoteSource {
         static let settingsBaseURL = "https://find.userpilot.io/v1/lookups/"
         static let socketPath = "/mobile/v1/events/websocket"
-        static let experienceBaseURL =
-            "https://appex-dev-nxtapp-14664.userpilot.io/api/v1/public/content"
         /// How long fetched SDK settings stay fresh before a refetch.
         static let configurationDuration = TimeInterval(30 * 60)
     }

@@ -133,12 +133,10 @@ internal class UserpilotRemoteSource {
         completion: @escaping (Result<Data, RemoteSourceError>) -> Void
     ) {
         guard let requestUrl = URL(string: url) else {
-            logger.error("❌ Invalid URL: %{public}@", url)
+            logger.error("❌ Invalid URL")
             completion(.failure(.invalidURL))
             return
         }
-
-        logger.info("✅ Request URL: %{public}@", url)
 
         let task = session.dataTask(with: URLRequest(url: requestUrl)) { [weak self] data, response, error in
             guard let self else {

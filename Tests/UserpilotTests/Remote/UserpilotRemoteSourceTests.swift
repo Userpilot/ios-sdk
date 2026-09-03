@@ -331,7 +331,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
                 """.utf8
             ),
             HTTPURLResponse(
-                url: URL(string: Constants.RemoteSource.experienceBaseURL)!,
+                url: URL(string: Environment.getExperienceContentUrl())!,
                 statusCode: 200,
                 httpVersion: nil,
                 headerFields: nil
@@ -340,7 +340,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         )
 
         let params = PreviewExperienceQueryParams(
-            baseUrl: Constants.RemoteSource.experienceBaseURL,
+            baseUrl: Environment.getExperienceContentUrl(),
             appToken: userpilot.config.token,
             contentType: "survey",
             contentId: "123"
@@ -359,6 +359,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         XCTAssertEqual(result?.contentType, "survey")
         XCTAssertNotNil(result?.survey)
         XCTAssertNotNil(result?.theme)
+        assertRemoteLogsDoNotExposePreviewRequest()
     }
 
     func testFetchPreviewExperience_failsWithDecodingError_whenInvalidJson() {
@@ -369,7 +370,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         URLProtocolStub.response = (
             Data("invalid json".utf8),
             HTTPURLResponse(
-                url: URL(string: Constants.RemoteSource.experienceBaseURL)!,
+                url: URL(string: Environment.getExperienceContentUrl())!,
                 statusCode: 200,
                 httpVersion: nil,
                 headerFields: nil
@@ -378,7 +379,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         )
 
         let params = PreviewExperienceQueryParams(
-            baseUrl: Constants.RemoteSource.experienceBaseURL,
+            baseUrl: Environment.getExperienceContentUrl(),
             appToken: userpilot.config.token,
             contentType: "survey",
             contentId: "123"
@@ -409,7 +410,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         URLProtocolStub.response = (
             nil,
             HTTPURLResponse(
-                url: URL(string: Constants.RemoteSource.experienceBaseURL)!,
+                url: URL(string: Environment.getExperienceContentUrl())!,
                 statusCode: 404,
                 httpVersion: nil,
                 headerFields: nil
@@ -418,7 +419,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         )
 
         let params = PreviewExperienceQueryParams(
-            baseUrl: Constants.RemoteSource.experienceBaseURL,
+            baseUrl: Environment.getExperienceContentUrl(),
             appToken: userpilot.config.token,
             contentType: "survey",
             contentId: "999"
@@ -439,6 +440,17 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         } else {
             XCTFail("Expected httpError")
         }
+        assertRemoteLogsDoNotExposePreviewRequest()
+    }
+
+    /// Preview URL includes `app_token` as a query item; never log it or the content host.
+    private func assertRemoteLogsDoNotExposePreviewRequest() {
+        let allLogs =
+            logger.loggedDebugs + logger.loggedInfos + logger.loggedLogs + logger.loggedErrors
+            + logger.loggedFaults
+        XCTAssertFalse(allLogs.contains(where: { $0.contains("Request URL") }))
+        XCTAssertFalse(allLogs.contains(where: { $0.contains(Environment.getExperienceContentUrl()) }))
+        XCTAssertFalse(allLogs.contains(where: { $0.contains(userpilot.config.token) }))
     }
 }
 // swiftlint:enable all

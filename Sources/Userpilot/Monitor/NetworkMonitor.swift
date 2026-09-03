@@ -262,7 +262,7 @@ internal class NetworkMonitor: NetworkMonitoring {
         var hosts: [String] = []
         appendHost(from: socketURL, to: &hosts)
         appendHost(from: Constants.RemoteSource.settingsBaseURL, to: &hosts)
-        appendHost(from: Constants.RemoteSource.experienceBaseURL, to: &hosts)
+        appendHost(from: Environment.getExperienceContentUrl(), to: &hosts)
         return hosts
     }
 
