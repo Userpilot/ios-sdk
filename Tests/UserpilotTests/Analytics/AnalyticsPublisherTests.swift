@@ -806,6 +806,55 @@ class AnalyticsPublisherTests: XCTestCase {
         // Should not reprocess same identify event
         XCTAssertFalse(publishIdentifyEventCalled)
     }
+
+    // MARK: - User Switch With A Screen Tracked Right After Identify
+
+    /// A user switch blanks the user id via `clean()` while the new user's identify waits in the
+    /// queue to be replayed by `onSocketClosed`. Any event queued behind that identify — a screen
+    /// tracked right after `identify` — must survive the replay, otherwise the queue empties and
+    /// the post-identify screen event goes out carrying the *previous* screen.
+    func testUserSwitch_withQueuedScreen_shouldPublishQueuedScreenTitleAndSkipPostIdentifyScreen() {
+        // Arrange: user N is identified and sitting on the "online queue" screen
+        userpilot.storage.userId = "userN"
+        userpilot.storage.user = User(userId: "userN").toJson() ?? ""
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { true }
+
+        var screenPayloads: [Payload] = []
+        userpilot.socketManager.onPublish = { eventName, payload in
+            if eventName == Constants.Event.screenEvent { screenPayloads.append(payload) }
+        }
+
+        analyticsPublisher.publish(Event(type: .screen("online queue")))
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+
+        // Arrange: the new user's identify and a screen right behind it are both queued while the
+        // socket is joining (mirrors the asynchronous processing on device)
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.publish(Event(type: .identify("userA")))
+        analyticsPublisher.publish(Event(type: .screen("queue s1 home")))
+        userpilot.socketManager.isJoiningSocket = false
+
+        // Act: the identify is processed, which switches user and tears the old socket down
+        analyticsPublisher.onSocketOpened()
+
+        // Act: the socket close replays the pending identify, then the connection comes back
+        userpilot.socketManager.isSocketOpened = false
+        analyticsPublisher.onSocketClosed()
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+
+        // Assert: only the queued screen event follows the switch — no post-identify screen event —
+        // and it carries its own title, starting a new session for the new user
+        XCTAssertEqual(screenPayloads.count, 2)
+        let payload = screenPayloads.last?.flatMap { $0 } ?? [:]
+        XCTAssertEqual(payload[Constants.Analytics.screenTitleProperty] as? String, "queue s1 home")
+
+        let metadata = payload[Constants.Analytics.metaDataProperty] as? [String: Any] ?? [:]
+        XCTAssertEqual(metadata[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
+    }
 }
 
 // swiftlint:enable all

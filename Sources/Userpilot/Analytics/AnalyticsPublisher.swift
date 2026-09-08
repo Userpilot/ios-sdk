@@ -618,7 +618,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter event: The event to cache
      */
     private func cacheEvent(_ event: Event, isInternalEvent: Bool = false) {
-        if storage.userId.isEmpty {
+        // An empty user id means the queue is orphaned (app-level logout) and must not leak into
+        // the next user's session. A user switch is the exception: `clean()` blanks the id while
+        // the new user's identify is still pending, and the queue already holds that user's
+        // events — clearing here would drop them (e.g. a screen tracked right after `identify`).
+        if storage.userId.isEmpty, storage.temporaryUser.orEmpty().isEmpty {
             eventsQueue.clear()
         }
         if event.isScreenEvent,
