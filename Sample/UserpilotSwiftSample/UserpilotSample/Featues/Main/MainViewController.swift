@@ -20,7 +20,7 @@ class MainViewController: BaseViewController {
 
     // MARK: - Properties
 
-    internal lazy var content: [Content] = [.identify, .screens, .events, .eventsLog, .configurations, .autoCapture]
+    internal lazy var content: [Content] = [.configurations, .identify, .screens, .events, .eventsLog, .autoCapture]
 
     private var didPresentInitialConfig = false
 
