@@ -12,6 +12,8 @@ Update your `Info.plist` to register the custom URL scheme. Replace `USERPILOT_T
 
 For example, if your Userpilot Token is `NX-12345678` your url scheme value would be `userpilot-nx-12345678`.
 
+> **One scheme covers both environments.** The SDK strips a leading `STG-` from your token and lowercases the result before matching, so a staging token of `STG-NX-12345678` produces the same `userpilot-nx-12345678` scheme as the production token `NX-12345678`. Register it once.
+
 ```
 <key>CFBundleURLTypes</key>
 <array>
