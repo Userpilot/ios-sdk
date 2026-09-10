@@ -779,6 +779,59 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [resultExpectation], timeout: 1.0)
     }
 
+    // MARK: - Overlay Window Threading Tests
+
+    /// Regression: `logout()` runs on whatever queue the host app — or a wrapper such as
+    /// Capacitor, which calls in from its `bridge` queue — invokes it on. `resetState`
+    /// reaches the overlay through `hideExperienceOverlayIfIdle()`, which used to
+    /// *construct* the lazy `ExperienceOverlayWindow` on that background thread. A
+    /// `UIWindow` built off the main thread crashes UIKit with
+    /// "Call must be made on main thread" inside `_performAfterCATransactionCommits`.
+    func testLogout_offTheMainThread_doesNotCreateTheOverlayWindow() {
+        // Arrange — no experience has been presented, so no overlay exists yet
+        XCTAssertNil(userpilot.existingExperienceOverlayWindow)
+
+        // Act
+        let loggedOut = XCTestExpectation(description: "logout ran to completion off the main thread")
+        performOn(.background) {
+            self.experiencesPublisher.logout()
+            loggedOut.fulfill()
+        }
+        wait(for: [loggedOut], timeout: 2.0)
+
+        // Assert — collapsing an idle overlay must never build one
+        XCTAssertNil(
+            userpilot.existingExperienceOverlayWindow,
+            "Hiding an overlay that was never needed must not construct a UIWindow"
+        )
+    }
+
+    /// An overlay that *does* exist still has to be collapsed by a logout arriving
+    /// off the main thread — the fix marshals the UIKit work, it does not drop it.
+    func testLogout_offTheMainThread_hidesAnExistingOverlayOnTheMainThread() {
+        // Arrange — build and surface the overlay from the test's main thread
+        let overlay = userpilot.experienceOverlayWindow
+        overlay.prepareForPresentation()
+        XCTAssertFalse(overlay.isHidden)
+
+        // Act
+        let loggedOut = XCTestExpectation(description: "logout ran to completion off the main thread")
+        performOn(.background) {
+            self.experiencesPublisher.logout()
+            loggedOut.fulfill()
+        }
+        wait(for: [loggedOut], timeout: 2.0)
+
+        // The hide is enqueued on the main queue before `logout()` returns, so this
+        // barrier block runs strictly after it (main queue is FIFO).
+        let mainQueueDrained = XCTestExpectation(description: "main queue processed the marshalled hide")
+        performOn(.main) { mainQueueDrained.fulfill() }
+        wait(for: [mainQueueDrained], timeout: 2.0)
+
+        // Assert
+        XCTAssertTrue(overlay.isHidden, "A logout must collapse an overlay that was already surfaced")
+    }
+
     // MARK: - Preview session tracking
 
     func testUpdateScreen_shouldPreservePendingPreview() {

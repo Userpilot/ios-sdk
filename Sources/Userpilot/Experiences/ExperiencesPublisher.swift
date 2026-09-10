@@ -268,8 +268,25 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// Hides the overlay window when no experience is currently presented on it.
     /// Called from dismissal paths so the overlay window doesn't sit visible
     /// (and consume input focus) while idle.
+    ///
+    /// Reached from `resetState`, which runs on the caller's queue — `logout()` and
+    /// `updateScreen(_:)` are public API and wrappers call them from their own
+    /// queues (Capacitor from its `bridge` queue). Hiding a window is UIKit work,
+    /// so marshal it onto the main queue; the `Thread.isMainThread` fast path keeps
+    /// the already-on-main callers (`endExperience`, `experienceDidFinishDismissing`)
+    /// synchronous so their hide still lands before their completion handler.
+    ///
+    /// Uses the non-creating accessor: an instance that never presented an
+    /// experience has no overlay to collapse, and building one here would construct
+    /// (and briefly surface) a window purely in order to hide it.
     internal func hideExperienceOverlayIfIdle() {
-        userpilot?.experienceOverlayWindow.hideIfIdle()
+        if Thread.isMainThread {
+            userpilot?.existingExperienceOverlayWindow?.hideIfIdle()
+        } else {
+            performOn(.main) { [weak self] in
+                self?.userpilot?.existingExperienceOverlayWindow?.hideIfIdle()
+            }
+        }
     }
 
     /**

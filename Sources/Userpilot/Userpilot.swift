@@ -106,9 +106,31 @@ public class Userpilot: NSObject {
     ///
     /// Marked `internal` so `ExperiencesPublisher` can route presentations
     /// through it; never exposed to host apps directly.
-    internal lazy var experienceOverlayWindow: ExperienceOverlayWindow = {
-        ExperienceOverlayWindow(owningInstance: self)
-    }()
+    ///
+    /// Creating a `UIWindow` is main-thread-only UIKit work, so only presentation
+    /// paths (which already run on the main queue) may touch this. Teardown paths
+    /// use `existingExperienceOverlayWindow` instead.
+    internal var experienceOverlayWindow: ExperienceOverlayWindow {
+        if let existing = experienceOverlayWindowStorage { return existing }
+        let overlay = ExperienceOverlayWindow(owningInstance: self)
+        experienceOverlayWindowStorage = overlay
+        return overlay
+    }
+
+    /// The overlay window only if one was already built — never creates one.
+    ///
+    /// Teardown paths (logout, screen change, dismissal) collapse the overlay, and
+    /// an instance that never presented an experience has none to collapse. Reading
+    /// the creating accessor there would construct — and, per
+    /// `ExperienceOverlayWindow.init`, momentarily surface — a whole window just to
+    /// hide it, off the main thread whenever the caller isn't on it.
+    internal var existingExperienceOverlayWindow: ExperienceOverlayWindow? {
+        experienceOverlayWindowStorage
+    }
+
+    /// Backing store for `experienceOverlayWindow`. `nil` until this instance
+    /// actually presents an experience.
+    private var experienceOverlayWindowStorage: ExperienceOverlayWindow?
 
     // MARK: - Delegates
 
