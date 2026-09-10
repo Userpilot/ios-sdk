@@ -124,6 +124,45 @@ final class MultiInstanceIntegrationTests: XCTestCase {
         )
     }
 
+    // MARK: - Instance Deallocation
+
+    /// `Registry` holds instances weakly, so a `Userpilot` deallocates on whichever
+    /// thread the host drops its reference on. Its overlay `UIWindow` must not be torn
+    /// down there: every teardown step is main-thread-only UIKit work, and running it
+    /// on a background thread trips the same UIKit assertion that crashed logout.
+    ///
+    /// The overlay is held strongly here so it stays inspectable after its owner is
+    /// gone — asserting on ARC release timing would only measure the autorelease pool.
+    func testInstanceReleasedOffTheMainThread_tearsItsOverlayDownOnTheMainThread() throws {
+        // Arrange — a surfaced overlay attached to a live scene
+        var instance: MockUserpilot? = MockUserpilot(
+            config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
+        )
+        let overlay = try XCTUnwrap(instance?.experienceOverlayWindow)
+        XCTAssertFalse(overlay.isHidden)
+        XCTAssertNotNil(overlay.windowScene, "Precondition: the overlay resolved a scene")
+
+        // Act — drop the last strong reference off the main thread
+        let released = XCTestExpectation(description: "instance deallocated off the main thread")
+        performOn(.background) {
+            instance = nil
+            released.fulfill()
+        }
+        wait(for: [released], timeout: 2.0)
+
+        // `deinit` marshals the teardown, so drain the main queue behind it (FIFO).
+        let mainQueueDrained = XCTestExpectation(description: "main queue processed the teardown")
+        performOn(.main) { mainQueueDrained.fulfill() }
+        wait(for: [mainQueueDrained], timeout: 2.0)
+
+        // Assert — the teardown ran (on main; off main it would abort in UIKit)
+        XCTAssertTrue(overlay.isHidden, "A destroyed instance must collapse its overlay")
+        XCTAssertNil(
+            overlay.windowScene,
+            "UIKit retains a window in its scene's list, so a destroyed instance would leak the overlay"
+        )
+    }
+
     // MARK: - Shared dropping
 
     func testShared_returnsHostInstanceWhenBothCoexist() throws {

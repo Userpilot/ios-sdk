@@ -147,6 +147,21 @@ internal final class ExperienceOverlayWindow: UIWindow {
         isHidden = true
     }
 
+    /// Releases the overlay's hold on UIKit once its owning instance is gone.
+    ///
+    /// `init` surfaces the window, which puts it in its scene's window list and makes
+    /// UIKit retain it. Detaching the scene hands that reference back, so a destroyed
+    /// instance does not leave a hidden overlay in the list for the life of the
+    /// process — and so the window's final release follows its owner instead of
+    /// outliving it. Unconditional, unlike `hideIfIdle()`: nothing can present on
+    /// this overlay again once the owner is gone.
+    ///
+    /// Main-thread only, like all UIKit teardown.
+    func teardown() {
+        isHidden = true
+        windowScene = nil
+    }
+
     // MARK: - Scene Lifecycle
 
     /// Collapses the overlay when the scene it lives on disconnects (e.g. the

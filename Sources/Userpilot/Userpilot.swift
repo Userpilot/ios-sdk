@@ -219,6 +219,25 @@ public class Userpilot: NSObject {
 
     deinit {
         Registry.shared.unregister(self)
+        releaseExperienceOverlayWindowOnMain()
+    }
+
+    /// Tears the overlay window down on the main thread as this instance goes away.
+    ///
+    /// `Registry` holds instances weakly, so a `Userpilot` deallocates on whichever
+    /// thread the host app (or an embedding SDK) drops its reference on. Everything
+    /// `teardown()` does is main-thread-only UIKit work, and `UIWindow.dealloc`
+    /// itself tears down a view hierarchy, so when that thread isn't main the window
+    /// must outlive this `deinit` by one main-queue hop — the block's capture is what
+    /// keeps it alive until then.
+    private func releaseExperienceOverlayWindowOnMain() {
+        guard let overlay = experienceOverlayWindowStorage else { return }
+        experienceOverlayWindowStorage = nil
+        if Thread.isMainThread {
+            overlay.teardown()
+        } else {
+            performOn(.main) { overlay.teardown() }
+        }
     }
 
     // MARK: - Setup Methods
