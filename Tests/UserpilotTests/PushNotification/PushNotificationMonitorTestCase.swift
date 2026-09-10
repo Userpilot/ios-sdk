@@ -75,7 +75,7 @@ extension Dictionary where Key == AnyHashable, Value == Any {
     }
 }
 
-private extension UNNotificationResponse {
+extension UNNotificationResponse {
     final class KeyedArchiver: NSKeyedArchiver {
         override func decodeObject(forKey _: String) -> Any { "" }
 
