@@ -193,6 +193,7 @@ userpilot = Userpilot(
         .logging(true) // Enable or disable logging.
         .enableUseInAppBrowser(enabled: true) // Enable Open external link In-app browser using SFSafariViewController.
         .disableRequestPushNotificationsPermission() // Disable SDK push permission request flow (default false).
+        .enableRequestIdentifyBeforeScreen() // Re-state the identified user before every screen event (default false).
 )
 userpilot.navigationDelegate = self
 userpilot.analyticsDelegate = self

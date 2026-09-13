@@ -151,9 +151,17 @@ internal class AnalyticsPublisher {
     /// The user session state machine.
     private let userSessionStateMachine: UserSessionStateManaging
 
-    /// Once-per-screen policy for unchanged identify events and their push-token re-assert, plus
-    /// the unmetered re-state that precedes a screen reload.
-    private let identifyRefreshStateMachine = IdentifyRefreshStateMachine()
+    /// Guards `pendingIdentifyBeforeScreenAcks` — pushes and socket resolutions arrive on
+    /// different queues.
+    private let identifyBeforeScreenLock = NSLock()
+
+    /// Identify pushes sent by `publishIdentifyBeforeScreen()` that have not resolved yet.
+    ///
+    /// They bypass `eventsQueue`, but `onSocketEventSent` routes resolutions by event **name**
+    /// alone: an unclaimed `user_identify` ack there satisfies
+    /// `isPostIdentificationContext(_:)` and would publish a second screen event on top of the one
+    /// it precedes. A counter, not a flag: several screens can be in flight.
+    private var pendingIdentifyBeforeScreenAcks = 0
 
     // MARK: - Queues & State
 
@@ -290,8 +298,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
         // Reset start session for next login user
         startSession = true
-        // A new user starts with a fresh refresh allowance and owes no push-token sync
-        identifyRefreshStateMachine.onUserChanged()
+        // The socket closes below, so an identify sent ahead of a screen will never resolve. Left
+        // outstanding, its stale claim would swallow the next user's first identify ack.
+        clearIdentifyBeforeScreenAcks()
         // Reset content states
         experiencesPublisher?.logout()
         // Clear seen contents from screenSessionStateMachine
@@ -322,7 +331,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func reset() {
         startSession = true
         eventThrottle.clear()
-        identifyRefreshStateMachine.onUserChanged()
+        clearIdentifyBeforeScreenAcks()
     }
 
     /**
@@ -369,14 +378,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Handle app state - drop events when app is not in active state
             guard sessionMonitorer?.isAppActive ?? false else { return }
 
-            // Run identify events through the refresh policy. Non-identify events skip this.
-            if event.isIdentifyEvent {
-                let refreshDecision = handleIdentifyEvent(event)
-                guard refreshDecision != .suppress else { return }
-                if refreshDecision == .refresh {
-                    event.isIdentifyRefresh = true
-                }
-            }
+            // Drop identify events that carry nothing new. Non-identify events skip this.
+            if event.isIdentifyEvent, didHandleIdentifyEvent(event) { return }
 
             // Hold events while network monitor is still resolving initial state
             if !networkMonitor.isReady {
@@ -431,48 +434,32 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     * Builds the refresh request from the collaborators `IdentifyRefreshStateMachine` deliberately
-     * does not own.
+     * Drops identify events that carry nothing new, and caches the pending user for the rest.
      *
      * - Parameter event: The identify event to classify
      * - Returns: The facts the refresh policy needs to decide
      */
-    private func identifyRefreshRequest(for event: Event) -> IdentifyRefreshRequest {
-        IdentifyRefreshRequest(
-            carriesNoNewData: storage.user.isNotEmpty
-                && User.fromJson(storage.user).isSameIdentifyEvent(event: event),
-            isAnonymousUser: storage.anonymousUserId.isNotEmpty
-                && event.userId == storage.anonymousUserId,
-            // A pending identify has not reached the backend yet, so this is `onSocketClosed`
-            // replaying it, not a fresh host-app call.
-            isPendingReplay: storage.temporaryUser != nil && !socketManager.isSocketOpened
-        )
-    }
-
     /**
-     * Runs an identify event through the refresh policy and, unless it is suppressed, caches it as
-     * the pending identify event.
+     * Drops identify events that carry nothing new, and caches the pending user for the rest.
+     *
+     * Re-stating an unchanged user is the job of `Config.enableRequestIdentifyBeforeScreen(_:)`,
+     * which re-sends the cached identify where it matters: immediately before a screen event.
      *
      * - Parameter event: The identify event to handle
-     * - Returns: The policy decision for this event
+     * - Returns: true if the event should be ignored, false if processing should continue
      */
-    private func handleIdentifyEvent(_ event: Event) -> IdentifyRefreshDecision {
-        let request = identifyRefreshRequest(for: event)
-        let decision = identifyRefreshStateMachine.transition(request)
+    private func didHandleIdentifyEvent(_ event: Event) -> Bool {
+        // A pending identify has not reached the backend yet, so a closed socket means
+        // `onSocketClosed` is replaying it, not a fresh host-app call. A replay must go through or
+        // the reconnect never re-identifies the user.
+        let isPendingReplay = storage.temporaryUser != nil && !socketManager.isSocketOpened
+        let carriesNoNewData = storage.user.isNotEmpty
+            && User.fromJson(storage.user).isSameIdentifyEvent(event: event)
 
-        // The host asked to re-state the cached user, so the next screen reload may re-send this
-        // event — whether the allowance forwarded it or dropped it. Anonymous identifies never
-        // qualify: `transition(_:)` drops them before the allowance.
-        if request.carriesNoNewData && !request.isAnonymousUser {
-            identifyRefreshStateMachine.recordRequestedIdentify(event)
-        }
-
-        guard decision != .suppress else { return decision }
-
+        let shouldIgnore = carriesNoNewData && !isPendingReplay
         // Update temporary cached user in storage
-        storage.temporaryUser = event.toUser().toJson()
-
-        return decision
+        if !shouldIgnore { storage.temporaryUser = event.toUser().toJson() }
+        return shouldIgnore
     }
 
     /**
@@ -501,10 +488,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         // When socket is closed then handle user session state
         if event.isIdentifyEvent {
             if storage.userId == event.userId {
-                // Refresh identifies skip the post-identify fake-reload screen event
-                if !event.isIdentifyRefresh {
-                    userSessionStateMachine.markAwaitingInitialScreen()
-                }
+                userSessionStateMachine.markAwaitingInitialScreen()
             } else {
                 userSessionStateMachine.markUserSwitch()
             }
@@ -670,41 +654,88 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             return true
         }
 
-        // Offline restore drops `isIdentifyRefresh`; re-detect same-user no-op identifies here.
-        let isIdentifyRefresh = event.isIdentifyRefresh
-            || (storage.user.isNotEmpty && User.fromJson(storage.user).isSameIdentifyEvent(event: event))
-
-        var payload: [String: Any] = [
-            Constants.Analytics.metaDataProperty: event.properties ?? [:]
-        ]
-        if let company = event.company, !company.isEmpty {
-            payload[Constants.Analytics.identifyCompanyProperty] = company
-        }
-        socketManager.publish(event.eventName, payload: payload)
-
-        if isIdentifyRefresh {
-            // Nothing about the user changed, so the backend has nothing to re-evaluate:
-            // send the identify alone and skip the fake reload screen event.
-            syncPushTokenIfNeeded()
-            return true
-        }
+        socketManager.publish(event.eventName, payload: identifyPayload(for: event))
 
         // Socket is connected with the same user id — request post-identify screen
         userSessionStateMachine.markAwaitingInitialScreen()
         return true
     }
 
+    /// Builds the `user_identify` socket payload from an event's properties and company.
+    private func identifyPayload(for event: Event) -> [String: Any] {
+        var payload: [String: Any] = [
+            Constants.Analytics.metaDataProperty: event.properties ?? [:]
+        ]
+        if let company = event.company, !company.isEmpty {
+            payload[Constants.Analytics.identifyCompanyProperty] = company
+        }
+        return payload
+    }
+
     /**
-     * Re-publishes the device push token owed by a forwarded identify refresh.
+     * Re-publishes the device push token alongside an acknowledged identify.
      *
      * `PushNotificationMonitor.setPushToken` only publishes when the token value changes, so a
      * returning user whose token is unchanged would otherwise never re-pair token ↔ user on the
-     * backend. Called after the identify is on the wire so the backend sees the user first.
+     * backend. Called once the identify is on the backend so it sees the user first.
      */
-    private func syncPushTokenIfNeeded() {
-        // Check the socket first: the obligation must not be consumed while it cannot be fulfilled.
-        guard canRequestEvent, identifyRefreshStateMachine.consumePushTokenSync() else { return }
+    private func syncPushToken() {
+        guard canRequestEvent else { return }
         pushNotificationMonitor?.resyncPushToken()
+    }
+
+    /**
+     * Claims the resolution of an identify sent by `publishIdentifyBeforeScreen()`, if one is
+     * outstanding.
+     *
+     * - Returns: true when this ack belongs to such an identify and must not drive the event queue.
+     */
+    private func consumeIdentifyBeforeScreenAck() -> Bool {
+        identifyBeforeScreenLock.lock()
+        defer { identifyBeforeScreenLock.unlock() }
+
+        guard pendingIdentifyBeforeScreenAcks > 0 else { return false }
+        pendingIdentifyBeforeScreenAcks -= 1
+        return true
+    }
+
+    /// Drops every outstanding claim (logout / user switch / reset closes the socket).
+    private func clearIdentifyBeforeScreenAcks() {
+        identifyBeforeScreenLock.lock()
+        defer { identifyBeforeScreenLock.unlock() }
+
+        pendingIdentifyBeforeScreenAcks = 0
+    }
+
+    /**
+     * Re-states the cached user on the socket immediately before a screen event, when
+     * `Config.enableRequestIdentifyBeforeScreen(_:)` is on.
+     *
+     * A screen event makes the backend evaluate content for the current surface, so the user is
+     * restated first. Published straight to the socket rather than through `eventsQueue`: the
+     * screen push follows immediately, and enqueuing would reorder the two.
+     *
+     * Deliberately skips the queue path's side effects — no `markAwaitingInitialScreen()` (the
+     * screen it precedes *is* that event) and no `storage.temporaryUser` write, because nothing
+     * about the user changed.
+     */
+    private func publishIdentifyBeforeScreen() {
+        guard config.requestIdentifyBeforeScreen else { return }
+        let cachedUser = User.fromJson(storage.user)
+        guard cachedUser.userId.isNotEmpty else { return }
+
+        var payload: [String: Any] = [
+            Constants.Analytics.metaDataProperty: cachedUser.properties
+        ]
+        if !cachedUser.company.isEmpty {
+            payload[Constants.Analytics.identifyCompanyProperty] = cachedUser.company
+        }
+        // Claim the ack before the push so a fast resolution cannot arrive unclaimed.
+        identifyBeforeScreenLock.lock()
+        pendingIdentifyBeforeScreenAcks += 1
+        identifyBeforeScreenLock.unlock()
+
+        socketManager.publish(Constants.Event.identifyEvent, payload: payload)
     }
 
     /**
@@ -837,9 +868,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             if isScreenTitleChanged {
                 isNewScreen = true
 
-                // A genuinely new screen re-opens the identify refresh allowance
-                identifyRefreshStateMachine.onScreenChanged()
-
                 // New screen: start with an empty set of seen experiences
                 screenSessionStateMachine = ScreenSessionStateMachine(
                     event: event,
@@ -928,9 +956,6 @@ extension AnalyticsPublisher: SocketSubscription {
     func onSocketOpened() {
         tryCatch {
             processEvent()
-            // Cold start path: an identify refresh flushed when the socket opened may still owe
-            // a push-token re-assert if identify() could not fulfill it yet.
-            syncPushTokenIfNeeded()
         }
     }
 
@@ -974,11 +999,11 @@ extension AnalyticsPublisher: SocketSubscription {
             // through their own direct subscriptions
             guard eventName.isAnalyticsEvent() else { return }
 
-            // A reload identify owns no queue head. Claimed before the dequeue below so it cannot
-            // consume an unrelated event, and returned early so it cannot request a post-identify
-            // screen event on top of the reload that follows it.
+            // An identify sent ahead of a screen owns no queue head. Claimed before the dequeue
+            // below so it cannot consume an unrelated event, and returned early so it cannot
+            // request a post-identify screen event on top of the screen it precedes.
             if eventName == Constants.Event.identifyEvent,
-               identifyRefreshStateMachine.consumeScreenReloadIdentifyAck() {
+               consumeIdentifyBeforeScreenAck() {
                 return
             }
 
@@ -1001,6 +1026,10 @@ extension AnalyticsPublisher: SocketSubscription {
                 logger.info("👤 USER %{public}@", storage.user)
                 clearCachedIdentifyEvent()
                 broadcastEvent(event, event.userId ?? "", properties: payload)
+                // The token senders are value-guarded, so a returning user whose token is unchanged
+                // would otherwise never re-pair token ↔ user. Once the identify is on the backend,
+                // re-assert it so the pairing is always restated alongside the user.
+                syncPushToken()
             }
 
             if eventName == Constants.Event.screenEvent {
@@ -1016,7 +1045,9 @@ extension AnalyticsPublisher: SocketSubscription {
                 // fresh watchdog window for the new in-flight push
                 scheduleProcessingWatchdog()
                 let published = publishScreenEvent(
-                    isFakeReload: userSessionStateMachine.getPostIdentificationFakeReloadConfig())
+                    isFakeReload: userSessionStateMachine.getPostIdentificationFakeReloadConfig(),
+                    // An identify was just acknowledged; repeating it here would be a duplicate.
+                    precedeWithIdentify: false)
                 if !published {
                     resetProcessingEventStatus()
                     processEvent()
@@ -1152,9 +1183,8 @@ extension AnalyticsPublisher {
      * Publishes a fake reload screen event when an experience is shown/closed.
      * This ensures proper state tracking for experiences.
      *
-     * Re-affirms the cached user first via `publishIdentifyBeforeScreenReload()`, so the backend
-     * always evaluates content against a freshly stated user. The identify is sent after the
-     * throttle check, so a throttled reload sends neither message.
+     * The throttle is checked before the screen push, so a throttled reload sends neither the
+     * screen message nor the identify that may precede it.
      *
      * - Parameter experienceType: The type of experience (FLOW or SURVEY)
      * - Parameter experienceId: The ID of the experience being shown
@@ -1182,36 +1212,9 @@ extension AnalyticsPublisher {
                 screenTitle: screenSessionStateMachine.event.screenTitle ?? "") {
                 return
             }
-            publishIdentifyBeforeScreenReload()
             published = publishScreenEvent(isFakeReload: isFakeReload)
         }
         return published
-    }
-
-    /**
-     * Re-publishes the identify the host last passed, immediately ahead of a screen reload, so the
-     * backend re-evaluates content against a freshly stated user.
-     *
-     * Sends nothing unless the host actually passed a same-as-cached identify recently enough —
-     * `IdentifyRefreshStateMachine.beginScreenReloadRefresh()` owns that record, its eligibility
-     * and the ack claim. A screen the host never identified on reloads on its own.
-     *
-     * Published straight to the socket rather than through `eventsQueue`: the reload only runs
-     * while the queue is empty, so enqueuing would cancel the very reload this precedes. It
-     * therefore skips the queue path's side effects on purpose — no `markAwaitingInitialScreen()`
-     * (the reload *is* the screen event), no `storage.temporaryUser` write, and no push-token
-     * re-assert.
-     */
-    private func publishIdentifyBeforeScreenReload() {
-        guard let identify = identifyRefreshStateMachine.beginScreenReloadRefresh() else { return }
-
-        var payload: [String: Any] = [
-            Constants.Analytics.metaDataProperty: identify.properties ?? [:]
-        ]
-        if let company = identify.company, !company.isEmpty {
-            payload[Constants.Analytics.identifyCompanyProperty] = company
-        }
-        socketManager.publish(Constants.Event.identifyEvent, payload: payload)
     }
 
     /**
@@ -1241,12 +1244,22 @@ extension AnalyticsPublisher {
      * Publishes the current screen session state as a screen event, carrying
      * session-start state, fake-reload flag, and seen experiences/surveys.
      *
+     * This is the single place a `screen` message is published, so it is also the single place the
+     * preceding identify is sent when `Config.enableRequestIdentifyBeforeScreen(_:)` is on.
+     *
+     * - Parameter precedeWithIdentify: false only for the screen event that already follows an
+     *   acknowledged identify, which would otherwise repeat it.
      * - Returns: true when a screen push went out
      */
     @discardableResult
-    private func publishScreenEvent(isFakeReload: Bool = false) -> Bool {
+    private func publishScreenEvent(
+        isFakeReload: Bool = false,
+        precedeWithIdentify: Bool = true
+    ) -> Bool {
         ensureScreenSessionStateMachine()
         guard let screenSessionStateMachine else { return false }
+
+        if precedeWithIdentify { publishIdentifyBeforeScreen() }
 
         let screenEvent = screenSessionStateMachine.event
         if let screenTitle = screenEvent.screenTitle {
@@ -1382,9 +1395,6 @@ extension AnalyticsPublisher {
         return initialQueue.getAll()
     }
 
-    func mockIdentifyRefreshState() -> IdentifyRefreshStateMachine.State {
-        return identifyRefreshStateMachine.state
-    }
 }
 #endif
 // swiftlint:enable file_length

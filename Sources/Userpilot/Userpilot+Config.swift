@@ -58,6 +58,10 @@ extension Userpilot {
         /// Open external link In-app browser using SFSafariViewController
         var useInAppBrowser: Bool = false
 
+        /// Re-states the identified user on the socket immediately before every screen event.
+        /// See `enableRequestIdentifyBeforeScreen(_:)`.
+        var requestIdentifyBeforeScreen: Bool = false
+
         // MARK: - Autocapture Configuration Options
 
         /// Whether or not to enable screen autocapture. Defaults to false.
@@ -233,6 +237,30 @@ extension Userpilot {
         @objc
         public func enableUseInAppBrowser(_ enabled: Bool = true) -> Self {
             useInAppBrowser = enabled
+            return self
+        }
+
+        /// Re-states the identified user on the socket immediately before every screen event.
+        ///
+        /// A screen event is what makes the backend evaluate content for the current surface. With
+        /// this enabled the SDK re-sends the cached user's `identify` first, so that evaluation
+        /// always runs against freshly stated user properties — on app-tracked screens and on the
+        /// SDK's own `fake_reload` screens alike (experience dismissal, preview dismissal, return
+        /// from background).
+        ///
+        /// The screen event the SDK sends right after an `identify` is the one exception: that
+        /// identify has just been acknowledged, so repeating it would be a duplicate.
+        ///
+        /// Doubles the number of identify messages the SDK sends, so it defaults to `false` and
+        /// existing integrations are unchanged unless the host opts in. No effect until a user is
+        /// identified.
+        ///
+        /// - Parameter enabled: A boolean indicating whether to re-state the user before screens.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableRequestIdentifyBeforeScreen(_ enabled: Bool = true) -> Self {
+            requestIdentifyBeforeScreen = enabled
             return self
         }
 
