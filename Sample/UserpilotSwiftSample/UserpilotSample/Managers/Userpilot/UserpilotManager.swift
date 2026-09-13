@@ -85,25 +85,6 @@ class UserpilotManager {
         userpilot?.track(eventName: eventName, properties: properties)
     }
 
-    // MARK: - QA socket race reproduction (Socket Race Repro screen)
-
-    func qaExpireSettingsCache() {
-        userpilot?.qaExpireSettingsCache()
-    }
-
-    func qaArmSocketRace(_ kind: SocketRaceKind) {
-        userpilot?.qaArmSocketRace(kind)
-    }
-
-    func qaDisarmSocketRace() {
-        userpilot?.qaDisarmSocketRace()
-    }
-
-    /// Call off the main queue — this is the reader that enters the Crash B window.
-    func qaReadSocketStateOffMain() {
-        userpilot?.qaReadSocketStateOffMain()
-    }
-
     /// Pauses automatic capture for this instance until `resumeAutoCapture()` is called.
     func stopAutoCapture() {
         userpilot?.stopAutoCapture()

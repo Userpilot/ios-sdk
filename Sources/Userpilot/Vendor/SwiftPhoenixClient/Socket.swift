@@ -290,15 +290,6 @@ public class Socket: PhoenixTransportDelegate {
   
   /// - return: The state of the connect. [.connecting, .open, .closing, .closed]
   public var connectionState: PhoenixTransportReadyState {
-    // QA (Crash B): resolve the transport, park, then read `readyState` — the exact shape that
-    // faulted when `_connection` was read without the lock. Note this deliberately still goes
-    // through the `connection` getter, so the caller holds its own strong reference across the
-    // hold; a crash here means that guarantee regressed rather than that the harness forced one.
-    if SocketRaceRepro.isCrashBArmed {
-      guard let transport = connection else { return .closed }
-      SocketRaceRepro.holdCrashBWindowIfNeeded()
-      return transport.readyState
-    }
     return self.connection?.readyState ?? .closed
   }
   

@@ -678,47 +678,4 @@ extension Userpilot {
     }
 
 }
-
-// MARK: - QA socket race reproduction
-
-/// Drives the socket lifecycle races from Userpilot/ios-sdk#50 and CI-3925. See
-/// `SocketRaceRepro` for what each kind targets and why this version is expected to survive it.
-///
-/// ⚠️ Verification instrumentation for the sample app's "Socket Race Repro" screen. Public only
-/// so that screen can reach it; must not reach a release branch.
-extension Userpilot {
-
-    /// Drops the cached SDK settings so the next `connect()` goes through a real `fetchSettings`
-    /// round trip and is driven from the URLSession callback queue.
-    public func qaExpireSettingsCache() {
-        storage.configurationDate = nil
-    }
-
-    public func qaArmSocketRace(_ kind: SocketRaceKind) {
-        SocketRaceRepro.arm(kind)
-        if kind == .crashA {
-            qaExpireSettingsCache()
-        }
-    }
-
-    public func qaDisarmSocketRace() {
-        SocketRaceRepro.disarm()
-    }
-
-    /// Reads socket state through the Phoenix transport, the way the analytics flush used to.
-    ///
-    /// Call this off the main queue: it is what enters the Crash B window. `isSocketOpened` no
-    /// longer dereferences the transport in this version (it answers from a lock-guarded flag),
-    /// so the reproduction screen needs an explicit reader to reach `Socket.connectionState`
-    /// instead of depending on flush timing.
-    ///
-    /// Reads `isJoiningSocket` specifically: `isShutdownState` short-circuits on `isClosingSocket`,
-    /// which teardown sets first, so it would stop dereferencing the transport exactly when the
-    /// race is interesting.
-    @discardableResult
-    public func qaReadSocketStateOffMain() -> Bool {
-        return socketManager.isJoiningSocket
-    }
-
-}
 // swiftlint:enable file_length

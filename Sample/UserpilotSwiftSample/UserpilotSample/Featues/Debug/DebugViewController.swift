@@ -12,7 +12,6 @@ final class DebugViewController: UIViewController {
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private let items: [DebugContent] = [
         .onlineQueue,
-        .socketRace,
         .offlineEvents
     ]
 
@@ -84,8 +83,6 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
         switch items[indexPath.row] {
         case .onlineQueue:
             FlowRoutingManager.shared.openViewController(OnlineQueueViewController())
-        case .socketRace:
-            FlowRoutingManager.shared.openViewController(SocketRaceReproViewController())
         case .offlineEvents:
             FlowRoutingManager.shared.openViewController(OfflineEventsViewController())
         }
@@ -94,15 +91,12 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
 
 enum DebugContent {
     case onlineQueue
-    case socketRace
     case offlineEvents
 
     var title: String {
         switch self {
         case .onlineQueue:
             return "Online queue"
-        case .socketRace:
-            return "Socket Race Repro (#50 / CI-3925)"
         case .offlineEvents:
             return "Offline events"
         }

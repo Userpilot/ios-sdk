@@ -72,10 +72,6 @@ internal class UserpilotRemoteSource {
 
     /// Checks if cached SDK configuration is still valid.
     private func shouldUseCachedConfiguration() -> Bool {
-        // QA (Crash A): a cache hit completes synchronously on the caller's queue and never
-        // reaches the URLSession callback queue that the crash was reported from. Force the
-        // network round trip while armed so `connect()` is driven from that queue.
-        if SocketRaceRepro.isCrashAArmed { return false }
         guard let configurationDate = storage.configurationDate,
             storage.socketURL.isNotEmpty
         else {
