@@ -25,6 +25,10 @@
 		FACF000000000000000000B1 /* ConfigViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A1 /* ConfigViewController.swift */; };
 		FACF000000000000000000B2 /* ConfigFlag.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A2 /* ConfigFlag.swift */; };
 		FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */; };
+		UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */; };
+		UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */; };
+		UP3BAD7BCF2B32445CB2548C /* SocketRaceReproViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP3F48CDF64BE6448D9DEEF8 /* SocketRaceReproViewController.swift */; };
+		UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */; };
 		AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */; };
 		AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */; };
 		AB6ABAAC2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */; };
@@ -58,6 +62,7 @@
 		ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */; };
 		ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */; };
 		ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */; };
+		UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */; };
 		ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB317B2F73F58400E1789D /* PickerViewTestViewController.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
@@ -107,6 +112,10 @@
 		FACF000000000000000000A1 /* ConfigViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigViewController.swift; sourceTree = "<group>"; };
 		FACF000000000000000000A2 /* ConfigFlag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlag.swift; sourceTree = "<group>"; };
 		FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlagTableViewCell.swift; sourceTree = "<group>"; };
+		UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugViewController.swift; sourceTree = "<group>"; };
+		UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineQueueViewController.swift; sourceTree = "<group>"; };
+		UP3F48CDF64BE6448D9DEEF8 /* SocketRaceReproViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketRaceReproViewController.swift; sourceTree = "<group>"; };
+		UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineEventsViewController.swift; sourceTree = "<group>"; };
 		AB585F672CD79EF400E2A66D /* Dev.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Dev.xcconfig; sourceTree = "<group>"; };
 		AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaddingLabel.swift; sourceTree = "<group>"; };
 		AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventsViewController.swift; sourceTree = "<group>"; };
@@ -153,6 +162,7 @@
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABD07B272D6C4ED000619C47 /* Prod.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Prod.xcconfig; sourceTree = "<group>"; };
 		ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureTestViewController.swift; sourceTree = "<group>"; };
+		UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureHubViewController.swift; sourceTree = "<group>"; };
 		ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEB31732F73F58400E1789D /* TextConfigDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextConfigDemoViewController.swift; sourceTree = "<group>"; };
@@ -252,6 +262,7 @@
 			isa = PBXGroup;
 			children = (
 				FACF000000000000000000C1 /* Config */,
+				UP08E667051DEB4096A385C2 /* Debug */,
 				ABEB31742F73F58400E1789D /* AutoCapture */,
 				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
@@ -365,6 +376,41 @@
 			path = Config;
 			sourceTree = "<group>";
 		};
+		UP08E667051DEB4096A385C2 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */,
+				UP1D9D3FCE847D46FDB03B8A /* Offline */,
+				UPAE8C6135D07D4AA9914D9D /* OnlineQueue */,
+				UP4FDBB275E34947FBBE9626 /* SocketRace */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		UPAE8C6135D07D4AA9914D9D /* OnlineQueue */ = {
+			isa = PBXGroup;
+			children = (
+				UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */,
+			);
+			path = OnlineQueue;
+			sourceTree = "<group>";
+		};
+		UP4FDBB275E34947FBBE9626 /* SocketRace */ = {
+			isa = PBXGroup;
+			children = (
+				UP3F48CDF64BE6448D9DEEF8 /* SocketRaceReproViewController.swift */,
+			);
+			path = SocketRace;
+			sourceTree = "<group>";
+		};
+		UP1D9D3FCE847D46FDB03B8A /* Offline */ = {
+			isa = PBXGroup;
+			children = (
+				UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */,
+			);
+			path = Offline;
+			sourceTree = "<group>";
+		};
 		FACF000000000000000000C2 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -443,6 +489,7 @@
 		ABEB31742F73F58400E1789D /* AutoCapture */ = {
 			isa = PBXGroup;
 			children = (
+				UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */,
 				ABAD7ABF2F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift */,
 				ABCD472F2F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift */,
 				ABCD472D2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift */,
@@ -724,6 +771,10 @@
 				FACF000000000000000000B1 /* ConfigViewController.swift in Sources */,
 				FACF000000000000000000B2 /* ConfigFlag.swift in Sources */,
 				FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */,
+				UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */,
+				UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */,
+				UP3BAD7BCF2B32445CB2548C /* SocketRaceReproViewController.swift in Sources */,
+				UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */,
 				ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */,
 				ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
@@ -753,6 +804,7 @@
 				ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */,
 				ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */,
 				ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */,
+				UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */,
 				ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */,
 				AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */,
 			);

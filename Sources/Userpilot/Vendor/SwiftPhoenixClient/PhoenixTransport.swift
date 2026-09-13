@@ -226,6 +226,9 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
           }
           
           if let session = self.session {
+              // QA (Crash A): park between creating the session and creating its task, so a
+              // concurrent teardown would invalidate `session` first. Inert unless armed.
+              SocketRaceRepro.holdCrashAWindowIfNeeded()
               self.task = session.webSocketTask(with: request)
               // Start the task
               self.task?.resume()
@@ -301,6 +304,10 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   private func notifyDelegate(_ block: @escaping (PhoenixTransportDelegate) -> Void) {
     guard let delegate = self.delegate else { return }
     DispatchQueue.main.async {
+      // QA (Crash C): park on main mid-hop so the transport can finish deallocating before the
+      // delegate is invoked. `delegate` was captured above while `self` was still valid and the
+      // closure does not capture `self`, so there is no weak load left here to fault on.
+      SocketRaceRepro.holdCrashCWindowIfNeeded()
       block(delegate)
     }
   }

@@ -33,11 +33,7 @@ class AutoCaptureTestViewController: UIViewController {
 
     // Buttons
     private let normalButton = UIButton(type: .system)
-    private let tableViewButton = UIButton(type: .system)
-    private let collectionViewButton = UIButton(type: .system)
     private let menuButton = UIButton(type: .system)
-    private let pickerTestButton = UIButton(type: .system)
-    private let tabsTestButton = UIButton(type: .system)
     private let gestureTestView = UIView()
 
     // Labels for displaying values
@@ -47,7 +43,7 @@ class AutoCaptureTestViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Auto Capture TITLE Test"
+        title = "Controls test"
         view.backgroundColor = .systemBackground
         setupBackButton()
         setupUI()
@@ -224,71 +220,16 @@ class AutoCaptureTestViewController: UIViewController {
         textView.font = .systemFont(ofSize: 16)
         stackView.addArrangedSubview(textView)
 
-        // UIPickerView (pushed test screen — exercises UIPickerView+AutoCapture)
-        addSectionHeader("10. UIPickerView (picker_view_changed)")
-        pickerTestButton.setTitle("Open UIPickerView Test", for: .normal)
-        pickerTestButton.addTarget(
-            self, action: #selector(onPickerTestButtonTapped), for: .touchUpInside)
-        pickerTestButton.backgroundColor = .systemTeal
-        pickerTestButton.setTitleColor(.white, for: .normal)
-        pickerTestButton.layer.cornerRadius = 8
-        pickerTestButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        stackView.addArrangedSubview(pickerTestButton)
-
-        // TableView Button
-        addSectionHeader("11. UITableView Cell Selection")
-        tableViewButton.setTitle("Open TableView Test", for: .normal)
-        tableViewButton.addTarget(
-            self, action: #selector(onTableViewButtonTapped), for: .touchUpInside)
-        tableViewButton.backgroundColor = .systemGreen
-        tableViewButton.setTitleColor(.white, for: .normal)
-        tableViewButton.layer.cornerRadius = 8
-        tableViewButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        stackView.addArrangedSubview(tableViewButton)
-
-        // CollectionView Button
-        addSectionHeader("12. UICollectionView Item Selection")
-        collectionViewButton.setTitle("Open CollectionView Test", for: .normal)
-        collectionViewButton.addTarget(
-            self, action: #selector(onCollectionViewButtonTapped), for: .touchUpInside)
-        collectionViewButton.backgroundColor = .systemOrange
-        collectionViewButton.setTitleColor(.white, for: .normal)
-        collectionViewButton.layer.cornerRadius = 8
-        collectionViewButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        stackView.addArrangedSubview(collectionViewButton)
-
         // UIMenu Button
-        addSectionHeader("13. UIMenu (menu item tap)")
+        addSectionHeader("10. UIMenu (menu item tap)")
         setupMenuButton()
         stackView.addArrangedSubview(menuButton)
 
         // GestureRecognizer Demo (UIApplication.sendAction -> captureGestureAction)
-        addSectionHeader("14. Gesture Recognizers (tap / long press)")
+        addSectionHeader("11. Gesture Recognizers (tap / long press)")
         addLabel("Tap or long-press this view to test captureGestureAction.")
         setupGestureTestView()
         stackView.addArrangedSubview(gestureTestView)
-
-        // Text Config Demo Button
-        addSectionHeader("15. Text Config Demo")
-        textConfigDemoButton.setTitle("Open Text Config Demo", for: .normal)
-        textConfigDemoButton.addTarget(
-            self, action: #selector(onTextConfigDemoButtonTapped), for: .touchUpInside)
-        textConfigDemoButton.backgroundColor = .systemIndigo
-        textConfigDemoButton.setTitleColor(.white, for: .normal)
-        textConfigDemoButton.layer.cornerRadius = 8
-        textConfigDemoButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        stackView.addArrangedSubview(textConfigDemoButton)
-
-        // Tabs Demo Button
-        addSectionHeader("16. Tabs Demo")
-        tabsTestButton.setTitle("Open Tabs Test", for: .normal)
-        tabsTestButton.addTarget(
-            self, action: #selector(onTabsTestButtonTapped), for: .touchUpInside)
-        tabsTestButton.backgroundColor = .systemPink
-        tabsTestButton.setTitleColor(.white, for: .normal)
-        tabsTestButton.layer.cornerRadius = 8
-        tabsTestButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        stackView.addArrangedSubview(tabsTestButton)
     }
 
     private func setupGestureTestView() {
@@ -438,21 +379,6 @@ class AutoCaptureTestViewController: UIViewController {
         print("Page: \(sender.currentPage)")
     }
 
-    @IBAction func onTableViewButtonTapped(_ sender: UIButton) {
-        let tableVC = TableViewTestViewController()
-        navigationController?.pushViewController(tableVC, animated: true)
-    }
-
-    @IBAction func onCollectionViewButtonTapped(_ sender: UIButton) {
-        let collectionVC = CollectionViewTestViewController()
-        navigationController?.pushViewController(collectionVC, animated: true)
-    }
-
-    @IBAction func onPickerTestButtonTapped(_ sender: UIButton) {
-        let pickerVC = PickerViewTestViewController()
-        navigationController?.pushViewController(pickerVC, animated: true)
-    }
-
     @objc private func onGestureTap(_ sender: UITapGestureRecognizer) {
         showAlert("Gesture Tap", "Tap gesture action fired")
     }
@@ -460,20 +386,6 @@ class AutoCaptureTestViewController: UIViewController {
     @objc private func onGestureLongPress(_ sender: UILongPressGestureRecognizer) {
         guard sender.state == .began else { return }
         showAlert("Gesture Long Press", "Long press gesture action fired")
-    }
-
-    // MARK: - Text Config Demo Button
-
-    private let textConfigDemoButton = UIButton(type: .system)
-
-    @IBAction func onTextConfigDemoButtonTapped(_ sender: UIButton) {
-        let textConfigVC = TextConfigDemoViewController()
-        navigationController?.pushViewController(textConfigVC, animated: true)
-    }
-
-    @IBAction func onTabsTestButtonTapped(_ sender: UIButton) {
-        let tabsVC = AutoCaptureTabsTestViewController()
-        navigationController?.pushViewController(tabsVC, animated: true)
     }
 
     private func showAlert(_ title: String, _ message: String) {

@@ -20,14 +20,13 @@ class MainViewController: BaseViewController {
 
     // MARK: - Properties
 
-    internal lazy var content: [Content] = [.configurations, .identify, .screens, .events, .eventsLog, .autoCapture]
-
-    private var didPresentInitialConfig = false
+    internal lazy var content: [Content] = [.configurations, .identify, .screens, .events, .eventsLog, .debug, .autoCapture]
 
     // MARK: - Override
     override func viewDidLoad() {
         super.viewDidLoad()
         UserpilotManager.shared.settings()
+        presentConfigIfNeeded()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -35,16 +34,21 @@ class MainViewController: BaseViewController {
         UserpilotManager.shared.screen("main")
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken)
-        if !didPresentInitialConfig, appToken?.isEmpty ?? true {
-            didPresentInitialConfig = true
-            openConfigScreen()
+    /// Mirrors Android MainActivity: open Configuration when no app token is saved.
+    private func presentConfigIfNeeded() {
+        let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken) ?? ""
+        guard appToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Defer until the navigation stack from SceneDelegate is ready.
+        DispatchQueue.main.async { [weak self] in
+            self?.openConfigScreen()
         }
     }
 
     internal func openConfigScreen() {
+        // Avoid stacking duplicate config screens if Main already pushed one.
+        if FlowRoutingManager.shared.visibleViewController is ConfigViewController {
+            return
+        }
         FlowRoutingManager.shared.openViewController(ConfigViewController())
     }
 }
