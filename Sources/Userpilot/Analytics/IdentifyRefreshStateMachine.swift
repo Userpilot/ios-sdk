@@ -51,9 +51,14 @@ internal enum IdentifyRefreshDecision {
  * value-guarded, so a returning user whose token is unchanged would otherwise never re-pair
  * token ↔ user).
  *
- * All state lives in a single `State` value. Two independent booleans would allow combinations that
- * cannot occur, and would hide the rule that a screen change must not discard an unsettled token
- * obligation.
+ * A second, **unmetered** rule lives here too: a screen reload re-sends the identify the host last
+ * passed (`recordRequestedIdentify()` → `beginScreenReloadRefresh()`), without reading or spending
+ * the allowance above. Both rules answer the same question — "when may the SDK re-send an identify
+ * that changes nothing?" — so they are kept together.
+ *
+ * The allowance lives in a single `State` value. Two independent booleans would allow combinations
+ * that cannot occur, and would hide the rule that a screen change must not discard an unsettled
+ * token obligation.
  *
  * Thread-safe: identify, screen and socket callbacks arrive from different queues.
  *
@@ -79,6 +84,34 @@ internal final class IdentifyRefreshStateMachine {
     private let lock = NSLock()
 
     private var _state: State = .refreshAllowed
+
+    /// Reload identifies published but not yet resolved by the socket.
+    ///
+    /// A counter rather than a flag: a screen can reload more than once (two experiences dismissed
+    /// in a row), and each reload owes exactly one ack.
+    private var outstandingScreenReloadIdentifies = 0
+
+    /// A same-as-cached identify the host passed, with its age in screen changes.
+    private struct RequestedIdentify {
+
+        /// The identify to re-send ahead of a reload.
+        let event: Event
+
+        /// Screen changes since it was recorded; never exceeds `maxScreenReloadAge`, because
+        /// `onScreenChanged()` drops the record instead.
+        let screensAgo: Int
+    }
+
+    /// The identify the host last passed that carried no new user data, and how many screen
+    /// changes ago it arrived. `nil` once it expires, or when the host has passed none.
+    ///
+    /// Payload and eligibility are one value: a reload needs both, they are set and cleared
+    /// together, and pairing them makes an eligible-but-absent identify unrepresentable.
+    private var requestedIdentify: RequestedIdentify?
+
+    /// Screen changes a recorded identify stays eligible for: the screen it was recorded on (`0`)
+    /// and the one after it (`1`). The grace of one covers the ordering described above.
+    private static let maxScreenReloadAge = 1
 
     /// The current state. Exposed for assertions; callers must not derive control flow from it.
     internal var state: State {
@@ -124,6 +157,70 @@ internal final class IdentifyRefreshStateMachine {
     }
 
     /**
+     * Records the identify the host passed carrying no new user data, arming the next screen reload
+     * to re-send it.
+     *
+     * Called whether that identify was forwarded (`.refresh`) or dropped (`.suppress`, once this
+     * screen's allowance is spent) — what matters is that the host asked for the user to be
+     * re-stated, not whether the allowance had room.
+     *
+     * Anonymous identifies never reach this: `transition(_:)` drops them before the allowance, so
+     * the generated anonymous user can never arm a reload.
+     *
+     * - Parameter event: The identify to re-send ahead of a reload.
+     */
+    internal func recordRequestedIdentify(_ event: Event) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        requestedIdentify = RequestedIdentify(event: event, screensAgo: 0)
+    }
+
+    /**
+     * Hands back the identify a screen reload should re-state the user with, claiming the ack it
+     * will owe.
+     *
+     * Armed only by `recordRequestedIdentify(_:)` — a reload on a screen where the host never
+     * called `identify` goes out alone. Once armed it applies to **every** reload in range, rather
+     * than once per screen: by the time an experience is dismissed, the screen's own allowance has
+     * normally been spent by the identify that opened it.
+     *
+     * Deliberately unmetered — it neither reads nor advances `state`, and owes no push-token
+     * re-assert. The token ↔ user pairing `consumePushTokenSync()` exists to repair is a
+     * returning-user problem; a reload happens mid-session on a user the backend has already seen.
+     *
+     * - Returns: The identify to publish ahead of the screen event, or `nil` to reload alone.
+     */
+    internal func beginScreenReloadRefresh() -> Event? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        // No age check: `onScreenChanged()` drops the record once it expires, so anything held
+        // here is eligible by construction.
+        guard let recorded = requestedIdentify else { return nil }
+        outstandingScreenReloadIdentifies += 1
+        return recorded.event
+    }
+
+    /**
+     * Claims the resolution of an identify sent by `beginScreenReloadRefresh(_:)`, if one is
+     * outstanding.
+     *
+     * A reload identify never enters the analytics queue, so its ack owns no queue head and must
+     * not drive the queue — `AnalyticsPublisher` swallows the resolution this claims.
+     *
+     * - Returns: `true` when the ack belongs to a reload identify.
+     */
+    internal func consumeScreenReloadIdentifyAck() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard outstandingScreenReloadIdentifies > 0 else { return false }
+        outstandingScreenReloadIdentifies -= 1
+        return true
+    }
+
+    /**
      * Claims the pending push-token re-assert, if one is owed.
      *
      * - Returns: `true` exactly once per forwarded refresh.
@@ -137,10 +234,19 @@ internal final class IdentifyRefreshStateMachine {
         return true
     }
 
-    /// A genuinely new screen re-opens the refresh allowance.
+    /// A genuinely new screen re-opens the refresh allowance and ages the recorded identify.
     internal func onScreenChanged() {
         lock.lock()
         defer { lock.unlock() }
+
+        // Aged before the allowance check below: the recorded identify expires by screen count
+        // regardless of whether the allowance is held open by an unsettled token obligation.
+        if let recorded = requestedIdentify {
+            let aged = recorded.screensAgo + 1
+            requestedIdentify = aged <= Self.maxScreenReloadAge
+                ? RequestedIdentify(event: recorded.event, screensAgo: aged)
+                : nil
+        }
 
         // A pending token sync belongs to an identify that has not reached the backend yet, not to
         // the screen it was requested on. Keep suppressing until it settles — re-sending an
@@ -155,5 +261,10 @@ internal final class IdentifyRefreshStateMachine {
         defer { lock.unlock() }
 
         _state = .refreshAllowed
+        // The socket closes on a user change, so a reload identify in flight will never resolve.
+        // Left outstanding, its stale claim would swallow the next user's first identify ack.
+        outstandingScreenReloadIdentifies = 0
+        // The next user must re-state itself before any reload speaks on its behalf.
+        requestedIdentify = nil
     }
 }

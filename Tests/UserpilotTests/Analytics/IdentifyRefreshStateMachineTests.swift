@@ -41,6 +41,12 @@ final class IdentifyRefreshStateMachineTests: XCTestCase {
         IdentifyRefreshRequest(carriesNoNewData: true, isAnonymousUser: false, isPendingReplay: true)
     }
 
+    /// The same-as-cached identify the host passes, which a screen reload re-sends.
+    private let reloadIdentify = Event(
+        type: .identify("test-user"),
+        properties: ["plan": "pro"]
+    )
+
     /// Drives the machine to `.refreshSettled`: one forwarded refresh whose token sync completed.
     private func settleARefresh() {
         XCTAssertEqual(sut.transition(unchangedIdentify()), .refresh)
@@ -261,5 +267,128 @@ final class IdentifyRefreshStateMachineTests: XCTestCase {
         // A double claim would publish the push token twice for one identify refresh.
         XCTAssertEqual(claims, 1)
         XCTAssertEqual(sut.state, .refreshSettled)
+    }
+
+    // MARK: - Screen reload refresh
+
+    func testReloadSendsNothing_whenTheHostPassedNoIdentify() {
+        // The reload goes out alone: nothing was requested, so there is nothing to re-state.
+        XCTAssertNil(sut.beginScreenReloadRefresh())
+    }
+
+    func testReloadResends_whenTheHostPassedAnIdentifyOnThisScreen() {
+        sut.recordRequestedIdentify(reloadIdentify)
+
+        XCTAssertEqual(sut.beginScreenReloadRefresh()?.userId, reloadIdentify.userId)
+    }
+
+    func testReloadResends_whenTheIdentifyWasPassedOnThePreviousScreen() {
+        // The host typically calls identify on the way into a screen, before that screen's event
+        // lands, so the identify is recorded against the screen it is leaving.
+        sut.recordRequestedIdentify(reloadIdentify)
+        sut.onScreenChanged()
+
+        XCTAssertEqual(sut.beginScreenReloadRefresh()?.userId, reloadIdentify.userId)
+    }
+
+    func testReloadStopsResendingTwoScreensAfterTheIdentify() {
+        sut.recordRequestedIdentify(reloadIdentify)
+        sut.onScreenChanged()
+        sut.onScreenChanged()
+
+        XCTAssertNil(sut.beginScreenReloadRefresh())
+    }
+
+    func testRecordedIdentifyAgesEvenWhileATokenSyncIsOwed() {
+        // onScreenChanged returns early for the allowance in this state; the recorded identify
+        // must still expire by screen count.
+        sut.recordRequestedIdentify(reloadIdentify)
+        XCTAssertEqual(sut.transition(unchangedIdentify()), .refresh)
+        XCTAssertEqual(sut.state, .awaitingPushTokenSync)
+
+        sut.onScreenChanged()
+        sut.onScreenChanged()
+
+        XCTAssertNil(sut.beginScreenReloadRefresh())
+    }
+
+    func testReloadResends_forEveryReloadOfTheSameScreen() {
+        // Unmetered: a dismissal is a new evaluation point, so the screen's spent allowance — the
+        // normal state by the time an experience closes — must not gate it.
+        sut.recordRequestedIdentify(reloadIdentify)
+        settleARefresh()
+
+        XCTAssertEqual(sut.beginScreenReloadRefresh()?.userId, reloadIdentify.userId)
+        XCTAssertEqual(sut.beginScreenReloadRefresh()?.userId, reloadIdentify.userId)
+    }
+
+    func testReloadLeavesThePerScreenAllowanceUntouched() {
+        sut.recordRequestedIdentify(reloadIdentify)
+
+        _ = sut.beginScreenReloadRefresh()
+
+        // Neither spent nor re-opened: the metered path still owns the allowance, and the reload
+        // owes no push-token re-assert.
+        XCTAssertEqual(sut.state, .refreshAllowed)
+        XCTAssertFalse(sut.consumePushTokenSync())
+        XCTAssertEqual(sut.transition(unchangedIdentify()), .refresh)
+    }
+
+    func testReloadDoesNotReopenASpentAllowance() {
+        settleARefresh()
+        sut.recordRequestedIdentify(reloadIdentify)
+
+        _ = sut.beginScreenReloadRefresh()
+
+        // A host identify on this screen is still suppressed — the reload path is separate.
+        XCTAssertEqual(sut.transition(unchangedIdentify()), .suppress)
+    }
+
+    func testReloadAckIsClaimableOncePerForwardedReloadIdentify() {
+        sut.recordRequestedIdentify(reloadIdentify)
+        _ = sut.beginScreenReloadRefresh()
+        _ = sut.beginScreenReloadRefresh()
+
+        XCTAssertTrue(sut.consumeScreenReloadIdentifyAck())
+        XCTAssertTrue(sut.consumeScreenReloadIdentifyAck())
+        XCTAssertFalse(sut.consumeScreenReloadIdentifyAck())
+    }
+
+    func testReloadAckIsNotClaimableWhenNoReloadIdentifyWasSent() {
+        // A queued identify's ack must reach the queue: claiming it would strand the queue.
+        _ = sut.beginScreenReloadRefresh()
+
+        XCTAssertFalse(sut.consumeScreenReloadIdentifyAck())
+    }
+
+    func testUserChangeDropsOutstandingClaimsAndTheRecordedIdentify() {
+        sut.recordRequestedIdentify(reloadIdentify)
+        _ = sut.beginScreenReloadRefresh()
+
+        sut.onUserChanged()
+
+        // The socket closed, so that identify never resolves — a stale claim would otherwise
+        // swallow the next user's first identify ack.
+        XCTAssertFalse(sut.consumeScreenReloadIdentifyAck())
+        // And the next user must re-state itself before a reload speaks on its behalf.
+        XCTAssertNil(sut.beginScreenReloadRefresh())
+    }
+
+    func testConcurrentReloadAckClaimsMatchTheNumberForwarded() {
+        sut.recordRequestedIdentify(reloadIdentify)
+        let forwarded = 50
+        for _ in 0..<forwarded { _ = sut.beginScreenReloadRefresh() }
+
+        let lock = NSLock()
+        var claims = 0
+        DispatchQueue.concurrentPerform(iterations: 200) { _ in
+            let claimed = self.sut.consumeScreenReloadIdentifyAck()
+            lock.lock()
+            if claimed { claims += 1 }
+            lock.unlock()
+        }
+
+        // Over-claiming would swallow real queued identify acks and strand the event queue.
+        XCTAssertEqual(claims, forwarded)
     }
 }

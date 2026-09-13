@@ -855,6 +855,125 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
     }
+
+    // MARK: - Identify refresh before a screen reload
+
+    /// Establishes a cached user and a live screen session, optionally has the host re-pass the
+    /// same identify (the call that arms a reload), then waits out the screen throttle so the
+    /// reload under test is not swallowed by it.
+    ///
+    /// `screenSessionStateMachine` is `private(set)`, so the session has to be built through a real
+    /// screen event — hence the throttle wait.
+    private func arrangeReloadableScreen(
+        title: String = "Reload Screen",
+        userId: String = "reload-user",
+        hostPassesIdentify: Bool = true
+    ) {
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.storage.userId = userId
+        userpilot.storage.user = User(
+            userId: userId,
+            properties: ["plan": "pro"]
+        ).toJson() ?? ""
+
+        analyticsPublisher.publish(Event(type: .screen(title)))
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+
+        // Same-as-cached arms a reload; the new-data login identify must not.
+        let properties = hostPassesIdentify ? ["plan": "pro"] : ["plan": "enterprise"]
+        analyticsPublisher.publish(Event(type: .identify(userId), properties: properties))
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+
+        let throttleWindow = XCTestExpectation(description: "screen throttle window elapsed")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { throttleWindow.fulfill() }
+        wait(for: [throttleWindow], timeout: 2.0)
+    }
+
+    /// Records the event names published to the socket from this point on.
+    private func recordPublishedEvents() -> () -> [String] {
+        var names = [String]()
+        let lock = NSLock()
+        userpilot.socketManager.onPublish = { name, _ in
+            lock.lock()
+            names.append(name)
+            lock.unlock()
+        }
+        return {
+            lock.lock()
+            defer { lock.unlock() }
+            return names
+        }
+    }
+
+    func testReloadPublishesTheRequestedIdentifyBeforeTheScreenEvent() {
+        arrangeReloadableScreen()
+        let published = recordPublishedEvents()
+
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+
+        // The identify the host passed is re-sent first, and the reload follows it.
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
+    }
+
+    func testReloadSendsTheScreenEventAlone_whenTheHostPassedNoIdentify() {
+        // A user identified once at login and never re-identified: the host never asked for the
+        // user to be re-stated, so a dismissal must not speak on its behalf.
+        arrangeReloadableScreen(hostPassesIdentify: false)
+        let published = recordPublishedEvents()
+
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+
+        XCTAssertEqual(published(), [Constants.Event.screenEvent])
+    }
+
+    func testReloadSendsTheScreenEventAlone_forTheAnonymousUser() {
+        // The re-passed identify is the generated anonymous one, which the refresh policy drops
+        // before the allowance — so it never arms a reload.
+        userpilot.storage.anonymousUserId = "anon-1"
+        arrangeReloadableScreen(userId: "anon-1")
+        let published = recordPublishedEvents()
+
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+
+        XCTAssertEqual(published(), [Constants.Event.screenEvent])
+    }
+
+    func testReloadResendsTheIdentifyTheHostPassed() {
+        arrangeReloadableScreen()
+        var identifyPayload: [String: Any]?
+        userpilot.socketManager.onPublish = { name, payload in
+            if name == Constants.Event.identifyEvent { identifyPayload = payload }
+        }
+
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+
+        let metadata = identifyPayload?[Constants.Analytics.metaDataProperty] as? [String: String]
+        XCTAssertEqual(metadata, ["plan": "pro"])
+    }
+
+    func testReloadIdentifyAckDoesNotRequestASecondScreenEvent() {
+        arrangeReloadableScreen()
+        let published = recordPublishedEvents()
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+
+        // The reload identify never entered the queue, so its ack owns no head. Unclaimed, it
+        // satisfies isPostIdentificationContext and would duplicate the screen event.
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
+    }
+
+    func testReloadSendsNeitherEvent_forAThrottledScreen() {
+        arrangeReloadableScreen()
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        let published = recordPublishedEvents()
+
+        // A second dismissal inside the throttle window sends no identify either — checking the
+        // throttle before the identify is what keeps the two in step.
+        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 11, isFakeReload: true)
+
+        XCTAssertEqual(published(), [])
+    }
 }
 
 // swiftlint:enable all
