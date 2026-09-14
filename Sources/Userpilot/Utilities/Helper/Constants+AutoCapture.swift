@@ -97,5 +97,13 @@ extension Constants {
         // MARK: - Values
 
         static let reductText = "****"
+
+        /// Upper bound for published `target_text`. Captured text is host content (a cell can
+        /// render a whole JSON blob), so it is collapsed to one line and truncated past this
+        /// length with `targetTextTruncationSuffix`.
+        static let maxTargetTextLength = 256
+
+        /// Marks `target_text` that was cut at `maxTargetTextLength`.
+        static let targetTextTruncationSuffix = "…"
     }
 }

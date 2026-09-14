@@ -20,6 +20,19 @@ import UIKit
 /// (see extension below), which apply Config flags and `userpilotRedact*` on the responder chain.
 internal enum UIKitViewResolver {
 
+    /// The title a modern cell / header-footer view renders through its content configuration.
+    ///
+    /// Used for row-level `target_text`, where the element is the row or section header rather
+    /// than the leaf view under the finger. Cells that still use the legacy `textLabel` read that
+    /// first; this covers the `UIListContentConfiguration` replacement.
+    @available(iOS 14.0, *)
+    static func listConfigurationText(_ configuration: UIContentConfiguration?) -> String? {
+        guard let text = (configuration as? UIListContentConfiguration)?.text, !text.isEmpty else {
+            return nil
+        }
+        return text
+    }
+
     /// Resolves the hierarchy path of a view from leaf to root, joined by `;`.
     ///
     /// Each segment follows the pattern:
@@ -343,12 +356,12 @@ internal extension UIView {
     /// Applies text-capture policy to a raw string for autocapture payloads.
     /// - Global text capture off → `nil` (omit `target_text`)
     /// - `userpilotRedactText` on the responder chain → redaction placeholder
-    /// - otherwise → `raw`
+    /// - otherwise → `raw`, collapsed to one line and bounded (see ``String/userpilotBoundedText()``)
     func resolvedInteractionText(_ raw: String?) -> String? {
         guard let raw, !raw.isEmpty else { return nil }
         if isInteractionTextCaptureDisabled() { return nil }
         if hasUserpilotRedactTextOptIn() { return Constants.AutoCapture.reductText }
-        return raw
+        return raw.userpilotBoundedText()
     }
 
     /// Text published when capture resolves to an ignore-inner-hierarchy ancestor.
@@ -447,19 +460,20 @@ internal extension UIView {
             textFieldPreferPlaceholder: true,
             includeAccessibilityFallback: false
         ) {
-            return direct
+            return direct.userpilotBoundedText()
         }
 
         if let nested = findLabelText(in: self) {
-            return nested
+            return nested.userpilotBoundedText()
         }
 
         return nil
     }
 
-    /// Recursively searches subviews for the first UILabel with non-empty text
+    /// Recursively searches subviews for the first UILabel with non-empty text.
+    /// Hidden and `userpilotRedactText` subtrees are skipped so their content is never published.
     private func findLabelText(in view: UIView) -> String? {
-        for subview in view.subviews {
+        for subview in view.subviews where subview.isUserpilotTextReadable {
             if let label = subview as? UILabel, let text = label.text, !text.isEmpty {
                 return text
             }
@@ -468,6 +482,35 @@ internal extension UIView {
             }
         }
         return nil
+    }
+
+    /// First non-empty text rendered anywhere inside this view's subtree, in front-to-back
+    /// subview order, ignoring text-capture policy (callers apply it via
+    /// ``resolvedInteractionText(_:)``).
+    ///
+    /// Used for row-level capture (`table_view_cell_selected` / `collection_view_item_selected`),
+    /// where the interacted element is the whole row rather than the touched leaf. Hidden and
+    /// `userpilotRedactText` subtrees are skipped.
+    func userpilotFirstTextInSubtree() -> String? {
+        for subview in subviews where subview.isUserpilotTextReadable {
+            if let text = subview.userpilotRawDirectText(
+                textFieldPreferPlaceholder: true,
+                includeAccessibilityFallback: false
+            ) {
+                return text
+            }
+            if let nested = subview.userpilotFirstTextInSubtree() {
+                return nested
+            }
+        }
+        return nil
+    }
+
+    /// `false` for views whose text must never be harvested by a subtree crawl: invisible views
+    /// and views the host opted out of with `userpilotRedactText`.
+    private var isUserpilotTextReadable: Bool {
+        guard !isHidden, alpha > 0.01 else { return false }
+        return !userpilotRedactText
     }
 
     /// Returns the accessibility label of this view, applying accessibility-capture policy.
@@ -485,6 +528,25 @@ internal extension UIView {
         }
 
         return label
+    }
+}
+
+// MARK: - Captured text bounding
+
+internal extension String {
+
+    /// Normalizes captured host text for publishing: every run of whitespace/newlines becomes a
+    /// single space, and anything past `Constants.AutoCapture.maxTargetTextLength` is cut and
+    /// suffixed with `Constants.AutoCapture.targetTextTruncationSuffix`.
+    ///
+    /// Captured text is arbitrary host content — a cell can render a whole JSON document — so it
+    /// is bounded before it reaches a payload.
+    func userpilotBoundedText() -> String {
+        let collapsed = split(whereSeparator: { $0.isWhitespace || $0.isNewline }).joined(separator: " ")
+        guard collapsed.count > Constants.AutoCapture.maxTargetTextLength else { return collapsed }
+        let keep = Constants.AutoCapture.maxTargetTextLength
+            - Constants.AutoCapture.targetTextTruncationSuffix.count
+        return collapsed.prefix(keep) + Constants.AutoCapture.targetTextTruncationSuffix
     }
 }
 

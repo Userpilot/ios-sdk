@@ -222,12 +222,29 @@ extension UIWindow {
             if let accessibilityLabel = view.getAccessibilityLabelContent() {
                 eventProperties[Constants.AutoCapture.accessibilityLabel] = accessibilityLabel
             }
-            if let text = view.getTextContent() {
+            if let text = sectionContainerText(for: view) ?? view.getTextContent() {
                 eventProperties[Constants.AutoCapture.targetText] = text
             }
         }
 
         InstanceResolver.shared.handleClickTracked(eventProperties, source: view)
+    }
+
+    /// Text for a tap that landed inside a table section header/footer or a collection
+    /// supplementary view.
+    ///
+    /// These are single logical elements like rows are, so the container's own text is published
+    /// rather than whichever leaf the finger hit — the same rule
+    /// ``UITableViewCell/userpilotResolvedCellText(touchedView:)`` applies to cells. Returns `nil`
+    /// for taps outside such a container, leaving the regular leaf resolution in place.
+    private func sectionContainerText(for view: UIView) -> String? {
+        if let headerFooter = view.findParentTableViewHeaderFooter() {
+            return headerFooter.userpilotResolvedHeaderFooterText(touchedView: view)
+        }
+        if let reusable = view.findParentCollectionReusableView() {
+            return reusable.userpilotResolvedSupplementaryText(touchedView: view)
+        }
+        return nil
     }
 
 }
