@@ -421,6 +421,118 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertFalse(didPublishEvent)
     }
 
+    // MARK: - Push Token vs Offline Sync
+
+    private var pushTokenEventName: String { SDKEventsName.pushNotificationToken.rawValue }
+
+    private func makePushTokenEvent() -> PushNotificationTokenEvent {
+        PushNotificationTokenEvent(
+            appToken: "NX-00000",
+            userId: "test-user-123",
+            token: "device-push-token"
+        )
+    }
+
+    func testPublishInternalSDKEvent_pushTokenWithStoredOfflineEvents_shouldWaitForSyncToFinish() {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.offlineEventsHandler.hasCachedEvents = true
+        userpilot.offlineEventsHandler.holdRestoreCompletion = true
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { eventName, _ in
+            publishedEvents.append(eventName)
+        }
+
+        // Act
+        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+
+        // Assert - the offline batch owns the wire, the token does not overtake it
+        XCTAssertFalse(publishedEvents.contains(pushTokenEventName))
+
+        // Act - the batch lands and the cached SDK events drain
+        userpilot.offlineEventsHandler.finishRestore()
+
+        // Assert
+        XCTAssertTrue(publishedEvents.contains(pushTokenEventName))
+    }
+
+    func testPublishInternalSDKEvent_pushTokenWithNoOfflineEvents_shouldStillSendInTheSamePass() {
+        // Arrange - taking the cached route must not delay the token when nothing is syncing
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.offlineEventsHandler.hasCachedEvents = false
+        var publishedPayload: [String: Any]?
+        userpilot.socketManager.onPublish = { eventName, payload in
+            if eventName == self.pushTokenEventName { publishedPayload = payload }
+        }
+
+        // Act
+        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+
+        // Assert
+        XCTAssertEqual(publishedPayload?["token"] as? String, "device-push-token")
+        XCTAssertEqual(publishedPayload?["user_id"] as? String, "test-user-123")
+        XCTAssertEqual(publishedPayload?["app_token"] as? String, "NX-00000")
+    }
+
+    func testPublishInternalSDKEvent_pushTokenWhileSocketClosed_shouldSendOnceSocketOpens() {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = false
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { eventName, _ in
+            publishedEvents.append(eventName)
+        }
+        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+        XCTAssertFalse(publishedEvents.contains(pushTokenEventName))
+
+        // Act
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        // Assert
+        XCTAssertTrue(publishedEvents.contains(pushTokenEventName))
+    }
+
+    func testPublishInternalSDKEvent_pushTokenDrain_shouldNotReCacheTheEvent() {
+        // Arrange - the drain must send directly, or it re-enters the cached route forever
+        userpilot.socketManager.isSocketOpened = true
+        var publishCount = 0
+        userpilot.socketManager.onPublish = { eventName, _ in
+            if eventName == self.pushTokenEventName { publishCount += 1 }
+        }
+
+        // Act
+        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+        analyticsPublisher.onSocketOpened()
+
+        // Assert - sent exactly once, and the second drain found an empty cache
+        XCTAssertEqual(publishCount, 1)
+    }
+
+    func testPublishInternalSDKEvent_contentEventWithStoredOfflineEvents_shouldWaitForSyncToFinish() {
+        // Arrange - every internal SDK event queues behind a syncing offline batch
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.offlineEventsHandler.hasCachedEvents = true
+        userpilot.offlineEventsHandler.holdRestoreCompletion = true
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { eventName, _ in
+            publishedEvents.append(eventName)
+        }
+        let contentEventName = SDKEventsName.fetchExperienceContent.rawValue
+        let contentEvent = MockSDKEvent(eventName: contentEventName)
+
+        // Act
+        analyticsPublisher.publishInternalSDKEvent(contentEvent)
+
+        // Assert
+        XCTAssertFalse(publishedEvents.contains(contentEventName))
+
+        // Act - the batch lands and the cached SDK events drain
+        userpilot.offlineEventsHandler.finishRestore()
+
+        // Assert
+        XCTAssertTrue(publishedEvents.contains(contentEventName))
+    }
+
     func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.

@@ -449,12 +449,31 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
     var didRestoreEvents = false
     var didClearLocalEvents = false
 
+    /// When true, `restoreEventsFromLocalStorage` holds its completion so a test can
+    /// observe the window while the batch is still on the wire. Release it with
+    /// `finishRestore()`, which stands in for the batch ACK.
+    var holdRestoreCompletion = false
+    private var heldRestoreCompletion: (() -> Void)?
+
     func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool) {
         savedEvents.append((event, clearStoredEventsFirst))
     }
 
     func restoreEventsFromLocalStorage(completion: (() -> Void)?) {
         didRestoreEvents = true
+        // The real handler deletes the rows as it reads them
+        hasCachedEvents = false
+        guard holdRestoreCompletion else {
+            completion?()
+            return
+        }
+        heldRestoreCompletion = completion
+    }
+
+    /// Resolves a held restore the way the batch ACK does in `onSocketEventSent`.
+    func finishRestore() {
+        let completion = heldRestoreCompletion
+        heldRestoreCompletion = nil
         completion?()
     }
 

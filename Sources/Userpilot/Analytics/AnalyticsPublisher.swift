@@ -1156,17 +1156,31 @@ extension AnalyticsPublisher {
      */
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
         tryCatch {
+            // Every internal SDK event takes the cached route, never a direct send. The
+            // cache is drained from `processEvent` *after* `restoreOfflineEventsIfNeeded()`,
+            // so a syncing offline batch always reaches the backend first - no gate and no
+            // "is a restore running" flag needed. With nothing to sync the drain happens in
+            // this same pass, so the event still goes out immediately.
+            cachedSDKEvents.append(sdkEvent)
+
             guard canRequestEvent else {
-                cachedSDKEvents.append(sdkEvent)
-                // connect() gates itself on the socket state - always safe to call
+                // The cache is drained from `onSocketOpened` once the channel joins.
                 openSocket()
                 return
             }
-            socketManager.publish(
-                sdkEvent.eventName,
-                payload: sdkEvent.eventPayload
-            )
+            processEvent()
         }
+    }
+
+    /// Pushes an SDK event onto the socket.
+    ///
+    /// Separate from `publishInternalSDKEvent` so the drain below cannot re-enter the
+    /// caching route above and put the event straight back into the cache it came from.
+    private func sendSDKEvent(_ sdkEvent: SDKEvent) {
+        socketManager.publish(
+            sdkEvent.eventName,
+            payload: sdkEvent.eventPayload
+        )
     }
 
     /** Sends any cached SDK events while the socket can accept them */
@@ -1174,7 +1188,7 @@ extension AnalyticsPublisher {
         tryCatch {
             while !cachedSDKEvents.isEmpty && canRequestEvent {
                 let sdkEvent = cachedSDKEvents.removeFirst()
-                publishInternalSDKEvent(sdkEvent)
+                sendSDKEvent(sdkEvent)
             }
         }
     }
