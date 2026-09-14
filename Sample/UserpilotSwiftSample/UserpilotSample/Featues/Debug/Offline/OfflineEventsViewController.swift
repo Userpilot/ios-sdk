@@ -62,8 +62,7 @@ final class OfflineEventsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Offline events"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
+        view.backgroundColor = SampleAppearance.screenBackground
         setupUI()
         setupAutoTargets()
         renderStatus(idleMessage())
@@ -79,24 +78,6 @@ final class OfflineEventsViewController: UIViewController {
         stopBurst()
     }
 
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
-    @objc private func backTapped() {
-        navigationController?.popViewController(animated: true)
-    }
-
     private func setupUI() {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
@@ -104,7 +85,7 @@ final class OfflineEventsViewController: UIViewController {
         stopButton.setTitle("Stop", for: .normal)
         stopButton.isEnabled = false
         stopButton.addTarget(self, action: #selector(stopTapped), for: .touchUpInside)
-        styleOutlined(stopButton, color: .systemRed)
+        stopButton.applyLiquidGlassStyle(.regular, title: "Stop", tintColor: .systemRed)
 
         let logsButton = makeButton("Events log / Logs", action: #selector(openLogs))
         let bottomRow = UIStackView(arrangedSubviews: [stopButton, logsButton])
@@ -120,7 +101,7 @@ final class OfflineEventsViewController: UIViewController {
             bottomRow.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
             bottomRow.heightAnchor.constraint(equalToConstant: 44),
 
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomRow.topAnchor, constant: -8)
@@ -494,39 +475,22 @@ final class OfflineEventsViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
         button.addTarget(self, action: action, for: .touchUpInside)
-        styleOutlined(button, color: .systemBlue)
+        button.applyLiquidGlassStyle(.regular, title: title, unifiedHeight: false)
         return button
     }
 
     private func configureActionButton(_ button: UIButton, title: String, action: Selector, filled: Bool) {
         button.setTitle(title, for: .normal)
-        button.titleLabel?.numberOfLines = 0
-        button.titleLabel?.textAlignment = .center
         button.addTarget(self, action: action, for: .touchUpInside)
-        if filled {
-            button.backgroundColor = .systemBlue
-            button.setTitleColor(.white, for: .normal)
-            button.layer.cornerRadius = 8
-            button.contentEdgeInsets = UIEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
-        } else {
-            styleOutlined(button, color: .systemBlue)
-        }
-    }
-
-    private func styleOutlined(_ button: UIButton, color: UIColor) {
-        button.setTitleColor(color, for: .normal)
-        button.layer.cornerRadius = 8
-        button.layer.borderWidth = 1
-        button.layer.borderColor = color.cgColor
-        button.contentEdgeInsets = UIEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
+        button.applyLiquidGlassStyle(filled ? .prominent : .regular, title: title)
     }
 
     private func styleChip(_ button: UIButton, selected: Bool) {
-        button.layer.cornerRadius = 8
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemBlue.cgColor
-        button.backgroundColor = selected ? UIColor.systemBlue.withAlphaComponent(0.15) : .clear
-        button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
+        button.applyLiquidGlassStyle(
+            selected ? .prominent : .regular,
+            title: button.title(for: .normal),
+            unifiedHeight: false
+        )
     }
 
     private func labeledControl(title: String, control: UIView) -> UIStackView {

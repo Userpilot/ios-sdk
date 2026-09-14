@@ -10,16 +10,17 @@ import UIKit
 
 class ScreenTwoViewController: BaseViewController {
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Screen Two"
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         UserpilotManager.shared.screen("screen two")
     }
 
     // MARK: - IBAction
-
-    @IBAction func onBackButtonClicked(_ sender: UIButton) {
-        close()
-    }
 
     @IBAction func onNextButtonClicked(_ sender: UIButton) {
         UserpilotManager.shared.triggerExperience(experienceId: "mobile:5")

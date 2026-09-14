@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942A82CD25CD700924844 /* MainViewController.xib */; };
 		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
 		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
 		AB1942B32CD2609700924844 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942B22CD2609700924844 /* ScreenOneViewController.xib */; };
@@ -66,7 +65,6 @@
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
 		ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */; };
-		ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */; };
 		ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F682C985E2000004D1C /* CustomEventViewController.swift */; };
 		ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */; };
 		ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C7B2C73688000013F18 /* MainViewController.swift */; };
@@ -77,6 +75,7 @@
 		ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */; };
 		ABFB5FE42C9173D60054E142 /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE32C9173D60054E142 /* CardView.swift */; };
 		ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE52C91743B0054E142 /* OutlineButton.swift */; };
+		UPA91C2E4B7D6E8F0A1B2C01 /* SampleAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */; };
 		ABFB5FE82C9175030054E142 /* UITableReusableView+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */; };
 		ABFD95802D0E096500F8F757 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABFD957F2D0E096500F8F757 /* Userpilot */; };
 		C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897B82C5CFFFA0083928E /* AppDelegate.swift */; };
@@ -86,8 +85,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		AB1942A72CD25CD700924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainViewController.xib; sourceTree = "<group>"; };
-		AB1942AA2CD25CD700924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/MainViewController.xcstrings; sourceTree = "<group>"; };
 		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		AB1942AD2CD25FD200924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ScreenTwoViewController.xib; sourceTree = "<group>"; };
 		AB1942B02CD25FD200924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/ScreenTwoViewController.xcstrings; sourceTree = "<group>"; };
@@ -168,7 +165,6 @@
 		ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+UserProperties.swift"; sourceTree = "<group>"; };
 		ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+CompanyProperties.swift"; sourceTree = "<group>"; };
 		ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIStackView+Extensions.swift"; sourceTree = "<group>"; };
-		ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+TableView.swift"; sourceTree = "<group>"; };
 		ABED3F682C985E2000004D1C /* CustomEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomEventViewController.swift; sourceTree = "<group>"; };
 		ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Bold.ttf"; sourceTree = "<group>"; };
 		ABF38C7B2C73688000013F18 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
@@ -179,6 +175,7 @@
 		ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTableViewCell.swift; sourceTree = "<group>"; };
 		ABFB5FE32C9173D60054E142 /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		ABFB5FE52C91743B0054E142 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
+		UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleAppearance.swift; sourceTree = "<group>"; };
 		ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITableReusableView+Extension.swift"; sourceTree = "<group>"; };
 		C5C897B52C5CFFFA0083928E /* UserpilotSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserpilotSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5C897B82C5CFFFA0083928E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -293,10 +290,8 @@
 		AB6DBD402C68D2180009BB11 /* Main */ = {
 			isa = PBXGroup;
 			children = (
-				ABED3F632C9831AC00004D1C /* Extensions */,
 				ABF38C7F2C73713100013F18 /* Models */,
 				ABF38C7B2C73688000013F18 /* MainViewController.swift */,
-				AB1942A82CD25CD700924844 /* MainViewController.xib */,
 			);
 			path = Main;
 			sourceTree = "<group>";
@@ -308,6 +303,7 @@
 				ABACA8592C96D591006C9B77 /* PropertyView */,
 				ABFB5FE32C9173D60054E142 /* CardView.swift */,
 				ABFB5FE52C91743B0054E142 /* OutlineButton.swift */,
+				UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */,
 			);
 			path = CustomViews;
 			sourceTree = "<group>";
@@ -497,14 +493,6 @@
 			children = (
 				ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */,
 				ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */,
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		ABED3F632C9831AC00004D1C /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-				ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -706,7 +694,6 @@
 				AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */,
 				ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */,
 				ABAC8E6A2CE9CF21005EEC9D /* SDKEventsViewController.xib in Resources */,
-				AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */,
 				ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */,
 				ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */,
 				AB1942BF2CD2615800924844 /* AddPropertyDialogViewController.xib in Resources */,
@@ -748,6 +735,7 @@
 			files = (
 				AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */,
 				ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */,
+				UPA91C2E4B7D6E8F0A1B2C01 /* SampleAppearance.swift in Sources */,
 				ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,
 				ABCD472C2F793C5300D71EA8 /* DemoBackButtonViewController.swift in Sources */,
@@ -782,7 +770,6 @@
 				ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */,
 				AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */,
 				ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */,
-				ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */,
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
 				AB8A08862FF27964004C16B3 /* String+Int+Exensions.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
@@ -801,15 +788,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		AB1942A82CD25CD700924844 /* MainViewController.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				AB1942A72CD25CD700924844 /* Base */,
-				AB1942AA2CD25CD700924844 /* mul */,
-			);
-			name = MainViewController.xib;
-			sourceTree = "<group>";
-		};
 		AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */ = {
 			isa = PBXVariantGroup;
 			children = (

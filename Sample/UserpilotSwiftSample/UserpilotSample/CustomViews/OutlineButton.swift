@@ -12,18 +12,15 @@ class OutlineButton: UIButton {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setupButton()
+        applyLiquidGlassStyle(.regular)
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setupButton()
     }
 
-    private func setupButton() {
-        self.layer.cornerRadius = 10
-        self.layer.masksToBounds = true
-        self.layer.borderWidth = 1.0
-        self.layer.borderColor = UIColor(named: "AccentColor")?.cgColor
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        applyLiquidGlassStyle(.regular)
     }
 }

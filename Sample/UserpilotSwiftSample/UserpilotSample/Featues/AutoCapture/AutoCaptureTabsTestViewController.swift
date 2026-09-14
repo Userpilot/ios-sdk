@@ -14,7 +14,7 @@ final class AutoCaptureTabsTestViewController: UITabBarController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Tabs Test"
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = SampleAppearance.screenBackground
         setupTabs()
     }
 
@@ -65,7 +65,7 @@ private final class AutoCaptureTabContentViewController: UIViewController {
     }
 
     private func setupUI() {
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = SampleAppearance.screenBackground
 
         let titleLabel = UILabel()
         titleLabel.text = "\(tabTitle) Tab"
@@ -82,12 +82,9 @@ private final class AutoCaptureTabContentViewController: UIViewController {
 
         let actionButton = UIButton(type: .system)
         actionButton.setTitle("Tap in \(tabTitle)", for: .normal)
-        actionButton.backgroundColor = .systemBlue
-        actionButton.setTitleColor(.white, for: .normal)
-        actionButton.layer.cornerRadius = 10
-        actionButton.titleLabel?.font = .boldSystemFont(ofSize: 16)
+        actionButton.applyLiquidGlassStyle(.prominent, title: "Tap in \(tabTitle)")
         actionButton.translatesAutoresizingMaskIntoConstraints = false
-        actionButton.heightAnchor.constraint(equalToConstant: 48).isActive = true
+        actionButton.heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight).isActive = true
         actionButton.addTarget(self, action: #selector(onTapButton), for: .touchUpInside)
 
         let stack = UIStackView(arrangedSubviews: [titleLabel, messageLabel, actionButton])

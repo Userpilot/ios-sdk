@@ -44,8 +44,7 @@ class AutoCaptureTestViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Controls test"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
+        view.backgroundColor = SampleAppearance.screenBackground
         setupUI()
     }
 
@@ -55,32 +54,6 @@ class AutoCaptureTestViewController: UIViewController {
     
     override var userpilotScreenTitle: String? {
         "Demo title"
-    }
-
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.titleLabel?.font = .systemFont(ofSize: 17)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.userpilotRedactText = true
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
-    @objc private func backTapped() {
-        if let nav = navigationController {
-            nav.popViewController(animated: true)
-        } else {
-            dismiss(animated: true)
-        }
     }
 
     // MARK: - Setup UI
@@ -110,8 +83,7 @@ class AutoCaptureTestViewController: UIViewController {
         scrollView.addSubview(contentView)
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -148,12 +120,10 @@ class AutoCaptureTestViewController: UIViewController {
         addSectionHeader("1. UIButton (tap)")
         normalButton.setTitle("Tap Me!", for: .normal)
         normalButton.addTarget(self, action: #selector(onNormalButtonTapped), for: .touchUpInside)
-        normalButton.backgroundColor = .systemBlue
-        normalButton.setTitleColor(.white, for: .normal)
         normalButton.accessibilityLabel = "Test accessibilityLabel"
         normalButton.accessibilityIdentifier = "testAccessibilityIdentifier"
-        normalButton.layer.cornerRadius = 8
-        normalButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        normalButton.applyLiquidGlassStyle(.prominent, title: "Tap Me!")
+        normalButton.heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight).isActive = true
         stackView.addArrangedSubview(normalButton)
 
         // UISwitch
@@ -262,10 +232,8 @@ class AutoCaptureTestViewController: UIViewController {
 
     private func setupMenuButton() {
         menuButton.setTitle("Show Menu ▼", for: .normal)
-        menuButton.backgroundColor = .systemPurple
-        menuButton.setTitleColor(.white, for: .normal)
-        menuButton.layer.cornerRadius = 8
-        menuButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        menuButton.applyLiquidGlassStyle(.prominent, title: "Show Menu ▼", tintColor: .systemPurple)
+        menuButton.heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight).isActive = true
 
         let menuItems = UIMenu(
             title: "Options",

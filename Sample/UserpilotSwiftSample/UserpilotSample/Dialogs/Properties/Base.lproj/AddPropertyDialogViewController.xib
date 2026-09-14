@@ -5,6 +5,7 @@
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -51,47 +52,32 @@
                             </subviews>
                         </stackView>
                         <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="12" translatesAutoresizingMaskIntoConstraints="NO" id="0vp-MK-cJm">
-                            <rect key="frame" x="30" y="130" width="267.66666666666669" height="40"/>
+                            <rect key="frame" x="30" y="130" width="267.66666666666669" height="52"/>
                             <subviews>
-                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="B18-yp-DsY">
-                                    <rect key="frame" x="0.0" y="0.0" width="128" height="40"/>
-                                    <color key="backgroundColor" name="AccentColor"/>
+                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="B18-yp-DsY" customClass="LiquidGlassButton" customModule="UserPilotSample" customModuleProvider="target">
+                                    <rect key="frame" x="0.0" y="0.0" width="128" height="52"/>
                                     <constraints>
-                                        <constraint firstAttribute="height" constant="40" id="y5V-bB-H6T"/>
+                                        <constraint firstAttribute="height" constant="52" id="y5V-bB-H6T"/>
                                     </constraints>
                                     <fontDescription key="fontDescription" type="system" weight="medium" pointSize="14"/>
                                     <state key="normal" title="Add">
                                         <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                     </state>
-                                    <userDefinedRuntimeAttributes>
-                                        <userDefinedRuntimeAttribute type="number" keyPath="cornerRadius">
-                                            <real key="value" value="8"/>
-                                        </userDefinedRuntimeAttribute>
-                                    </userDefinedRuntimeAttributes>
                                     <connections>
                                         <action selector="doneButtonHandler:" destination="-1" eventType="touchUpInside" id="c0B-7a-6df"/>
                                     </connections>
                                 </button>
-                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="c3p-hp-hMe">
-                                    <rect key="frame" x="140" y="0.0" width="127.66666666666669" height="40"/>
-                                    <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="c3p-hp-hMe" customClass="LiquidGlassButton" customModule="UserPilotSample" customModuleProvider="target">
+                                    <rect key="frame" x="140" y="0.0" width="127.66666666666669" height="52"/>
                                     <constraints>
-                                        <constraint firstAttribute="height" constant="40" id="NNY-se-2L4"/>
+                                        <constraint firstAttribute="height" constant="52" id="NNY-se-2L4"/>
                                     </constraints>
                                     <fontDescription key="fontDescription" type="system" weight="medium" pointSize="14"/>
                                     <state key="normal" title="Cancel">
                                         <color key="titleColor" name="AccentColor"/>
                                     </state>
                                     <userDefinedRuntimeAttributes>
-                                        <userDefinedRuntimeAttribute type="number" keyPath="cornerRadius">
-                                            <real key="value" value="0.0"/>
-                                        </userDefinedRuntimeAttribute>
-                                        <userDefinedRuntimeAttribute type="color" keyPath="borderColor">
-                                            <color key="value" name="Valhalla"/>
-                                        </userDefinedRuntimeAttribute>
-                                        <userDefinedRuntimeAttribute type="number" keyPath="borderWidth">
-                                            <real key="value" value="0.0"/>
-                                        </userDefinedRuntimeAttribute>
+                                        <userDefinedRuntimeAttribute type="boolean" keyPath="isProminent" value="NO"/>
                                     </userDefinedRuntimeAttributes>
                                     <connections>
                                         <action selector="cancelButtonHandler:" destination="-1" eventType="touchUpInside" id="2yw-5h-mZd"/>
@@ -99,11 +85,11 @@
                                 </button>
                             </subviews>
                             <constraints>
-                                <constraint firstAttribute="height" constant="40" id="BK0-dh-Ks4"/>
+                                <constraint firstAttribute="height" constant="52" id="BK0-dh-Ks4"/>
                             </constraints>
                         </stackView>
                     </subviews>
-                    <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <color key="backgroundColor" systemColor="secondarySystemGroupedBackgroundColor"/>
                     <constraints>
                         <constraint firstItem="0vp-MK-cJm" firstAttribute="top" secondItem="XXn-ef-Jb2" secondAttribute="bottom" constant="24" id="7L1-Rv-ME3"/>
                         <constraint firstItem="0vp-MK-cJm" firstAttribute="leading" secondItem="egO-ry-NCy" secondAttribute="leading" constant="30" id="Akp-xA-Lcy"/>
@@ -144,5 +130,8 @@
         <namedColor name="Valhalla">
             <color red="0.32899999618530273" green="0.32400000095367432" blue="0.4779999852180481" alpha="0.33000001311302185" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
+        <systemColor name="secondarySystemGroupedBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
     </resources>
 </document>

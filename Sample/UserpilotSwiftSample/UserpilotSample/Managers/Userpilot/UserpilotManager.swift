@@ -27,6 +27,10 @@ class UserpilotManager {
     private var userpilot: Userpilot?
     
     private(set) var userpilotSDKEvents = [UserpilotSDKEvent]()
+
+    func clearSDKEvents() {
+        userpilotSDKEvents.removeAll()
+    }
     
     // MARK: - Life Cycle
     

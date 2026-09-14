@@ -24,17 +24,26 @@ class IdentifyViewController: BaseViewController {
     }
     @IBOutlet weak var userPropertiesStackView: UIStackView!
     @IBOutlet weak var companyPropertiesStackView: UIStackView!
-    @IBOutlet weak var anonymousButton: UIButton! {
-        didSet {
-            anonymousButton.layer.borderColor = UIColor.accent.cgColor
-            anonymousButton.layer.borderWidth = 1
-        }
-    }
+    @IBOutlet weak var anonymousButton: UIButton!
 
     internal var userPropertiesViews: [String: PropertyView] = [:]
     internal var companyPropertiesViews: [String: PropertyView] = [:]
 
     // MARK: - Override
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Identify"
+        let logoutItem = UIBarButtonItem(
+            title: "Logout",
+            style: .plain,
+            target: self,
+            action: #selector(onLogoutBarButtonTapped)
+        )
+        logoutItem.tintColor = .systemRed
+        navigationItem.rightBarButtonItem = logoutItem
+        wrapPrimaryScrollContentInCard()
+    }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -49,10 +58,6 @@ class IdentifyViewController: BaseViewController {
         identifyUser()
     }
 
-    @IBAction func onBackButtonClicked(_ sender: UIButton) {
-        close()
-    }
-
     @IBAction func onAddUserProperty(_ sender: UIButton) {
         showAddUserPropertyDiaog()
     }
@@ -61,7 +66,7 @@ class IdentifyViewController: BaseViewController {
         showAddCompanyPropertyDialog()
     }
 
-    @IBAction func onLogout(_ sender: UIButton) {
+    @objc private func onLogoutBarButtonTapped() {
         FlowRoutingManager.shared.showAlertMessage("User logged out successfully!")
         UserpilotManager.shared.logout()
     }

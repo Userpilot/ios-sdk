@@ -65,6 +65,8 @@ final class ConfigFlagTableViewCell: UITableViewCell {
 
     private func setupViews() {
         selectionStyle = .none
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
         contentView.addSubview(titleLabel)
         contentView.addSubview(descriptionLabel)
         contentView.addSubview(flagSwitch)

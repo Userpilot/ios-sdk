@@ -41,33 +41,8 @@ class CollectionViewTestViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "CollectionView Test"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
+        view.backgroundColor = SampleAppearance.screenBackground
         setupCollectionView()
-    }
-
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.titleLabel?.font = .systemFont(ofSize: 17)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
-    @objc private func backTapped() {
-        if let nav = navigationController {
-            nav.popViewController(animated: true)
-        } else {
-            dismiss(animated: true)
-        }
     }
 
     // MARK: - Setup
@@ -87,7 +62,7 @@ class CollectionViewTestViewController: UIViewController {
 
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.backgroundColor = .systemBackground
+        collectionView.backgroundColor = SampleAppearance.screenBackground
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.register(CustomCollectionViewCell.self, forCellWithReuseIdentifier: cellIdentifier)
@@ -95,7 +70,7 @@ class CollectionViewTestViewController: UIViewController {
         view.addSubview(collectionView)
 
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -162,7 +137,7 @@ class CustomCollectionViewCell: UICollectionViewCell {
     // MARK: - Setup
 
     private func setupUI() {
-        contentView.backgroundColor = .secondarySystemBackground
+        contentView.backgroundColor = SampleAppearance.elevatedBackground
         contentView.layer.cornerRadius = 12
         contentView.layer.masksToBounds = true
 
@@ -222,7 +197,7 @@ class CustomCollectionViewCell: UICollectionViewCell {
         didSet {
             UIView.animate(withDuration: 0.2) {
                 // swiftlint:disable:next line_length
-                self.contentView.backgroundColor = self.isSelected ? .systemBlue.withAlphaComponent(0.2) : .secondarySystemBackground
+                self.contentView.backgroundColor = self.isSelected ? .systemBlue.withAlphaComponent(0.2) : SampleAppearance.elevatedBackground
                 self.transform = self.isSelected ? CGAffineTransform(scaleX: 0.95, y: 0.95) : .identity
             }
         }

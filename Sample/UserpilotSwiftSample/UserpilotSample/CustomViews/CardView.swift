@@ -21,21 +21,11 @@ class CardView: UIView {
     }
 
     private func setupCardView() {
-        // Set corner radius
-        self.layer.cornerRadius = 10.0
-        self.layer.masksToBounds = false
-
-        // Set shadow properties
-        self.layer.shadowColor = UIColor.black.cgColor
-        self.layer.shadowOffset = CGSize(width: 0, height: 2)
-        self.layer.shadowOpacity = 0.2
-        self.layer.shadowRadius = 4.0
-
-        // Optionally, add a border
-        self.layer.borderColor = UIColor.systemGray6.cgColor
-        self.layer.borderWidth = 0.5
-
-        // Set the background color of the card
-        self.backgroundColor = UIColor.white
+        layer.cornerRadius = SampleAppearance.contentCardCornerRadius
+        layer.cornerCurve = .continuous
+        layer.masksToBounds = true
+        layer.shadowOpacity = 0
+        layer.borderWidth = 0
+        backgroundColor = SampleAppearance.elevatedBackground
     }
 }

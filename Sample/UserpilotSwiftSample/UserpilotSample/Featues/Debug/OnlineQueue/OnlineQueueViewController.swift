@@ -6,9 +6,11 @@
 //  Stay ONLINE. Verify fake_reload / start_session via Logs + Xcode console.
 //
 
-import UIKit
+// Each scenario is a self-contained QA script with its own expected-result text; keeping them
+// in one harness is the point of the screen.
+// swiftlint:disable file_length
 
-// swiftlint:disable all
+import UIKit
 
 final class OnlineQueueViewController: UIViewController {
 
@@ -38,8 +40,7 @@ final class OnlineQueueViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Online queue"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
+        view.backgroundColor = SampleAppearance.screenBackground
         setupUI()
         statusLabel.text = "Ready. Stay online. Identify A + establish screen, then run a scenario."
     }
@@ -50,30 +51,12 @@ final class OnlineQueueViewController: UIViewController {
 //            skipNextAutoScreen = false
 //            return
 //        }
-        //if reportScreenSwitch.isOn {
-            UserpilotManager.shared.screen(screenTitle)
-        //}
+        // if reportScreenSwitch.isOn {
+        UserpilotManager.shared.screen(screenTitle)
+        // }
     }
 
     // MARK: - Setup
-
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
-    @objc private func backTapped() {
-        navigationController?.popViewController(animated: true)
-    }
 
     private func setupUI() {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +71,7 @@ final class OnlineQueueViewController: UIViewController {
             logsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             logsButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
 
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: logsButton.topAnchor, constant: -8)
@@ -107,6 +90,13 @@ final class OnlineQueueViewController: UIViewController {
             stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -32)
         ])
 
+        addStatusHeader()
+        addUserInputs()
+        addScenarioButtons()
+    }
+
+    /// Status readout plus the usage hint at the top of the scroll view.
+    private func addStatusHeader() {
         statusLabel.numberOfLines = 0
         statusLabel.font = .systemFont(ofSize: 12)
         statusLabel.textColor = .label
@@ -126,18 +116,23 @@ final class OnlineQueueViewController: UIViewController {
         stackView.addArrangedSubview(statusContainer)
 
         let hint = makeLabel(
-            "Stay ONLINE. Logging=true. Scenario buttons fire identify/screen/track for onSocketEventSent fake_reload + start_session checks."
+            """
+            Stay ONLINE. Logging=true. Scenario buttons fire identify/screen/track \
+            for onSocketEventSent fake_reload + start_session checks.
+            """
         )
         hint.textColor = .secondaryLabel
         stackView.addArrangedSubview(hint)
+    }
 
+    /// The "report screen on appear" toggle and the two user-id fields.
+    private func addUserInputs() {
         let switchRow = UIStackView()
         switchRow.axis = .horizontal
         switchRow.alignment = .center
         switchRow.spacing = 12
-        let switchLabel = makeLabel("Report screen(\"online queue\") on appear")
+        switchRow.addArrangedSubview(makeLabel("Report screen(\"online queue\") on appear"))
         reportScreenSwitch.isOn = true
-        switchRow.addArrangedSubview(switchLabel)
         switchRow.addArrangedSubview(reportScreenSwitch)
         stackView.addArrangedSubview(switchRow)
 
@@ -149,30 +144,43 @@ final class OnlineQueueViewController: UIViewController {
         userBField.borderStyle = .roundedRect
         stackView.addArrangedSubview(userAField)
         stackView.addArrangedSubview(userBField)
+    }
 
-        stackView.addArrangedSubview(makeSection("Setup"))
-        stackView.addArrangedSubview(makeButton("1. Identify User A", action: #selector(setupIdentifyA)))
-        stackView.addArrangedSubview(makeButton("2. Establish current screen", action: #selector(setupScreen)))
-        stackView.addArrangedSubview(makeButton("Logout (clear session)", action: #selector(logoutTapped)))
+    /// The scenario / manual-API button list. Titles double as the QA checklist.
+    private func addScenarioButtons() {
+        let sections: [(String, [(String, Selector)])] = [
+            ("Setup", [
+                ("1. Identify User A", #selector(setupIdentifyA)),
+                ("2. Establish current screen", #selector(setupScreen)),
+                ("Logout (clear session)", #selector(logoutTapped))
+            ]),
+            ("Scenarios (ONQ)", [
+                ("S1 Identify only → fake_reload=true, start_session=false", #selector(runIdentifyOnly)),
+                ("S2 Identify NEW user → fake_reload=false, start_session=true", #selector(runNewUser)),
+                ("S3 Identify + screen in queue → NO fake screen", #selector(runIdentifyPlusScreen)),
+                ("S4 Identify + track + screen → NO fake screen", #selector(runIdentifyTrackScreen)),
+                ("S5 Identify A then Identify B", #selector(runIdentifyThenNewUser)),
+                ("S6 Identify + 2 screens (content)", #selector(runTwoScreens)),
+                ("S7 Identify + 3 screens (fake reload title)", #selector(runThreeScreens)),
+                ("S8 Identify with NO current screen", #selector(runNoScreen)),
+                ("S9 Failed ACK (manual network drop)", #selector(runFailedAck)),
+                ("S10 Teo multi-app content check", #selector(runTeo))
+            ]),
+            ("Manual APIs", [
+                ("screen(queue_s1_home)", #selector(manualS1)),
+                ("screen(queue_s2_settings)", #selector(manualS2)),
+                ("screen(queue_s3_profile)", #selector(manualS3)),
+                ("track(unique)", #selector(manualTrack)),
+                ("End experience (trigger fake reload)", #selector(endExperience))
+            ])
+        ]
 
-        stackView.addArrangedSubview(makeSection("Scenarios (ONQ)"))
-        stackView.addArrangedSubview(makeButton("S1 Identify only → fake_reload=true, start_session=false", action: #selector(runIdentifyOnly)))
-        stackView.addArrangedSubview(makeButton("S2 Identify NEW user → fake_reload=false, start_session=true", action: #selector(runNewUser)))
-        stackView.addArrangedSubview(makeButton("S3 Identify + screen in queue → NO fake screen", action: #selector(runIdentifyPlusScreen)))
-        stackView.addArrangedSubview(makeButton("S4 Identify + track + screen → NO fake screen", action: #selector(runIdentifyTrackScreen)))
-        stackView.addArrangedSubview(makeButton("S5 Identify A then Identify B", action: #selector(runIdentifyThenNewUser)))
-        stackView.addArrangedSubview(makeButton("S6 Identify + 2 screens (content)", action: #selector(runTwoScreens)))
-        stackView.addArrangedSubview(makeButton("S7 Identify + 3 screens (fake reload title)", action: #selector(runThreeScreens)))
-        stackView.addArrangedSubview(makeButton("S8 Identify with NO current screen", action: #selector(runNoScreen)))
-        stackView.addArrangedSubview(makeButton("S9 Failed ACK (manual network drop)", action: #selector(runFailedAck)))
-        stackView.addArrangedSubview(makeButton("S10 Teo multi-app content check", action: #selector(runTeo)))
-
-        stackView.addArrangedSubview(makeSection("Manual APIs"))
-        stackView.addArrangedSubview(makeButton("screen(queue_s1_home)", action: #selector(manualS1)))
-        stackView.addArrangedSubview(makeButton("screen(queue_s2_settings)", action: #selector(manualS2)))
-        stackView.addArrangedSubview(makeButton("screen(queue_s3_profile)", action: #selector(manualS3)))
-        stackView.addArrangedSubview(makeButton("track(unique)", action: #selector(manualTrack)))
-        stackView.addArrangedSubview(makeButton("End experience (trigger fake reload)", action: #selector(endExperience)))
+        for (title, buttons) in sections {
+            stackView.addArrangedSubview(makeSection(title))
+            for (buttonTitle, action) in buttons {
+                stackView.addArrangedSubview(makeButton(buttonTitle, action: action))
+            }
+        }
     }
 
     private func makeSection(_ title: String) -> UILabel {
@@ -192,20 +200,18 @@ final class OnlineQueueViewController: UIViewController {
     private func makeButton(_ title: String, action: Selector) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
-        button.titleLabel?.numberOfLines = 0
-        button.titleLabel?.textAlignment = .center
-        button.contentHorizontalAlignment = .center
-        button.layer.cornerRadius = 8
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemBlue.cgColor
-        button.contentEdgeInsets = UIEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
+        button.applyLiquidGlassStyle(.regular, title: title, unifiedHeight: false)
         button.addTarget(self, action: action, for: .touchUpInside)
         return button
     }
 
-    // MARK: - Actions
+}
 
-    @objc private func openLogs() {
+// MARK: - Actions
+
+private extension OnlineQueueViewController {
+
+    @objc func openLogs() {
         FlowRoutingManager.shared.openViewController(SDKEventsViewController.newInstance())
     }
 
@@ -235,7 +241,8 @@ final class OnlineQueueViewController: UIViewController {
             self.setStatus(
                 """
                 S1 Identify-only (same user)
-                Expected after Identify ACK: synthetic screen title='\(self.screenTitle)', fake_reload=true, start_session=false.
+                Expected after Identify ACK: synthetic screen title='\(self.screenTitle)', \
+                fake_reload=true, start_session=false.
                 """
             )
         }
@@ -290,7 +297,8 @@ final class OnlineQueueViewController: UIViewController {
                 self.setStatus(
                     """
                     S5 Identify A then Identify B
-                    Expected after B ACK (empty queue + screen): fake_reload=false, start_session=true for \(self.userB()).
+                    Expected after B ACK (empty queue + screen): fake_reload=false, \
+                    start_session=true for \(self.userB()).
                     """
                 )
             }

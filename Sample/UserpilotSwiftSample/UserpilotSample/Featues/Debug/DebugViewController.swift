@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class DebugViewController: UIViewController {
+final class DebugViewController: BaseViewController {
 
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private let items: [DebugContent] = [
@@ -18,8 +18,6 @@ final class DebugViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Debug"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
         setupTable()
     }
 
@@ -28,36 +26,19 @@ final class DebugViewController: UIViewController {
         UserpilotManager.shared.screen("debug")
     }
 
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
     private func setupTable() {
         tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.backgroundColor = SampleAppearance.screenBackground
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         view.addSubview(tableView)
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-    }
-
-    @objc private func backTapped() {
-        navigationController?.popViewController(animated: true)
     }
 
     static func newInstance() -> DebugViewController {

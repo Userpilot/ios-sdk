@@ -36,24 +36,6 @@ final class ConfigViewController: BaseViewController {
 
     // MARK: - UI Components
 
-    private let backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        button.tintColor = .label
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-
-    private let titleLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Configuration"
-        label.font = .boldSystemFont(ofSize: 16)
-        label.textColor = .label
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
     private let tokenTextField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "Enter your app token"
@@ -69,6 +51,7 @@ final class ConfigViewController: BaseViewController {
     private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .grouped)
         tableView.separatorStyle = .none
+        tableView.backgroundColor = SampleAppearance.screenBackground
         tableView.keyboardDismissMode = .onDrag
         tableView.translatesAutoresizingMaskIntoConstraints = false
         return tableView
@@ -88,10 +71,6 @@ final class ConfigViewController: BaseViewController {
     private let saveButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Save & Restart", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .boldSystemFont(ofSize: 14)
-        button.backgroundColor = .systemBlue
-        button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -100,7 +79,8 @@ final class ConfigViewController: BaseViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        title = "Configuration"
+        saveButton.applyLiquidGlassStyle(.prominent, title: "Save & Restart")
         setupViews()
         setupTableView()
         setupActions()
@@ -110,8 +90,6 @@ final class ConfigViewController: BaseViewController {
     // MARK: - Setup
 
     private func setupViews() {
-        view.addSubview(backButton)
-        view.addSubview(titleLabel)
         view.addSubview(tableView)
         view.addSubview(restartNoteLabel)
         view.addSubview(saveButton)
@@ -119,15 +97,7 @@ final class ConfigViewController: BaseViewController {
         let safeArea = view.safeAreaLayoutGuide
 
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: 12),
-            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-
-            backButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.widthAnchor.constraint(equalToConstant: 30),
-            backButton.heightAnchor.constraint(equalToConstant: 30),
-
-            tableView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            tableView.topAnchor.constraint(equalTo: safeArea.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: restartNoteLabel.topAnchor, constant: -8),
@@ -139,7 +109,7 @@ final class ConfigViewController: BaseViewController {
             saveButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             saveButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             saveButton.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -16),
-            saveButton.heightAnchor.constraint(equalToConstant: 45)
+            saveButton.heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight)
         ])
     }
 
@@ -155,16 +125,11 @@ final class ConfigViewController: BaseViewController {
     }
 
     private func setupActions() {
-        backButton.addTarget(self, action: #selector(onBackTapped), for: .touchUpInside)
         saveButton.addTarget(self, action: #selector(onSaveAndRestartTapped), for: .touchUpInside)
         tokenTextField.delegate = self
     }
 
     // MARK: - Actions
-
-    @objc private func onBackTapped() {
-        close()
-    }
 
     @objc private func onSaveAndRestartTapped() {
         let token = tokenTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
