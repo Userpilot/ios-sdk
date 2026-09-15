@@ -533,6 +533,60 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(publishedEvents.contains(contentEventName))
     }
 
+    // MARK: - Cached SDK Event Drain
+
+    func testProcessSDKEvent_multipleCachedEvents_shouldDrainInPublishOrder() {
+        // Arrange - the cache is a FIFO queue: events must reach the backend in the order
+        // they were published, whatever the storage behind it.
+        userpilot.socketManager.isSocketOpened = false
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { eventName, _ in
+            publishedEvents.append(eventName)
+        }
+        ["sdk-event-1", "sdk-event-2", "sdk-event-3"].forEach {
+            analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: $0))
+        }
+        XCTAssertTrue(publishedEvents.isEmpty)
+
+        // Act
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        // Assert
+        XCTAssertEqual(publishedEvents, ["sdk-event-1", "sdk-event-2", "sdk-event-3"])
+    }
+
+    func testProcessSDKEvent_socketClosesMidDrain_shouldKeepTheRemainingEventCached() {
+        // Arrange - the drain checks socket readiness *before* taking an event, so a socket
+        // that drops mid-drain leaves the rest cached instead of swallowing them. Popping
+        // first and discovering the closed socket afterwards would lose the event.
+        userpilot.socketManager.isSocketOpened = false
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { [weak userpilot] eventName, _ in
+            publishedEvents.append(eventName)
+            // The socket drops as soon as the first event goes out
+            userpilot?.socketManager.isSocketOpened = false
+        }
+        ["sdk-event-1", "sdk-event-2"].forEach {
+            analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: $0))
+        }
+
+        // Act
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        // Assert - only the first went out, and the re-drive on the empty queue settled
+        // instead of spinning on the still-cached second event
+        XCTAssertEqual(publishedEvents, ["sdk-event-1"])
+
+        // Act - the socket comes back
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        // Assert - the second event survived the closed window
+        XCTAssertEqual(publishedEvents, ["sdk-event-1", "sdk-event-2"])
+    }
+
     func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.
