@@ -165,20 +165,15 @@ internal class AnalyticsPublisher {
 
     // MARK: - Queues & State
 
-    /// Guards `storedCachedSDKEvents`.
-    ///
-    /// The cache is appended from the caller's thread (main, for the experience view models) but
-    /// drained from whichever thread runs the processing cycle — including `watchdogQueue`. The
-    /// single-flight gate does not cover it: `publishInternalSDKEvent` appends *before* claiming
-    /// the cycle, so an append can overlap a drain on a plain array.
-    private let cachedSDKEventsLock = NSLock()
-
     /// Internal SDK events cached while the socket is reconnecting. Responses are
     /// delivered to their senders via the multicast subscription, identified by
     /// `message.resolvedEvent` — no per-event callback is kept.
     ///
-    /// Reached only through the locked accessors below, never directly.
-    private var storedCachedSDKEvents = [SDKEvent]()
+    /// `EventQueue` and not a plain array: the cache is appended from the caller's thread (main,
+    /// for the experience view models) but drained from whichever thread runs the processing
+    /// cycle — including `watchdogQueue`. The single-flight gate does not cover it, because
+    /// `publishInternalSDKEvent` appends *before* claiming the cycle.
+    private lazy var cachedSDKEvents = EventQueue<SDKEvent>()
 
     /// Event throttling mechanism to prevent spam
     private lazy var eventThrottle = EventThrottle(throttleDuration: 1.0)
@@ -194,10 +189,10 @@ internal class AnalyticsPublisher {
     /// Serialized live analytics event queue. The head stays enqueued until its
     /// socket ACK arrives (peek-then-dequeue-on-ACK), so a watchdog restart can
     /// re-attempt the same head without duplicating an acknowledged send.
-    private lazy var eventsQueue = EventQueue()
+    private lazy var eventsQueue = EventQueue<Event>()
 
     /// Holds events until the network monitor produces its first reliable state.
-    private lazy var initialQueue = EventQueue()
+    private lazy var initialQueue = EventQueue<Event>()
 
     /// Single-flight gate: exactly one processing cycle may be in flight.
     private lazy var isProcessingEvent: AtomicReference<Bool> = AtomicReference(false)
@@ -605,7 +600,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /// The re-driven cycle drains the cache and comes back here with it empty, so this settles.
     private func releaseAfterEmptyQueue() {
         resetProcessingEventStatus()
-        guard hasCachedSDKEvents else { return }
+        guard !cachedSDKEvents.isEmpty() else { return }
         processEvent()
     }
 
@@ -1119,7 +1114,7 @@ private extension AnalyticsPublisher {
         guard clearCachedIdentifyEvent else { return }
         eventsQueue.clear()
         initialQueue.clear()
-        clearCachedSDKEvents()
+        cachedSDKEvents.clear()
         self.clearCachedIdentifyEvent()
     }
 
@@ -1184,7 +1179,7 @@ extension AnalyticsPublisher {
             // so a syncing offline batch always reaches the backend first - no gate and no
             // "is a restore running" flag needed. With nothing to sync the drain happens in
             // this same pass, so the event still goes out immediately.
-            cacheSDKEvent(sdkEvent)
+            cachedSDKEvents.enqueue(sdkEvent)
 
             guard canRequestEvent else {
                 // The cache is drained from `onSocketOpened` once the channel joins.
@@ -1206,43 +1201,12 @@ extension AnalyticsPublisher {
         )
     }
 
-    /// Appends an internal SDK event to the cache.
-    private func cacheSDKEvent(_ sdkEvent: SDKEvent) {
-        cachedSDKEventsLock.lock()
-        defer { cachedSDKEventsLock.unlock() }
-        storedCachedSDKEvents.append(sdkEvent)
-    }
-
-    /// Pops the oldest cached SDK event, or `nil` when the cache is empty.
-    ///
-    /// One locked step: an `isEmpty` check followed by a separate `removeFirst()` would still be
-    /// a check-then-act against a concurrent `clearCachedSDKEvents()`.
-    private func dequeueCachedSDKEvent() -> SDKEvent? {
-        cachedSDKEventsLock.lock()
-        defer { cachedSDKEventsLock.unlock() }
-        return storedCachedSDKEvents.isEmpty ? nil : storedCachedSDKEvents.removeFirst()
-    }
-
-    /// Whether an internal SDK event is still waiting to be sent.
-    private var hasCachedSDKEvents: Bool {
-        cachedSDKEventsLock.lock()
-        defer { cachedSDKEventsLock.unlock() }
-        return !storedCachedSDKEvents.isEmpty
-    }
-
-    /// Drops every cached SDK event.
-    private func clearCachedSDKEvents() {
-        cachedSDKEventsLock.lock()
-        defer { cachedSDKEventsLock.unlock() }
-        storedCachedSDKEvents.removeAll()
-    }
-
     /** Sends any cached SDK events while the socket can accept them */
     private func processSDKEvent() {
         tryCatch {
-            // Socket readiness is checked before the pop, never after: popping an event the
-            // socket cannot take would drop it.
-            while canRequestEvent, let sdkEvent = dequeueCachedSDKEvent() {
+            // Socket readiness is checked before the dequeue, never after: taking an event the
+            // socket cannot send would drop it.
+            while canRequestEvent, let sdkEvent = cachedSDKEvents.dequeue() {
                 sendSDKEvent(sdkEvent)
             }
         }

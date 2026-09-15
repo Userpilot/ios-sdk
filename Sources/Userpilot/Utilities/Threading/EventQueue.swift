@@ -6,13 +6,13 @@
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  [Brief Description]
-//  Thread-safe event queue with optional prioritization for internal events.
+//  Thread-safe FIFO queue with optional prioritization for internal events.
 //
 
 import Foundation
 
-internal class EventQueue {
-    private var queue: [Event] = []
+internal class EventQueue<Element> {
+    private var queue: [Element] = []
     private let dispatchQueue = DispatchQueue(
         label: Constants.DispatchQueues.eventQueue,
         attributes: .concurrent
@@ -20,7 +20,7 @@ internal class EventQueue {
 
     // MARK: - Write operations (exclusive)
 
-    public func enqueue(_ event: Event, isInternalEvent: Bool = false) {
+    public func enqueue(_ event: Element, isInternalEvent: Bool = false) {
         dispatchQueue.sync(flags: .barrier) {
             if isInternalEvent {
                 self.queue.insert(event, at: 0)
@@ -31,7 +31,7 @@ internal class EventQueue {
     }
 
     @discardableResult
-    public func dequeue() -> Event? {
+    public func dequeue() -> Element? {
         dispatchQueue.sync(flags: .barrier) {
             if !queue.isEmpty {
                 return queue.removeFirst()
@@ -56,7 +56,7 @@ internal class EventQueue {
 
     // MARK: - Read operations (shared reads)
 
-    public func peek() -> Event? {
+    public func peek() -> Element? {
         dispatchQueue.sync {
             queue.first
         }
@@ -74,13 +74,13 @@ internal class EventQueue {
         }
     }
 
-    public func getAll() -> [Event] {
+    public func getAll() -> [Element] {
         dispatchQueue.sync {
             queue
         }
     }
 
-    public func getAndClear() -> [Event] {
+    public func getAndClear() -> [Element] {
         dispatchQueue.sync(flags: .barrier) {
             let events = queue
             queue.removeAll()
@@ -88,19 +88,19 @@ internal class EventQueue {
         }
     }
 
-    public func contains(_ event: Event, where compare: (Event, Event) -> Bool) -> Bool {
+    public func contains(_ event: Element, where compare: (Element, Element) -> Bool) -> Bool {
         dispatchQueue.sync {
             queue.contains(where: { compare($0, event) })
         }
     }
 
-    public func find(where predicate: (Event) -> Bool) -> Event? {
+    public func find(where predicate: (Element) -> Bool) -> Element? {
         dispatchQueue.sync {
             queue.first(where: predicate)
         }
     }
 
-    public func getFirst() -> Event? {
+    public func getFirst() -> Element? {
         dispatchQueue.sync {
             queue.first
         }

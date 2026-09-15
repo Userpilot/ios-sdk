@@ -13,11 +13,11 @@ import XCTest
 // swiftlint:disable all
 class EventQueueTests: XCTestCase {
 
-    var eventQueue: EventQueue!
+    var eventQueue: EventQueue<Event>!
 
     override func setUp() {
         super.setUp()
-        eventQueue = EventQueue()
+        eventQueue = EventQueue<Event>()
     }
 
     override func tearDown() {
