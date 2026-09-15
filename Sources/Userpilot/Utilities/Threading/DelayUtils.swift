@@ -63,9 +63,17 @@ internal class DelayUtils {
 
     /**
      Cancels any currently scheduled delayed action.
+
+     Always hops to `queue` — it must not short-circuit on a pending-action check made from the
+     caller's thread. `delayAction` assigns `currentWorkItem` *inside* `queue`, so between it
+     returning and its block running there is a window where a timer is on its way but the
+     property is still unset. A check there reads "nothing pending", skips the cancel, and the
+     action fires anyway — an experience shown after the reset that was meant to stop it.
+     Going through the serial queue orders this cancel behind that assignment instead.
+
+     A no-op when nothing is scheduled, so no guard is needed.
      */
     func cancelDelay() {
-        if !hasPendingAction() { return }
         queue.async { [weak self] in
             self?.currentWorkItem?.cancel()
             self?.currentWorkItem = nil
@@ -74,11 +82,15 @@ internal class DelayUtils {
 
     /**
      Checks if there's a currently scheduled action that hasn't been executed yet.
-    
+
+     Reads on `queue`, which owns `currentWorkItem`; never call this from within `queue`.
+
      - Returns: `true` if there's a pending action, `false` otherwise
      */
     func hasPendingAction() -> Bool {
-        return currentWorkItem != nil && currentWorkItem?.isCancelled == false
+        return queue.sync {
+            currentWorkItem != nil && currentWorkItem?.isCancelled == false
+        }
     }
 
     /**
