@@ -54,6 +54,15 @@ internal final class MulticastDelegate<T> {
 
     // MARK: - Properties
 
+    /// Guards every access to `delegates`. Mutations and snapshot reads happen under this lock;
+    /// delegate callbacks run OUTSIDE it (see `invoke`).
+    ///
+    /// `NSHashTable` is not thread-safe, and this table is reached from several queues:
+    /// `invoke` runs on the socket transport and push-resolution threads, while `add` can run on
+    /// the socket thread too — resolving a lazily-built subscriber from inside a socket callback
+    /// registers it right there.
+    private let lock = NSLock()
+
     /// A set of weak references to the delegates, preventing retain cycles.
     /// `NSHashTable.weakObjects()` ensures delegates are automatically removed when deallocated.
     private let delegates: NSHashTable<AnyObject> = NSHashTable.weakObjects()
@@ -63,26 +72,37 @@ internal final class MulticastDelegate<T> {
     /// Adds a new delegate to the multicast list.
     /// - Parameter delegate: The delegate to be added.
     func add(_ delegate: T) {
-        // Add the delegate only if it's not already in the list.
-        if !delegates.contains(delegate as AnyObject) {
-            delegates.add(delegate as AnyObject)
+        lock.withLock {
+            // Add the delegate only if it's not already in the list.
+            if !delegates.contains(delegate as AnyObject) {
+                delegates.add(delegate as AnyObject)
+            }
         }
     }
 
     /// Removes a specific delegate from the multicast list.
     /// - Parameter delegateToRemove: The delegate to be removed.
     func remove(_ delegateToRemove: T) {
-        // Iterating in reverse to safely remove elements while iterating.
-        for delegate in delegates.allObjects.reversed() where delegate === delegateToRemove as AnyObject {
-            delegates.remove(delegate)
+        lock.withLock {
+            // `allObjects` is already a snapshot, so removing while walking it is safe.
+            for delegate in delegates.allObjects.reversed() where delegate === delegateToRemove as AnyObject {
+                delegates.remove(delegate)
+            }
         }
     }
 
     /// Invokes a closure on all the delegates in the multicast list.
+    ///
+    /// Iterates a snapshot taken under `lock`, so a delegate whose callback registers or removes
+    /// another delegate cannot mutate the table mid-iteration. Callbacks run outside the lock:
+    /// `NSLock` is not recursive, so a subscriber reaching back into `registerCallback` from its
+    /// own callback would otherwise deadlock.
+    ///
     /// - Parameter invocation: A closure that takes a delegate and performs an action.
     func invoke(_ invocation: (T) -> Void) {
+        let snapshot = lock.withLock { delegates.allObjects.reversed() }
         // Ensure that force-casting is safe by iterating through the delegates.
-        for delegate in delegates.allObjects.reversed() {
+        for delegate in snapshot {
             guard let castedDelegate = delegate as? T else { continue }
             invocation(castedDelegate)
         }
