@@ -586,14 +586,27 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     /// Releases processing or sends the background fake reload when no live event is queued.
     private func handleEmptyEventQueue() {
         guard userSessionStateMachine.getCurrentState() == .backgroundToInitialScreen else {
-            resetProcessingEventStatus()
+            releaseAfterEmptyQueue()
             return
         }
 
         userSessionStateMachine.markNormal()
         if !publishFakeReloadScreenEvent(nil, nil, isFakeReload: false) {
-            resetProcessingEventStatus()
+            releaseAfterEmptyQueue()
         }
+    }
+
+    /// Releases the gate, then re-drives processing if an internal SDK event reached the cache
+    /// after this cycle already drained it.
+    ///
+    /// Every other release path ends with `processEvent()`; this one is the exception, so an
+    /// event `publishInternalSDKEvent` cached while the gate was held would sit there until the
+    /// next analytics event or reconnect — a content or theme fetch stuck that way never renders.
+    /// The re-driven cycle drains the cache and comes back here with it empty, so this settles.
+    private func releaseAfterEmptyQueue() {
+        resetProcessingEventStatus()
+        guard hasCachedSDKEvents else { return }
+        processEvent()
     }
 
     /// Publishes the queued event using the matching event-specific path.
