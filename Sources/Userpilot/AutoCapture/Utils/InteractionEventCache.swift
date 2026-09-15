@@ -50,9 +50,9 @@ internal enum InteractionEventCache {
         guard Userpilot.isInitialized else { return }
         // swiftlint:disable:next multiple_closures_with_trailing_closure superfluous_disable_command
         if let length = envelope.textLengthForDedupe {
-            lastDeliveredLock.lock()
-            lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
-            lastDeliveredLock.unlock()
+            lastDeliveredLock.withLock {
+                lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
+            }
         }
         // Re-resolve the owning instance at delivery time so it always reflects the
         // current Registry state. If the source view has been deallocated, fall back
@@ -73,9 +73,7 @@ internal enum InteractionEventCache {
         let key = debounceKey(for: view)
 
         if let length = textLengthForDedupe {
-            lastDeliveredLock.lock()
-            let last = lastDeliveredTextLengthByDebounceKey[key]
-            lastDeliveredLock.unlock()
+            let last = lastDeliveredLock.withLock { lastDeliveredTextLengthByDebounceKey[key] }
             guard last != length else { return }
         }
 
@@ -90,9 +88,7 @@ internal enum InteractionEventCache {
 
     static func flushAll() {
         debouncer.cancelAll()
-        lastDeliveredLock.lock()
-        lastDeliveredTextLengthByDebounceKey.removeAll()
-        lastDeliveredLock.unlock()
+        lastDeliveredLock.withLock { lastDeliveredTextLengthByDebounceKey.removeAll() }
     }
 
     /// Publishes any debounced interaction that is still waiting for its quiet period.

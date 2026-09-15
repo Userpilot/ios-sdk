@@ -96,9 +96,8 @@ internal class AutoCaptureCoordinater {
 
     /// Per-instance stop/resume gate. When `true`, this instance records no screen
     /// or interaction events until `resumeAutoCapture()` is called; other instances
-    /// are unaffected. Guarded by `stopResumeLock`.
-    private let stopResumeLock = NSLock()
-    private var _isStopped = false
+    /// are unaffected.
+    private let stoppedState = AtomicReference<Bool>(false)
 
     // MARK: - Computed Helpers
 
@@ -277,21 +276,15 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
 
     /// `true` while this instance's capture is paused. Thread-safe.
     var isStopped: Bool {
-        stopResumeLock.lock()
-        defer { stopResumeLock.unlock() }
-        return _isStopped
+        stoppedState.value
     }
 
     func stopAutoCapture() {
-        stopResumeLock.lock()
-        _isStopped = true
-        stopResumeLock.unlock()
+        stoppedState.value = true
     }
 
     func resumeAutoCapture() {
-        stopResumeLock.lock()
-        _isStopped = false
-        stopResumeLock.unlock()
+        stoppedState.value = false
     }
 }
 
