@@ -21,12 +21,6 @@
 		AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB46B0A32D07134B0054D249 /* Userpilot */; };
 		AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
-		FACF000000000000000000B1 /* ConfigViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A1 /* ConfigViewController.swift */; };
-		FACF000000000000000000B2 /* ConfigFlag.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A2 /* ConfigFlag.swift */; };
-		FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */; };
-		UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */; };
-		UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */; };
-		UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */; };
 		AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */; };
 		AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */; };
 		AB6ABAAC2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAAA2CE88FFD00FB72A8 /* SDKEventTableViewCell.swift */; };
@@ -60,7 +54,6 @@
 		ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */; };
 		ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */; };
 		ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */; };
-		UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */; };
 		ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB317B2F73F58400E1789D /* PickerViewTestViewController.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
@@ -75,13 +68,20 @@
 		ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */; };
 		ABFB5FE42C9173D60054E142 /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE32C9173D60054E142 /* CardView.swift */; };
 		ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE52C91743B0054E142 /* OutlineButton.swift */; };
-		UPA91C2E4B7D6E8F0A1B2C01 /* SampleAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */; };
 		ABFB5FE82C9175030054E142 /* UITableReusableView+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */; };
 		ABFD95802D0E096500F8F757 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = ABFD957F2D0E096500F8F757 /* Userpilot */; };
 		C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897B82C5CFFFA0083928E /* AppDelegate.swift */; };
 		C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */; };
 		C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C12C5CFFFB0083928E /* Assets.xcassets */; };
 		C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */; };
+		FACF000000000000000000B1 /* ConfigViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A1 /* ConfigViewController.swift */; };
+		FACF000000000000000000B2 /* ConfigFlag.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A2 /* ConfigFlag.swift */; };
+		FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */; };
+		UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */; };
+		UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */; };
+		UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */; };
+		UPA91C2E4B7D6E8F0A1B2C01 /* SampleAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */; };
+		UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -105,12 +105,6 @@
 		AB2564922DB4F55000393126 /* UserpilotSample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UserpilotSample.entitlements; sourceTree = "<group>"; };
 		AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+PushNotification.swift"; sourceTree = "<group>"; };
 		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
-		FACF000000000000000000A1 /* ConfigViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigViewController.swift; sourceTree = "<group>"; };
-		FACF000000000000000000A2 /* ConfigFlag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlag.swift; sourceTree = "<group>"; };
-		FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlagTableViewCell.swift; sourceTree = "<group>"; };
-		UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugViewController.swift; sourceTree = "<group>"; };
-		UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineQueueViewController.swift; sourceTree = "<group>"; };
-		UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineEventsViewController.swift; sourceTree = "<group>"; };
 		AB585F672CD79EF400E2A66D /* Dev.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Dev.xcconfig; sourceTree = "<group>"; };
 		AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaddingLabel.swift; sourceTree = "<group>"; };
 		AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKEventsViewController.swift; sourceTree = "<group>"; };
@@ -157,7 +151,6 @@
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABD07B272D6C4ED000619C47 /* Prod.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Prod.xcconfig; sourceTree = "<group>"; };
 		ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureTestViewController.swift; sourceTree = "<group>"; };
-		UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureHubViewController.swift; sourceTree = "<group>"; };
 		ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEB31732F73F58400E1789D /* TextConfigDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextConfigDemoViewController.swift; sourceTree = "<group>"; };
@@ -175,7 +168,6 @@
 		ABFB5FDC2C9171600054E142 /* EventTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTableViewCell.swift; sourceTree = "<group>"; };
 		ABFB5FE32C9173D60054E142 /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		ABFB5FE52C91743B0054E142 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
-		UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleAppearance.swift; sourceTree = "<group>"; };
 		ABFB5FE72C9175030054E142 /* UITableReusableView+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITableReusableView+Extension.swift"; sourceTree = "<group>"; };
 		C5C897B52C5CFFFA0083928E /* UserpilotSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserpilotSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5C897B82C5CFFFA0083928E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -183,6 +175,14 @@
 		C5C897C12C5CFFFB0083928E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C5C897C42C5CFFFB0083928E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C5C897C62C5CFFFB0083928E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FACF000000000000000000A1 /* ConfigViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigViewController.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A2 /* ConfigFlag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlag.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlagTableViewCell.swift; sourceTree = "<group>"; };
+		UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugViewController.swift; sourceTree = "<group>"; };
+		UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineEventsViewController.swift; sourceTree = "<group>"; };
+		UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineQueueViewController.swift; sourceTree = "<group>"; };
+		UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleAppearance.swift; sourceTree = "<group>"; };
+		UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureHubViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -358,58 +358,6 @@
 				AB585F5F2CD79C0400E2A66D /* Properties */,
 			);
 			path = Dialogs;
-			sourceTree = "<group>";
-		};
-		FACF000000000000000000C1 /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				FACF000000000000000000C2 /* Models */,
-				FACF000000000000000000C3 /* Cells */,
-				FACF000000000000000000A1 /* ConfigViewController.swift */,
-			);
-			path = Config;
-			sourceTree = "<group>";
-		};
-		UP08E667051DEB4096A385C2 /* Debug */ = {
-			isa = PBXGroup;
-			children = (
-				UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */,
-				UP1D9D3FCE847D46FDB03B8A /* Offline */,
-				UPAE8C6135D07D4AA9914D9D /* OnlineQueue */,
-			);
-			path = Debug;
-			sourceTree = "<group>";
-		};
-		UPAE8C6135D07D4AA9914D9D /* OnlineQueue */ = {
-			isa = PBXGroup;
-			children = (
-				UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */,
-			);
-			path = OnlineQueue;
-			sourceTree = "<group>";
-		};
-		UP1D9D3FCE847D46FDB03B8A /* Offline */ = {
-			isa = PBXGroup;
-			children = (
-				UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */,
-			);
-			path = Offline;
-			sourceTree = "<group>";
-		};
-		FACF000000000000000000C2 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				FACF000000000000000000A2 /* ConfigFlag.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		FACF000000000000000000C3 /* Cells */ = {
-			isa = PBXGroup;
-			children = (
-				FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */,
-			);
-			path = Cells;
 			sourceTree = "<group>";
 		};
 		ABACA8632C96E3E9006C9B77 /* UI */ = {
@@ -610,6 +558,58 @@
 			path = UserpilotSample;
 			sourceTree = "<group>";
 		};
+		FACF000000000000000000C1 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000C2 /* Models */,
+				FACF000000000000000000C3 /* Cells */,
+				FACF000000000000000000A1 /* ConfigViewController.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C2 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000A2 /* ConfigFlag.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C3 /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */,
+			);
+			path = Cells;
+			sourceTree = "<group>";
+		};
+		UP08E667051DEB4096A385C2 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */,
+				UP1D9D3FCE847D46FDB03B8A /* Offline */,
+				UPAE8C6135D07D4AA9914D9D /* OnlineQueue */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		UP1D9D3FCE847D46FDB03B8A /* Offline */ = {
+			isa = PBXGroup;
+			children = (
+				UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */,
+			);
+			path = Offline;
+			sourceTree = "<group>";
+		};
+		UPAE8C6135D07D4AA9914D9D /* OnlineQueue */ = {
+			isa = PBXGroup;
+			children = (
+				UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */,
+			);
+			path = OnlineQueue;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -667,7 +667,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */,
+				AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -686,8 +686,8 @@
 				ABAC8E6E2CE9E9D0005EEC9D /* SDKEventTableViewCell.xib in Resources */,
 				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
 				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
-			AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
-			AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
+				AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
+				AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
 				AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */,
 				AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */,
 				C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */,
@@ -1108,9 +1108,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */ = {
+		AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../ios-sdk";
+			relativePath = "../../../ios-sdk copy";
 		};
 /* End XCLocalSwiftPackageReference section */
 
