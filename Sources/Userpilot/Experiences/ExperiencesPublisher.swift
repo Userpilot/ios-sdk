@@ -117,8 +117,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     /// The current screen title being tracked
     private lazy var currentScreen: String = ""
 
-    /// The last screen on which NPS was shown, preventing repeated NPS on same screen.
-    private lazy var npsTrackedScreen: String = ""
+    /// Set when NPS is presented so it shows at most once per screen visit, matching Android.
+    /// Cleared by `resetState()` when the screen changes or the user logs out.
+    /// Atomic because presentation writes on main while socket and reset paths use other queues.
+    private let npsShownOnCurrentScreen = AtomicReference(false)
 
     /// Queue to track pending experience content waiting to be displayed
     private var pendingExperiences: [ExperienceContent] = []
@@ -804,10 +806,14 @@ extension ExperiencesPublisher {
         )
     }
 
-    /** Opens an NPS experience as a bottom sheet fragment */
+    /** Opens an NPS experience as a bottom sheet, at most once per screen visit. */
     private func openNPSBottomSheetExperience(_ experienceContent: ExperienceContent) {
-        if currentScreen == npsTrackedScreen {
-            resetProcessingExperienceStatus()
+        if npsShownOnCurrentScreen.value {
+            logger.info("🎯 NPS suppressed - already shown on the current screen")
+            // Drain the queue rather than only resetting the state: every launch path reads
+            // `pendingExperiences.first`, so an NPS left at the head after being refused blocks
+            // each experience that arrives behind it until the screen changes.
+            processNextPendingExperiences()
             return
         }
         showExperience(
@@ -932,7 +938,7 @@ extension ExperiencesPublisher {
                         self.experienceStateMachine.setActiveComponent(upExperience)
                     }
                     if viewController.isKind(of: NPSBottomSheetViewController.self) {
-                        self.npsTrackedScreen = self.currentScreen
+                        self.npsShownOnCurrentScreen.value = true
                     }
                     switch presentation {
                     case .fullScreen, .normal:
@@ -1067,7 +1073,7 @@ extension ExperiencesPublisher {
         tryCatch {
             delayUtils.cancelDelay()
             clearPendingExperiences()
-            npsTrackedScreen = ""
+            npsShownOnCurrentScreen.value = false
 
             if hasActiveExperience || experienceStateMachine.getActiveComponent() != nil {
                 endExperience(manualClose: true, completion: completion)
@@ -1304,6 +1310,10 @@ extension ExperiencesPublisher {
 
     func mockGetCurrentScreen() -> String {
         return currentScreen
+    }
+
+    func mockSetNPSShownOnCurrentScreen(_ shown: Bool) {
+        npsShownOnCurrentScreen.value = shown
     }
 
     func mockActiveExperience(experience: UIViewController) {

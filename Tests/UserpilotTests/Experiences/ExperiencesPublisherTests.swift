@@ -356,6 +356,97 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
     }
 
+    /// Regression: an NPS refused because one already ran on this screen used to stay at the head of
+    /// the pending queue. `openExperienceFlow()` always reads that head, so every experience arriving
+    /// afterwards was decoded and queued but never rendered — content returned by a track event
+    /// stopped appearing for as long as the user stayed on the screen.
+    func testOnNewMessage_shouldShowContent_WhenARefusedNPSIsQueuedOnTheSameScreen() {
+        // Arrange — an NPS has already been shown on "Home", so a repeat one must be refused
+        let expectation = XCTestExpectation(description: "Track event content becomes the active content")
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
+
+        // Act — the repeat NPS arrives, then a track event returns flow content
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeNPSContentPayload()),
+            true
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.experiencesPublisher.onNewMessage(
+                Message(payload: ["payload": MockContentFactory.makeFlowContentPayload()])
+            )
+
+            // Assert — the refused NPS must not be holding the queue head
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                guard case .flow(let content) = self.experiencesPublisher.getActiveMobileContent() else {
+                    XCTFail("Expected the track event's flow content, not the refused NPS")
+                    expectation.fulfill()
+                    return
+                }
+                XCTAssertEqual(content.id, 77)
+                expectation.fulfill()
+            }
+        }
+
+        wait(for: [expectation], timeout: 2.0)
+    }
+
+    /// The queue drain must not weaken the dedup itself: a repeat NPS on the screen it already ran
+    /// on is still dropped rather than shown again.
+    func testOnSocketEventSent_shouldDropRepeatNPS_OnTheScreenItAlreadyRanOn() {
+        // Arrange
+        let expectation = XCTestExpectation(description: "Repeat NPS is dropped")
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
+
+        // Act — reporting the same screen must not make NPS eligible again
+        experiencesPublisher.updateScreen("Home")
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeNPSContentPayload()),
+            true
+        )
+
+        // Assert
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent())
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testUpdateScreen_shouldMakeNPSEligibleAgain_WhenReturningToThePreviousScreen() {
+        // Arrange — NPS already ran during the previous visit to Home
+        let expectation = XCTestExpectation(description: "NPS is eligible on the next screen visit")
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
+
+        // Act — leave Home and return, then receive NPS again
+        experiencesPublisher.updateScreen("Details")
+        experiencesPublisher.updateScreen("Home")
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeNPSContentPayload()),
+            true
+        )
+
+        // Assert — the NPS is accepted instead of being suppressed for the previous visit
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self else { return }
+            guard case .nps = self.experiencesPublisher.getActiveMobileContent() else {
+                XCTFail("Expected NPS to be eligible on the next visit to Home")
+                expectation.fulfill()
+                return
+            }
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+
     func testOnSocketEventSent_shouldSelectSurvey_WhenHigherPriorityFlowWasSeen() {
         // Arrange
         let expectation = XCTestExpectation(description: "Unseen survey should be selected")
