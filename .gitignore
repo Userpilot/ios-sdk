@@ -74,3 +74,7 @@ CLAUDE.md
 # Locally generated agent specs/plans — not project documentation
 docs/superpowers/
 plan/
+
+# Local GitHub Actions cleanup helper and audit records
+/scripts/cleanup-github-actions.py
+/.local/github-actions-cleanup/
