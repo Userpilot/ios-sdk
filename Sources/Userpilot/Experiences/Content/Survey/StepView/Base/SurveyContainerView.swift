@@ -42,7 +42,8 @@ internal class SurveyContainerView: UIView {
     private lazy var barStepsProgressView: UPStepsBarProgressView = {
         let progressView = UPStepsBarProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.heightAnchor.constraint(equalToConstant: 5).isActive = true
+        progressView.heightAnchor.constraint(
+            equalToConstant: ThemeHandler.DefaultValues.stepsProgressBarHeight).isActive = true
         return progressView
     }()
 
