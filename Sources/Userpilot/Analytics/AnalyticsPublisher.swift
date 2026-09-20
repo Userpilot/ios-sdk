@@ -394,6 +394,15 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Network monitor is ready and reports no network: persist locally
             if offlineEventsHandler.shouldSaveOffline {
+                // Screen state is local bookkeeping, so it must not wait for the network.
+                // setupScreenEvent is the only place a new screen session starts with an empty
+                // seen set, and restored offline events go to the backend as a raw batch that
+                // never re-enters screen(_:) - so navigation performed offline would otherwise
+                // stay invisible to the session, and content already seen on a screen would
+                // remain suppressed when the user came back to it online.
+                if event.isScreenEvent {
+                    setupScreenEvent(event)
+                }
                 handleOfflineEvent(event)
                 return
             }

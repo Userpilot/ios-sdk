@@ -614,6 +614,53 @@ class AnalyticsPublisherTests: XCTestCase {
         )
     }
 
+    /// A screen tracked while offline is only persisted, never published, so the seen sets that
+    /// suppress already-shown content have to be reset here too. Without it, content shown before
+    /// the connection dropped stays suppressed when the user navigates away and comes back.
+    func testPublish_offlineScreenChange_shouldClearSeenContent() throws {
+        // Arrange — a flow already shown on the current screen
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        analyticsPublisher.experiencePublished(.flow, flow.id)
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+
+        // Act — the user navigates to another screen with no network
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.publish(Event(type: .screen("Screen Y")))
+
+        // Assert — the flow is eligible again, and the screen event is still only stored
+        XCTAssertFalse(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.event.screenTitle, "Screen Y")
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    /// Re-entering the same screen is not navigation, so what was shown there stays suppressed.
+    func testPublish_offlineSameScreen_shouldKeepSeenContent() throws {
+        // Arrange — a flow already shown on the current screen
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        analyticsPublisher.experiencePublished(.flow, flow.id)
+
+        // Act — the same screen is tracked again with no network
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+
+        // Assert — it is still recorded as seen
+        XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
+    }
+
     func testIsExperienceSeen_shouldNotCrossTypesForTheSameNumericId() throws {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.
