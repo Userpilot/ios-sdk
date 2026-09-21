@@ -10,13 +10,6 @@
 
 import Foundation
 
-/// Which pipeline a stored offline row came from.
-internal enum StoredOfflineEventKind: String, Codable {
-    case analytics
-    /// `internal` is a Swift keyword, so the case is spelled differently from its raw value.
-    case internalEvent = "internal"
-}
-
 /// The envelope persisted inside `EventStorage.data`.
 ///
 /// An analytics row nests the existing `Codable` `Event`; an internal row carries the SDK
@@ -82,7 +75,9 @@ extension StoredOfflineEvent: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
             ?? Self.schemaVersionValue
-        kind = try container.decodeIfPresent(StoredOfflineEventKind.self, forKey: .kind) ?? .analytics
+        // Required, not defaulted: every writer sets it, so a row without one is corrupt and
+        // must not be silently filed as analytics. Matches the Android envelope.
+        kind = try container.decode(StoredOfflineEventKind.self, forKey: .kind)
         eventType = try container.decode(String.self, forKey: .eventType)
         event = try container.decodeIfPresent(Event.self, forKey: .event)
 
