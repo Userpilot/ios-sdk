@@ -137,7 +137,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
         qos: .userInteractive
     )
 
-    /// Date when a fake screen reload event was last requested
+    /// Date when a fake screen reload event was last requested.
+    /// Armed on every experience close, online or offline. Closing an experience makes the host
+    /// surface re-emit its screen event, and that repeat is an artifact of the dismissal rather
+    /// than real navigation whether or not a socket is there to carry the fake reload — offline it
+    /// would otherwise be persisted and replayed to the backend as a genuine screen view.
     private var requestFakeScreenReloadEventDate: Date?
 
     /// Track last active experience
@@ -404,9 +408,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             if isPreviewExperienceMode() {
                 if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                     activeExperience = nil
-                    if socketManager.isSocketOpened {
-                        requestFakeScreenReloadEventDate = Date()
-                    }
+                    requestFakeScreenReloadEventDate = Date()
                     analyticsPublisher.publishFakeReloadScreenEvent(
                         sdkEvent.getContentType(),
                         sdkEvent.getContentId()
@@ -430,9 +432,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
             // closing the experience directly won't trigger screen content
             if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                 activeExperience = nil
-                if socketManager.isSocketOpened {
-                    requestFakeScreenReloadEventDate = Date()
-                }
+                requestFakeScreenReloadEventDate = Date()
             }
 
             // Don't trigger fake reload for NPS experiences or experiences with deep links

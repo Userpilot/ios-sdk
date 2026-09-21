@@ -715,6 +715,45 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertFalse(canRequest)
     }
 
+    /// Closing an experience makes the host surface re-emit its screen event whether or not a
+    /// socket is there to carry the fake reload, so the suppression window has to be armed while
+    /// offline too — otherwise the repeat is persisted and later replayed to the backend as a
+    /// genuine screen view.
+    func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseEventWhileOffline() {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = false
+        let mockEvent = MockSDKEvent(eventName: "dismissed_mobile_content")
+        mockEvent.isCloseEvent = true
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(mockEvent)
+        let canRequest = experiencesPublisher.canRequestScreenEvent()
+
+        // Assert
+        XCTAssertFalse(canRequest)
+    }
+
+    /// The preview close path re-emits the host screen event for the same reason, so it arms the
+    /// window while offline too.
+    func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForPreviewCloseWhileOffline() {
+        // Arrange
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.experienceStateMachine.markPreviewMode()
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in return true }
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 77]
+        )
+        closeEvent.isCloseEvent = true
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+        let canRequest = experiencesPublisher.canRequestScreenEvent()
+
+        // Assert
+        XCTAssertFalse(canRequest)
+    }
+
     func testPublishInternalSDKEvent_shouldHandleCloseEvent_WithDeepLink() {
         // Arrange
         let mockEvent = MockSDKEvent(eventName: "close-event", hasDeepLink: true)

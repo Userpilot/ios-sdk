@@ -661,6 +661,42 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
     }
 
+    /// Dismissing a Userpilot experience makes the host surface re-emit its screen event. Online
+    /// that repeat is dropped, because the dismissal already sent a fake reload for the same
+    /// screen. Persisting it while offline replayed it to the backend as a genuine screen view,
+    /// making it re-evaluate content for a screen the user never actually re-entered.
+    func testPublish_offlineSameScreenAfterAnExperienceClosed_shouldNotStoreTheRepeat() {
+        // Arrange — the user is on "Screen X" and an experience has just been dismissed there,
+        // which is what leaves `canRequestScreenEvent()` reporting false
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { return false }
+
+        // Act — the host surface re-emits the same screen with no network
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+
+        // Assert — nothing is persisted, and the screen session still tracks the screen
+        XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
+        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.event.screenTitle, "Screen X")
+    }
+
+    /// The cooldown suppresses repeats, never real navigation — that would lose the screen.
+    func testPublish_offlineNavigationAfterAnExperienceClosed_shouldStillBeStored() {
+        // Arrange — the user is on "Screen X" and an experience has just been dismissed there
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { return false }
+
+        // Act — the user navigates to another screen with no network
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.publish(Event(type: .screen("Screen Y")))
+
+        // Assert — the navigation is persisted
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.first?.event.screenTitle, "Screen Y")
+    }
+
     func testIsExperienceSeen_shouldNotCrossTypesForTheSameNumericId() throws {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.

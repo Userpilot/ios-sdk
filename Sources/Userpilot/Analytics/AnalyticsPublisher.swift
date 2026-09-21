@@ -394,15 +394,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
             // Network monitor is ready and reports no network: persist locally
             if offlineEventsHandler.shouldSaveOffline {
-                // Screen state is local bookkeeping, so it must not wait for the network.
-                // setupScreenEvent is the only place a new screen session starts with an empty
-                // seen set, and restored offline events go to the backend as a raw batch that
-                // never re-enters screen(_:) - so navigation performed offline would otherwise
-                // stay invisible to the session, and content already seen on a screen would
-                // remain suppressed when the user came back to it online.
-                if event.isScreenEvent {
-                    setupScreenEvent(event)
-                }
+                if event.isScreenEvent, !shouldStoreScreenEventOffline(event) { return }
                 handleOfflineEvent(event)
                 return
             }
@@ -424,6 +416,32 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 handleClosedSocket(event)
             }
         }
+    }
+
+    /**
+     * Records an offline screen event in the screen session and reports whether it is worth
+     * persisting.
+     *
+     * The state update always runs: screen state is local bookkeeping, so it must not wait for
+     * the network. `setupScreenEvent(_:)` is the only place a new screen session starts with an
+     * empty seen set, and restored offline events go to the backend as a raw batch that never
+     * re-enters `screen(_:)` - so navigation performed offline would otherwise stay invisible to
+     * the session, and content already seen on a screen would remain suppressed when the user
+     * came back to it online.
+     *
+     * The verdict mirrors `screen(_:)`: a move to a different screen is always kept, while a
+     * repeat of the screen the user is already on is kept only when
+     * `ExperiencesPublishing.canRequestScreenEvent()` allows it. Without that second check the
+     * screen event the host surface re-emits when a Userpilot experience is dismissed - dropped
+     * outright while online - would be persisted and later replayed as a genuine screen view,
+     * making the backend re-evaluate content for a screen the user never actually re-entered.
+     *
+     * - Parameter event: The offline screen event to record
+     * - Returns: true when the event should be persisted
+     */
+    private func shouldStoreScreenEventOffline(_ event: Event) -> Bool {
+        let isNewScreen = setupScreenEvent(event)
+        return isNewScreen || experiencesPublisher?.canRequestScreenEvent() == true
     }
 
     /**
