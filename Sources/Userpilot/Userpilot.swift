@@ -60,40 +60,22 @@ public class Userpilot: NSObject {
 
     // MARK: - Properties
 
-    /// A dependency injection container that stores and provides necessary services like analytics,
-    /// storage, and networking.
-    ///
     /// `var` rather than `let` so the idempotent initializer can adopt an already-registered
-    /// instance's container when `Userpilot(config:)` is called twice with the same token —
-    /// see the explanatory comment in `init(config:)`. External callers never see this
-    /// property; it remains module-internal.
+    /// instance's container when `Userpilot(config:)` is called twice with the same token.
     var container = DIContainer()
 
-    /// Configuration object that holds initialization parameters for the SDK.
     let config: Config
 
-    /// Lazy loading of the `AnalyticsPublishing` instance responsible for publishing user tracking events.
+    // Resolved lazily, never in `init`: the idempotent initializer may swap `container` for an
+    // already-registered instance's, and these must bind to that one.
     private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-
-    /// Lazy loading of the `DataStoring` instance that manages persistent storage (e.g., user data, preferences).
     private lazy var storage = container.resolve(DataStoring.self)
-
-    /// Lazy loading of the `SocketManaging` instance that manages WebSocket connections and event-driven communication.
     private lazy var socketManager = container.resolve(SocketManaging.self)
-
-    /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
-
-    /// Lazy loading of the `ExperiencesPublishing` instance that manages app lifecycle.
     private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-
-    /// Lazy loading AutoPropertyDecoratoring
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
-
-    /// Lazy loading pushNotificationMonitoring
     private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
-
-    /// Lazy loading SDK logger
+    private lazy var linkOpener = container.resolve(LinkOpening.self)
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
@@ -135,7 +117,14 @@ public class Userpilot: NSObject {
     // MARK: - Delegates
 
     /// The delegate object that handles application screen navigation during experience presentation.
-    @objc public weak var navigationDelegate: UserpilotNavigationDelegate?
+    @objc public weak var navigationDelegate: UserpilotNavigationDelegate? {
+        didSet {
+            // A cold-start push deep link may be held waiting on exactly this assignment: the
+            // notification is replayed from inside `init`, before a host could set a delegate.
+            guard navigationDelegate != nil else { return }
+            linkOpener.processPendingDeepLink()
+        }
+    }
 
     /// The delegate object that broadcast analytics events.
     @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
@@ -215,6 +204,14 @@ public class Userpilot: NSObject {
 
         // Log the initialization of the SDK with the current version.
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
+
+        // Hosts assign `navigationDelegate` on the lines *after* this constructor returns, so a
+        // cold-start push replayed by `register(observer:)` above has nowhere to route to yet.
+        // Opening routing one runloop turn later lets those assignments land first, and still
+        // delivers the link for hosts that never set a delegate at all.
+        performOn(.main) { [weak self] in
+            self?.linkOpener.processPendingDeepLink()
+        }
     }
 
     deinit {

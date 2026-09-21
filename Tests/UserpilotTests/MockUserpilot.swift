@@ -248,6 +248,11 @@ class MockLinkOpening: LinkOpening {
     func handleURL(_ url: URL) {
         onHandleURL?(url)
     }
+
+    var didProcessPendingDeepLink = false
+    func processPendingDeepLink() {
+        didProcessPendingDeepLink = true
+    }
 }
 
 // MARK: - Mock Socket Manager
