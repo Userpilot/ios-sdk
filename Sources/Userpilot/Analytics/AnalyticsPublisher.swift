@@ -1305,7 +1305,8 @@ extension AnalyticsPublisher {
      * session-start state, fake-reload flag, and seen experiences/surveys.
      *
      * This is the single place a `screen` message is published, so it is also the single place the
-     * preceding identify is sent when `Config.enableRequestIdentifyBeforeScreen(_:)` is on.
+     * preceding identify is sent when `Config.enableRequestIdentifyBeforeScreen(_:)` is on and the
+     * single place the cached internal SDK events are flushed ahead of it.
      *
      * - Parameter precedeWithIdentify: false only for the screen event that already follows an
      *   acknowledged identify, which would otherwise repeat it.
@@ -1318,6 +1319,19 @@ extension AnalyticsPublisher {
     ) -> Bool {
         ensureScreenSessionStateMachine()
         guard let screenSessionStateMachine else { return false }
+
+        // Cached internal SDK events go out first. A `screen` message makes the backend
+        // re-evaluate content for this surface, so a step-seen/completed/dismissed event still
+        // sitting in the cache would be judged against a screen the backend already answered — a
+        // dismissal arriving after the fake reload it triggered gets the dismissed content served
+        // straight back. `processEvent` drains ahead of the event queue, but its single-flight gate
+        // makes that drain a no-op while another cycle holds it — an event awaiting its ack (the
+        // post-identify screen push in `onSocketEventSent` runs inside exactly that claimed cycle)
+        // or an asynchronous offline restore — and the screen still goes out. A persisted offline
+        // batch keeps its head start: it is published from
+        // `restoreOfflineEventsIfNeeded()` on the processing cycle that a socket open always runs,
+        // before any screen message can be pushed from here.
+        processSDKEvent()
 
         if precedeWithIdentify { publishIdentifyBeforeScreen() }
 

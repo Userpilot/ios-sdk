@@ -1262,6 +1262,33 @@ class AnalyticsPublisherTests: XCTestCase {
 
         XCTAssertTrue(resynced)
     }
+
+    // MARK: - Internal SDK Events Ordering Around A Screen Message
+
+    /// A `screen` message makes the backend re-evaluate content for the surface, so a cached
+    /// dismissal has to be on the wire first — otherwise the fake reload the dismissal itself
+    /// triggered gets the dismissed content served straight back.
+    ///
+    /// The cause reproduced here is the one that does not depend on dispatch: the event is cached
+    /// while the socket is down, so nothing drains it, and the reload then pushes the screen from
+    /// `publishScreenEvent`. On device the same gap opens whenever `processEvent`'s single-flight
+    /// gate is already claimed (e.g. an asynchronous offline restore) and the drain it schedules
+    /// never runs.
+    func testFakeReload_shouldPushCachedSDKEventsBeforeTheScreenEvent() {
+        // Arrange — a live screen session, and a content dismissal cached while the socket was down
+        arrangeReloadableScreen()
+        userpilot.socketManager.isSocketOpened = false
+        analyticsPublisher.publishInternalSDKEvent(
+            MockSDKEvent(eventName: "dismissed_mobile_content"))
+        userpilot.socketManager.isSocketOpened = true
+        let published = recordPublishedEvents()
+
+        // Act — the dismissal drives a fake reload for the current screen
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 2, isFakeReload: true))
+
+        // Assert — the dismissal reaches the socket before the screen message
+        XCTAssertEqual(published(), ["dismissed_mobile_content", Constants.Event.screenEvent])
+    }
 }
 
 // swiftlint:enable all
