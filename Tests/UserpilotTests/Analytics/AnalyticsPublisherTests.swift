@@ -587,6 +587,57 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(publishedEvents, ["sdk-event-1", "sdk-event-2"])
     }
 
+    /// Losing the network with an experience on screen produces an error close, and Phoenix keeps
+    /// retrying, so the close repeats. Internal SDK events are held only in memory — unlike
+    /// analytics events they are never written to the offline database — so dropping them on an
+    /// error close would lose the dismissal for good and the backend would serve the dismissed
+    /// content again. A transport error is not a teardown: the user has not changed and the socket
+    /// is expected back.
+    func testOnSocketClosed_afterASocketError_shouldKeepCachedSDKEventsForTheReconnect() {
+        // Arrange — the network died and a content dismissal was cached
+        userpilot.socketManager.isSocketOpened = false
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { eventName, _ in
+            publishedEvents.append(eventName)
+        }
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
+        XCTAssertTrue(publishedEvents.isEmpty)
+
+        // Act — a reconnect attempt fails and the channel reports the error close
+        userpilot.socketManager.didCloseFromError = true
+        analyticsPublisher.onSocketClosed()
+
+        // Act — the connection comes back
+        userpilot.socketManager.didCloseFromError = false
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        // Assert — the dismissal still reaches the backend
+        XCTAssertEqual(publishedEvents, ["content-dismissed"])
+    }
+
+    /// A logout *is* a teardown, so the opposite has to hold too: the previous session's cached
+    /// SDK events must not leak into the next one.
+    func testLogout_shouldDropCachedSDKEvents() {
+        // Arrange — a cached SDK event and a closed socket
+        userpilot.socketManager.isSocketOpened = false
+        var publishedEvents: [String] = []
+        userpilot.socketManager.onPublish = { eventName, _ in
+            publishedEvents.append(eventName)
+        }
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
+
+        // Act — the SDK is torn down
+        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+
+        // Act — a socket opens for the next session
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        // Assert — the previous session's event does not leak into it
+        XCTAssertTrue(publishedEvents.isEmpty)
+    }
+
     func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.
