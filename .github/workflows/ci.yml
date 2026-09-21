@@ -15,7 +15,7 @@
 #
 # Only the SDK is built here — the Sample/ apps are covered by publish-sample.yml.
 
-name: CI
+name: Quality Gate
 
 on:
   pull_request:
@@ -25,7 +25,7 @@ on:
 
 # 🛑 A new push to the same PR/branch supersedes the previous run
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
