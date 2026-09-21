@@ -1340,6 +1340,66 @@ class AnalyticsPublisherTests: XCTestCase {
         // Assert — the dismissal reaches the socket before the screen message
         XCTAssertEqual(published(), ["dismissed_mobile_content", Constants.Event.screenEvent])
     }
+
+    // MARK: - Internal SDK Events Offline Gate
+
+    // The three tests below assert synchronously on purpose. `publishInternalSDKEvent`
+    // (`Sources/Userpilot/Analytics/AnalyticsPublisher.swift:1202`) runs its whole body on the
+    // calling thread: `tryCatch` (`Sources/Userpilot/Utilities/Helper/Utils.swift:149`) is a plain
+    // non-escaping `try?` wrapper, and the gate sits ahead of every dispatch in the method, so the
+    // mock has already been touched by the time the call returns.
+    //
+    // Each one also pins the *other* branch — whether `openSocket()` ran — so the `isEmpty`
+    // assertions cannot pass by the event having been dropped on the floor.
+
+    func testPublishInternalSDKEvent_persistsAnEligibleEventWhileOffline() throws {
+        let offlineHandler = try XCTUnwrap(
+            userpilot.container.resolve(OfflineEventsHandling.self) as? MockOfflineEventsHandler)
+        offlineHandler.shouldSaveOffline = true
+        var didOpenSocket = false
+        userpilot.socketManager.onConnect = { didOpenSocket = true }
+        let sdkEvent = MockSDKEvent(
+            eventName: "seen_mobile_content_step",
+            eventPayload: ["mobile_content_id": 42]
+        )
+
+        analyticsPublisher.publishInternalSDKEvent(sdkEvent)
+
+        XCTAssertEqual(offlineHandler.savedSDKEvents.count, 1)
+        XCTAssertEqual(offlineHandler.savedSDKEvents.first?.eventName, "seen_mobile_content_step")
+        // The early return is load-bearing beyond the persist: reopening the socket cannot
+        // succeed with no network.
+        XCTAssertFalse(didOpenSocket)
+    }
+
+    func testPublishInternalSDKEvent_keepsTheInMemoryPathForAnIneligibleEventWhileOffline() throws {
+        let offlineHandler = try XCTUnwrap(
+            userpilot.container.resolve(OfflineEventsHandling.self) as? MockOfflineEventsHandler)
+        offlineHandler.shouldSaveOffline = true
+        var didOpenSocket = false
+        userpilot.socketManager.onConnect = { didOpenSocket = true }
+
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+
+        XCTAssertTrue(offlineHandler.savedSDKEvents.isEmpty)
+        // Neither persisted nor dropped: a request/response event still takes the cached route
+        // and still asks for a socket, so it retries live on reconnect.
+        XCTAssertTrue(didOpenSocket)
+    }
+
+    func testPublishInternalSDKEvent_doesNotPersistWhenTheNetworkIsAvailable() throws {
+        let offlineHandler = try XCTUnwrap(
+            userpilot.container.resolve(OfflineEventsHandling.self) as? MockOfflineEventsHandler)
+        offlineHandler.shouldSaveOffline = false
+        var didOpenSocket = false
+        userpilot.socketManager.onConnect = { didOpenSocket = true }
+
+        analyticsPublisher.publishInternalSDKEvent(
+            MockSDKEvent(eventName: "seen_mobile_content_step", eventPayload: ["mobile_content_id": 42]))
+
+        XCTAssertTrue(offlineHandler.savedSDKEvents.isEmpty)
+        XCTAssertTrue(didOpenSocket)
+    }
 }
 
 // swiftlint:enable all

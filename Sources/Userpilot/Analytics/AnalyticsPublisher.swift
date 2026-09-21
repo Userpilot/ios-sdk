@@ -1201,6 +1201,16 @@ extension AnalyticsPublisher {
      */
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
         tryCatch {
+            // No network: persist the eligible ones so they replay in the offline batch with the
+            // analytics events around them, in createdAt order within that batch. The early
+            // return also skips the openSocket() below, which cannot succeed while offline. An
+            // ineligible event falls through and keeps the in-memory path — it is neither
+            // persisted nor dropped.
+            if offlineEventsHandler.shouldSaveOffline, sdkEvent.isOfflineEligible {
+                offlineEventsHandler.saveSDKEventToLocalStorage(sdkEvent)
+                return
+            }
+
             // Every internal SDK event takes the cached route, never a direct send. The
             // cache is drained from `processEvent` *after* `restoreOfflineEventsIfNeeded()`,
             // so a syncing offline batch always reaches the backend first - no gate and no

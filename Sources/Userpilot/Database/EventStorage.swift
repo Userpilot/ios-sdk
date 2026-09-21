@@ -22,7 +22,11 @@ internal struct EventStorage: Codable {
     let sizeBytes: Int
 
     init?(_ event: Event, _ token: String, _ userId: String) {
-        guard let data = try? UserpilotEncoder.shared.encode(event) else {
+        self.init(StoredOfflineEvent(event: event), token, userId)
+    }
+
+    init?(_ stored: StoredOfflineEvent, _ token: String, _ userId: String) {
+        guard let data = try? UserpilotEncoder.shared.encode(stored) else {
             return nil
         }
         self.requestId = UUID()
@@ -33,12 +37,11 @@ internal struct EventStorage: Codable {
         self.sizeBytes = data.count
     }
 
-    /// Decodes the stored event data back to an Event object
-    func toEvent() -> Event? {
+    /// Decodes the stored envelope back to a `StoredOfflineEvent`.
+    func toStoredEvent() -> StoredOfflineEvent? {
         do {
-            return try UserpilotDecoder.shared.decode(Event.self, from: data)
+            return try UserpilotDecoder.shared.decode(StoredOfflineEvent.self, from: data)
         } catch {
-            print("❌ Failed to decode Event:", error)
             return nil
         }
     }

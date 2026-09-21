@@ -28,6 +28,12 @@ internal protocol OfflineEventsHandling: AnyObject {
     ///   under the new user.
     func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool)
 
+    /// Saves an internal SDK event to local storage when network is unavailable.
+    ///
+    /// Unlike `saveEventToLocalStorage` there is no `clearStoredEventsFirst`: an internal
+    /// event is never an identify event, so an offline user switch cannot arrive here.
+    func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent)
+
     /// Restores events from local storage and publishes them as a batch
     /// - Parameter completion: Optional callback invoked when restoration is complete
     func restoreEventsFromLocalStorage(completion: (() -> Void)?)
@@ -126,16 +132,44 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
             }
 
             // Save this item to local storage so we can retry later if needed
-            eventDatabaseStorage.saveEvent(
+            persistOfflineEvent(
                 eventStorage,
-                completion: { [weak self] saved in
-                    if saved {
-                        self?.logger.info(
-                            "🗃️ Event saved to local storage: %{public}@", event.eventName)
-                    } else {
-                        self?.logger.error("⚠️ Event not saved - storage limit exceeded")
-                    }
-                })
+                eventName: event.eventName,
+                successMessage: "🗃️ Event saved to local storage: %{public}@",
+                limitMessage: "⚠️ Event not saved - storage limit exceeded")
+        }
+    }
+
+    /**
+     * Saves an internal SDK event to local storage when network is unavailable.
+     *
+     * The event is wrapped in a `StoredOfflineEvent` envelope marked `.internalEvent` so the
+     * replay path can tell it apart from an analytics row.
+     *
+     * There is deliberately no `clearStoredEventsFirst` counterpart to
+     * `saveEventToLocalStorage`: an internal event is never an identify event, so an offline
+     * user switch cannot arrive through this path. An `SDKEvent` also carries no user id of
+     * its own, so an empty `storage.userId` drops the event rather than falling back.
+     *
+     * - Parameter sdkEvent: The internal SDK event to save to local storage
+     */
+    func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent) {
+        tryCatch {
+            let userId = storage.userId
+            guard !userId.isEmpty else { return }
+
+            guard let eventStorage = EventStorage(
+                StoredOfflineEvent(sdkEvent: sdkEvent), config.token, userId
+            ) else {
+                logger.error("⚠️ Failed to encode internal event to JSON")
+                return
+            }
+
+            persistOfflineEvent(
+                eventStorage,
+                eventName: sdkEvent.eventName,
+                successMessage: "🗃️ Internal event saved to local storage: %{public}@",
+                limitMessage: "⚠️ Internal event not saved - storage limit exceeded")
         }
     }
 
@@ -184,23 +218,36 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
                         var eventsList: [[String: Any]] = []
 
                         for eventStorage in localEvents {
-                            guard let event = eventStorage.toEvent() else {
+                            guard let stored = eventStorage.toStoredEvent(), stored.isSupportedSchema else {
                                 self.logger.error("⚠️ Failed to decode event from local storage")
                                 continue
                             }
 
                             var eventData: [String: Any]?
 
-                            switch event.type {
-                            case .identify:
-                                eventData = self.buildIdentifyEventData(
-                                    event: event, eventStorage: eventStorage)
-                            case .screen:
-                                eventData = self.buildScreenEventData(
-                                    event: event, eventStorage: eventStorage)
-                            case .event, .autoCaptureEvent:
-                                eventData = self.buildTrackEventData(
-                                    event: event, eventStorage: eventStorage)
+                            // The internal check comes first: an internal row's `eventType`
+                            // carries the SDK event name, not an analytics event name, so it
+                            // must never reach a `switch event.type` branch.
+                            if stored.isInternalEvent {
+                                eventData = self.buildInternalEventData(
+                                    stored: stored, eventStorage: eventStorage)
+                            } else if let event = stored.event {
+                                switch event.type {
+                                case .identify:
+                                    eventData = self.buildIdentifyEventData(
+                                        event: event, eventStorage: eventStorage)
+                                case .screen:
+                                    eventData = self.buildScreenEventData(
+                                        event: event, eventStorage: eventStorage)
+                                case .event, .autoCaptureEvent:
+                                    eventData = self.buildTrackEventData(
+                                        event: event, eventStorage: eventStorage)
+                                }
+                            } else {
+                                // Decoded cleanly but carries neither an internal payload nor an
+                                // analytics event — nothing this version knows how to replay.
+                                self.logger.error(
+                                    "⚠️ Dropping unsupported offline event: %{public}@", stored.eventType)
                             }
 
                             if let eventData = eventData {
@@ -245,6 +292,42 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
     }
 
     // MARK: - Private Methods
+
+    /**
+     * Persists an already-encoded row and reports the outcome.
+     *
+     * Shared tail of `saveEventToLocalStorage` and `saveSDKEventToLocalStorage`. The two differ
+     * in how they resolve the user id and build the row; they do not differ in how the row is
+     * persisted or in the shape of the outcome logging, so a future change to the
+     * persistence-failure path (a retry, a metric, a dropped-event counter) only has to be made
+     * here.
+     *
+     * `Logging` declares its messages as `StaticString`, so the two log lines cannot be built at
+     * runtime and are passed in as literals instead — the same way `UPLogger` threads its own
+     * `StaticString` format down into `os_log`.
+     *
+     * - Parameters:
+     *   - eventStorage: The encoded row to persist
+     *   - eventName: Event name interpolated into `successMessage`
+     *   - successMessage: Logged at `info` level when the row was stored
+     *   - limitMessage: Logged at `error` level when the store refused the row
+     */
+    private func persistOfflineEvent(
+        _ eventStorage: EventStorage,
+        eventName: String,
+        successMessage: StaticString,
+        limitMessage: StaticString
+    ) {
+        eventDatabaseStorage.saveEvent(
+            eventStorage,
+            completion: { [weak self] saved in
+                if saved {
+                    self?.logger.info(successMessage, eventName)
+                } else {
+                    self?.logger.error(limitMessage)
+                }
+            })
+    }
 
     /**
      * Builds event data map for identify events.
@@ -317,6 +400,34 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
             eventData[Constants.Analytics.screenProperty] = screen
         }
 
+        return eventData
+    }
+
+    /**
+     * Builds event data map for an internal SDK event.
+     *
+     * The event's own payload is spread at the top level rather than nested under
+     * `metaDataProperty`: internal payloads are flat maps of JSON primitives and none of them
+     * carry a key that could collide with `eventTypeProperty` or `createdAtProperty`. The
+     * Android SDK's `buildInternalEventData` produces the same shape, so this is a
+     * cross-platform wire contract — do not rename keys or nest the payload.
+     *
+     * - Parameters:
+     *   - stored: The stored internal event
+     *   - eventStorage: The stored event metadata
+     * - Returns: Map containing event data for batch sending
+     */
+    private func buildInternalEventData(
+        stored: StoredOfflineEvent,
+        eventStorage: EventStorage
+    ) -> [String: Any] {
+        var eventData: [String: Any] = [:]
+        eventData[Constants.OfflineEvents.eventTypeProperty] = stored.eventType
+        eventData[Constants.OfflineEvents.createdAtProperty] = formatTimestampWithTimezone(
+            eventStorage.createdAt)
+        for (key, value) in stored.payload ?? [:] {
+            eventData[key] = value
+        }
         return eventData
     }
 

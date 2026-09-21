@@ -446,6 +446,7 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
     var shouldSaveOffline: Bool = false
     var hasCachedEvents: Bool = false
     var savedEvents: [(event: Event, clearStoredEventsFirst: Bool)] = []
+    var savedSDKEvents: [SDKEvent] = []
     var didRestoreEvents = false
     var didClearLocalEvents = false
 
@@ -457,6 +458,10 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
 
     func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool) {
         savedEvents.append((event, clearStoredEventsFirst))
+    }
+
+    func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent) {
+        savedSDKEvents.append(sdkEvent)
     }
 
     func restoreEventsFromLocalStorage(completion: (() -> Void)?) {
@@ -479,7 +484,9 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
 
     func clearLocalEvents() {
         didClearLocalEvents = true
+        // The real handler deletes every row, internal ones included.
         savedEvents.removeAll()
+        savedSDKEvents.removeAll()
     }
 }
 
@@ -489,7 +496,15 @@ class MockEventStorage: EventStoring {
     var events: [EventStorage] = []
     var didDeleteAllEvents = false
 
+    /// Set to false to stand in for a full store: `saveEvent` then refuses the row the way the
+    /// real storage does once a limit is reached. Defaults to true, so no existing test changes.
+    var saveEventResult = true
+
     func saveEvent(_ activity: EventStorage, completion: @escaping (Bool) -> Void) {
+        guard saveEventResult else {
+            completion(false)
+            return
+        }
         events.append(activity)
         completion(true)
     }
