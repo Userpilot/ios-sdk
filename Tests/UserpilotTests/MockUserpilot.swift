@@ -411,12 +411,6 @@ class MockPushNotificationMonitor: PushNotificationMonitoring {
         }
         return result
     }
-
-    var onAttemptDeferredNotificationResponse: (() -> Void)?
-    func attemptDeferredNotificationResponse() -> Bool {
-        onAttemptDeferredNotificationResponse?()
-        return false
-    }
 }
 
 // MARK: - Mock Network Monitor

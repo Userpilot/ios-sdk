@@ -46,12 +46,6 @@ internal protocol PushNotificationMonitoring: AnyObject {
     ///
     /// - Returns: A boolean indicating whether the notification was successfully handled.
     func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool
-
-    /// Attempts to handle a deferred notification response.
-    ///
-    /// - Returns: A boolean indicating whether the deferred response was successfully processed.
-    @discardableResult
-    func attemptDeferredNotificationResponse() -> Bool
 }
 
 /// `PushNotificationMonitor` is responsible for managing push notifications,
@@ -79,7 +73,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         pushAuthorizationStatus == .authorized && storage.pushToken.isNotEmpty
     }
 
-    private var deferredNotification: UserpilotNotification?
     // Later, we could make this as configuration option,
     // to request the permission many times till we get it.
     private var didRequestPermissions = false
@@ -176,7 +169,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         if let cachedToken {
             setPushToken(cachedToken)
         }
-        attemptDeferredNotificationResponse()
     }
 
     // MARK: - Refresh Push Status
@@ -284,49 +276,17 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
             return false
         }
 
-        // Handle deferred notification if analytics event is not yet allowed
-        guard analyticsPublisher.canRequestEvent else {
-            deferredNotification = parsedNotification
-            completionHandler?()
-            return true
-        }
+        // Neither step below needs an open socket: publishInternalSDKEvent caches the event while
+        // the socket is closed and persists it to the offline store while the network is down,
+        // and the deeplink is pure client-side navigation through LinkOpener. Reporting here also
+        // keeps `created_at` at tap time rather than reconnect time.
+        reportNotificationOpened(parsedNotification)
 
         // Process the notification and respond accordingly
         executeNotificationResponse(
             userpilot: userpilot,
             parsedNotification: parsedNotification,
             completionHandler: completionHandler
-        )
-
-        return true
-    }
-
-    /// Attempts to process a deferred notification response if it was previously deferred.
-    ///
-    /// - Returns: A boolean indicating whether the deferred response was successfully processed.
-    @discardableResult
-    func attemptDeferredNotificationResponse() -> Bool {
-        guard
-            let parsedNotification = deferredNotification,
-            let userpilot = userpilot
-        else { return false }
-
-        defer { deferredNotification = nil }
-
-        if let appToken = parsedNotification.appToken, !appToken.isEmpty, appToken != config.token {
-            config.logger.info("Deferred notification response skipped")
-            return false
-        }
-
-        guard parsedNotification.userId == storage.userId else {
-            config.logger.info("Deferred notification response skipped")
-            return false
-        }
-
-        executeNotificationResponse(
-            userpilot: userpilot,
-            parsedNotification: parsedNotification,
-            completionHandler: nil
         )
 
         return true
@@ -343,18 +303,27 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         parsedNotification: UserpilotNotification,
         completionHandler: (() -> Void)? = nil
     ) {
-        if parsedNotification.isTest != "true" {
-            let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
-            analyticsPublisher.publishInternalSDKEvent(
-                PushNotificationOpenedEvent(payload: properties)
-            )
-        }
-
         if let url = parsedNotification.deeplink {
             linkOpener.handleURL(url)
         }
 
         completionHandler?()
+    }
+
+    /// Publishes the `opened_push_notification` event for a tap.
+    ///
+    /// Called from `processNotification(_:completionHandler:)` the moment the tap arrives,
+    /// whatever the connection state — `publishInternalSDKEvent` caches it while the socket is
+    /// closed and persists it to the offline store while the network is down.
+    ///
+    /// - Parameter parsedNotification: The validated notification that was opened.
+    private func reportNotificationOpened(_ parsedNotification: UserpilotNotification) {
+        guard parsedNotification.isTest != "true" else { return }
+
+        let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
+        analyticsPublisher.publishInternalSDKEvent(
+            PushNotificationOpenedEvent(payload: properties)
+        )
     }
 
 }

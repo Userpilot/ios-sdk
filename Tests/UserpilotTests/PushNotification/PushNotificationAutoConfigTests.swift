@@ -33,8 +33,8 @@ final class PushNotificationAutoConfigTests: PushNotificationMonitorTestCase {
             config: Userpilot.Config(token: lateToken).defaultInstance(false)
         )
         lateUserpilot.storage.userId = "default-00000"
+        // Socket still closed when the replay lands — the response must be acted on anyway.
         lateUserpilot.analyticsPublisher.canRequestEvent = false
-        let lateMonitor = PushNotificationMonitor(container: lateUserpilot.container)
 
         let linkOpened = expectation(description: "deep link opened")
         lateUserpilot.linkOpener.onHandleURL = { url in
@@ -42,8 +42,9 @@ final class PushNotificationAutoConfigTests: PushNotificationMonitorTestCase {
             linkOpened.fulfill()
         }
 
-        // Assert: the response was held for that instance, not dropped.
-        XCTAssertTrue(lateMonitor.attemptDeferredNotificationResponse())
+        // Assert: registering replays the held response straight through, not dropped and not
+        // parked waiting for a socket.
+        _ = PushNotificationMonitor(container: lateUserpilot.container)
         wait(for: [linkOpened], timeout: 1.0)
     }
 
@@ -54,10 +55,17 @@ final class PushNotificationAutoConfigTests: PushNotificationMonitorTestCase {
             UNNotificationResponse.mock(userInfo: userpilotPushNotification())
         )
         userpilot.storage.userId = "default-00000"
+        // Socket closed: the response is still handled, it no longer waits for a connection.
         userpilot.analyticsPublisher.canRequestEvent = false
+
+        let linkOpened = expectation(description: "deep link opened")
+        userpilot.linkOpener.onHandleURL = { url in
+            XCTAssertEqual(url.absoluteString, "app://some-link")
+            linkOpened.fulfill()
+        }
 
         PushNotificationAutoConfig.didReceive(response) {}
 
-        XCTAssertTrue(pushNotificationMonitor.attemptDeferredNotificationResponse())
+        wait(for: [linkOpened], timeout: 1.0)
     }
 }

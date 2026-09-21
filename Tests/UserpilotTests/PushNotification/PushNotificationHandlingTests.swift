@@ -51,14 +51,28 @@ final class PushNotificationHandlingTests: PushNotificationMonitorTestCase {
         XCTAssertTrue(result)
     }
 
-    func testDidReceiveNotification_returnsTrue_whenUserpilotPushButEventRequestsNotAllowed() throws {
+    /// A closed socket must not hold anything back: `publishInternalSDKEvent` persists the event
+    /// to the offline store when there is no network, and the deeplink is client-side navigation.
+    func testDidReceiveNotification_reportsAndNavigates_whenSocketIsClosed() throws {
         // Arrange
         let userInfo = userpilotPushNotification()
         let completionExpectation = expectation(description: "completion called")
+        let openReported = expectation(description: "push open event")
+        let linkOpened = expectation(description: "deep link opened")
         let completion = { completionExpectation.fulfill() }
 
         userpilot.storage.userId = "default-00000"
         userpilot.analyticsPublisher.canRequestEvent = false
+
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { sdkEvent in
+            guard let event = sdkEvent as? PushNotificationOpenedEvent else { return }
+            XCTAssertEqual(event.eventPayload["notification_id"] as? Int, 5)
+            openReported.fulfill()
+        }
+        userpilot.linkOpener.onHandleURL = { url in
+            XCTAssertEqual(url.absoluteString, "app://some-link")
+            linkOpened.fulfill()
+        }
 
         // Act
         let result = pushNotificationMonitor.processNotificationForTesting(
