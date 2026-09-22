@@ -36,9 +36,6 @@ internal class SessionMonitor: SessionMonitoring {
     /// The storage used to store user-related data.
     private let storage: DataStoring
 
-    /// A flag to prevent calling didEnterForeground twice
-    private var hasInitializedForeground = false
-
     /// A flag to mintor app status
     private var _isAppActive = true
 
@@ -56,23 +53,27 @@ internal class SessionMonitor: SessionMonitoring {
             name: UIApplication.didEnterBackgroundNotification,
             object: nil
         )
-        // Add observer for when the app enters the foreground.
+        // Add observer for every transition to the active state.
+        // `didBecomeActive` supersedes `willEnterForeground`: it covers the first
+        // activation (which `willEnterForeground` never delivers — that one only fires
+        // when returning from background) *and* every later foreground return, so a
+        // single observer handles both. Wrapper SDKs (Capacitor / Flutter / React Native
+        // / MAUI) build `Userpilot` while UIKit is still `.inactive`, so with
+        // `willEnterForeground` alone `resume()` never ran and the socket stayed closed
+        // until the user backgrounded and foregrounded the app.
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(didEnterForeground),
-            name: UIApplication.willEnterForegroundNotification,
+            selector: #selector(didBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
 
-        // Handle initial state only if app is currently active
-        // This is a common issue when using native iOS SDKs within Flutter or ReactNative plugins.
-        // The problem occurs due to the different lifecycle management between
-        // these plugins and native iOS apps.
+        // The one activation no notification can deliver: the SDK was created *after*
+        // the app was already `.active`, so `didBecomeActive` has already fired and will
+        // not fire again until the next activation. Catch up on the current state.
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            if UIApplication.shared.applicationState == .active && !self.hasInitializedForeground {
-                self.onAppStart()
-            }
+            guard let self, UIApplication.shared.applicationState == .active else { return }
+            self.onAppStart()
         }
     }
 
@@ -87,8 +88,6 @@ internal class SessionMonitor: SessionMonitoring {
     }
 
     func reset() {
-        hasInitializedForeground = false
-
         // Stop listening for further lifecycle callbacks
         NotificationCenter.default.removeObserver(
             self,
@@ -96,7 +95,7 @@ internal class SessionMonitor: SessionMonitoring {
             object: nil)
         NotificationCenter.default.removeObserver(
             self,
-            name: UIApplication.willEnterForegroundNotification,
+            name: UIApplication.didBecomeActiveNotification,
             object: nil)
 
         // Clean up state we previously persisted
@@ -114,17 +113,20 @@ internal class SessionMonitor: SessionMonitoring {
         analyticsPublisher.flush()
     }
 
-    /// Called when the app enters the foreground.
+    /// Called when the app becomes active — cold start and every foreground return.
     /// This method resumes analytics socket connection and event publishing.
     /// - Parameter notification: The notification object containing information about the event.
     @objc
-    func didEnterForeground(notification: Notification) {
+    func didBecomeActive(notification: Notification) {
         onAppStart()
     }
 
+    /// Resumes monitoring and publishing. Safe to call repeatedly: `startMonitoring()`
+    /// returns early while a path monitor is alive, `resume()` no-ops without a stored
+    /// session date, and `connect()` gates on the socket state — so no guard flag is
+    /// needed to dedupe the activation paths.
     private func onAppStart() {
         _isAppActive = true
-        hasInitializedForeground = true
         networkMonitor.startMonitoring()
         analyticsPublisher.resume()
     }
