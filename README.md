@@ -1,7 +1,7 @@
 # Userpilot iOS SDK
 
 ![version](https://img.shields.io/github/v/tag/Userpilot/ios-sdk?label=version)
-[![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://docs.userpilot.com/article/313-install-userpilot-on-your-ios-app)
+[![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://docs.userpilot.com/developer/installation/mobile/ios/installation)
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/apple/swift-package-manager)
 [![CocoaPods compatible](https://img.shields.io/badge/CocoaPods-compatible-red.svg)](https://cocoapods.org/pods/Userpilot)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Userpilot/ios-sdk/blob/main/LICENSE)
@@ -25,6 +25,8 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
+    - [Scan QR Code for Review](#scan-qr-code-for-review)
+    - [Offline Mode](#offline-mode)
     - [Auto Capture](#auto-capture)
     - [Push Notification](#push-notification)
     - [Multi-Instance Support](#multi-instance-support)
@@ -65,6 +67,8 @@ Before you begin, ensure your iOS project meets the following requirements:
 4. Click **Add Package**.
 
 Once integrated, the Userpilot SDK is available throughout your application.
+
+See the official [iOS SDK release notes](https://docs.userpilot.com/developer/installation/mobile/ios/mobile-ios-release-notes) for version history and upgrade details.
 
 ### Initializing
 
@@ -190,8 +194,8 @@ If you have additional configuration needs, you can pass a custom configuration 
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
-        .logging(true) // Enable or disable logging.
-        .enableUseInAppBrowser(enabled: true) // Enable Open external link In-app browser using SFSafariViewController.
+        .logging(enabled: true) // Enable or disable logging.
+        .enableUseInAppBrowser(true) // Enable Open external link In-app browser using SFSafariViewController.
         .disableRequestPushNotificationsPermission() // Disable SDK push permission request flow (default false).
         .enableRequestIdentifyBeforeScreen() // Re-state the identified user before every screen event (default false).
 )
@@ -211,7 +215,18 @@ public protocol UserpilotNavigationDelegate: AnyObject {
 }
 ```
 
-The Userpilot SDK automatically handles navigation if you haven't implemented the `UserpilotNavigationHandler`. When a deep link is external, the SDK will handle it appropriately. For complete control over link handling, you can override the `UserpilotNavigationHandler` protocol. This allows you to customize the behavior for all types of links as per your requirements.
+Implement `UserpilotNavigationDelegate` to control link handling. Without a delegate, the SDK opens custom schemes through the system and web links through the system browser or the configured in-app browser.
+
+Assign `userpilot.navigationDelegate` immediately after initializing the SDK,
+and keep a strong reference to the delegate because the SDK holds it weakly.
+Navigation callbacks run on the main thread. In SDK 1.4.0 and later, the latest
+link received during initialization is held until a delegate is assigned or the
+next main-queue turn after initialization. If no delegate is assigned, the SDK
+uses its normal URL-opening behavior. This startup delay does not wait for a
+router that your app initializes asynchronously; buffer the URL in your delegate
+if your navigation UI is not ready.
+
+See the [SDK Callbacks guide](https://docs.userpilot.com/developer/installation/mobile/ios/callbacks#navigation-handler).
 
 #### Analytics Delegate
 
@@ -290,17 +305,29 @@ public protocol UserpilotExperienceDelegate: AnyObject {
 }
 ```
 
+### Scan QR Code for Review
+
+To review a draft Flow or Survey on a real device, configure the Userpilot custom URL scheme and scan the experience QR code from the Mobile Builder. The QR code opens a Userpilot preview link in your app, and the SDK loads the draft experience for review.
+
+See the official [Custom URL Scheme guide](https://docs.userpilot.com/developer/installation/mobile/ios/custom_scheme) for setup and troubleshooting.
+
+### Offline Mode
+
+SDK **1.4.0 and later** automatically stores offline analytics, flow/survey/NPS interactions, and push-notification opens for the current user. Stored events survive app restarts and are sent together when the connection returns. All event types share a **3 MB / 5,000-event** limit; events removed for sending are not retried if that send fails.
+
+See the official [Offline Mode guide](https://docs.userpilot.com/developer/installation/mobile/ios/features#offline-mode) for supported events, exclusions, and delivery limits.
+
 ### Auto Capture
 
 The Userpilot SDK supports automatic capture of screen views and user interaction events. please refer to the [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation).
 
 ### Push Notification
 
-Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions, and integration details, please refer to the [Push Notifications Guide](https://docs.userpilot.com/developer/installation/mobile/ios/push-notifications).
+Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions and integration details, see the official [Push Notifications Guide](https://docs.userpilot.com/developer/installation/mobile/ios/push-notifications).
 
 ### Multi-Instance Support
 
-Userpilot iOS SDK supports running multiple independent instances in the same process. Each instance keeps its own analytics, autocapture scope, storage, and experience overlay window isolated from other instances. For setup instructions and routing details, please refer to the [Multi-Instance Guide](Sources/Userpilot/Userpilot.docc/MultiInstance.md).
+Userpilot iOS SDK supports running multiple independent instances in the same process. Each instance keeps its own analytics, autocapture scope, storage, and experience overlay window isolated from other instances. For setup instructions and routing details, see the official [Multi-Instance Guide](https://docs.userpilot.com/developer/installation/mobile/ios/multi-instance).
 
 ## 📝 Documentation
 
