@@ -36,8 +36,12 @@ internal class SessionMonitor: SessionMonitoring {
     /// The storage used to store user-related data.
     private let storage: DataStoring
 
-    /// A flag to mintor app status
-    private var _isAppActive = true
+    /// A flag to mintor app status.
+    /// Written on the main thread by the lifecycle callbacks, read from the socket and
+    /// analytics queues (`SocketManager.publish`, `AnalyticsPublisher.publish`) to drop
+    /// events while the app is inactive. Unguarded, a reader can miss the background
+    /// transition and push events over a socket the system is about to suspend.
+    private let _isAppActive = AtomicReference<Bool>(true)
 
     /// Initializes the `SessionMonitor` with a dependency container that resolves an `AnalyticsPublishing` instance.
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
@@ -84,7 +88,7 @@ internal class SessionMonitor: SessionMonitoring {
 
     /// Logic to check if the socket is currently open
     var isAppActive: Bool {
-        _isAppActive
+        _isAppActive.value
     }
 
     func reset() {
@@ -107,7 +111,7 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterBackground(notification: Notification) {
-        _isAppActive = false
+        _isAppActive.value = false
         storage.sessionDate = Date()
         networkMonitor.stopMonitoring()
         analyticsPublisher.flush()
@@ -126,7 +130,7 @@ internal class SessionMonitor: SessionMonitoring {
     /// session date, and `connect()` gates on the socket state — so no guard flag is
     /// needed to dedupe the activation paths.
     private func onAppStart() {
-        _isAppActive = true
+        _isAppActive.value = true
         networkMonitor.startMonitoring()
         analyticsPublisher.resume()
     }
