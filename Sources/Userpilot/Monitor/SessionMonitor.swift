@@ -43,6 +43,12 @@ internal class SessionMonitor: SessionMonitoring {
     /// transition and push events over a socket the system is about to suspend.
     private let _isAppActive = AtomicReference<Bool>(true)
 
+    /// Whether `onAppStart()` has run for the current foreground period.
+    /// Set on the main thread by `onAppStart()` and `didEnterBackground`, but also cleared by
+    /// `reset()`, which `deinit` calls on whichever thread releases the last reference — so
+    /// this cannot be a plain `Bool`.
+    private let hasStartedSession = AtomicReference<Bool>(false)
+
     /// Initializes the `SessionMonitor` with a dependency container that resolves an `AnalyticsPublishing` instance.
     /// - Parameter container: The dependency injection container used to resolve the required dependencies.
     init(container: DIContainer) {
@@ -102,6 +108,8 @@ internal class SessionMonitor: SessionMonitoring {
             name: UIApplication.didBecomeActiveNotification,
             object: nil)
 
+        hasStartedSession.value = false
+
         // Clean up state we previously persisted
         storage.sessionDate = nil
     }
@@ -111,6 +119,7 @@ internal class SessionMonitor: SessionMonitoring {
     /// - Parameter notification: The notification object containing information about the event.
     @objc
     func didEnterBackground(notification: Notification) {
+        hasStartedSession.value = false
         _isAppActive.value = false
         storage.sessionDate = Date()
         networkMonitor.stopMonitoring()
@@ -125,11 +134,14 @@ internal class SessionMonitor: SessionMonitoring {
         onAppStart()
     }
 
-    /// Resumes monitoring and publishing. Safe to call repeatedly: `startMonitoring()`
-    /// returns early while a path monitor is alive, `resume()` no-ops without a stored
-    /// session date, and `connect()` gates on the socket state — so no guard flag is
-    /// needed to dedupe the activation paths.
+    /// Resumes monitoring and publishing once per foreground period. Deduplicates the
+    /// init catch-up and `didBecomeActive` (which can both fire for the same activation),
+    /// and `.inactive` → `.active` bounces (Control Center, alerts) that never backgrounded.
     private func onAppStart() {
+        // Claim the foreground period in one atomic step - a separate read then write would
+        // let two activations both pass the check and resume twice.
+        guard hasStartedSession.compareAndSet(expected: false, new: true) else { return }
+
         _isAppActive.value = true
         networkMonitor.startMonitoring()
         analyticsPublisher.resume()
