@@ -33,13 +33,13 @@ Add the token-based scheme to the app target's `Info.plist`:
         <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string>userpilot-USERPILOT_TOKEN</string>
+            <string>userpilot-APP_TOKEN</string>
         </array>
     </dict>
 </array>
 ```
 
-Replace `USERPILOT_TOKEN` with the same lowercased token used to initialize the SDK.
+Replace `APP_TOKEN` with the same lowercased token used to initialize the SDK.
 
 ## Forward every URL entry point
 
