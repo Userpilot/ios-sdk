@@ -151,17 +151,29 @@ internal class AnalyticsPublisher {
     /// The user session state machine.
     private let userSessionStateMachine: UserSessionStateManaging
 
-    /// Guards `pendingIdentifyBeforeScreenAcks` — pushes and socket resolutions arrive on
-    /// different queues.
-    private let identifyBeforeScreenLock = NSLock()
+    /// Guards identify insertion, predecessor, and parked reload state across processing queues.
+    private let publishCorrelationLock = NSLock()
 
-    /// Identify pushes sent by `publishIdentifyBeforeScreen()` that have not resolved yet.
+    /// True while an identify inserted by `insertIdentifyBeforeScreenIfNeeded()` is still
+    /// working its way through the queue ahead of the screen that asked for it.
     ///
-    /// They bypass `eventsQueue`, but `onSocketEventSent` routes resolutions by event **name**
-    /// alone: an unclaimed `user_identify` ack there satisfies
-    /// `isPostIdentificationContext(_:)` and would publish a second screen event on top of the one
-    /// it precedes. A counter, not a flag: several screens can be in flight.
-    private var pendingIdentifyBeforeScreenAcks = 0
+    /// A one-shot, not a counter: the identify goes through `eventsQueue` like any other event,
+    /// so its resolution already belongs to a queue head and needs no separate accounting. This
+    /// only stops the screen from inserting a second identify when it is reprocessed.
+    private var identifyBeforeScreenInserted = false
+
+    /// True when the event this queue last resolved was an identify.
+    ///
+    /// A screen that already follows an acknowledged identify does not need the user restated
+    /// again - the identify ahead of it did exactly that one push ago.
+    private var lastResolvedQueuedEventWasIdentify = false
+
+    /// A fake reload that yielded to an inserted identify, replayed once that identify resolves.
+    private struct PendingFakeReload {
+        let isFakeReload: Bool
+    }
+
+    private var pendingFakeReload: PendingFakeReload?
 
     // MARK: - Queues & State
 
@@ -259,25 +271,33 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func flush() {
         tryCatch {
             let events = eventsQueue.getAndClear()
-            // In case of a new user, clear all queue and cache the identify new user event only
-            let newUserEvents = events.filter { $0.isIdentifyEvent && $0.userId != storage.userId }
-            if let firstNewUserEvent = newUserEvents.first {
-                storage.temporaryUser = firstNewUserEvent.toUser().toJson()
-                eventsQueue.enqueue(firstNewUserEvent)
+            let pendingIdentifyIndex = events.firstIndex {
+                $0.isIdentifyEvent && $0.userId != storage.userId
+            }
+            if let pendingIdentifyIndex {
+                // Requeue the whole tail, not just the identify: those events are that user's
+                // session and `resume()` replays them once the socket is back. Keeping only the
+                // identify dropped everything queued behind it.
+                let pendingEvents = events[pendingIdentifyIndex...]
+                storage.temporaryUser = pendingEvents.first?.toUser().toJson()
+                pendingEvents.forEach { eventsQueue.enqueue($0) }
             } else {
                 events.forEach { event in
                     switch event.type {
                     case .identify:
                         _ = identify(event)
                     case .screen:
-                        _ = screen(event)
+                        // No identify insertion here: `flush` has already drained the queue, so
+                        // requeueing would put an identify back into a queue that is being torn
+                        // down and drop this screen entirely.
+                        _ = resolveScreenOutcome(event)
                     case .event, .autoCaptureEvent:
                         _ = trackEvent(event)
                     }
                 }
+                closeSocket()
+                userSessionStateMachine.markUserBackFromBackground()
             }
-            closeSocket()
-            userSessionStateMachine.markUserBackFromBackground()
             resetProcessingEventStatus()
         }
     }
@@ -305,7 +325,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         startSession = true
         // The socket closes below, so an identify sent ahead of a screen will never resolve. Left
         // outstanding, its stale claim would swallow the next user's first identify ack.
-        clearIdentifyBeforeScreenAcks()
+        clearIdentifyBeforeScreenInsertion()
         // Reset content states
         experiencesPublisher?.logout()
         // Clear seen contents from screenSessionStateMachine
@@ -336,7 +356,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func reset() {
         startSession = true
         eventThrottle.clear()
-        clearIdentifyBeforeScreenAcks()
+        clearIdentifyBeforeScreenInsertion()
     }
 
     /**
@@ -613,11 +633,20 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 return
             }
 
-            // Nothing was pushed (throttled, invalid, or blocked): drop the head
-            // and continue, otherwise the gate would wait for an ACK that will
-            // never arrive.
-            if !publishQueuedEvent(event) {
+            switch publishQueuedEvent(event) {
+            case .published:
+                break
+            case .skipped:
+                // Nothing was pushed (throttled, invalid, or blocked): drop the head
+                // and continue, otherwise the gate would wait for an ACK that will
+                // never arrive.
                 skipHeadEvent()
+            case .requeued:
+                // The head was pushed back behind an identify this cycle inserted ahead of
+                // it. The head is still valid work - restart the cycle so the identify goes
+                // out first and this event follows on its resolution.
+                resetProcessingEventStatus()
+                processEvent()
             }
         }
     }
@@ -640,7 +669,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
 
         userSessionStateMachine.markNormal()
-        if !publishFakeReloadScreenEvent(nil, nil, isFakeReload: false) {
+        if !publishFakeReloadScreenEvent(nil, nil, isFakeReload: false), !isRestatingUserBeforeScreen {
             releaseAfterEmptyQueue()
         }
     }
@@ -659,14 +688,25 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /// Publishes the queued event using the matching event-specific path.
-    private func publishQueuedEvent(_ event: Event) -> Bool {
+    /// What happened to the queue head this cycle.
+    private enum QueuedPublishOutcome {
+        /// A push went out; the head stays enqueued until its resolution.
+        case published
+        /// Nothing went out and nothing will - drop the head.
+        case skipped
+        /// Nothing went out, but the head is still wanted: an identify was inserted ahead of
+        /// it and must go first. Restart the cycle rather than dropping anything.
+        case requeued
+    }
+
+    private func publishQueuedEvent(_ event: Event) -> QueuedPublishOutcome {
         switch event.type {
         case .identify:
-            return identify(event)
+            return identify(event) ? .published : .skipped
         case .screen:
             return screen(event)
         case .event, .autoCaptureEvent:
-            return trackEvent(event)
+            return trackEvent(event) ? .published : .skipped
         }
     }
 
@@ -728,8 +768,12 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
         socketManager.publish(event.eventName, payload: identifyPayload(for: event))
 
-        // Socket is connected with the same user id — request post-identify screen
-        userSessionStateMachine.markAwaitingInitialScreen()
+        // Socket is connected with the same user id — request post-identify screen.
+        // Not for the restatement: the screen it precedes IS that event, and arming this would
+        // leave the state machine awaiting a screen that is already on its way.
+        if !isRestatingUserBeforeScreen {
+            userSessionStateMachine.markAwaitingInitialScreen()
+        }
         return true
     }
 
@@ -745,11 +789,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     * Re-publishes the device push token alongside an acknowledged identify.
+     * Re-publishes the device push token for a host identify ACK or cached-user restatement.
      *
      * `PushNotificationMonitor.setPushToken` only publishes when the token value changes, so a
      * returning user whose token is unchanged would otherwise never re-pair token ↔ user on the
-     * backend. Called once the identify is on the backend so it sees the user first.
+     * backend. Host identifies sync after their ACK; restatements cache it at insertion.
      */
     private func syncPushToken() {
         guard canRequestEvent else { return }
@@ -757,57 +801,119 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     }
 
     /**
-     * Claims the resolution of an identify sent by `publishIdentifyBeforeScreen()`, if one is
-     * outstanding.
-     *
-     * - Returns: true when this ack belongs to such an identify and must not drive the event queue.
-     */
-    private func consumeIdentifyBeforeScreenAck() -> Bool {
-        identifyBeforeScreenLock.lock()
-        defer { identifyBeforeScreenLock.unlock() }
-
-        guard pendingIdentifyBeforeScreenAcks > 0 else { return false }
-        pendingIdentifyBeforeScreenAcks -= 1
-        return true
-    }
-
-    /// Drops every outstanding claim (logout / user switch / reset closes the socket).
-    private func clearIdentifyBeforeScreenAcks() {
-        identifyBeforeScreenLock.lock()
-        defer { identifyBeforeScreenLock.unlock() }
-
-        pendingIdentifyBeforeScreenAcks = 0
-    }
-
-    /**
-     * Re-states the cached user on the socket immediately before a screen event, when
+     * Re-states the cached user immediately before a screen event, when
      * `Config.enableRequestIdentifyBeforeScreen(_:)` is on.
      *
      * A screen event makes the backend evaluate content for the current surface, so the user is
-     * restated first. Published straight to the socket rather than through `eventsQueue`: the
-     * screen push follows immediately, and enqueuing would reorder the two.
+     * restated first. The identify is inserted at the FRONT of `eventsQueue` and then travels
+     * the ordinary path: it is published as the queue head, and the screen behind it follows on
+     * its resolution. Nothing is pushed around the queue, so every resolution maps to exactly
+     * one queue head and the ack needs no disambiguation.
      *
-     * Deliberately skips the queue path's side effects — no `markAwaitingInitialScreen()` (the
-     * screen it precedes *is* that event) and no `storage.temporaryUser` write, because nothing
-     * about the user changed.
+     * One-shot per screen: `identifyBeforeScreenInserted` stops the screen from inserting another
+     * identify when it comes back round as the head after this one resolves, which would loop
+     * forever.
+     *
+     * - Returns: true when an identify was inserted and the caller must yield to it.
      */
-    private func publishIdentifyBeforeScreen() {
-        guard config.requestIdentifyBeforeScreen else { return }
+    private func insertIdentifyBeforeScreenIfNeeded() -> Bool {
+        guard config.requestIdentifyBeforeScreen else { return false }
+
+        // An identify was just acknowledged, so the user is already restated on the backend for
+        // the screen that follows. Repeating it here would be a duplicate.
+        publishCorrelationLock.lock()
+        let shouldInsert = !lastResolvedQueuedEventWasIdentify && !identifyBeforeScreenInserted
+        if shouldInsert { identifyBeforeScreenInserted = true }
+        publishCorrelationLock.unlock()
+        guard shouldInsert else { return false }
+
         let cachedUser = User.fromJson(storage.user)
-        guard cachedUser.userId.isNotEmpty else { return }
-
-        var payload: [String: Any] = [
-            Constants.Analytics.metaDataProperty: cachedUser.properties
-        ]
-        if !cachedUser.company.isEmpty {
-            payload[Constants.Analytics.identifyCompanyProperty] = cachedUser.company
+        guard cachedUser.userId.isNotEmpty else {
+            clearIdentifyBeforeScreenInsertion()
+            return false
         }
-        // Claim the ack before the push so a fast resolution cannot arrive unclaimed.
-        identifyBeforeScreenLock.lock()
-        pendingIdentifyBeforeScreenAcks += 1
-        identifyBeforeScreenLock.unlock()
 
-        socketManager.publish(Constants.Event.identifyEvent, payload: payload)
+        // A reload can enter outside processEvent. Hold its cycle while the token is cached,
+        // or resyncPushToken re-enters processing before the caller has parked that reload.
+        _ = isProcessingEvent.compareAndSet(expected: false, new: true)
+        // Ahead of the screen that triggered it. `isInternalEvent` inserts at index 0.
+        eventsQueue.enqueue(
+            Event(
+                type: .identify(cachedUser.userId),
+                properties: cachedUser.properties,
+                company: cachedUser.company.isEmpty ? nil : cachedUser.company
+            ),
+            isInternalEvent: true
+        )
+
+        // Re-pair token <-> user alongside the restatement. This is why the identify ack no
+        // longer syncs the token: doing it here keeps it deliberate and keeps the restatement's
+        // resolution free of the queue path's side effects.
+        syncPushToken()
+        return true
+    }
+
+    /// True while the restatement inserted by ``insertIdentifyBeforeScreenIfNeeded()`` is the
+    /// event on the wire.
+    ///
+    /// The old out-of-band push deliberately skipped the queue path's identify side effects -
+    /// no `markAwaitingInitialScreen()`, no `storage.temporaryUser` write, no host broadcast -
+    /// because nothing about the user changed. Routing it through the queue would have
+    /// subscribed it to all of them, so it is recognised here instead.
+    ///
+    /// While the one-shot is claimed the queue head is that identify, then the screen it
+    /// precedes; a host identify arriving meanwhile lands behind them, never ahead.
+    private var isRestatingUserBeforeScreen: Bool {
+        publishCorrelationLock.lock()
+        defer { publishCorrelationLock.unlock() }
+        return identifyBeforeScreenInserted
+    }
+
+    /// Replays the fake reload that was waiting on the identify which has now resolved.
+    ///
+    /// The one-shot stays claimed across the replay so it cannot insert a second identify; if
+    /// nothing goes out it is released here, or it would stay claimed forever and no later screen
+    /// could restate the user again.
+    private func replayParkedFakeReload(_ parked: PendingFakeReload) {
+        // Admission already updated seen content and consumed the throttle allowance. Keep the
+        // gate held and preserve the original reload flag rather than admitting the reload again.
+        if canRequestEvent, eventsQueue.isEmpty() {
+            scheduleProcessingWatchdog()
+            if publishScreenEvent(isFakeReload: parked.isFakeReload) { return }
+        }
+        clearIdentifyBeforeScreenInsertion()
+        resetProcessingEventStatus()
+        processEvent()
+    }
+
+    /// Claims a parked fake reload, if one is waiting on an identify.
+    private func takePendingFakeReload() -> PendingFakeReload? {
+        publishCorrelationLock.lock()
+        defer { publishCorrelationLock.unlock() }
+
+        let parked = pendingFakeReload
+        pendingFakeReload = nil
+        return parked
+    }
+
+    /// Replays an admitted reload or releases the gate for the next queued event.
+    private func continueAfterResolution() {
+        if let parked = takePendingFakeReload() {
+            replayParkedFakeReload(parked)
+        } else {
+            resetProcessingEventStatus()
+            processEvent()
+        }
+    }
+
+    /// Releases the one-shot so the next screen can restate the user again.
+    private func clearIdentifyBeforeScreenInsertion() {
+        publishCorrelationLock.lock()
+        defer { publishCorrelationLock.unlock() }
+
+        identifyBeforeScreenInserted = false
+        lastResolvedQueuedEventWasIdentify = false
+        pendingFakeReload = nil
     }
 
     /**
@@ -816,16 +922,32 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter event: The screen event to process
      * - Returns: true when a screen push went out
      */
-    private func screen(_ event: Event) -> Bool {
+    private func screen(_ event: Event) -> QueuedPublishOutcome {
+        // An identify must precede this screen, and it is now the queue head. This screen
+        // stays enqueued behind it and is republished when the identify resolves.
+        if insertIdentifyBeforeScreenIfNeeded() {
+            return .requeued
+        }
+        let outcome = resolveScreenOutcome(event)
+        // The screen this identify preceded is not going out (throttled, or not a screen the
+        // publisher will report). Release the one-shot, or no later screen could ever restate
+        // the user again.
+        if case .skipped = outcome {
+            clearIdentifyBeforeScreenInsertion()
+        }
+        return outcome
+    }
+
+    private func resolveScreenOutcome(_ event: Event) -> QueuedPublishOutcome {
         // Returns true if this is a new screen, which triggers screen event
         if setupScreenEvent(event) {
-            return publishScreenEvent(isFakeReload: false)
+            return publishScreenEvent(isFakeReload: false) ? .published : .skipped
         }
         // Not a new screen, check if valid to trigger screen event
         if experiencesPublisher?.canRequestScreenEvent() == true {
-            return publishScreenEvent(isFakeReload: false)
+            return publishScreenEvent(isFakeReload: false) ? .published : .skipped
         }
-        return false
+        return .skipped
     }
 
     /**
@@ -1036,8 +1158,17 @@ extension AnalyticsPublisher: SocketSubscription {
     func onSocketClosed() {
         tryCatch {
             resetProcessingEventStatus()
-            // Socket closed from error state, don't reopen, keep events for next open
-            if socketManager.didCloseFromError { return }
+            // A transport error keeps the queue, including an inserted identify. Keep its
+            // classification and parked reload for the retry; otherwise its next ACK would
+            // broadcast a host identify and erase the host's pending user update.
+            if socketManager.didCloseFromError {
+                publishCorrelationLock.lock()
+                lastResolvedQueuedEventWasIdentify = false
+                publishCorrelationLock.unlock()
+                return
+            }
+            // Intentional closes end the insertion's lifetime with the old session.
+            clearIdentifyBeforeScreenInsertion()
             // Background close: keep the queue as-is (a queued new-user identify is
             // picked up by resume() on foreground). Re-publishing here would hit the
             // app-inactive guard and silently drop the event.
@@ -1068,28 +1199,39 @@ extension AnalyticsPublisher: SocketSubscription {
             // through their own direct subscriptions
             guard eventName.isAnalyticsEvent() else { return }
 
-            // An identify sent ahead of a screen owns no queue head. Claimed before the dequeue
-            // below so it cannot consume an unrelated event, and returned early so it cannot
-            // request a post-identify screen event on top of the screen it precedes.
-            if eventName == Constants.Event.identifyEvent,
-               consumeIdentifyBeforeScreenAck() {
-                return
-            }
+            // Remove the in-flight head - it stayed enqueued until this resolution.
+            //
+            // Only when the head is what actually resolved. A screen pushed around the queue (a
+            // fake reload, which is allowed out only while the queue is empty) owns no head, so an
+            // unconditional dequeue let its resolution consume whatever the app enqueued during
+            // the round trip - dropping an event that was never sent. Matching on the event name
+            // needs no per-push identity: the out-of-band pushes are screens, and a screen can
+            // only be queued behind them, never ahead.
+            let event = eventsQueue.getFirst()?.eventName == eventName
+                ? eventsQueue.dequeue()
+                : nil
 
-            // Remove the in-flight head - it stayed enqueued until this resolution
-            let event = eventsQueue.dequeue()
+            publishCorrelationLock.lock()
+            let wasRestatement = identifyBeforeScreenInserted && event?.isIdentifyEvent == true
+            // A failed intervening event also breaks adjacency. Only a successful queued
+            // identify can satisfy the next screen's requirement.
+            lastResolvedQueuedEventWasIdentify = eventSent && event?.isIdentifyEvent == true
+            publishCorrelationLock.unlock()
 
             guard eventSent else {
                 logger.error(
                     "⚠️ Event not acknowledged (%{public}@), dropping and continuing queue",
                     eventName)
-                resetProcessingEventStatus()
-                processEvent()
+                continueAfterResolution()
                 return
             }
 
+            // The restatement carries nothing new about the user, so it must not run any of
+            // this: no cached-user write, no `temporaryUser` clear, no host broadcast, no token
+            // resync. That is what the out-of-band push it replaced deliberately skipped.
             // Update cached user object
-            if let event, eventName == Constants.Event.identifyEvent && event.userId == storage.userId {
+            if let event, !wasRestatement,
+               eventName == Constants.Event.identifyEvent && event.userId == storage.userId {
                 var newUser = User.fromJson(storage.user)
                 storage.user = newUser.updateUser(event: event).toJson() ?? ""
                 logger.info("👤 USER %{public}@", storage.user)
@@ -1106,7 +1248,7 @@ extension AnalyticsPublisher: SocketSubscription {
             }
 
             // Handle request screen event after user identify event
-            if userSessionStateMachine.isPostIdentificationContext(eventName)
+            if !wasRestatement && userSessionStateMachine.isPostIdentificationContext(eventName)
                 && userSessionStateMachine.shouldRequestInitialScreenEvent(
                     eventsQueue.isEmpty(),
                     experiencesPublisher?.getCurrentScreen.isNotEmpty == true) {
@@ -1114,17 +1256,14 @@ extension AnalyticsPublisher: SocketSubscription {
                 // fresh watchdog window for the new in-flight push
                 scheduleProcessingWatchdog()
                 let published = publishScreenEvent(
-                    isFakeReload: userSessionStateMachine.getPostIdentificationFakeReloadConfig(),
-                    // An identify was just acknowledged; repeating it here would be a duplicate.
-                    precedeWithIdentify: false)
+                    isFakeReload: userSessionStateMachine.getPostIdentificationFakeReloadConfig())
                 if !published {
                     resetProcessingEventStatus()
                     processEvent()
                 }
             } else {
                 // Continue processing the next event in the queue
-                resetProcessingEventStatus()
-                processEvent()
+                continueAfterResolution()
             }
         }
     }
@@ -1306,6 +1445,19 @@ extension AnalyticsPublisher {
                 screenTitle: screenSessionStateMachine.event.screenTitle ?? "") {
                 return
             }
+
+            // A fake reload is not a queue entry, so it cannot simply wait its turn behind the
+            // identify. Park it, let the identify go out as the queue head, and replay it from
+            // the identify's resolution so the order still holds.
+            if insertIdentifyBeforeScreenIfNeeded() {
+                publishCorrelationLock.lock()
+                pendingFakeReload = PendingFakeReload(isFakeReload: isFakeReload)
+                publishCorrelationLock.unlock()
+                resetProcessingEventStatus()
+                processEvent()
+                return
+            }
+
             published = publishScreenEvent(isFakeReload: isFakeReload)
         }
         return published
@@ -1338,18 +1490,19 @@ extension AnalyticsPublisher {
      * Publishes the current screen session state as a screen event, carrying
      * session-start state, fake-reload flag, and seen experiences/surveys.
      *
-     * This is the single place a `screen` message is published, so it is also the single place the
-     * preceding identify is sent when `Config.enableRequestIdentifyBeforeScreen(_:)` is on and the
-     * single place the cached internal SDK events are flushed ahead of it.
+     * This is the single place a `screen` message is published, and the single place the cached
+     * internal SDK events are flushed ahead of it.
      *
-     * - Parameter precedeWithIdentify: false only for the screen event that already follows an
-     *   acknowledged identify, which would otherwise repeat it.
+     * The preceding identify is NOT pushed from here. It is inserted at the front of
+     * `eventsQueue` by ``screen(_:)`` for client screens, and by
+     * ``publishFakeReloadScreenEvent(_:_:isFakeReload:)`` for SDK fake reloads, so it always
+     * travels the ordinary ack-gated path ahead of the screen it precedes.
+     *
      * - Returns: true when a screen push went out
      */
     @discardableResult
     private func publishScreenEvent(
-        isFakeReload: Bool = false,
-        precedeWithIdentify: Bool = true
+        isFakeReload: Bool = false
     ) -> Bool {
         ensureScreenSessionStateMachine()
         guard let screenSessionStateMachine else { return false }
@@ -1366,8 +1519,6 @@ extension AnalyticsPublisher {
         // `restoreOfflineEventsIfNeeded()` on the processing cycle that a socket open always runs,
         // before any screen message can be pushed from here.
         processSDKEvent()
-
-        if precedeWithIdentify { publishIdentifyBeforeScreen() }
 
         let screenEvent = screenSessionStateMachine.event
         if let screenTitle = screenEvent.screenTitle {
@@ -1400,6 +1551,9 @@ extension AnalyticsPublisher {
             existingMetadata.merging(newMetadata) { _, new in new }
 
         socketManager.publish(screenEvent.eventName, payload: payload)
+        // The screen this identify preceded is now on the wire: let the next screen
+        // restate the user again.
+        clearIdentifyBeforeScreenInsertion()
 
         if isFakeReload {
             suppressScreenAutocaptureAfterFakeReload()
