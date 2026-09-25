@@ -374,32 +374,6 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
-    /// A fake reload owns no queue entry. Its ACK must release a waiting track without
-    /// removing it before the track's own ACK arrives.
-    func testTrackEnqueuedDuringAFakeReloadRoundTrip_isNotConsumedByTheScreenAck() {
-        userpilot.experiencesPublisher.onCanRequestScreenEvent = { true }
-        arrangeReloadableScreen(title: "Home")
-        var published = recordPublishedEvents()
-
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
-        XCTAssertEqual(published(), [Constants.Event.screenEvent])
-        published = recordPublishedEvents()
-
-        // Hold the track in the queue until the screen ACK resumes processing.
-        userpilot.socketManager.isJoiningSocket = true
-        analyticsPublisher.publish(Event(type: .event("purchase_completed")))
-        XCTAssertTrue(published().isEmpty)
-        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.eventTitle, "purchase_completed")
-        userpilot.socketManager.isJoiningSocket = false
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
-
-        XCTAssertEqual(published(), [Constants.Event.trackEvent])
-        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 1)
-        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
-        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
-    }
-
     // MARK: - Experience Events Tests
 
     func testCanRequestEvent_shouldReturnSocketState() {
@@ -962,223 +936,6 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertFalse(connectCalled)
     }
 
-    // MARK: - identify-before-screen side effects
-
-    /// The restatement carries nothing new about the user, so its ack must not run the identify
-    /// bookkeeping. `syncPushToken` used to fire from there - once per screen, invisibly. It is
-    /// now published deliberately alongside the restatement instead.
-    func testRestatement_resyncsTheTokenOnce_andNotAgainFromItsAck() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-
-        var resyncCount = 0
-        userpilot.pushNotificationMonitor.onResyncPushToken = { resyncCount += 1 }
-
-        analyticsPublisher.publish(Event(type: .screen("Another Screen")))
-        XCTAssertEqual(resyncCount, 1, "the token is re-paired alongside the restatement")
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        XCTAssertEqual(
-            resyncCount, 1,
-            "the restatement's ack must not re-sync the token a second time")
-    }
-
-    /// A screen that already follows an acknowledged identify does not need the user restated
-    /// again - the identify one push ago did exactly that.
-    func testScreenFollowingAnIdentify_doesNotInsertASecondIdentify() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-
-        let published = recordPublishedEvents()
-        // Use changed properties so the host identify is actually sent, then queue its screen.
-        analyticsPublisher.publish(identifyEventForCurrentUser())
-        analyticsPublisher.publish(Event(type: .screen("Another Screen")))
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
-        XCTAssertEqual(User.fromJson(userpilot.storage.user).properties["plan"] as? String, "enterprise")
-    }
-
-    /// `flush` drains the queue itself, so a screen it replays must go out rather than be pushed
-    /// back into a queue that is being torn down.
-    func testFlush_withTheFlagOn_stillPublishesAQueuedScreen() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        // Keep the screen unsent behind a track event until flush drains the queue.
-        analyticsPublisher.publish(Event(type: .event("before-background")))
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.flush()
-
-        XCTAssertEqual(published(), [Constants.Event.trackEvent, Constants.Event.screenEvent])
-        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
-    }
-
-    private func identifyEventForCurrentUser() -> Event {
-        Event(type: .identify(userpilot.storage.userId), properties: ["plan": "enterprise"])
-    }
-
-    func testRestatement_preservesPendingHostIdentifyAndDoesNotBroadcast() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        let delegate = IdentifyDelegate()
-        userpilot.analyticsDelegate = delegate
-        let cachedUser = userpilot.storage.user
-        let state = userpilot.container.resolve(UserSessionStateManaging.self)
-
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
-        XCTAssertTrue(state.isNormal(), "restating a user must not arm the initial-screen state")
-        analyticsPublisher.publish(identifyEventForCurrentUser())
-        let pendingUser = userpilot.storage.temporaryUser
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(userpilot.storage.user, cachedUser)
-        XCTAssertEqual(userpilot.storage.temporaryUser, pendingUser)
-        XCTAssertTrue(delegate.identifies.isEmpty)
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        let delivered = expectation(description: "analytics delegate callbacks delivered")
-        DispatchQueue.main.async { delivered.fulfill() }
-        wait(for: [delivered], timeout: 2)
-        XCTAssertEqual(delegate.identifies, ["reload-user"])
-        XCTAssertNil(userpilot.storage.temporaryUser)
-        XCTAssertEqual(User.fromJson(userpilot.storage.user).properties["plan"] as? String, "enterprise")
-    }
-
-    func testRestatement_cachesPushTokenUntilTheProcessingCycleContinues() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        // Use the real token monitor and route it back into this publisher.
-        userpilot.container.register(AnalyticsPublishing.self, value: analyticsPublisher)
-        let monitor = PushNotificationMonitor(container: userpilot.container)
-        userpilot.storage.pushToken = "test-token"
-        let published = recordPublishedEvents()
-        userpilot.pushNotificationMonitor.onResyncPushToken = {
-            monitor.resyncPushToken()
-            XCTAssertTrue(published().isEmpty, "the token must wait in the SDK cache while the gate is held")
-        }
-
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
-
-        XCTAssertEqual(published(), ["user_token", Constants.Event.identifyEvent])
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        XCTAssertEqual(published(), ["user_token", Constants.Event.identifyEvent, Constants.Event.screenEvent])
-    }
-
-    func testScreenAfterFailedTrack_insertsIdentifyEvenIfAnEarlierIdentifySucceeded() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        analyticsPublisher.publish(identifyEventForCurrentUser())
-        analyticsPublisher.publish(Event(type: .event("between-identify-and-screen")))
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), false)
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
-    }
-
-    func testRestatement_forBackgroundReload_preservesTheReloadFlag() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        var screenMetadata: [String: Any]?
-        userpilot.socketManager.onPublish = { name, payload in
-            if name == Constants.Event.screenEvent {
-                screenMetadata = payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-            }
-        }
-        analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: false)
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(screenMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
-    }
-
-    func testRestatement_whenIdentifyFails_stillReplaysTheParkedReload() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        let published = recordPublishedEvents()
-        analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true)
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), false)
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
-    }
-
-    func testRestatement_forReloadWithPushToken_sendsOnlyOneIdentify() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        userpilot.container.register(AnalyticsPublishing.self, value: analyticsPublisher)
-        let monitor = PushNotificationMonitor(container: userpilot.container)
-        userpilot.storage.pushToken = "test-token"
-        userpilot.pushNotificationMonitor.onResyncPushToken = { monitor.resyncPushToken() }
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true)
-        XCTAssertEqual(published(), ["user_token", Constants.Event.identifyEvent])
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        XCTAssertEqual(published(), ["user_token", Constants.Event.identifyEvent, Constants.Event.screenEvent])
-    }
-
-    func testUserSwitch_queuedBehindRestatement_reconnectsAsTheNewUser() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        var closes = 0
-        userpilot.socketManager.onClose = { closes += 1 }
-
-        analyticsPublisher.publish(Event(type: .screen("Old user screen")))
-        analyticsPublisher.publish(Event(type: .identify("next-user")))
-        analyticsPublisher.publish(Event(type: .screen("New user screen")))
-        let pendingUser = userpilot.storage.temporaryUser
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        XCTAssertEqual(closes, 0)
-        XCTAssertEqual(userpilot.storage.temporaryUser, pendingUser)
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
-        XCTAssertEqual(closes, 1)
-        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "next-user")
-        userpilot.socketManager.isSocketOpened = false
-        analyticsPublisher.onSocketClosed()
-        XCTAssertEqual(userpilot.storage.userId, "next-user")
-        userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(User.fromJson(userpilot.storage.user).userId, "next-user")
-        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.event.screenTitle, "New user screen")
-    }
-
-    func testRestatement_afterReconnect_staysInternalAndPreservesPendingHostIdentify() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
-        analyticsPublisher.publish(identifyEventForCurrentUser())
-        let pendingUser = userpilot.storage.temporaryUser
-        userpilot.socketManager.didCloseFromError = true
-        userpilot.socketManager.isSocketOpened = false
-        analyticsPublisher.onSocketClosed()
-        userpilot.socketManager.didCloseFromError = false
-        userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(userpilot.storage.temporaryUser, pendingUser)
-        XCTAssertTrue(userpilot.container.resolve(UserSessionStateManaging.self).isNormal())
-        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.event.screenTitle, "Checkout")
-    }
-
-    private final class IdentifyDelegate: NSObject, UserpilotAnalyticsDelegate {
-        var identifies: [String] = []
-
-        func didTrack(analytic: UserpilotAnalytic, value: String, properties: [String: Any]?) {
-            if analytic == .identify { identifies.append(value) }
-        }
-    }
-
     // MARK: - Autocapture screen guard (Android parity)
 
     /// An autocapture event with no screen is meaningless, so it must be neither sent nor STORED.
@@ -1437,7 +1194,7 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
     }
 
-    // MARK: - Identify before screen
+    // MARK: - Screen reloads and host identify
 
     /// Establishes a cached user and a live screen session, then waits out the screen throttle so
     /// the reload under test is not swallowed by it.
@@ -1456,11 +1213,6 @@ class AnalyticsPublisherTests: XCTestCase {
         ).toJson() ?? ""
 
         analyticsPublisher.publish(Event(type: .screen(title)))
-        // With the flag on the identify is inserted ahead of the screen and is the first
-        // thing on the wire, so the screen only goes out once that identify is resolved.
-        if userpilot.config.requestIdentifyBeforeScreen {
-            analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-        }
         analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
 
         let throttleWindow = XCTestExpectation(description: "screen throttle window elapsed")
@@ -1484,8 +1236,7 @@ class AnalyticsPublisherTests: XCTestCase {
         }
     }
 
-    func testReloadSendsTheScreenEventAlone_whenTheFlagIsOff() {
-        // The default configuration is unchanged by this feature.
+    func testReloadSendsTheScreenEventAlone() {
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
@@ -1494,53 +1245,25 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
 
-    func testReloadPublishesTheIdentifyFirst_whenTheFlagIsOn() {
-        userpilot.config.requestIdentifyBeforeScreen = true
+    func testAppScreenEvent_publishesWithoutIdentify() {
         arrangeReloadableScreen()
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
-
-        // The identify travels the queue like any other event, so the reload it precedes does
-        // not go out until that identify resolves.
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
-    }
-
-    func testAppScreenEventIsPrecededByTheIdentify_whenTheFlagIsOn() {
-        // The flag covers app-tracked screens too, not just the SDK's fake reloads.
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.publish(Event(type: .screen("Another Screen")))
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
-
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
-    }
-
-    func testScreenIdentifyCarriesTheCachedUser_whenTheFlagIsOn() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        var identifyPayload: [String: Any]?
+        var published: [String] = []
+        var screenTitle: String?
         userpilot.socketManager.onPublish = { name, payload in
-            if name == Constants.Event.identifyEvent { identifyPayload = payload }
+            published.append(name)
+            screenTitle = payload?[Constants.Analytics.screenTitleProperty] as? String
         }
 
         analyticsPublisher.publish(Event(type: .screen("Another Screen")))
 
-        let metadata = identifyPayload?[Constants.Analytics.metaDataProperty] as? [String: String]
-        XCTAssertEqual(metadata, ["plan": "pro"])
+        XCTAssertEqual(published, [Constants.Event.screenEvent])
+        XCTAssertEqual(screenTitle, "Another Screen")
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.screenTitle, "Another Screen")
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
-    func testReloadSendsNothingExtra_whenNoUserIsIdentified() {
-        userpilot.config.requestIdentifyBeforeScreen = true
+    func testReloadSendsOnlyScreen_whenCachedUserIsEmpty() {
         arrangeReloadableScreen()
         userpilot.storage.user = ""
         let published = recordPublishedEvents()
@@ -1550,24 +1273,9 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
 
-    func testIdentifyBeforeScreenAckDoesNotRequestASecondScreenEvent() {
-        userpilot.config.requestIdentifyBeforeScreen = true
-        arrangeReloadableScreen()
-        let published = recordPublishedEvents()
-        analyticsPublisher.publish(Event(type: .screen("Another Screen")))
-
-        // The identify owns a queue head now, so its ack releases exactly one screen - it can
-        // no longer satisfy isPostIdentificationContext and duplicate the screen event.
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
-    }
-
-    func testReloadSendsNeitherEvent_forAThrottledScreen() {
-        userpilot.config.requestIdentifyBeforeScreen = true
+    func testReloadSendsNothing_forAThrottledScreen() {
         arrangeReloadableScreen()
         analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
         analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         let published = recordPublishedEvents()
@@ -1579,7 +1287,6 @@ class AnalyticsPublisherTests: XCTestCase {
     }
 
     func testDuplicateIdentifyIsDropped() {
-        // Re-stating an unchanged user is the flag's job, not the identify path's.
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
