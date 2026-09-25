@@ -937,6 +937,45 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertFalse(connectCalled)
     }
 
+    // MARK: - Autocapture screen guard (Android parity)
+
+    /// An autocapture event with no screen is meaningless, so it must be neither sent nor STORED.
+    /// The offline branch of `publish` returns before `trackEvent` runs, so the guard has to sit
+    /// on that path too or the event is persisted and replayed later.
+    func testPublish_autoCaptureWithoutScreen_isNotPersistedOffline() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.publish(makeAutoCaptureEvent(screen: nil))
+
+        XCTAssertTrue(
+            userpilot.offlineEventsHandler.savedEvents.isEmpty,
+            "a screenless autocapture event must not reach local storage")
+    }
+
+    /// The autocapture pipeline can hand over an EMPTY screen dictionary, which carries no more
+    /// information than a missing one.
+    func testPublish_autoCaptureWithEmptyScreen_isNotPersistedOffline() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.publish(makeAutoCaptureEvent(screen: [:]))
+
+        XCTAssertTrue(
+            userpilot.offlineEventsHandler.savedEvents.isEmpty,
+            "an empty screen map must be treated as no screen")
+    }
+
+    /// The guard must not swallow a well-formed autocapture event.
+    func testPublish_autoCaptureWithScreen_isPersistedOffline() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.publish(makeAutoCaptureEvent())
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
     // MARK: - Track Event Throttle Key Tests
 
     private func makeAutoCaptureEvent(

@@ -395,6 +395,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Network monitor is ready and reports no network: persist locally
             if offlineEventsHandler.shouldSaveOffline {
                 if event.isScreenEvent, !shouldStoreScreenEventOffline(event) { return }
+                if rejectsAutoCaptureWithoutScreen(event) { return }
                 // Something needs sending and we believe we are offline, so this is the moment
                 // to re-verify. `NWPathMonitor` only reports interface transitions, so a probe
                 // that failed while the interface stayed up never retries on its own. The call
@@ -447,6 +448,27 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     private func shouldStoreScreenEventOffline(_ event: Event) -> Bool {
         let isNewScreen = setupScreenEvent(event)
         return isNewScreen || experiencesPublisher?.canRequestScreenEvent() == true
+    }
+
+    /**
+     * An autocapture event without a screen must be neither sent nor stored: its payload is
+     * meaningless without the surface it happened on.
+     *
+     * Checked on the live path AND the offline path. The offline branch of `publish` returns
+     * before `trackEvent` ever runs, so a screenless autocapture event used to be persisted and
+     * replayed later regardless. The check is `screen` empty-or-nil rather than just nil: the
+     * autocapture pipeline can hand over an empty dictionary, which carries no more information
+     * than a missing one.
+     *
+     * Mirrors Android's `rejectsAutoCaptureWithoutScreen`.
+     *
+     * - Parameter event: The event to check
+     * - Returns: true when the event must not be sent or stored
+     */
+    private func rejectsAutoCaptureWithoutScreen(_ event: Event) -> Bool {
+        guard event.type == .autoCaptureEvent, event.screen?.isEmpty ?? true else { return false }
+        logger.error("❗ Event Error, Auto capture event must have screen")
+        return true
     }
 
     /**
@@ -823,10 +845,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         if let screen = event.screen {
             payload[Constants.Analytics.screenProperty] = screen
         }
-        if event.type == .autoCaptureEvent && event.screen == nil {
-            logger.error("❗ Event Error, Auto capture event must have screen")
-            return false
-        }
+        if rejectsAutoCaptureWithoutScreen(event) { return false }
 
         broadcastEvent(event, event.eventTitle, properties: payload)
         socketManager.publish(event.eventName, payload: payload)
