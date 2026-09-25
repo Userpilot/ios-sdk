@@ -545,10 +545,13 @@ extension SocketManager: SocketManaging {
     ///
     /// Runs on the caller's queue - unlike the connect/teardown paths, which are all serialized on
     /// main. That is safe for the transport itself (`sendBuffer` is a `SynchronizedArray` and a send
-    /// on a cancelled task just fails its completion), but `Socket.makeRef()` increments a plain
-    /// `UInt64`, so a push racing the main-queue heartbeat can duplicate a message ref and misroute
-    /// its ACK. Hopping to main would fix that; it would also reorder pushes relative to the caller,
-    /// so it is left alone deliberately rather than by omission.
+    /// on a cancelled task just fails its completion), and it stays on the caller's queue so pushes
+    /// are not reordered relative to the caller.
+    ///
+    /// Message refs used to be the catch here: `Socket.makeRef()` was an unguarded read-modify-write,
+    /// so a push racing the heartbeat (`com.phoenix.socket.heartbeat`, not main) could duplicate a
+    /// ref and misroute its ACK. That is now fixed at the source - `makeRef()` is lock-guarded - so
+    /// publishing off the caller's queue no longer trades ref safety for ordering.
     func publish(
         _ eventName: String,
         payload: Payload
