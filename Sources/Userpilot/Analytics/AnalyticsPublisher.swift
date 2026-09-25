@@ -395,6 +395,11 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Network monitor is ready and reports no network: persist locally
             if offlineEventsHandler.shouldSaveOffline {
                 if event.isScreenEvent, !shouldStoreScreenEventOffline(event) { return }
+                // Something needs sending and we believe we are offline, so this is the moment
+                // to re-verify. `NWPathMonitor` only reports interface transitions, so a probe
+                // that failed while the interface stayed up never retries on its own. The call
+                // is throttled inside the monitor, so a burst of events is still one probe.
+                networkMonitor.recheckIfOffline()
                 handleOfflineEvent(event)
                 return
             }

@@ -59,6 +59,10 @@ internal protocol NetworkMonitoring: AnyObject {
 
     /// Stops monitoring network connectivity changes.
     func stopMonitoring()
+
+    /// Re-probes reachability if the SDK currently believes it is offline. Throttled internally;
+    /// safe to call on every event.
+    func recheckIfOffline()
 }
 
 // MARK: - NetworkMonitor
@@ -86,7 +90,8 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     private var pathMonitor: NWPathMonitor?
     private var debounceWorkItem: DispatchWorkItem?
-    private let debounceDelay: TimeInterval = 0.3
+    /// Interface-change debounce. `var` so tests can collapse it.
+    internal var debounceDelay: TimeInterval = 0.3
 
     // Reachability check properties
     // Active validation targets first-party Userpilot hosts only — probing public
@@ -97,6 +102,14 @@ internal class NetworkMonitor: NetworkMonitoring {
     private let reachabilityTimeout: TimeInterval = 5.0
     private var currentReachabilityIndex = 0
 
+    /// Stands in for ``checkInternetReachability(host:completion:)`` so tests can drive a
+    /// failing probe to recovery without opening real sockets. `nil` in production.
+    internal var reachabilityProbe: ((String, @escaping (Bool) -> Void) -> Void)?
+
+    /// Shortest gap between two recovery probes driven by ``recheckIfOffline()``.
+    /// `var` so tests can collapse it.
+    internal var reachabilityRecheckInterval: TimeInterval = 10.0
+
     // Backing state (accessed via concurrent queue)
     private var _isNetworkAvailable: Bool = false  // Start pessimistic until verified
     private var _hasInterfaceConnection: Bool = false  // Interface level connectivity
@@ -104,6 +117,8 @@ internal class NetworkMonitor: NetworkMonitoring {
     private var _connectionType: ConnectionType = .unknown
     private var _isReady: Bool = false
     private var _isCheckingReachability: Bool = false
+    /// When the last probe started, so `recheckIfOffline()` can throttle.
+    private var _lastReachabilityCheckAt: TimeInterval = 0
 
     /// Indicates whether the device has real internet connectivity
     var isNetworkAvailable: Bool {
@@ -226,6 +241,7 @@ internal class NetworkMonitor: NetworkMonitoring {
 
         stateQueue.async(flags: .barrier) { [weak self] in
             self?._isCheckingReachability = true
+            self?._lastReachabilityCheckAt = Date().timeIntervalSince1970
         }
 
         // Rotate through first-party hosts for redundancy
@@ -245,7 +261,11 @@ internal class NetworkMonitor: NetworkMonitoring {
         let host = reachabilityHosts[currentReachabilityIndex]
         currentReachabilityIndex = (currentReachabilityIndex + 1) % reachabilityHosts.count
 
-        checkInternetReachability(host: host) { [weak self] hasAccess in
+        let probe = reachabilityProbe ?? { [weak self] probeHost, completion in
+            self?.checkInternetReachability(host: probeHost, completion: completion)
+        }
+
+        probe(host) { [weak self] hasAccess in
             guard let self = self else { return }
 
             self.stateQueue.async(flags: .barrier) {
@@ -253,6 +273,38 @@ internal class NetworkMonitor: NetworkMonitoring {
             }
 
             self.updateInternetAccessState(hasAccess: hasAccess)
+        }
+    }
+
+    // MARK: - Recovery
+
+    /// Re-probes reachability when the SDK believes it is offline.
+    ///
+    /// `NWPathMonitor` reports INTERFACE transitions only, so a probe that failed while the
+    /// interface stayed `.satisfied` — captive portal, backend outage, transient DNS — would
+    /// otherwise pin the SDK offline until the interface flapped or the app was backgrounded,
+    /// with every event routed to local storage in the meantime.
+    ///
+    /// Driven by event publishing rather than by a timer: while the app is idle there is nothing
+    /// to send, so being marked offline costs nothing and a wake-up would buy nothing. The moment
+    /// something does need sending, this re-checks. Throttled to one probe per
+    /// ``reachabilityRecheckInterval`` so a burst of events cannot turn into a burst of probes.
+    func recheckIfOffline() {
+        var shouldProbe = false
+        stateQueue.sync(flags: .barrier) {
+            let now = Date().timeIntervalSince1970
+            guard !_isNetworkAvailable,
+                  _hasInterfaceConnection,
+                  !_isCheckingReachability,
+                  now - _lastReachabilityCheckAt >= reachabilityRecheckInterval
+            else { return }
+            shouldProbe = true
+        }
+        guard shouldProbe else { return }
+
+        logger.debug("🌐 Offline with a live interface - re-checking reachability")
+        networkQueue.async { [weak self] in
+            self?.performReachabilityCheck()
         }
     }
 
@@ -334,7 +386,9 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     // MARK: - State Management
 
-    private func updateInterfaceState(hasInterface: Bool, connectionType: ConnectionType) {
+    /// Entry point for an interface transition. Internal rather than private so tests can stand
+    /// in for `NWPathMonitor` without opening a real path monitor.
+    internal func updateInterfaceState(hasInterface: Bool, connectionType: ConnectionType) {
         debounceWorkItem?.cancel()
 
         let workItem = DispatchWorkItem { [weak self] in

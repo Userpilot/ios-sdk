@@ -437,6 +437,10 @@ class MockNetworkMonitor: NetworkMonitoring {
     func stopMonitoring() {
         onStopMonitoring?()
     }
+    var recheckIfOfflineCount = 0
+    func recheckIfOffline() {
+        recheckIfOfflineCount += 1
+    }
 }
 
 // MARK: - Mock Offline Events Handler
