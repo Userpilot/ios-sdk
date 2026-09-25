@@ -33,21 +33,27 @@ class AnalyticsPublisherTests: XCTestCase {
     // MARK: - Publish Method Tests
 
     func testPublish_identifyEvent_shouldCacheEventAndUpdateStorage() {
-        // Arrange
-        let userId = "test-user-123"
-        let properties = ["name": "John Doe", "email": "john@example.com"]
-        let company = ["name": "Test Company", "id": "company-123"]
-        let identifyEvent = Event(
-            type: .identify(userId),
-            properties: properties,
-            company: company
+        userpilot.storage.userId = ""
+        userpilot.storage.user = ""
+        userpilot.socketManager.isJoiningSocket = true
+        let identify = Event(
+            type: .identify("user-123"),
+            properties: ["plan": "pro"],
+            company: ["id": "company-123"]
         )
 
-        // Act
-        analyticsPublisher.publish(identifyEvent)
+        analyticsPublisher.publish(identify)
 
-        // Assert
-        XCTAssertTrue(userpilot.socketManager.isShutdownState || !userpilot.socketManager.isSocketOpened)
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-123")
+        XCTAssertEqual(queued.first?.properties?["plan"] as? String, "pro")
+        XCTAssertEqual(queued.first?.company?["id"] as? String, "company-123")
+        let pending = User.fromJson(userpilot.storage.temporaryUser.orEmpty())
+        XCTAssertEqual(pending.userId, "user-123")
+        XCTAssertEqual(pending.properties["plan"] as? String, "pro")
+        XCTAssertEqual(pending.company["id"] as? String, "company-123")
+        XCTAssertEqual(userpilot.storage.user, "", "Unacknowledged data must not be committed")
     }
 
     func testPublish_screenEvent_shouldSetupScreenSessionStateMachine() {
@@ -247,13 +253,12 @@ class AnalyticsPublisherTests: XCTestCase {
     // MARK: - Reset Tests
 
     func testReset_shouldResetStartSessionFlag() {
-        // Arrange
-        // Simulate that start session was previously false
+        userpilot.storage.sessionDate = Date().addingTimeInterval(-60)
+        analyticsPublisher.updateSessionState()
+        XCTAssertFalse(analyticsPublisher.isStartSession)
 
-        // Act
         analyticsPublisher.reset()
 
-        // Assert
         XCTAssertTrue(analyticsPublisher.isStartSession)
     }
 
@@ -353,22 +358,20 @@ class AnalyticsPublisherTests: XCTestCase {
     }
 
     func testOnSocketEventSent_shouldUpdateUserOnIdentifyEvent() {
-        // Arrange
-        let userId = "test-user"
-        let identifyEvent = Event(type: .identify(userId))
-        userpilot.storage.userId = userId
-        userpilot.storage.user = "{\"userId\":\"test-user\",\"properties\":{}}"
+        userpilot.storage.userId = "test-user"
+        userpilot.storage.user = User(userId: "test-user", properties: ["plan": "free"]).toJson()!
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .identify("test-user"), properties: ["plan": "pro"]))
+        XCTAssertEqual(User.fromJson(userpilot.storage.user).properties["plan"] as? String, "free")
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 1)
 
-        // Simulate cached identify event
-        analyticsPublisher.publish(identifyEvent)
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
 
-        let payload: [String: Any] = ["test": "data"]
-
-        // Act
-        analyticsPublisher.onSocketEventSent("identify", payload, Message(), true)
-
-        // Assert
-        XCTAssertNotEqual(userpilot.storage.user, "")
+        let user = User.fromJson(userpilot.storage.user)
+        XCTAssertEqual(user.userId, "test-user")
+        XCTAssertEqual(user.properties["plan"] as? String, "pro")
+        XCTAssertTrue(userpilot.storage.temporaryUser.orEmpty().isEmpty)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
     /// A fake reload owns no queue entry. Its ACK must release a waiting track without
@@ -839,20 +842,16 @@ class AnalyticsPublisherTests: XCTestCase {
     }
 
     func testPublishFakeReloadScreenEvent_withSameTimeForScreenEvent_shouldNotPublishScreenEvent() {
-        // Arrange
         userpilot.socketManager.isSocketOpened = true
-        let screenEvent = Event(type: .screen("Test Screen"))
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+        let published = recordPublishedEvents()
 
-        var publishScreenEventCalled = false
-        userpilot.socketManager.onPublish = { _, _ in publishScreenEventCalled = true }
+        let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
 
-        // Act
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
-
-        // Assert
-        // Would need to verify socket manager publish was called with fake reload flag
-        XCTAssertFalse(publishScreenEventCalled)
+        XCTAssertFalse(sent)
+        XCTAssertEqual(published(), [])
     }
 
     func testExperiencePublished_shouldUpdateSeenExperiences() {
@@ -1568,11 +1567,14 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.config.requestIdentifyBeforeScreen = true
         arrangeReloadableScreen()
         analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         let published = recordPublishedEvents()
 
-        // A second dismissal inside the throttle window sends no identify either.
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 11, isFakeReload: true)
+        let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 11, isFakeReload: true)
 
+        XCTAssertFalse(sent)
         XCTAssertEqual(published(), [])
     }
 

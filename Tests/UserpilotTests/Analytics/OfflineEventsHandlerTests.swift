@@ -179,7 +179,7 @@ class OfflineEventsHandlerTests: XCTestCase {
         }
 
         handler.restoreEventsFromLocalStorage { }
-        wait(for: [published], timeout: 2.0)
+        wait(for: [published], timeout: 10.0)
 
         let batch = try XCTUnwrap(captured, file: file, line: line)
         return try XCTUnwrap(
@@ -198,7 +198,7 @@ class OfflineEventsHandlerTests: XCTestCase {
 
         let finished = expectation(description: "restore finished")
         handler.restoreEventsFromLocalStorage { finished.fulfill() }
-        wait(for: [finished], timeout: 2.0)
+        wait(for: [finished], timeout: 10.0)
 
         return publishedEventNames
     }

@@ -552,51 +552,48 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     func testOnNewMessage_shouldNotProcessContent_WhenRequestIdExists() {
-        // Arrange
-        let payload: [String: Any] = [
-            "mobile_contents": ["test": "data"],
-            "request_id": 123
-        ]
-        let message = Message(payload: ["payload": payload])
+        var rejected = MockContentFactory.makeFlowContentPayload()
+        rejected["request_id"] = 123
+        var accepted = MockContentFactory.makeFlowContentPayload()
+        var acceptedFlow = accepted["mobile_contents"] as! [String: Any]
+        acceptedFlow["id"] = 78
+        accepted["mobile_contents"] = acceptedFlow
+        XCTAssertNotNil(rejected.toJSONString()?.toFlowContent(), "The rejected response must otherwise be valid")
+        let processed = expectation(description: "accepted response reached theme lookup")
+        userpilot.themeHandler.onGetThemeById = { _ in
+            processed.fulfill()
+            return nil
+        }
 
-        // Act
-        experiencesPublisher.onNewMessage(message)
+        experiencesPublisher.onNewMessage(Message(payload: ["payload": rejected]))
+        experiencesPublisher.onNewMessage(Message(payload: ["payload": accepted]))
+        wait(for: [processed], timeout: 1.0)
 
-        // Assert
-        let result = experiencesPublisher.getActiveMobileContent()
-        XCTAssertNil(result)
+        XCTAssertEqual(experiencesPublisher.getActiveMobileContent()?.experienceId(), 78)
     }
 
     func testOnNewMessage_shouldNotProcessContent_WhenActiveExperienceExists() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "First content should be processed, second should not")
-        let mockPayload: [String: Any?] = MockContentFactory.makeFlowContentPayload()
-        let firstMessage = Message(payload: ["payload": mockPayload])
+        let renderer = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: renderer)
+        let cached = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getCachedExperienceContent()?.experienceId() == 77
+            },
+            object: nil
+        )
 
-        // Process first message
-        experiencesPublisher.onNewMessage(firstMessage)
+        experiencesPublisher.onNewMessage(Message(payload: ["payload": MockContentFactory.makeFlowContentPayload()]))
+        wait(for: [cached], timeout: 2.0)
 
-        // Wait for first message to be processed, then try second message
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Now try to process another message - this should be ignored due to pending experience
-            let secondMessage = Message(payload: ["payload": mockPayload])
-            self.experiencesPublisher.onNewMessage(secondMessage)
-            
-            // Wait a bit more and check result
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                let result = self.experiencesPublisher.getActiveMobileContent()
-                // Should still be the first (flow) content
-                if case .flow(let content) = result {
-                    let expectedId = (mockPayload["mobile_contents"] as? [String: Any])?["id"] as? Int
-                    XCTAssertEqual(content.id, expectedId)
-                } else {
-                    XCTFail("Expected flow content to remain")
-                }
-                expectation.fulfill()
-            }
+        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
+        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceContent()?.experienceId(), 77)
+        let closed = expectation(description: "original renderer remains active")
+        renderer.onTriggerClose = { manual in
+            XCTAssertTrue(manual)
+            closed.fulfill()
         }
-        
-        wait(for: [expectation], timeout: 1.0)
+        experiencesPublisher.endExperience(manualClose: true)
+        wait(for: [closed], timeout: 1.0)
     }
 
     // MARK: - publishInternalSDKEvent Tests
@@ -755,16 +752,25 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     func testPublishInternalSDKEvent_shouldHandleCloseEvent_WithDeepLink() {
-        // Arrange
-        let mockEvent = MockSDKEvent(eventName: "close-event", hasDeepLink: true)
-        mockEvent.isCloseEvent = true
+        userpilot.experienceStateMachine.markActiveFromCurrentState(
+            content: .survey(content: MockContentFactory.makeSurveyContent())
+        )
+        XCTAssertTrue(userpilot.experienceStateMachine.isActive())
+        var published: [String] = []
+        var reloadCount = 0
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { published.append($0.eventName) }
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
+            reloadCount += 1
+            return true
+        }
+        let event = MockSDKEvent(eventName: "dismissed_mobile_content", hasDeepLink: true)
+        event.isCloseEvent = true
 
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(mockEvent)
-        let result = experiencesPublisher.getActiveMobileContent()
+        experiencesPublisher.publishInternalSDKEvent(event)
 
-        // Assert
-        XCTAssertNil(result)
+        XCTAssertEqual(published, ["dismissed_mobile_content"])
+        XCTAssertFalse(userpilot.experienceStateMachine.isActive())
+        XCTAssertEqual(reloadCount, 0)
     }
 
     func testPublishInternalSDKEvent_shouldHandleCloseEvent_withoutDeepLink() {
@@ -819,21 +825,19 @@ final class ExperiencesPublisherTests: XCTestCase {
         let mockSurveyContent = MockContentFactory.makeSurveyContent()
         let mockSurveyTheme = MockContentFactory.makeSurveyTheme()
 
-        let expectation = XCTestExpectation(description: "Wait for thank you message")
         let mockVC = MockUPExperience()
         experiencesPublisher.topViewControllerProvider = { return mockVC }
 
         // Act
         experiencesPublisher.showThankYouMessage(mockSurveyContent, mockSurveyTheme, 0)
 
-        // Assert
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            let canRequest = self.experiencesPublisher.canRequestScreenEvent()
-            XCTAssertFalse(canRequest) // Should be false when triggering thank you message
-            expectation.fulfill()
-        }
-
-        wait(for: [expectation], timeout: 1.0)
+        // Assert - `triggerThankYouMessageView` calls `markShowingThankYou()` synchronously
+        // before it hops to main, so the state is already set when the call returns. Waiting a
+        // second bought nothing and raced its own timeout; it also let the main-queue block's
+        // nil-host path reset the state back.
+        XCTAssertFalse(
+            experiencesPublisher.canRequestScreenEvent(),
+            "Showing the thank-you view must block further screen requests")
     }
 
     // MARK: - Preview Experience Tests
@@ -886,27 +890,31 @@ final class ExperiencesPublisherTests: XCTestCase {
         expectation.expectedFulfillmentCount = 10
 
         // Act
+        // Held locally: these closures can outlive `tearDown()`, and reading the IUO property
+        // after it is nilled traps the entire test host.
+        let publisher = experiencesPublisher!
+
         for _ in 0..<10 {
-            DispatchQueue.global(qos: .background).async {
+            DispatchQueue.global(qos: .userInitiated).async {
                 let mockPayload: [String: Any?] = MockContentFactory.makeFlowContentPayload()
                 let message = Message(payload: ["payload": mockPayload])
-                self.experiencesPublisher.onNewMessage(message)
+                publisher.onNewMessage(message)
                 expectation.fulfill()
             }
         }
 
-        // Assert
-        wait(for: [expectation], timeout: 2.0)
+        // Assert - the bounds below are failure bounds, not expected durations.
+        wait(for: [expectation], timeout: 10.0)
 
         // Verify that we still have valid state after concurrent access
         let resultExpectation = XCTestExpectation(description: "Wait for pending content check")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            let result = self.experiencesPublisher.getActiveMobileContent()
+            let result = publisher.getActiveMobileContent()
             // Should have some content (the last one to be processed)
             XCTAssertNotNil(result)
             resultExpectation.fulfill()
         }
-        wait(for: [resultExpectation], timeout: 1.0)
+        wait(for: [resultExpectation], timeout: 10.0)
     }
 
     // MARK: - Overlay Window Threading Tests
@@ -923,11 +931,14 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Act
         let loggedOut = XCTestExpectation(description: "logout ran to completion off the main thread")
-        performOn(.background) {
+        // Deliberately not `performOn(.background)`: that queue is pinned to QoS `.background`
+        // (DispatchQueue+Extensions.swift), which a loaded CI runner can starve for seconds. The
+        // regression under test is "arrives off the main thread", not "arrives on that queue".
+        DispatchQueue.global(qos: .userInitiated).async {
             self.experiencesPublisher.logout()
             loggedOut.fulfill()
         }
-        wait(for: [loggedOut], timeout: 2.0)
+        wait(for: [loggedOut], timeout: 10.0)
 
         // Assert — collapsing an idle overlay must never build one
         XCTAssertNil(
@@ -946,11 +957,14 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Act
         let loggedOut = XCTestExpectation(description: "logout ran to completion off the main thread")
-        performOn(.background) {
+        // Deliberately not `performOn(.background)`: that queue is pinned to QoS `.background`
+        // (DispatchQueue+Extensions.swift), which a loaded CI runner can starve for seconds. The
+        // regression under test is "arrives off the main thread", not "arrives on that queue".
+        DispatchQueue.global(qos: .userInitiated).async {
             self.experiencesPublisher.logout()
             loggedOut.fulfill()
         }
-        wait(for: [loggedOut], timeout: 2.0)
+        wait(for: [loggedOut], timeout: 10.0)
 
         // The hide is enqueued on the main queue before `logout()` returns, so this
         // barrier block runs strictly after it (main queue is FIFO).

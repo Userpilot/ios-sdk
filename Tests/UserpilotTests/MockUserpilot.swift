@@ -57,12 +57,6 @@ class MockUserpilot: Userpilot {
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
     }
 
-    var onIdentify: ((String, Payload, Payload) -> Void)?
-    override func identify(userId: String, properties: Payload = nil, company: Payload = nil) {
-        onIdentify?(userId, properties, company)
-        super.identify(userId: userId, properties: properties, company: company)
-    }
-
     var analyticsPublisher = MockAnalyticsPublisher()
     var storage = MockStorage()
     var networkMonitor = MockNetworkMonitor()
@@ -437,6 +431,7 @@ class MockNetworkMonitor: NetworkMonitoring {
     func stopMonitoring() {
         onStopMonitoring?()
     }
+
     var recheckIfOfflineCount = 0
     func recheckIfOffline() {
         recheckIfOfflineCount += 1

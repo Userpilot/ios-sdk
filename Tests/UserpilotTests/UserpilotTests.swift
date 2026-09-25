@@ -75,36 +75,19 @@ class UserpilotTests: XCTestCase {
 
     /// Verifies that user properties and company are passed correctly during identify
     func testIdentify_tracksUserPropertiesAndCompanyCorrectly() throws {
-        // Arrange
-        var trackedUserId: String?
-        var trackedProperties: Payload?
-        var trackedCompany: Payload?
+        var published: Event?
+        userpilot.analyticsPublisher.onPublish = { published = $0 }
 
-        userpilot.onIdentify = { userId, properties, company in
-            trackedUserId = userId
-            trackedProperties = properties
-            trackedCompany = company
-        }
-
-        // Act
         userpilot.identify(
             userId: "default-00000",
             properties: ["email": "test@mail.com"],
             company: ["id": "1"]
         )
 
-        // Assert
-        XCTAssertEqual(trackedUserId, "default-00000", "User Id should be 'default-00000'")
-
-        guard let properties = trackedProperties ?? nil else {
-            return XCTFail("Properties should not be nil")
-        }
-        XCTAssertEqual(properties["email"] as? String, "test@mail.com")
-
-        guard let company = trackedCompany ?? nil else {
-            return XCTFail("Company should not be nil")
-        }
-        XCTAssertEqual(company["id"] as? String, "1")
+        let event = try XCTUnwrap(published)
+        XCTAssertEqual(event.userId, "default-00000")
+        XCTAssertEqual(event.properties?["email"] as? String, "test@mail.com")
+        XCTAssertEqual(event.company?["id"] as? String, "1")
     }
 
     // MARK: - Anonymous

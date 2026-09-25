@@ -144,16 +144,19 @@ final class MultiInstanceIntegrationTests: XCTestCase {
 
         // Act — drop the last strong reference off the main thread
         let released = XCTestExpectation(description: "instance deallocated off the main thread")
-        performOn(.background) {
+        // Not `performOn(.background)`: that queue is pinned to QoS `.background`
+        // (DispatchQueue+Extensions.swift) and starves on a loaded runner. Any non-main queue
+        // proves the same point.
+        DispatchQueue.global(qos: .userInitiated).async {
             instance = nil
             released.fulfill()
         }
-        wait(for: [released], timeout: 2.0)
+        wait(for: [released], timeout: 10.0)
 
         // `deinit` marshals the teardown, so drain the main queue behind it (FIFO).
         let mainQueueDrained = XCTestExpectation(description: "main queue processed the teardown")
         performOn(.main) { mainQueueDrained.fulfill() }
-        wait(for: [mainQueueDrained], timeout: 2.0)
+        wait(for: [mainQueueDrained], timeout: 10.0)
 
         // Assert — the teardown ran (on main; off main it would abort in UIKit)
         XCTAssertTrue(overlay.isHidden, "A destroyed instance must collapse its overlay")

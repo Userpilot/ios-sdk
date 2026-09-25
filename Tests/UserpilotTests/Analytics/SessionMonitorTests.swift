@@ -72,21 +72,20 @@ final class SessionMonitorTests: XCTestCase {
         XCTAssertEqual(trackedResumeEvent, 2, "Resume should run on every activation, not only the first")
     }
 
-    func testInit_shouldResumeAnalyticsIfAppIsActive() {
-        // Arrange
-        var trackedResumeEvent = 0
-        userpilot.analyticsPublisher.onResume = { trackedResumeEvent += 1 }
+    func testInit_shouldResumeOnce_WhenActivationNotificationArrives() {
+        monitor.reset()
+        monitor = nil
+        var resumeCount = 0
+        userpilot.analyticsPublisher.onResume = { resumeCount += 1 }
+        monitor = SessionMonitor(container: userpilot.container)
 
-        let expectation = self.expectation(description: "Initial active app handling")
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        let initialized = expectation(description: "init catch-up completed")
+        DispatchQueue.main.async { initialized.fulfill() }
+        wait(for: [initialized], timeout: 1.0)
 
-        // Act
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            XCTAssertGreaterThanOrEqual(trackedResumeEvent, 0, "Resume may be called if app is active at init")
-            expectation.fulfill()
-        }
-
-        // Assert
-        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(resumeCount, 1, "Init catch-up and the activation must start one session")
+        XCTAssertTrue(monitor.isAppActive)
     }
 
     func testReset_shouldRemoveNotificationObservers() {
