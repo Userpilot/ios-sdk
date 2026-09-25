@@ -217,7 +217,24 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
 
                         var eventsList: [[String: Any]] = []
 
+                        // Who the batch will be attributed to. Empty only if storage was cleared
+                        // under us, and then there is nobody to compare against - replay as
+                        // before rather than drop everything.
+                        let currentUserId = self.storage.userId
+
                         for eventStorage in localEvents {
+                            // The batch goes out on the current user's channel and its items
+                            // carry no user id, so anything stored under a previous user would be
+                            // reported as this user's activity. `saveEventToLocalStorage` clears
+                            // on an offline user switch; this is the second line of defence for a
+                            // row that outlived that clear.
+                            if currentUserId.isNotEmpty, eventStorage.userId != currentUserId {
+                                self.logger.error(
+                                    "⚠️ Dropping offline event stored for another user: %{public}@",
+                                    eventStorage.requestId.uuidString)
+                                continue
+                            }
+
                             guard let stored = eventStorage.toStoredEvent(), stored.isSupportedSchema else {
                                 self.logger.error("⚠️ Failed to decode event from local storage")
                                 continue

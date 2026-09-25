@@ -138,6 +138,34 @@ class OfflineEventsHandlerTests: XCTestCase {
     /// failure bound. The handler's own completion is unusable here: once a batch is published
     /// the completion is parked in `offlineRestoreCompletion` until the socket ACKs, and the
     /// mock never ACKs.
+    /// Mirrors Android: the batch goes out on the CURRENT user's channel and its items carry no
+    /// user id, so a row that outlived an offline user switch would be reported as this user's
+    /// activity.
+    func testRestore_dropsRowsStoredForAnotherUser() throws {
+        let mine = try XCTUnwrap(
+            EventStorage(Event(type: .event("mine")), userpilot.config.token, "user-1"))
+        let theirs = try XCTUnwrap(
+            EventStorage(Event(type: .event("theirs")), userpilot.config.token, "user-2"))
+        eventStore.events = [theirs, mine]
+
+        let batch = try captureRestoredBatch()
+
+        let names = batch.compactMap { $0[Constants.Analytics.eventNameProperty] as? String }
+        XCTAssertEqual(names, ["mine"], "a row stored for another user must not be replayed")
+    }
+
+    /// With no current user there is nobody to compare against, so replay rather than drop.
+    func testRestore_keepsEveryRow_whenNoUserIsStored() throws {
+        storage.userId = ""
+        let older = try XCTUnwrap(
+            EventStorage(Event(type: .event("older")), userpilot.config.token, "user-2"))
+        eventStore.events = [older]
+
+        let batch = try captureRestoredBatch()
+
+        XCTAssertEqual(batch.count, 1)
+    }
+
     private func captureRestoredBatch(
         file: StaticString = #filePath,
         line: UInt = #line
