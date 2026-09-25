@@ -109,6 +109,34 @@ final class CellInteractionTextTests: XCTestCase {
         )
     }
 
+    /// The row title is read off `textLabel`, a CHILD of the cell, but the policy used to be
+    /// evaluated on the cell - whose responder chain walks UPWARD and never sees that label.
+    /// Marking the title itself therefore published it verbatim.
+    func testCellText_forRedactedTitleLabel_usesRedactionPlaceholder() {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        cell.textLabel?.text = "j.doe@example.com"
+        cell.textLabel?.userpilotRedactText = true
+
+        XCTAssertEqual(
+            cell.userpilotResolvedCellText(touchedView: cell.contentView),
+            Constants.AutoCapture.reductText,
+            "A redacted title label must never publish its text as target_text"
+        )
+    }
+
+    /// Redaction on the detail label must not suppress a title the host left readable.
+    func testCellText_forRedactedDetailLabelOnly_stillPublishesTheTitle() {
+        let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
+        cell.textLabel?.text = "Email"
+        cell.detailTextLabel?.text = "j.doe@example.com"
+        cell.detailTextLabel?.userpilotRedactText = true
+
+        XCTAssertEqual(
+            cell.userpilotResolvedCellText(touchedView: cell.detailTextLabel),
+            "Email"
+        )
+    }
+
     func testCellText_forCellWithoutAnyLabel_fallsBackToTouchedView() {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         let textView = UITextView()
@@ -151,6 +179,19 @@ final class CellInteractionTextTests: XCTestCase {
         XCTAssertEqual(
             header.userpilotResolvedHeaderFooterText(touchedView: title),
             Constants.AutoCapture.reductText
+        )
+    }
+
+    /// Same child-vs-container mismatch as the cell title.
+    func testHeaderText_forRedactedTitleLabel_usesRedactionPlaceholder() {
+        let header = UITableViewHeaderFooterView(reuseIdentifier: nil)
+        header.textLabel?.text = "j.doe@example.com"
+        header.textLabel?.userpilotRedactText = true
+
+        XCTAssertEqual(
+            header.userpilotResolvedHeaderFooterText(touchedView: header.contentView),
+            Constants.AutoCapture.reductText,
+            "A redacted header title label must never publish its text as target_text"
         )
     }
 

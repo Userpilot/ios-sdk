@@ -81,7 +81,7 @@ internal extension UITableViewCell {
     /// - Returns: The resolved text content or nil
     func userpilotResolvedCellText(touchedView: UIView?) -> String? {
         if let title = userpilotCellTitle() {
-            return resolvedInteractionText(title)
+            return title.owner.resolvedInteractionText(title.text)
         }
         if let rowText = contentView.userpilotFirstTextInSubtree() {
             return resolvedInteractionText(rowText)
@@ -103,13 +103,21 @@ internal extension UITableViewCell {
         return nil
     }
 
-    /// The cell's own title: the legacy `textLabel`, or the iOS 14+ content configuration's text.
-    private func userpilotCellTitle() -> String? {
-        if let text = textLabel?.text, !text.isEmpty {
-            return text
+    /// The cell's own title, together with the view that owns it.
+    ///
+    /// The owner matters: text-capture policy is resolved against a view's responder chain,
+    /// which runs UPWARD. Resolving a child label's text against the cell therefore never sees
+    /// that label's own `userpilotRedactText`, and published it verbatim. Resolving against the
+    /// label covers both — the label itself and every ancestor, the cell included.
+    private func userpilotCellTitle() -> (text: String, owner: UIView)? {
+        if let label = textLabel, let text = label.text, !text.isEmpty {
+            return (text, label)
         }
-        if #available(iOS 14.0, *) {
-            return UIKitViewResolver.listConfigurationText(contentConfiguration)
+        if #available(iOS 14.0, *),
+           let text = UIKitViewResolver.listConfigurationText(contentConfiguration) {
+            // A content configuration renders through views the host cannot mark
+            // individually, so the cell is the correct scope for the policy.
+            return (text, self)
         }
         return nil
     }
@@ -128,7 +136,7 @@ internal extension UITableViewHeaderFooterView {
     /// - Returns: The resolved text content or nil
     func userpilotResolvedHeaderFooterText(touchedView: UIView?) -> String? {
         if let title = userpilotHeaderFooterTitle() {
-            return resolvedInteractionText(title)
+            return title.owner.resolvedInteractionText(title.text)
         }
         if let headerText = contentView.userpilotFirstTextInSubtree() {
             return resolvedInteractionText(headerText)
@@ -138,14 +146,15 @@ internal extension UITableViewHeaderFooterView {
 
     // MARK: - Private Helpers
 
-    /// The header/footer's own title: the legacy `textLabel`, or the iOS 14+ content
-    /// configuration's text.
-    private func userpilotHeaderFooterTitle() -> String? {
-        if let text = textLabel?.text, !text.isEmpty {
-            return text
+    /// The header/footer's own title, together with the view that owns it.
+    /// Same owner rule as ``UITableViewCell/userpilotCellTitle()``.
+    private func userpilotHeaderFooterTitle() -> (text: String, owner: UIView)? {
+        if let label = textLabel, let text = label.text, !text.isEmpty {
+            return (text, label)
         }
-        if #available(iOS 14.0, *) {
-            return UIKitViewResolver.listConfigurationText(contentConfiguration)
+        if #available(iOS 14.0, *),
+           let text = UIKitViewResolver.listConfigurationText(contentConfiguration) {
+            return (text, self)
         }
         return nil
     }
