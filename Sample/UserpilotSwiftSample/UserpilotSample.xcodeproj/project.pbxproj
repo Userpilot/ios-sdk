@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942A82CD25CD700924844 /* MainViewController.xib */; };
 		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
 		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
 		AB1942B32CD2609700924844 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942B22CD2609700924844 /* ScreenOneViewController.xib */; };
@@ -21,8 +20,6 @@
 		AB3D7E202D1413EA00FC4ECF /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB3D7E1F2D1413EA00FC4ECF /* Userpilot */; };
 		AB46B0A42D07134B0054D249 /* Userpilot in Frameworks */ = {isa = PBXBuildFile; productRef = AB46B0A32D07134B0054D249 /* Userpilot */; };
 		AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */; };
-		AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */; };
-		AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */; };
 		AB585F662CD79D8C00E2A66D /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB585F652CD79D8C00E2A66D /* StorageManager.swift */; };
 		AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */; };
 		AB6ABAA62CE88B9300FB72A8 /* SDKEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6ABAA52CE88B9300FB72A8 /* SDKEventsViewController.swift */; };
@@ -61,7 +58,6 @@
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
 		ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */; };
-		ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */; };
 		ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F682C985E2000004D1C /* CustomEventViewController.swift */; };
 		ABEF6D3A2CB3E34800DAB48E /* Merriweather-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */; };
 		ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF38C7B2C73688000013F18 /* MainViewController.swift */; };
@@ -78,11 +74,17 @@
 		C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C897BA2C5CFFFA0083928E /* SceneDelegate.swift */; };
 		C5C897C22C5CFFFB0083928E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C12C5CFFFB0083928E /* Assets.xcassets */; };
 		C5C897C52C5CFFFB0083928E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5C897C32C5CFFFB0083928E /* LaunchScreen.storyboard */; };
+		FACF000000000000000000B1 /* ConfigViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A1 /* ConfigViewController.swift */; };
+		FACF000000000000000000B2 /* ConfigFlag.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A2 /* ConfigFlag.swift */; };
+		FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */; };
+		UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */; };
+		UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */; };
+		UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */; };
+		UPA91C2E4B7D6E8F0A1B2C01 /* SampleAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */; };
+		UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		AB1942A72CD25CD700924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainViewController.xib; sourceTree = "<group>"; };
-		AB1942AA2CD25CD700924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/MainViewController.xcstrings; sourceTree = "<group>"; };
 		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		AB1942AD2CD25FD200924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ScreenTwoViewController.xib; sourceTree = "<group>"; };
 		AB1942B02CD25FD200924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/ScreenTwoViewController.xcstrings; sourceTree = "<group>"; };
@@ -102,8 +104,6 @@
 		AB1942CC2CD2626C00924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/EventTableViewCell.xcstrings; sourceTree = "<group>"; };
 		AB2564922DB4F55000393126 /* UserpilotSample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UserpilotSample.entitlements; sourceTree = "<group>"; };
 		AB4721342DBA1E7900B92EE2 /* AppDelegate+PushNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+PushNotification.swift"; sourceTree = "<group>"; };
-		AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationsDialogViewController.swift; sourceTree = "<group>"; };
-		AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ConfigurationsDialogViewController.xib; sourceTree = "<group>"; };
 		AB585F652CD79D8C00E2A66D /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		AB585F672CD79EF400E2A66D /* Dev.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Dev.xcconfig; sourceTree = "<group>"; };
 		AB5ED5922D0E07CD002C815A /* PaddingLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaddingLabel.swift; sourceTree = "<group>"; };
@@ -158,7 +158,6 @@
 		ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+UserProperties.swift"; sourceTree = "<group>"; };
 		ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IdentifyViewController+CompanyProperties.swift"; sourceTree = "<group>"; };
 		ABED3F612C98051500004D1C /* UIStackView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIStackView+Extensions.swift"; sourceTree = "<group>"; };
-		ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+TableView.swift"; sourceTree = "<group>"; };
 		ABED3F682C985E2000004D1C /* CustomEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomEventViewController.swift; sourceTree = "<group>"; };
 		ABEF6D392CB3E34400DAB48E /* Merriweather-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather-Bold.ttf"; sourceTree = "<group>"; };
 		ABF38C7B2C73688000013F18 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
@@ -176,6 +175,14 @@
 		C5C897C12C5CFFFB0083928E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C5C897C42C5CFFFB0083928E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C5C897C62C5CFFFB0083928E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FACF000000000000000000A1 /* ConfigViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigViewController.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A2 /* ConfigFlag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlag.swift; sourceTree = "<group>"; };
+		FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFlagTableViewCell.swift; sourceTree = "<group>"; };
+		UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugViewController.swift; sourceTree = "<group>"; };
+		UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineEventsViewController.swift; sourceTree = "<group>"; };
+		UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineQueueViewController.swift; sourceTree = "<group>"; };
+		UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleAppearance.swift; sourceTree = "<group>"; };
+		UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureHubViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,15 +211,6 @@
 				AB1942BE2CD2615800924844 /* AddPropertyDialogViewController.xib */,
 			);
 			path = Properties;
-			sourceTree = "<group>";
-		};
-		AB585F602CD79C1100E2A66D /* Configurations */ = {
-			isa = PBXGroup;
-			children = (
-				AB585F612CD79C2800E2A66D /* ConfigurationsDialogViewController.swift */,
-				AB585F632CD79C3000E2A66D /* ConfigurationsDialogViewController.xib */,
-			);
-			path = Configurations;
 			sourceTree = "<group>";
 		};
 		AB6ABAA42CE8890700FB72A8 /* SDKEvents */ = {
@@ -258,6 +256,8 @@
 		AB6DBD352C68CD3B0009BB11 /* Featues */ = {
 			isa = PBXGroup;
 			children = (
+				FACF000000000000000000C1 /* Config */,
+				UP08E667051DEB4096A385C2 /* Debug */,
 				ABEB31742F73F58400E1789D /* AutoCapture */,
 				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
@@ -290,10 +290,8 @@
 		AB6DBD402C68D2180009BB11 /* Main */ = {
 			isa = PBXGroup;
 			children = (
-				ABED3F632C9831AC00004D1C /* Extensions */,
 				ABF38C7F2C73713100013F18 /* Models */,
 				ABF38C7B2C73688000013F18 /* MainViewController.swift */,
-				AB1942A82CD25CD700924844 /* MainViewController.xib */,
 			);
 			path = Main;
 			sourceTree = "<group>";
@@ -305,6 +303,7 @@
 				ABACA8592C96D591006C9B77 /* PropertyView */,
 				ABFB5FE32C9173D60054E142 /* CardView.swift */,
 				ABFB5FE52C91743B0054E142 /* OutlineButton.swift */,
+				UPA91C2E4B7D6E8F0A1B2C02 /* SampleAppearance.swift */,
 			);
 			path = CustomViews;
 			sourceTree = "<group>";
@@ -356,7 +355,6 @@
 		ABACA85E2C96E0C2006C9B77 /* Dialogs */ = {
 			isa = PBXGroup;
 			children = (
-				AB585F602CD79C1100E2A66D /* Configurations */,
 				AB585F5F2CD79C0400E2A66D /* Properties */,
 			);
 			path = Dialogs;
@@ -424,6 +422,7 @@
 		ABEB31742F73F58400E1789D /* AutoCapture */ = {
 			isa = PBXGroup;
 			children = (
+				UPDFBEEB3C1F6B418793B6DE /* AutoCaptureHubViewController.swift */,
 				ABAD7ABF2F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift */,
 				ABCD472F2F793CB000D71EA8 /* ScreenAPIContainerChildViewController.swift */,
 				ABCD472D2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift */,
@@ -442,14 +441,6 @@
 			children = (
 				ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */,
 				ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */,
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		ABED3F632C9831AC00004D1C /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-				ABED3F642C9831BD00004D1C /* MainViewController+TableView.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -567,6 +558,58 @@
 			path = UserpilotSample;
 			sourceTree = "<group>";
 		};
+		FACF000000000000000000C1 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000C2 /* Models */,
+				FACF000000000000000000C3 /* Cells */,
+				FACF000000000000000000A1 /* ConfigViewController.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C2 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000A2 /* ConfigFlag.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		FACF000000000000000000C3 /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				FACF000000000000000000A3 /* ConfigFlagTableViewCell.swift */,
+			);
+			path = Cells;
+			sourceTree = "<group>";
+		};
+		UP08E667051DEB4096A385C2 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */,
+				UP1D9D3FCE847D46FDB03B8A /* Offline */,
+				UPAE8C6135D07D4AA9914D9D /* OnlineQueue */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		UP1D9D3FCE847D46FDB03B8A /* Offline */ = {
+			isa = PBXGroup;
+			children = (
+				UP782B5FAFE6CF4694B8A995 /* OfflineEventsViewController.swift */,
+			);
+			path = Offline;
+			sourceTree = "<group>";
+		};
+		UPAE8C6135D07D4AA9914D9D /* OnlineQueue */ = {
+			isa = PBXGroup;
+			children = (
+				UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */,
+			);
+			path = OnlineQueue;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -624,7 +667,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */,
+				AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -644,7 +687,6 @@
 				AB1942CB2CD2626C00924844 /* EventTableViewCell.xib in Resources */,
 				AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */,
 				AB1942BB2CD260F000924844 /* IdentifyViewController.xib in Resources */,
-				AB585F642CD79C3000E2A66D /* ConfigurationsDialogViewController.xib in Resources */,
 				AB1942B72CD260CA00924844 /* DeepLinkViewController.xib in Resources */,
 				AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */,
 				AB1942C32CD261F100924844 /* CustomEventViewController.xib in Resources */,
@@ -652,7 +694,6 @@
 				AB1942C72CD2624000924844 /* EventsViewController.xib in Resources */,
 				ABC0B5162CB3CBB200139174 /* Qwitcher-Grypen-Regular.ttf in Resources */,
 				ABAC8E6A2CE9CF21005EEC9D /* SDKEventsViewController.xib in Resources */,
-				AB1942A92CD25CD700924844 /* MainViewController.xib in Resources */,
 				ABC0B5152CB3CBB200139174 /* Merriweather-Regular.ttf in Resources */,
 				ABADA1AD2CB3FB5800C6CC61 /* Merriweather-BoldItalic.ttf in Resources */,
 				AB1942BF2CD2615800924844 /* AddPropertyDialogViewController.xib in Resources */,
@@ -694,6 +735,7 @@
 			files = (
 				AB6DBD2F2C68BF510009BB11 /* IdentifyViewController.swift in Sources */,
 				ABFB5FE62C91743B0054E142 /* OutlineButton.swift in Sources */,
+				UPA91C2E4B7D6E8F0A1B2C01 /* SampleAppearance.swift in Sources */,
 				ABCDBF462CAEACED0083DF1D /* NibLoadable.swift in Sources */,
 				C5C897B92C5CFFFA0083928E /* AppDelegate.swift in Sources */,
 				ABCD472C2F793C5300D71EA8 /* DemoBackButtonViewController.swift in Sources */,
@@ -703,7 +745,12 @@
 				ABF38C7C2C73688000013F18 /* MainViewController.swift in Sources */,
 				ABF38C812C73719300013F18 /* Content.swift in Sources */,
 				ABED3F692C985E2000004D1C /* CustomEventViewController.swift in Sources */,
-				AB585F622CD79C2800E2A66D /* ConfigurationsDialogViewController.swift in Sources */,
+				FACF000000000000000000B1 /* ConfigViewController.swift in Sources */,
+				FACF000000000000000000B2 /* ConfigFlag.swift in Sources */,
+				FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */,
+				UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */,
+				UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */,
+				UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */,
 				ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */,
 				ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */,
 				ABF38C872C73889100013F18 /* ScreenOneViewController.swift in Sources */,
@@ -723,7 +770,6 @@
 				ABACA8602C96E0DD006C9B77 /* AddPropertyDialogViewController.swift in Sources */,
 				AB5ED5932D0E07D5002C815A /* PaddingLabel.swift in Sources */,
 				ABFB5FDE2C9171600054E142 /* EventTableViewCell.swift in Sources */,
-				ABED3F652C9831BD00004D1C /* MainViewController+TableView.swift in Sources */,
 				ABED3F622C98051500004D1C /* UIStackView+Extensions.swift in Sources */,
 				AB8A08862FF27964004C16B3 /* String+Int+Exensions.swift in Sources */,
 				C5C897BB2C5CFFFA0083928E /* SceneDelegate.swift in Sources */,
@@ -733,6 +779,7 @@
 				ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */,
 				ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */,
 				ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */,
+				UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */,
 				ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */,
 				AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */,
 			);
@@ -741,15 +788,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		AB1942A82CD25CD700924844 /* MainViewController.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				AB1942A72CD25CD700924844 /* Base */,
-				AB1942AA2CD25CD700924844 /* mul */,
-			);
-			name = MainViewController.xib;
-			sourceTree = "<group>";
-		};
 		AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -1070,9 +1108,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB25648F2DB4F4AB00393126 /* XCLocalSwiftPackageReference "../../../ios-sdk" */ = {
+		AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../ios-sdk";
+			relativePath = "../../../ios-sdk copy";
 		};
 /* End XCLocalSwiftPackageReference section */
 

@@ -10,8 +10,9 @@ import UIKit
 
 class DeepLinkViewController: BaseViewController {
 
-    @IBAction func onBackButtonClicked(_ sender: UIButton) {
-        close()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Movies Gallery"
     }
 }
 

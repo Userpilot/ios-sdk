@@ -134,4 +134,67 @@ final class SDKEventTests: XCTestCase {
         XCTAssertEqual(logout.eventName, SDKEventsName.userLogout.rawValue)
         XCTAssertEqual(logout.eventPayload["user_id"] as? String, "user-1")
     }
+
+    /// Mirrors the Android SDK's offline-eligible set; the two must stay identical.
+    private static let offlineEligibleEventNames: Set<String> = [
+        "seen_mobile_content",
+        "dismissed_mobile_content",
+        "complete_mobile_content",
+        "seen_mobile_content_step",
+        "completed_mobile_content_step",
+        "seen_survey",
+        "dismissed_survey",
+        "completed_survey",
+        "completed_survey_module_batch",
+        "seen_survey_module",
+        "skipped_survey_module",
+        "completed_survey_module",
+        "seen_NPS",
+        "dismiss_NPS",
+        "NPS_feedback",
+        "opened_push_notification"
+    ]
+
+    private static let offlineIneligibleEventNames: Set<String> = [
+        "get_mobile_content",
+        "fetch_theme",
+        "user_token",
+        "user_logout"
+    ]
+
+    func testOfflineEligibleEventNamesAreExactlyTheCrossPlatformSet() {
+        let eligible = Set(SDKEventsName.allCases.filter { $0.isOfflineEligible }.map { $0.rawValue })
+
+        XCTAssertEqual(eligible, Self.offlineEligibleEventNames)
+        XCTAssertEqual(Self.offlineEligibleEventNames.count, 16)
+        XCTAssertEqual(
+            Set(SDKEventsName.allCases.map { $0.rawValue }),
+            Self.offlineEligibleEventNames.union(Self.offlineIneligibleEventNames)
+        )
+    }
+
+    func testEachOfflineEligibleEventResolvesTrueThroughSDKEvent() {
+        for name in Self.offlineEligibleEventNames.sorted() {
+            XCTAssertTrue(
+                MockSDKEvent(eventName: name).isOfflineEligible,
+                "\(name) should be offline eligible"
+            )
+        }
+    }
+
+    func testEachIneligibleEventResolvesFalseThroughSDKEvent() {
+        for name in Self.offlineIneligibleEventNames.sorted() {
+            XCTAssertFalse(
+                MockSDKEvent(eventName: name).isOfflineEligible,
+                "\(name) should not be offline eligible"
+            )
+        }
+    }
+
+    func testUnknownEventNameIsNotOfflineEligible() {
+        XCTAssertFalse(
+            MockSDKEvent(eventName: "something_new").isOfflineEligible,
+            "something_new is not a known SDK event and must not be offline eligible"
+        )
+    }
 }

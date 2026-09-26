@@ -26,13 +26,13 @@ final class ScreenNameTrackerTests: XCTestCase {
         tracker.updateScreen(with: payload)
 
         XCTAssertEqual(tracker.getCurrentPayload(), payload)
-        XCTAssertEqual(tracker.buildScreenDictionary()[AutoCaptureConstants.screenName] as? String, "Home")
+        XCTAssertEqual(tracker.buildScreenDictionary()[Constants.AutoCapture.screenName] as? String, "Home")
         XCTAssertEqual(
-            tracker.buildScreenDictionaryForEvent()[AutoCaptureConstants.screenTitle],
+            tracker.buildScreenDictionaryForEvent()[Constants.AutoCapture.screenTitle],
             "HomeViewController"
         )
         XCTAssertEqual(
-            tracker.buildScreenDictionaryForEvent()[AutoCaptureConstants.navigationTitle],
+            tracker.buildScreenDictionaryForEvent()[Constants.AutoCapture.navigationTitle],
             "Dashboard"
         )
 
@@ -61,7 +61,7 @@ final class ScreenNameTrackerTests: XCTestCase {
         tracker.updateScreen(with: payload)
 
         let eventDict = tracker.buildScreenDictionaryForEvent()
-        XCTAssertEqual(eventDict[AutoCaptureConstants.screenTitle], "HomeViewController")
-        XCTAssertNil(eventDict[AutoCaptureConstants.navigationTitle])
+        XCTAssertEqual(eventDict[Constants.AutoCapture.screenTitle], "HomeViewController")
+        XCTAssertNil(eventDict[Constants.AutoCapture.navigationTitle])
     }
 }

@@ -27,7 +27,7 @@ internal class EventThrottle {
     private var activeScreenEvent: String?
 
     /// Serial dispatch queue for thread-safe operations.
-    private let queue = DispatchQueue(label: DispatchQueueConstants.THROTTLE_QUEUE)
+    private let queue = DispatchQueue(label: Constants.DispatchQueues.throttleQueue)
 
     // MARK: - Initialization
 

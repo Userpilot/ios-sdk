@@ -60,40 +60,22 @@ public class Userpilot: NSObject {
 
     // MARK: - Properties
 
-    /// A dependency injection container that stores and provides necessary services like analytics,
-    /// storage, and networking.
-    ///
     /// `var` rather than `let` so the idempotent initializer can adopt an already-registered
-    /// instance's container when `Userpilot(config:)` is called twice with the same token —
-    /// see the explanatory comment in `init(config:)`. External callers never see this
-    /// property; it remains module-internal.
+    /// instance's container when `Userpilot(config:)` is called twice with the same token.
     var container = DIContainer()
 
-    /// Configuration object that holds initialization parameters for the SDK.
     let config: Config
 
-    /// Lazy loading of the `AnalyticsPublishing` instance responsible for publishing user tracking events.
+    // Resolved lazily, never in `init`: the idempotent initializer may swap `container` for an
+    // already-registered instance's, and these must bind to that one.
     private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-
-    /// Lazy loading of the `DataStoring` instance that manages persistent storage (e.g., user data, preferences).
     private lazy var storage = container.resolve(DataStoring.self)
-
-    /// Lazy loading of the `SocketEvents` instance that manages WebSocket connections and event-driven communication.
-    private lazy var socketManager = container.resolve(SocketEvents.self)
-
-    /// Lazy loading of the `SessionMonitoring` instance that manages app lifecycle.
+    private lazy var socketManager = container.resolve(SocketManaging.self)
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
-
-    /// Lazy loading of the `ExperiencesPublishing` instance that manages app lifecycle.
     private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-
-    /// Lazy loading AutoPropertyDecoratoring
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
-
-    /// Lazy loading pushNotificationMonitoring
     private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
-
-    /// Lazy loading SDK logger
+    private lazy var linkOpener = container.resolve(LinkOpening.self)
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
@@ -106,14 +88,43 @@ public class Userpilot: NSObject {
     ///
     /// Marked `internal` so `ExperiencesPublisher` can route presentations
     /// through it; never exposed to host apps directly.
-    internal lazy var experienceOverlayWindow: ExperienceOverlayWindow = {
-        ExperienceOverlayWindow(owningInstance: self)
-    }()
+    ///
+    /// Creating a `UIWindow` is main-thread-only UIKit work, so only presentation
+    /// paths (which already run on the main queue) may touch this. Teardown paths
+    /// use `existingExperienceOverlayWindow` instead.
+    internal var experienceOverlayWindow: ExperienceOverlayWindow {
+        if let existing = experienceOverlayWindowStorage { return existing }
+        let overlay = ExperienceOverlayWindow(owningInstance: self)
+        experienceOverlayWindowStorage = overlay
+        return overlay
+    }
+
+    /// The overlay window only if one was already built — never creates one.
+    ///
+    /// Teardown paths (logout, screen change, dismissal) collapse the overlay, and
+    /// an instance that never presented an experience has none to collapse. Reading
+    /// the creating accessor there would construct — and, per
+    /// `ExperienceOverlayWindow.init`, momentarily surface — a whole window just to
+    /// hide it, off the main thread whenever the caller isn't on it.
+    internal var existingExperienceOverlayWindow: ExperienceOverlayWindow? {
+        experienceOverlayWindowStorage
+    }
+
+    /// Backing store for `experienceOverlayWindow`. `nil` until this instance
+    /// actually presents an experience.
+    private var experienceOverlayWindowStorage: ExperienceOverlayWindow?
 
     // MARK: - Delegates
 
     /// The delegate object that handles application screen navigation during experience presentation.
-    @objc public weak var navigationDelegate: UserpilotNavigationDelegate?
+    @objc public weak var navigationDelegate: UserpilotNavigationDelegate? {
+        didSet {
+            // A cold-start push deep link may be held waiting on exactly this assignment: the
+            // notification is replayed from inside `init`, before a host could set a delegate.
+            guard navigationDelegate != nil else { return }
+            linkOpener.processPendingDeepLink()
+        }
+    }
 
     /// The delegate object that broadcast analytics events.
     @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
@@ -193,10 +204,37 @@ public class Userpilot: NSObject {
 
         // Log the initialization of the SDK with the current version.
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
+
+        // Hosts assign `navigationDelegate` on the lines *after* this constructor returns, so a
+        // cold-start push replayed by `register(observer:)` above has nowhere to route to yet.
+        // Opening routing one runloop turn later lets those assignments land first, and still
+        // delivers the link for hosts that never set a delegate at all.
+        performOn(.main) { [weak self] in
+            self?.linkOpener.processPendingDeepLink()
+        }
     }
 
     deinit {
         Registry.shared.unregister(self)
+        releaseExperienceOverlayWindowOnMain()
+    }
+
+    /// Tears the overlay window down on the main thread as this instance goes away.
+    ///
+    /// `Registry` holds instances weakly, so a `Userpilot` deallocates on whichever
+    /// thread the host app (or an embedding SDK) drops its reference on. Everything
+    /// `teardown()` does is main-thread-only UIKit work, and `UIWindow.dealloc`
+    /// itself tears down a view hierarchy, so when that thread isn't main the window
+    /// must outlive this `deinit` by one main-queue hop — the block's capture is what
+    /// keeps it alive until then.
+    private func releaseExperienceOverlayWindowOnMain() {
+        guard let overlay = experienceOverlayWindowStorage else { return }
+        experienceOverlayWindowStorage = nil
+        if Thread.isMainThread {
+            overlay.teardown()
+        } else {
+            performOn(.main) { overlay.teardown() }
+        }
     }
 
     // MARK: - Setup Methods
@@ -205,7 +243,7 @@ public class Userpilot: NSObject {
      Initializes the DI (Dependency Injection) container and registers required services.
     
      This method sets up lazy initialization for essential SDK services like `DataStoring`,
-     `Networking`, `SocketEvents`, and more.
+     `Networking`, `SocketManaging`, and more.
      By using lazy registration, the services are only created when they are first used, improving performance.
      */
     internal func initializeContainer() {
@@ -218,7 +256,9 @@ public class Userpilot: NSObject {
         container.register(InstanceRegistering.self, value: Registry.shared)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
-        container.registerLazy(SocketEvents.self, initializer: SocketManager.init)
+        container.registerLazy(SocketManaging.self) { container in
+            SocketManager(container: container)
+        }
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
@@ -226,8 +266,12 @@ public class Userpilot: NSObject {
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
-        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateManager.init)
+        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateMachine.init)
+        container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
+        container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateMachine.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
+        container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
+        container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
@@ -343,7 +387,7 @@ extension Userpilot {
         }
         let event = Event(
             type: .screen(title),
-            properties: [AutoCaptureConstants.source: AutoCaptureConstants.manualCaptureSourceValue]
+            properties: [Constants.AutoCapture.source: Constants.AutoCapture.manualCaptureSourceValue]
         )
         analyticsPublisher.publish(event)
     }
@@ -386,7 +430,7 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         storage.user = ""
-        analyticsPublisher.logout(socketState: .shuttingDown, shouldClearCachedIdentifyEvent: true)
+        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
         clean()
     }
 

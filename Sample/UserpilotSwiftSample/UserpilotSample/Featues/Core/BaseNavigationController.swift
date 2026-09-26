@@ -16,10 +16,18 @@ class BaseNavigationController: UINavigationController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setNavigationBarHidden(true, animated: false)
-        self.delegate = self
-        self.interactivePopGestureRecognizer?.delegate = self
-        navigationBar.isTranslucent = false
+        delegate = self
+        interactivePopGestureRecognizer?.delegate = self
+        configureNavigationBarAppearance()
+    }
+
+    private func configureNavigationBarAppearance() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        navigationBar.standardAppearance = appearance
+        navigationBar.scrollEdgeAppearance = appearance
+        navigationBar.compactAppearance = appearance
+        navigationBar.prefersLargeTitles = false
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {

@@ -8,78 +8,199 @@
 import Foundation
 import UIKit
 
-// swiftlint:disable all
-
 func delay(_ delay: Double, closure: @escaping () -> Void) {
-
     DispatchQueue.main.asyncAfter(
         deadline: DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC),
-        execute: closure)
-
+        execute: closure
+    )
 }
 
-extension Dictionary where Key == String, Value == Any {
-    func formattedJSONLabel() -> NSAttributedString {
-        let attributedText = NSMutableAttributedString()
+enum JSONPreview {
 
-        let keyAttributes: [NSAttributedString.Key: Any] = [
-            .foregroundColor: UIColor.systemBlue,
-            .font: UIFont.monospacedSystemFont(ofSize: 14, weight: .bold)
-        ]
+    /// Text attributes per JSON token kind, built once per render.
+    private struct Palette {
+        let key: [NSAttributedString.Key: Any]
+        let string: [NSAttributedString.Key: Any]
+        let number: [NSAttributedString.Key: Any]
+        let bool: [NSAttributedString.Key: Any]
+        let null: [NSAttributedString.Key: Any]
+        let punctuation: [NSAttributedString.Key: Any]
 
-        let stringAttributes: [NSAttributedString.Key: Any] = [
-            .foregroundColor: UIColor.systemGreen,
-            .font: UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-        ]
-
-        let numberAttributes: [NSAttributedString.Key: Any] = [
-            .foregroundColor: UIColor.systemOrange,
-            .font: UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-        ]
-
-        let punctuationAttributes: [NSAttributedString.Key: Any] = [
-            .foregroundColor: UIColor.label,
-            .font: UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-        ]
-
-        func appendFormatted(json: Any, indent: String = "") {
-            if let dict = json as? [String: Any] {
-                attributedText.append(NSAttributedString(string: "{\n", attributes: punctuationAttributes))
-                for (index, key) in dict.keys.enumerated() {
-                    attributedText.append(NSAttributedString(string: indent + "  \"\(key)\": ", attributes: keyAttributes))
-
-                    let value = dict[key]
-
-                    // Recursive check
-                    if let subDict = value as? [String: Any] {
-                        appendFormatted(json: subDict, indent: indent + "  ")
-                    } else if let stringValue = value as? String {
-                        attributedText.append(NSAttributedString(string: "\"\(stringValue)\"", attributes: stringAttributes))
-                    } else if let numberValue = value as? NSNumber {
-                        attributedText.append(NSAttributedString(string: "\(numberValue)", attributes: numberAttributes))
-                    } else if value is NSNull {
-                        attributedText.append(NSAttributedString(string: "null", attributes: punctuationAttributes))
-                    } else {
-                        attributedText.append(NSAttributedString(string: "\"\(String(describing: value))\"", attributes: stringAttributes))
-                    }
-
-                    if index < dict.keys.count - 1 {
-                        attributedText.append(NSAttributedString(string: ",", attributes: punctuationAttributes))
-                    }
-
-                    // ADD NEW LINE AFTER EACH PROPERTY
-                    attributedText.append(NSAttributedString(string: "\n", attributes: punctuationAttributes))
-                }
-                attributedText.append(NSAttributedString(string: indent + "}", attributes: punctuationAttributes))
-            } else {
-                // Handle arrays or other values if needed
-            }
+        init(fontSize: CGFloat) {
+            key = JSONPreview.attributes(color: .systemBlue, size: fontSize, weight: .semibold)
+            string = JSONPreview.attributes(color: .systemGreen, size: fontSize, weight: .regular)
+            number = JSONPreview.attributes(color: .systemOrange, size: fontSize, weight: .regular)
+            bool = JSONPreview.attributes(color: .systemPurple, size: fontSize, weight: .regular)
+            null = JSONPreview.attributes(color: .tertiaryLabel, size: fontSize, weight: .regular)
+            punctuation = JSONPreview.attributes(color: .label, size: fontSize, weight: .regular)
         }
+    }
 
-        appendFormatted(json: self)
+    static func attributedString(
+        from object: Any?,
+        fontSize: CGFloat = 12
+    ) -> NSAttributedString {
+        guard let object else {
+            return NSAttributedString(
+                string: "null",
+                attributes: attributes(color: .tertiaryLabel, size: fontSize, weight: .regular)
+            )
+        }
+        let result = NSMutableAttributedString()
+        append(object, to: result, indent: "", palette: Palette(fontSize: fontSize))
+        return result
+    }
 
-        return attributedText
+    static func attributedString(
+        from dictionary: [String: Any]?,
+        fontSize: CGFloat = 12
+    ) -> NSAttributedString {
+        guard let dictionary, !dictionary.isEmpty else {
+            return NSAttributedString(
+                string: "{}",
+                attributes: attributes(color: .secondaryLabel, size: fontSize, weight: .regular)
+            )
+        }
+        return attributedString(from: dictionary as Any, fontSize: fontSize)
+    }
+
+    static func prettyString(from object: Any?) -> String {
+        guard let object,
+              JSONSerialization.isValidJSONObject(object),
+              let data = try? JSONSerialization.data(
+                withJSONObject: object,
+                options: [.prettyPrinted, .sortedKeys]
+              ),
+              let string = String(data: data, encoding: .utf8)
+        else {
+            return object.map { String(describing: $0) } ?? "null"
+        }
+        return string
+    }
+
+    // MARK: - Private
+
+    private static func attributes(
+        color: UIColor,
+        size: CGFloat,
+        weight: UIFont.Weight
+    ) -> [NSAttributedString.Key: Any] {
+        [
+            .foregroundColor: color,
+            .font: UIFont.monospacedSystemFont(ofSize: size, weight: weight)
+        ]
+    }
+
+    private static func append(
+        _ json: Any,
+        to attributedText: NSMutableAttributedString,
+        indent: String,
+        palette: Palette
+    ) {
+        if let dict = json as? [String: Any] {
+            appendObject(dict, to: attributedText, indent: indent, palette: palette)
+        } else if let array = json as? [Any] {
+            appendArray(array, to: attributedText, indent: indent, palette: palette)
+        } else {
+            appendScalar(json, to: attributedText, palette: palette)
+        }
+    }
+
+    private static func appendObject(
+        _ dict: [String: Any],
+        to attributedText: NSMutableAttributedString,
+        indent: String,
+        palette: Palette
+    ) {
+        let keys = dict.keys.sorted()
+        attributedText.append(NSAttributedString(string: "{", attributes: palette.punctuation))
+        guard !keys.isEmpty else {
+            attributedText.append(NSAttributedString(string: "}", attributes: palette.punctuation))
+            return
+        }
+        attributedText.append(NSAttributedString(string: "\n", attributes: palette.punctuation))
+        for (index, key) in keys.enumerated() {
+            attributedText.append(
+                NSAttributedString(string: indent + "  \"\(key)\": ", attributes: palette.key)
+            )
+            if let value = dict[key] {
+                append(value, to: attributedText, indent: indent + "  ", palette: palette)
+            } else {
+                attributedText.append(NSAttributedString(string: "null", attributes: palette.null))
+            }
+            appendSeparator(to: attributedText, isLast: index == keys.count - 1, palette: palette)
+        }
+        attributedText.append(NSAttributedString(string: indent + "}", attributes: palette.punctuation))
+    }
+
+    private static func appendArray(
+        _ array: [Any],
+        to attributedText: NSMutableAttributedString,
+        indent: String,
+        palette: Palette
+    ) {
+        attributedText.append(NSAttributedString(string: "[", attributes: palette.punctuation))
+        guard !array.isEmpty else {
+            attributedText.append(NSAttributedString(string: "]", attributes: palette.punctuation))
+            return
+        }
+        attributedText.append(NSAttributedString(string: "\n", attributes: palette.punctuation))
+        for (index, value) in array.enumerated() {
+            attributedText.append(
+                NSAttributedString(string: indent + "  ", attributes: palette.punctuation)
+            )
+            append(value, to: attributedText, indent: indent + "  ", palette: palette)
+            appendSeparator(to: attributedText, isLast: index == array.count - 1, palette: palette)
+        }
+        attributedText.append(NSAttributedString(string: indent + "]", attributes: palette.punctuation))
+    }
+
+    /// The `,` between entries (omitted after the last) plus the line break.
+    private static func appendSeparator(
+        to attributedText: NSMutableAttributedString,
+        isLast: Bool,
+        palette: Palette
+    ) {
+        if !isLast {
+            attributedText.append(NSAttributedString(string: ",", attributes: palette.punctuation))
+        }
+        attributedText.append(NSAttributedString(string: "\n", attributes: palette.punctuation))
+    }
+
+    private static func appendScalar(
+        _ value: Any,
+        to attributedText: NSMutableAttributedString,
+        palette: Palette
+    ) {
+        if value is NSNull {
+            attributedText.append(NSAttributedString(string: "null", attributes: palette.null))
+        } else if let boolValue = value as? Bool {
+            attributedText.append(
+                NSAttributedString(string: boolValue ? "true" : "false", attributes: palette.bool)
+            )
+        } else if let stringValue = value as? String {
+            attributedText.append(
+                NSAttributedString(string: "\"\(stringValue)\"", attributes: palette.string)
+            )
+        } else if let numberValue = value as? NSNumber {
+            // Distinguish Bool boxed as NSNumber.
+            let isBool = CFGetTypeID(numberValue) == CFBooleanGetTypeID()
+            attributedText.append(
+                NSAttributedString(
+                    string: isBool ? (numberValue.boolValue ? "true" : "false") : "\(numberValue)",
+                    attributes: isBool ? palette.bool : palette.number
+                )
+            )
+        } else {
+            attributedText.append(
+                NSAttributedString(string: "\"\(String(describing: value))\"", attributes: palette.string)
+            )
+        }
     }
 }
 
-// swiftlint:enable all
+extension Dictionary where Key == String, Value == Any {
+    func formattedJSONLabel(fontSize: CGFloat = 14) -> NSAttributedString {
+        JSONPreview.attributedString(from: self, fontSize: fontSize)
+    }
+}

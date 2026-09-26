@@ -58,7 +58,7 @@ final class DelayUtilsTests: XCTestCase {
             self?.delayUtils.cancelDelay()
 
             // Wait for cancel to complete (since it's async)
-            DispatchQueue(label: DispatchQueueConstants.DELAY_QUEUE).asyncAfter(deadline: .now() + 0.01) {
+            DispatchQueue(label: Constants.DispatchQueues.delayQueue).asyncAfter(deadline: .now() + 0.01) {
                 DispatchQueue.main.async {
                     cancelExpectation.fulfill()
                 }
@@ -67,6 +67,25 @@ final class DelayUtilsTests: XCTestCase {
 
         // Wait for cancel to complete first, then wait to ensure action doesn't execute
         wait(for: [cancelExpectation], timeout: 1.0)
+        wait(for: [executionExpectation], timeout: 0.3)
+    }
+
+    /// Cancelling in the window right after `delayAction` returns must still stop the action.
+    ///
+    /// `delayAction` assigns `currentWorkItem` inside its own queue, so at this point the property
+    /// is almost certainly still unset. A `cancelDelay()` that short-circuits on a check made from
+    /// this thread reads "nothing pending", skips the cancel, and the action fires anyway — the
+    /// experience-after-reset case.
+    func testCancelDelayImmediatelyAfterSchedulingPreventsExecution() {
+        let executionExpectation = expectation(description: "Action should not execute")
+        executionExpectation.isInverted = true
+
+        delayUtils.delayAction(delayTime: 0.1) {
+            executionExpectation.fulfill()
+        }
+        // Deliberately no wait: this is the window the bug lived in.
+        delayUtils.cancelDelay()
+
         wait(for: [executionExpectation], timeout: 0.3)
     }
 

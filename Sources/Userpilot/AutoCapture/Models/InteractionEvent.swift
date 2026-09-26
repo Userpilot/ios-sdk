@@ -65,7 +65,7 @@ internal struct InteractionPayload {
     var row: Int?
 
     /// Control-specific and privacy-safe values (switch on/off, slider value, selected index, text length, etc.).
-    /// Prefer keys from `AutoCaptureConstants`; merged into the published payload by `toSourceDictionary()`.
+    /// Prefer keys from `Constants.AutoCapture`; merged into the published payload by `toSourceDictionary()`.
     var sourceProperties: [String: Any] = [:]
 
     // MARK: - Initialization
@@ -85,47 +85,47 @@ internal struct InteractionPayload {
     // swiftlint:disable:next function_body_length cyclomatic_complexity superfluous_disable_command
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
-            AutoCaptureConstants.targetClass: targetClass
+            Constants.AutoCapture.targetClass: targetClass
         ]
 
         // Element properties
         if let elementText = elementText {
-            dict[AutoCaptureConstants.targetText] = elementText
+            dict[Constants.AutoCapture.targetText] = elementText
         }
         if let accessibilityLabel = accessibilityLabel {
-            dict[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
+            dict[Constants.AutoCapture.accessibilityLabel] = accessibilityLabel
         }
         if let accessibilityIdentifier = accessibilityIdentifier {
-            dict[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
+            dict[Constants.AutoCapture.accessibilityIdentifier] = accessibilityIdentifier
         }
         if let hierarchy = hierarchy {
-            dict[AutoCaptureConstants.hierarchy] = hierarchy
+            dict[Constants.AutoCapture.hierarchy] = hierarchy
         }
         if let targetAction = targetAction {
-            dict[AutoCaptureConstants.targetAction] = targetAction
+            dict[Constants.AutoCapture.targetAction] = targetAction
         }
         if let targetClass = ownerTargetClass {
-            dict[AutoCaptureConstants.ownerTargetClass] = targetClass
+            dict[Constants.AutoCapture.ownerTargetClass] = targetClass
         }
         if let targetViewName = targetViewName {
-            dict[AutoCaptureConstants.targetViewName] = targetViewName
+            dict[Constants.AutoCapture.targetViewName] = targetViewName
         }
         if let placeholder = placeholder {
-            dict[AutoCaptureConstants.placeholder] = placeholder
+            dict[Constants.AutoCapture.placeholder] = placeholder
         }
         if let dialogTitle = dialogTitle {
-            dict[AutoCaptureConstants.dialogTitle] = dialogTitle
+            dict[Constants.AutoCapture.dialogTitle] = dialogTitle
         }
         if let dialogMessage = dialogMessage {
-            dict[AutoCaptureConstants.dialogMessage] = dialogMessage
+            dict[Constants.AutoCapture.dialogMessage] = dialogMessage
         }
 
         // Index path properties
         if let section = section {
-            dict[AutoCaptureConstants.section] = section
+            dict[Constants.AutoCapture.section] = section
         }
         if let row = row {
-            dict[AutoCaptureConstants.selectedIndex] = row
+            dict[Constants.AutoCapture.selectedIndex] = row
         }
 
         return dict

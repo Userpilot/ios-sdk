@@ -255,7 +255,7 @@ extension UIView {
 
     func userpilotResolvedScreenName() -> String {
         guard let viewController = closestViewController() else {
-            return AutoCaptureConstants.unknownScreenHierarchyPlaceholder
+            return Constants.AutoCapture.unknownScreenHierarchyPlaceholder
         }
         return viewController.screenClassName
     }

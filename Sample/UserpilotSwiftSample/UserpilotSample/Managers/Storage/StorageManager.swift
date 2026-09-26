@@ -29,6 +29,12 @@ class StorageManager {
         return UserDefaults.standard.value(forKey: key) as? T
     }
 
+    // Retrieve a boolean from UserDefaults, falling back to `defaultValue` when never saved
+    func bool(forKey key: String, default defaultValue: Bool) -> Bool {
+        guard hasValue(forKey: key) else { return defaultValue }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+
     // Remove a value from UserDefaults
     func removeValue(forKey key: String) {
         UserDefaults.standard.removeObject(forKey: key)

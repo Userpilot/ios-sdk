@@ -25,9 +25,9 @@ internal class DeepLinkHandler: DeepLinkHandling {
 
         init?(url: URL, token: String) {
             let scheme = url.scheme?.lowercased()
-            // QR code link uses prod token always so we need to convert the stg token to prod token
-            let normalizedToken = token.replacingOccurrences(of: "STG-", with: "", options: .caseInsensitive)
-            let isValidScheme = scheme == "userpilot-\(normalizedToken)".lowercased()
+            // The scheme is the token as the SDK was configured with it, so a staging token keeps
+            // its `STG-` prefix: `STG-NX-12345678` matches `userpilot-stg-nx-12345678`.
+            let isValidScheme = scheme == "userpilot-\(token)".lowercased()
             guard isValidScheme, url.host == "sdk" else { return nil }
 
             // Supported paths:

@@ -68,8 +68,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
         owningInstance.config.attach(windows: [self])
 
         // Surface the window immediately so its rootViewController is part of
-        // the scene's window hierarchy from this point onward. Mirrors the
-        // pattern used by Appcues' overlay (`AppcuesUIWindow`) — without this,
+        // the scene's window hierarchy from this point onward. Without this,
         // a later `rootViewController.present(...)` from `ExperiencesPublisher`
         // fires before the window is attached and UIKit drops the present
         // with "whose view is not in the window hierarchy".
@@ -147,6 +146,21 @@ internal final class ExperienceOverlayWindow: UIWindow {
         isHidden = true
     }
 
+    /// Releases the overlay's hold on UIKit once its owning instance is gone.
+    ///
+    /// `init` surfaces the window, which puts it in its scene's window list and makes
+    /// UIKit retain it. Detaching the scene hands that reference back, so a destroyed
+    /// instance does not leave a hidden overlay in the list for the life of the
+    /// process — and so the window's final release follows its owner instead of
+    /// outliving it. Unconditional, unlike `hideIfIdle()`: nothing can present on
+    /// this overlay again once the owner is gone.
+    ///
+    /// Main-thread only, like all UIKit teardown.
+    func teardown() {
+        isHidden = true
+        windowScene = nil
+    }
+
     // MARK: - Scene Lifecycle
 
     /// Collapses the overlay when the scene it lives on disconnects (e.g. the
@@ -186,8 +200,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
     ///    app's main window scene is still reachable.
     ///
     /// Returns `nil` only when neither path resolves a scene; callers fall
-    /// through to the legacy `UIScreen.main.bounds` init path. Mirrors
-    /// Appcues' `mainWindowScene` resolver.
+    /// through to the legacy `UIScreen.main.bounds` init path.
     private static func resolveScene() -> UIWindowScene? {
         if let active = UIApplication.shared.activeWindowScenes.first {
             return active

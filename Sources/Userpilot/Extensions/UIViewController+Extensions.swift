@@ -196,8 +196,8 @@ internal extension UIAlertController {
         }
         if view.hasUserpilotRedactTextOptIn() {
             return (
-                title == nil ? nil : AutoCaptureConstants.reductText,
-                message == nil ? nil : AutoCaptureConstants.reductText
+                title == nil ? nil : Constants.AutoCapture.reductText,
+                message == nil ? nil : Constants.AutoCapture.reductText
             )
         }
         return (title, message)

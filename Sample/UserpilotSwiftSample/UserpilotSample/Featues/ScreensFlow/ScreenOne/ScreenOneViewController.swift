@@ -12,16 +12,17 @@ class ScreenOneViewController: BaseViewController {
 
     // MARK: - Override
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Screen One"
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         UserpilotManager.shared.screen("screen one")
     }
 
     // MARK: - IBAction
-
-    @IBAction func onBackButtonClicked(_ sender: UIButton) {
-        close()
-    }
 
     @IBAction func onNextButtonClicked(_ sender: UIButton) {
         FlowRoutingManager.shared.openViewController(ScreenTwoViewController.newInstance())

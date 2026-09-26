@@ -38,7 +38,7 @@ extension UITabBarController {
 
         let tabIndex = tabBarController.selectedIndex
         let tabTitle = selectedVC.tabBarItem?.title
-            ?? "\(AutoCaptureConstants.defaultTabTitlePrefix)\(tabIndex + 1)"
+            ?? "\(Constants.AutoCapture.defaultTabTitlePrefix)\(tabIndex + 1)"
 
         // Resolve via the *selected* view controller, not the container, so the
         // event attributes to the tenant whose screen the user just navigated to.

@@ -98,9 +98,14 @@ final class DeepLinkHandlerTests: XCTestCase {
         XCTAssertNil(DeepLinkHandler.Action(url: url, token: "NX-12345"))
     }
 
-    func testAction_stagingToken_acceptsProdScheme() {
-        let url = URL(string: "userpilot-nx-12345://sdk/experience_preview/EX-123")!
+    func testAction_stagingToken_acceptsStagingScheme() {
+        let url = URL(string: "userpilot-stg-nx-12345://sdk/experience_preview/EX-123")!
         XCTAssertNotNil(DeepLinkHandler.Action(url: url, token: "STG-NX-12345"))
+    }
+
+    func testAction_stagingToken_rejectsProdScheme() {
+        let url = URL(string: "userpilot-nx-12345://sdk/experience_preview/EX-123")!
+        XCTAssertNil(DeepLinkHandler.Action(url: url, token: "STG-NX-12345"))
     }
 
     func testAction_caseInsensitiveScheme_createsAction() {

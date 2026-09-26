@@ -88,11 +88,11 @@ internal final class ScreenNameTracker: ScreenNameTracking {
 
         // Common (always included)
         var screen: [String: String] = [
-            AutoCaptureConstants.screenTitle: payload.screenClass,
-            AutoCaptureConstants.screenName: payload.currentScreen
+            Constants.AutoCapture.screenTitle: payload.screenClass,
+            Constants.AutoCapture.screenName: payload.currentScreen
         ]
         if let navigationTitle = payload.navigationTitle, !navigationTitle.isEmpty {
-            screen[AutoCaptureConstants.navigationTitle] = navigationTitle
+            screen[Constants.AutoCapture.navigationTitle] = navigationTitle
         }
 
         return screen
@@ -105,7 +105,7 @@ internal final class ScreenNameTracker: ScreenNameTracking {
 
         // Common (always included)
         var screen: [String: String] = [
-            AutoCaptureConstants.screenTitle: payload.screenClass
+            Constants.AutoCapture.screenTitle: payload.screenClass
         ]
 
         return screen

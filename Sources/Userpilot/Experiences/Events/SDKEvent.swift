@@ -42,7 +42,7 @@ extension SDKEvent {
 
 }
 
-/// Used to pass seen content for cached ScreenViewEntity
+/// Used to pass seen content for cached ScreenSessionStateMachine
 extension SDKEvent {
 
     func getContentType() -> ExperienceType {
@@ -76,7 +76,20 @@ extension SDKEvent {
 
 }
 
-internal enum SDKEventsName: String {
+/// Used to decide which internal events survive an offline period
+extension SDKEvent {
+
+    /// Whether this event is persisted while offline and replayed in the `batch_events` batch.
+    ///
+    /// Resolves to false for any name the enum does not know, so an event coming from outside
+    /// `SDKEventsName` is excluded until someone deliberately opts it in.
+    var isOfflineEligible: Bool {
+        return SDKEventsName(rawValue: self.eventName)?.isOfflineEligible ?? false
+    }
+
+}
+
+internal enum SDKEventsName: String, CaseIterable {
     case fetchExperienceContent = "get_mobile_content"
     case fetchExperienceTheme = "fetch_theme"
 
@@ -101,4 +114,46 @@ internal enum SDKEventsName: String {
     case pushNotificationToken = "user_token"
     case pushNotificationOpened = "opened_push_notification"
     case userLogout = "user_logout"
+}
+
+extension SDKEventsName {
+
+    /// Internal events worth persisting while offline. Must stay identical to the Android SDK's set.
+    ///
+    /// Excluded on purpose:
+    /// - `fetchExperienceContent` / `fetchExperienceTheme`: request/response, a stale replay asks the
+    ///   backend to re-answer a question with no consumer left.
+    /// - `pushNotificationToken`: already self-heals through `resyncPushToken()` on socket open;
+    ///   replaying would send a stale token instead of the current one.
+    /// - `userLogout`: logout also clears the offline store it would be written into.
+    ///
+    /// Every case is listed explicitly with no `default:`, so a newly added event fails to compile
+    /// until someone decides which side it belongs on.
+    var isOfflineEligible: Bool {
+        switch self {
+        case .flowExperienceSeen,
+             .flowExperienceDismissed,
+             .flowExperienceCompleted,
+             .flowExperienceStepSeen,
+             .flowExperienceStepCompleted,
+             .surveyExperienceSeen,
+             .surveyExperienceDismissed,
+             .surveyExperienceCompleted,
+             .surveyExperienceSubmitted,
+             .surveyExperienceStepSeen,
+             .surveyExperienceStepSkipped,
+             .surveyExperienceStepSubmitted,
+             .npsExperienceSeen,
+             .npsExperienceDismissed,
+             .npsExperienceSubmitted,
+             .pushNotificationOpened:
+            return true
+        case .fetchExperienceContent,
+             .fetchExperienceTheme,
+             .pushNotificationToken,
+             .userLogout:
+            return false
+        }
+    }
+
 }

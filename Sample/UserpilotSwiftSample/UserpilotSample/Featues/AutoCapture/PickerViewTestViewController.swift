@@ -20,33 +20,8 @@ class PickerViewTestViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "UIPickerView Test"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
+        view.backgroundColor = SampleAppearance.screenBackground
         setupPicker()
-    }
-
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.titleLabel?.font = .systemFont(ofSize: 17)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
-    @objc private func backTapped() {
-        if let nav = navigationController {
-            nav.popViewController(animated: true)
-        } else {
-            dismiss(animated: true)
-        }
     }
 
     private func setupPicker() {
@@ -65,7 +40,7 @@ class PickerViewTestViewController: UIViewController {
         view.addSubview(pickerView)
 
         NSLayoutConstraint.activate([
-            selectionLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            selectionLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             selectionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             selectionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
 

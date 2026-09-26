@@ -80,7 +80,7 @@ extension Userpilot {
 
         /// Concurrent queue used for synchronized reads / barriered writes.
         private let queue = DispatchQueue(
-            label: DispatchQueueConstants.REGISTRY_QUEUE,
+            label: Constants.DispatchQueues.registryQueue,
             qos: .userInitiated,
             attributes: .concurrent
         )

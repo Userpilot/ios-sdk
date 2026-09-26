@@ -52,15 +52,41 @@ internal extension UICollectionViewCell {
             payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
         } else if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
+            payload.elementText = effectiveView.ignoreInnerHierarchyTextPlaceholder()
         } else {
-            payload.elementText = touchedView?.getTextContent()
+            payload.elementText = userpilotResolvedCellText(touchedView: touchedView)
             payload.accessibilityIdentifier = accessibilityIdentifier
             payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
         }
 
         // Send to the owning instance's engine
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
+    }
+
+    /// Resolves `target_text` for an item selection, in priority order.
+    ///
+    /// The interacted element is the **item**, not the leaf view under the finger, so the item's
+    /// own text wins: two taps on the same item publish the same text no matter where they land,
+    /// and an item that renders a large text blob (a JSON preview, a long description) can no
+    /// longer push that blob into the payload ahead of its title.
+    ///
+    /// 1. `UIListContentConfiguration.text` (iOS 14+ list cells)
+    /// 2. First visible, non-redacted text inside `contentView` (custom cells)
+    /// 3. The touched view itself (items whose only text lives outside `contentView`)
+    ///
+    /// Text-capture policy (config flag, `userpilotRedactText`) and bounding are applied by
+    /// ``UIView/resolvedInteractionText(_:)`` / ``UIView/getTextContent()``.
+    ///
+    /// - Parameter touchedView: The specific view that was touched
+    /// - Returns: The resolved text content or nil
+    func userpilotResolvedCellText(touchedView: UIView?) -> String? {
+        if let title = userpilotCellTitle() {
+            return resolvedInteractionText(title)
+        }
+        if let itemText = contentView.userpilotFirstTextInSubtree() {
+            return resolvedInteractionText(itemText)
+        }
+        return touchedView?.getTextContent()
     }
 
     // MARK: - Private Helpers
@@ -77,49 +103,30 @@ internal extension UICollectionViewCell {
         return nil
     }
 
-    /// Resolves text content from the cell with priority order
+    /// The item's own title: the iOS 14+ content configuration's text (list cells).
+    private func userpilotCellTitle() -> String? {
+        guard #available(iOS 14.0, *) else { return nil }
+        return UIKitViewResolver.listConfigurationText(contentConfiguration)
+    }
+}
+
+// MARK: - UICollectionReusableView Auto Capture
+
+internal extension UICollectionReusableView {
+
+    /// Resolves `target_text` for a tap that landed inside a supplementary view (section header,
+    /// footer, decoration) rather than an item.
+    ///
+    /// Same rule as an item: the element is the supplementary view, so its own text wins over
+    /// whichever leaf the finger hit. Supplementary views have no title API of their own, so
+    /// resolution starts at the first text in the subtree.
+    ///
     /// - Parameter touchedView: The specific view that was touched
     /// - Returns: The resolved text content or nil
-    private func resolveTextContent(touchedView: UIView?) -> String? {
-        // 1. Try the specific touched view if it has text
-        if let touchedView = touchedView {
-            if let text = extractText(from: touchedView), !text.isEmpty {
-                return text
-            }
+    func userpilotResolvedSupplementaryText(touchedView: UIView?) -> String? {
+        if let headerText = userpilotFirstTextInSubtree() {
+            return resolvedInteractionText(headerText)
         }
-
-        // 2. Search contentView for any text
-        return findTextInView(contentView)
-    }
-
-    /// Extracts text from a specific view
-    private func extractText(from view: UIView) -> String? {
-        if let label = view as? UILabel {
-            return label.text
-        }
-        if let button = view as? UIButton {
-            return button.currentTitle ?? button.titleLabel?.text
-        }
-        if let textField = view as? UITextField {
-            return textField.placeholder // Don't capture actual text for privacy
-        }
-        return nil
-    }
-
-    /// Recursively searches for text content in a view hierarchy
-    private func findTextInView(_ view: UIView) -> String? {
-        // Check current view
-        if let text = extractText(from: view), !text.isEmpty {
-            return text
-        }
-
-        // Search subviews
-        for subview in view.subviews {
-            if let text = findTextInView(subview) {
-                return text
-            }
-        }
-
-        return nil
+        return touchedView?.getTextContent()
     }
 }

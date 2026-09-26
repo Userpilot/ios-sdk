@@ -26,6 +26,14 @@ Userpilot(config: Userpilot.Config(token: appToken)
     .setNavigationHandler(navigationDelegate: self))
 ```
 
+Keep a strong reference to the navigation delegate because the SDK holds it
+weakly. Navigation callbacks run on the main thread. In SDK 1.4.0 and later, the
+latest link received during initialization is held until a delegate is assigned
+or the next main-queue turn after initialization. If no delegate is assigned, the
+SDK uses its normal URL-opening behavior. This startup delay does not wait for a
+router that your app initializes asynchronously; buffer the URL in your delegate
+if your navigation UI is not ready.
+
 
 ### Step 2: Implement the Navigation Delegate
 
