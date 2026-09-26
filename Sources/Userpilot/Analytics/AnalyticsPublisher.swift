@@ -242,16 +242,16 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     /**
      * Flushes all pending events when the app enters background.
-     * This ensures no events are lost when the app is backgrounded.
+     * A pending user switch keeps only the latest identify for the next connection.
      */
     func flush() {
         tryCatch {
             let events = eventsQueue.getAndClear()
-            // In case of a new user, clear all queue and cache the identify new user event only
-            let newUserEvents = events.filter { $0.isIdentifyEvent && $0.userId != storage.userId }
-            if let firstNewUserEvent = newUserEvents.first {
-                storage.temporaryUser = firstNewUserEvent.toUser().toJson()
-                eventsQueue.enqueue(firstNewUserEvent)
+            // A user switch discards the queue and caches only the latest requested identity.
+            if let latestIdentify = events.last(where: { $0.isIdentifyEvent }),
+               events.contains(where: { $0.isIdentifyEvent && $0.userId != storage.userId }) {
+                storage.temporaryUser = latestIdentify.toUser().toJson()
+                eventsQueue.enqueue(latestIdentify)
             } else {
                 events.forEach { event in
                     switch event.type {
@@ -310,7 +310,13 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func resume() {
         updateSessionState()
-        if let userId = getUserIdFromQueue() { storage.userId = userId }
+        if let userId = getUserIdFromQueue() {
+            // Preserve the switch before the socket adopts the queued user's channel.
+            if storage.userId.isNotEmpty, userId != storage.userId {
+                userSessionStateMachine.markUserSwitch()
+            }
+            storage.userId = userId
+        }
         // connect() gates itself on the socket state - always safe to call
         if storage.userId.isNotEmpty { openSocket() }
     }

@@ -204,6 +204,64 @@ class AnalyticsPublisherTests: XCTestCase {
 
     // MARK: - Resume Tests
 
+    func testFlush_keepsOnlyTheLatestIdentifyWhenSwitchingUsers() {
+        assertFlushKeepsLatestIdentify(latestUserId: "newest-user")
+    }
+
+    func testFlush_keepsTheLatestIdentifyWhenSwitchingBackToTheOriginalUser() {
+        assertFlushKeepsLatestIdentify(latestUserId: "old-user")
+    }
+
+    private func assertFlushKeepsLatestIdentify(latestUserId: String) {
+        arrangeReloadableScreen(title: "Home", userId: "old-user")
+        userpilot.storage.sessionDate = Date()
+        var closeCalled = false
+        userpilot.socketManager.onClose = { closeCalled = true }
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.publish(Event(type: .event("Before switch")))
+        analyticsPublisher.publish(Event(type: .identify("intermediate-user"), properties: ["plan": "basic"]))
+        analyticsPublisher.publish(Event(type: .screen("Checkout")))
+        analyticsPublisher.publish(Event(type: .identify(latestUserId), properties: ["plan": "pro"]))
+        analyticsPublisher.publish(Event(
+            type: .identify(latestUserId), properties: ["plan": "enterprise"], company: ["id": "latest-company"]))
+        analyticsPublisher.publish(Event(type: .event("Purchase"), properties: ["amount": 42]))
+        userpilot.sessionMonitor.isAppActive = false
+
+        analyticsPublisher.flush()
+
+        XCTAssertTrue(closeCalled)
+        analyticsPublisher.onSocketClosed()
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, latestUserId)
+        XCTAssertEqual(queued.first?.properties?["plan"] as? String, "enterprise")
+        let cached = User.fromJson(userpilot.storage.temporaryUser.orEmpty())
+        XCTAssertEqual(cached.userId, latestUserId)
+        XCTAssertEqual(cached.properties["plan"] as? String, "enterprise")
+        XCTAssertEqual(cached.company["id"] as? String, "latest-company")
+
+        var sent: [(String, Payload)] = []
+        userpilot.socketManager.onPublish = { sent.append(($0, $1)) }
+        userpilot.socketManager.isJoiningSocket = false
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.sessionMonitor.isAppActive = true
+        analyticsPublisher.resume()
+        analyticsPublisher.onSocketOpened()
+        XCTAssertEqual(userpilot.storage.userId, latestUserId)
+        XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent])
+        let metadata = sent.first?.1?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?["plan"] as? String, "enterprise")
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent, Constants.Event.screenEvent])
+        XCTAssertEqual(sent.last?.1?[Constants.Analytics.screenTitleProperty] as? String, "Home")
+        let screenMetadata = sent.last?.1?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(screenMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, latestUserId != "old-user")
+        XCTAssertEqual(screenMetadata?[Constants.Analytics.fakeReload] as? Bool, latestUserId == "old-user")
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+        XCTAssertEqual(sent.count, 2)
+    }
+
     func testResume_shouldConnectSocketWhenUserIdExists() {
         // Arrange
         userpilot.storage.userId = "test-user"
