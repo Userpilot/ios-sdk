@@ -1245,6 +1245,97 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
 
+    func testReloadACK_keepsTheNextScreenQueuedUntilItsOwnACK() {
+        arrangeReloadableScreen(title: "Home")
+        var titles: [String] = []
+        userpilot.socketManager.onPublish = { name, payload in
+            XCTAssertEqual(name, Constants.Event.screenEvent)
+            titles.append(payload?[Constants.Analytics.screenTitleProperty] as? String ?? "")
+        }
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
+        analyticsPublisher.publish(Event(type: .screen("Checkout")))
+
+        XCTAssertEqual(titles, ["Home"], "Navigation must wait for the reload ACK")
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home", "Checkout"])
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertEqual(titles, ["Home", "Checkout"])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Checkout"])
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
+    func testPostIdentifyScreenACK_doesNotDiscardTheFollowingTrackEvent() {
+        userpilot.storage.userId = "user-1"
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.experiencesPublisher.updateScreen("Home")
+        var sent: [(String, Payload)] = []
+        userpilot.socketManager.onPublish = { sent.append(($0, $1)) }
+        analyticsPublisher.publish(Event(type: .identify("user-1"), properties: ["plan": "pro"]))
+        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent, Constants.Event.screenEvent])
+
+        analyticsPublisher.publish(Event(type: .event("Purchase"), properties: ["amount": 42]))
+        XCTAssertEqual(sent.count, 2)
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+
+        XCTAssertEqual(sent.map { $0.0 }, [
+            Constants.Event.identifyEvent, Constants.Event.screenEvent, Constants.Event.trackEvent
+        ])
+        XCTAssertEqual(sent.last?.1?[Constants.Analytics.eventNameProperty] as? String, "Purchase")
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.eventTitle, "Purchase")
+        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
+    func testBackgroundScreenRefresh_holdsTheQueueUntilItResolves() {
+        arrangeReloadableScreen(title: "Home")
+        userpilot.sessionMonitor.isAppActive = false
+        analyticsPublisher.flush()
+        userpilot.sessionMonitor.isAppActive = true
+        var sent: [(String, Payload)] = []
+        userpilot.socketManager.onPublish = { sent.append(($0, $1)) }
+
+        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.publish(Event(type: .screen("Checkout")))
+
+        XCTAssertEqual(sent.count, 1)
+        XCTAssertEqual(sent.first?.1?[Constants.Analytics.screenTitleProperty] as? String, "Home")
+        let metadata = sent.first?.1?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home", "Checkout"])
+
+        // A failed/timeout resolution must also release only the refresh's queue entry.
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), false)
+        XCTAssertEqual(sent.count, 2)
+        XCTAssertEqual(sent.last?.1?[Constants.Analytics.screenTitleProperty] as? String, "Checkout")
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Checkout"])
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
+    func testReload_waitsForOfflineReplayBeforeSendingItsQueuedScreen() {
+        arrangeReloadableScreen(title: "Home")
+        userpilot.offlineEventsHandler.hasCachedEvents = true
+        userpilot.offlineEventsHandler.holdRestoreCompletion = true
+        let sent = recordPublishedEvents()
+
+        let accepted = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+
+        XCTAssertTrue(accepted, "The refresh waits in the same queue during offline replay")
+        XCTAssertEqual(sent(), [])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
+        analyticsPublisher.publish(Event(type: .event("Purchase")))
+        userpilot.offlineEventsHandler.finishRestore()
+        XCTAssertEqual(sent(), [Constants.Event.screenEvent])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 2)
+        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertEqual(sent(), [Constants.Event.screenEvent, Constants.Event.trackEvent])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.eventTitle, "Purchase")
+        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
     func testAppScreenEvent_publishesWithoutIdentify() {
         arrangeReloadableScreen()
         var published: [String] = []

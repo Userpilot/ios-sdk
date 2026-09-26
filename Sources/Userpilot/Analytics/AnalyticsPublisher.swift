@@ -44,7 +44,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// publish fake reload event
-    /// - Returns: true when a screen push actually went out
+    /// - Returns: true when a screen refresh was accepted into the queue
     @discardableResult
     func publishFakeReloadScreenEvent(
         _ experienceType: ExperienceType?,
@@ -615,9 +615,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
 
         userSessionStateMachine.markNormal()
-        if !publishFakeReloadScreenEvent(nil, nil, isFakeReload: false) {
-            releaseAfterEmptyQueue()
-        }
+        // Admission happens while this cycle owns the gate; the next cycle sends it.
+        publishFakeReloadScreenEvent(nil, nil, isFakeReload: false)
+        resetProcessingEventStatus()
+        processEvent()
     }
 
     /// Releases the gate, then re-drives processing if an internal SDK event reached the cache
@@ -738,8 +739,13 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Returns: true when a screen push went out
      */
     private func screen(_ event: Event) -> Bool {
+        let isNewScreen = setupScreenEvent(event)
+        // Generated refreshes have already passed admission and must retain their ACK slot.
+        if let isFakeReload = event.isFakeReload {
+            return publishScreenEvent(isFakeReload: isFakeReload)
+        }
         // Returns true if this is a new screen, which triggers screen event
-        if setupScreenEvent(event) {
+        if isNewScreen {
             return publishScreenEvent(isFakeReload: false)
         }
         // Not a new screen, check if valid to trigger screen event
@@ -1023,20 +1029,11 @@ extension AnalyticsPublisher: SocketSubscription {
                 && userSessionStateMachine.shouldRequestInitialScreenEvent(
                     eventsQueue.isEmpty(),
                     experiencesPublisher?.getCurrentScreen.isNotEmpty == true) {
-                // Keep the gate claimed for the post-identify screen push, with a
-                // fresh watchdog window for the new in-flight push
-                scheduleProcessingWatchdog()
-                let published = publishScreenEvent(
+                enqueueScreenRefresh(
                     isFakeReload: userSessionStateMachine.getPostIdentificationFakeReloadConfig())
-                if !published {
-                    resetProcessingEventStatus()
-                    processEvent()
-                }
-            } else {
-                // Continue processing the next event in the queue
-                resetProcessingEventStatus()
-                processEvent()
             }
+            resetProcessingEventStatus()
+            processEvent()
         }
     }
 
@@ -1188,8 +1185,8 @@ extension AnalyticsPublisher {
      * Publishes a fake reload screen event when an experience is shown/closed.
      * This ensures proper state tracking for experiences.
      *
-     * The throttle is checked before the screen push, so a throttled reload sends neither the
-     * screen message nor the identify that may precede it.
+     * The throttle is checked before enqueueing. Accepted refreshes wait for their own ACK
+     * before another analytics event can be sent.
      *
      * - Parameter experienceType: The type of experience (FLOW or SURVEY)
      * - Parameter experienceId: The ID of the experience being shown
@@ -1201,7 +1198,7 @@ extension AnalyticsPublisher {
         _ experienceId: Int?,
         isFakeReload: Bool
     ) -> Bool {
-        var published = false
+        var enqueued = false
         tryCatch {
             // Never bypass queue ordering: a fake reload only goes out when no
             // live analytics event is queued or in flight
@@ -1217,9 +1214,11 @@ extension AnalyticsPublisher {
                 screenTitle: screenSessionStateMachine.event.screenTitle ?? "") {
                 return
             }
-            published = publishScreenEvent(isFakeReload: isFakeReload)
+            enqueueScreenRefresh(isFakeReload: isFakeReload)
+            enqueued = true
+            processEvent()
         }
-        return published
+        return enqueued
     }
 
     /**
@@ -1245,6 +1244,14 @@ extension AnalyticsPublisher {
 
 extension AnalyticsPublisher {
 
+    /// Gives generated screens the same queue ownership as app screen events.
+    private func enqueueScreenRefresh(isFakeReload: Bool) {
+        ensureScreenSessionStateMachine()
+        guard var event = screenSessionStateMachine?.event else { return }
+        event.isFakeReload = isFakeReload
+        eventsQueue.enqueue(event)
+    }
+
     /**
      * Publishes the current screen session state as a screen event, carrying
      * session-start state, fake-reload flag, and seen experiences/surveys.
@@ -1259,17 +1266,9 @@ extension AnalyticsPublisher {
         ensureScreenSessionStateMachine()
         guard let screenSessionStateMachine else { return false }
 
-        // Cached internal SDK events go out first. A `screen` message makes the backend
-        // re-evaluate content for this surface, so a step-seen/completed/dismissed event still
-        // sitting in the cache would be judged against a screen the backend already answered — a
-        // dismissal arriving after the fake reload it triggered gets the dismissed content served
-        // straight back. `processEvent` drains ahead of the event queue, but its single-flight gate
-        // makes that drain a no-op while another cycle holds it — an event awaiting its ack (the
-        // post-identify screen push in `onSocketEventSent` runs inside exactly that claimed cycle)
-        // or an asynchronous offline restore — and the screen still goes out. A persisted offline
-        // batch keeps its head start: it is published from
-        // `restoreOfflineEventsIfNeeded()` on the processing cycle that a socket open always runs,
-        // before any screen message can be pushed from here.
+        // A screen request re-evaluates content, so pending seen/completed/dismissed events
+        // must reach the backend first. Queue processing already drains them; flush can also
+        // call this method directly and needs the same ordering.
         processSDKEvent()
 
         let screenEvent = screenSessionStateMachine.event

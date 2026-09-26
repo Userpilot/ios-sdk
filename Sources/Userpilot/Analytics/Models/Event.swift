@@ -28,6 +28,9 @@ internal struct Event {
     /// Auto-capture interaction category sent as `InteractionEventName`.
     var interactionEventName: String?
 
+    /// Queue-only reload metadata for SDK-generated screens; nil for app screen events.
+    var isFakeReload: Bool?
+
     // MARK: - EventType helpers
 
     var isIdentifyEvent: Bool {
