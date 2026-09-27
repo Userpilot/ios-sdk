@@ -229,6 +229,43 @@ class OfflineEventsHandlerTests: XCTestCase {
 
     // MARK: - Internal Event Replay
 
+    func testRestore_preservesScreenPropertiesAndOverridesFakeReload() throws {
+        let sources = [Constants.AutoCapture.manualCaptureSourceValue, Constants.AutoCapture.autoCaptureSourceValue]
+        for source in sources {
+            handler.saveEventToLocalStorage(event: Event(
+                type: .screen("Home"),
+                properties: [
+                    Constants.AutoCapture.source: source,
+                    Constants.Analytics.fakeReload: true,
+                    "custom_property": "retained"
+                ]
+            ))
+        }
+
+        let events = try captureRestoredBatch()
+
+        XCTAssertEqual(events.count, sources.count)
+        for (item, source) in zip(events, sources) {
+            XCTAssertEqual(item[Constants.OfflineEvents.eventTypeProperty] as? String, "screen")
+            XCTAssertEqual(item[Constants.Analytics.screenTitleProperty] as? String, "Home")
+            let metadata = try XCTUnwrap(item[Constants.Analytics.metaDataProperty] as? [String: Any])
+            XCTAssertEqual(metadata[Constants.AutoCapture.source] as? String, source)
+            XCTAssertEqual(metadata["custom_property"] as? String, "retained")
+            XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
+        }
+    }
+
+    func testRestore_screenWithoutPropertiesKeepsFakeReloadFalse() throws {
+        handler.saveEventToLocalStorage(event: Event(type: .screen("Home")))
+
+        let events = try captureRestoredBatch()
+
+        let item = try XCTUnwrap(events.first)
+        let metadata = try XCTUnwrap(item[Constants.Analytics.metaDataProperty] as? [String: Any])
+        XCTAssertEqual(metadata.count, 1)
+        XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
+    }
+
     func testRestore_spreadsTheInternalPayloadAtTheTopLevelOfTheBatchItem() throws {
         handler.saveSDKEventToLocalStorage(
             MockSDKEvent(

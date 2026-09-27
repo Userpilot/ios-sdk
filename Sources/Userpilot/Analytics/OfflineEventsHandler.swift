@@ -388,7 +388,9 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
         eventData[Constants.OfflineEvents.createdAtProperty] = formatTimestampWithTimezone(
             eventStorage.createdAt)
         eventData[Constants.Analytics.screenTitleProperty] = event.screenTitle ?? ""
-        eventData[Constants.Analytics.metaDataProperty] = [Constants.Analytics.fakeReload: false]
+        var metadata = event.properties ?? [:]
+        metadata[Constants.Analytics.fakeReload] = false
+        eventData[Constants.Analytics.metaDataProperty] = metadata
         return eventData
     }
 
