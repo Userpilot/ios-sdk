@@ -447,6 +447,45 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
     }
 
+    func testUpdateScreen_duringPreviewMakesNPSEligibleOnTheNewScreen() {
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
+        userpilot.experienceStateMachine.markPreviewMode()
+
+        experiencesPublisher.updateScreen("Details")
+        userpilot.experienceStateMachine.markIdle()
+        assertNPSIsEligible()
+    }
+
+    func testLogout_makesNPSEligibleForTheNextUser() {
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
+
+        experiencesPublisher.logout()
+
+        assertNPSIsEligible()
+    }
+
+    private func assertNPSIsEligible(file: StaticString = #filePath, line: UInt = #line) {
+        let processed = expectation(description: "NPS accepted after screen or identity change")
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeNPSContentPayload()),
+            true
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self else { return }
+            if case .nps = self.experiencesPublisher.getActiveMobileContent() {
+                processed.fulfill()
+            } else {
+                XCTFail("Expected NPS to be eligible", file: file, line: line)
+                processed.fulfill()
+            }
+        }
+        wait(for: [processed], timeout: 1.0)
+    }
+
     func testOnSocketEventSent_shouldSelectSurvey_WhenHigherPriorityFlowWasSeen() {
         // Arrange
         let expectation = XCTestExpectation(description: "Unseen survey should be selected")
@@ -753,6 +792,46 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Assert
         XCTAssertFalse(canRequest)
+    }
+
+    /// NPS is the last content shown, so closing a previewed NPS must not ask the backend for more
+    /// — matching the non-preview path here and Android's `handlePreviewCloseEvent`.
+    func testPublishInternalSDKEvent_shouldNotRequestReload_ForPreviewNPSClose() {
+        // Arrange
+        userpilot.experienceStateMachine.markPreviewMode()
+        var reloadCount = 0
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
+            reloadCount += 1
+            return true
+        }
+        let closeEvent = MockSDKEvent(eventName: SDKEventsName.npsExperienceSubmitted.rawValue)
+        closeEvent.isCloseNPSEvent = true
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        // Assert
+        XCTAssertEqual(reloadCount, 0)
+    }
+
+    /// The ordinary preview close still asks for the next content — that request is what lets the
+    /// next experience appear after a QR preview is dismissed.
+    func testPublishInternalSDKEvent_shouldRequestReload_ForPreviewFlowClose() {
+        // Arrange
+        userpilot.experienceStateMachine.markPreviewMode()
+        var reloadCount = 0
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
+            reloadCount += 1
+            return true
+        }
+        let closeEvent = MockSDKEvent(eventName: SDKEventsName.flowExperienceDismissed.rawValue)
+        closeEvent.isCloseEvent = true
+
+        // Act
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        // Assert
+        XCTAssertEqual(reloadCount, 1)
     }
 
     func testPublishInternalSDKEvent_shouldHandleCloseEvent_WithDeepLink() {
@@ -1108,6 +1187,9 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     func testPublishInternalSDKEvent_shouldEndPreviewSession_WhenTheRenderedPreviewCloses() throws {
+        // A real NPS was already shown and dismissed on this screen before the QR scan.
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
         // Arrange — a preview that reached the screen the way it does in production: that handoff
         // is what records the session the close is then entitled to end.
         let fetchExpectation = XCTestExpectation(description: "preview fetch requested")
@@ -1124,6 +1206,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         wait(for: [fetchExpectation], timeout: 1.0)
         fetchCompletion?(.success(try makePreviewExperience(themeId: 33)))
         wait(for: [rendered], timeout: 1.0)
+        XCTAssertNotNil(experiencesPublisher.getActiveMobileContent(), "The preview renderer consumes its content")
 
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload()
@@ -1146,6 +1229,21 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Assert — the preview that was on screen does own its session, so closing it ends it
         XCTAssertFalse(experiencesPublisher.isPreviewExperienceMode())
+
+        let repeatProcessed = expectation(description: "NPS stays suppressed after closing the preview")
+        experiencesPublisher.updateScreen("Home")
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent,
+            nil,
+            Message(payload: MockContentFactory.makeNPSContentPayload()),
+            true
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self else { return }
+            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent(), "Preview must not start a new screen visit")
+            repeatProcessed.fulfill()
+        }
+        wait(for: [repeatProcessed], timeout: 1.0)
     }
 
     private func makePreviewExperience(themeId: Int) throws -> PreviewExperience {

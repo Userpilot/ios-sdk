@@ -118,7 +118,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     private lazy var currentScreen: String = ""
 
     /// Set when NPS is presented so it shows at most once per screen visit, matching Android.
-    /// Cleared by `resetState()` when the screen changes or the user logs out.
+    /// Cleared when the screen changes or the user logs out, but preserved across QR previews.
     /// Atomic because presentation writes on main while socket and reset paths use other queues.
     private let npsShownOnCurrentScreen = AtomicReference(false)
 
@@ -191,6 +191,7 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      * This prevents experiences from being shown to the wrong user.
      */
     func logout() {
+        npsShownOnCurrentScreen.value = false
         resetState()
     }
 
@@ -429,7 +430,10 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                     activeExperience = nil
                     requestFakeScreenReloadEventDate = Date()
-                    if !sdkEvent.hasDeepLink {
+                    // Same exclusions as the non-preview path below, and as Android's
+                    // `handlePreviewCloseEvent`: NPS is the last content shown, and a deep link
+                    // opens a new screen that will ask for content on its own.
+                    if !sdkEvent.isEventForCloseNPSExperience(), !sdkEvent.hasDeepLink {
                         analyticsPublisher.publishFakeReloadScreenEvent(
                             sdkEvent.getContentType(),
                             sdkEvent.getContentId()
@@ -495,6 +499,7 @@ extension ExperiencesPublisher: SocketSubscription {
         tryCatch {
             if currentScreen == screenName { return }
             currentScreen = screenName
+            npsShownOnCurrentScreen.value = false
             // A preview renders on whatever screen the deep link landed on, so the screen change
             // that reveals it must resume it instead of resetting it away.
             if isPreviewExperienceMode() {
@@ -1094,7 +1099,6 @@ extension ExperiencesPublisher {
         tryCatch {
             delayUtils.cancelDelay()
             clearPendingExperiences()
-            npsShownOnCurrentScreen.value = false
 
             if hasActiveExperience || experienceStateMachine.getActiveComponent() != nil {
                 endExperience(manualClose: true, completion: completion)
