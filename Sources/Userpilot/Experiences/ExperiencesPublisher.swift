@@ -429,10 +429,12 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                 if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                     activeExperience = nil
                     requestFakeScreenReloadEventDate = Date()
-                    analyticsPublisher.publishFakeReloadScreenEvent(
-                        sdkEvent.getContentType(),
-                        sdkEvent.getContentId()
-                    )
+                    if !sdkEvent.hasDeepLink {
+                        analyticsPublisher.publishFakeReloadScreenEvent(
+                            sdkEvent.getContentType(),
+                            sdkEvent.getContentId()
+                        )
+                    }
                 }
                 return
             }
