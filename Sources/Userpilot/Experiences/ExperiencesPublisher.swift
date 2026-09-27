@@ -1363,6 +1363,11 @@ extension ExperiencesPublisher {
 
 #if DEBUG
 extension ExperiencesPublisher {
+    /// Set before delivering events so tests can control when the display delay finishes.
+    func mockSetDelayUtils(_ delayUtils: DelayUtils) {
+        self.delayUtils = delayUtils
+    }
+
     func mockSetCurrentScreen(title: String) {
         currentScreen = title
     }

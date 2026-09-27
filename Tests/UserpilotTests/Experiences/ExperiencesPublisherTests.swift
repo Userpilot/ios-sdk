@@ -150,14 +150,23 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     func testAutomaticExperience_keepsItsTriggerAndReplaysManualRequestAfterThemeAndDismissal() throws {
+        let displayScheduled = expectation(description: "automatic A reaches its display delay")
+        let automaticPresented = expectation(description: "automatic A is presented")
+        let displayDelay = MockExperienceDisplayDelay { displayScheduled.fulfill() }
+        let publisher = MockPresentingExperiencesPublisher(container: userpilot.container)
+        experiencesPublisher = publisher
+        publisher.mockSetDelayUtils(displayDelay)
+        publisher.presentationHost.onPresent = { automaticPresented.fulfill() }
+        defer { publisher.logout() }
+
         let themeRequested = expectation(description: "automatic A waits for its theme")
         let manualReplayed = expectation(description: "manual B requested after dismissal")
-        var requestedManualIds: [String] = []
+        let requestedManualIds = AtomicReference<[String]>([])
         userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             if event is ThemeContentEvent {
                 themeRequested.fulfill()
             } else if let event = event as? ExperienceContentEvent {
-                requestedManualIds.append(event.experienceId)
+                requestedManualIds.update { $0 + [event.experienceId] }
                 manualReplayed.fulfill()
             }
         }
@@ -165,7 +174,7 @@ final class ExperiencesPublisherTests: XCTestCase {
             EventType.screenEvent, nil,
             Message(payload: MockContentFactory.makeFlowContentPayload()), true
         )
-        wait(for: [themeRequested], timeout: 1.0)
+        wait(for: [themeRequested], timeout: 5.0)
 
         experiencesPublisher.triggerExperience("manual-B")
         let cached = XCTNSPredicateExpectation(
@@ -173,9 +182,9 @@ final class ExperiencesPublisherTests: XCTestCase {
                 self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
             }, object: nil
         )
-        wait(for: [cached], timeout: 2.0)
+        wait(for: [cached], timeout: 5.0)
         XCTAssertFalse(userpilot.experienceStateMachine.isManualTrigger())
-        XCTAssertTrue(requestedManualIds.isEmpty)
+        XCTAssertTrue(requestedManualIds.value.isEmpty)
 
         userpilot.themeHandler.onGetThemeById = { _ in
             ThemeData(carousel: nil, slideOut: nil, survey: nil)
@@ -184,14 +193,19 @@ final class ExperiencesPublisherTests: XCTestCase {
             SDKEventsName.fetchExperienceTheme.rawValue, ["theme_id": 1],
             Message(payload: ["id": 1, "theme_data": [:]]), true
         )
-        let automaticActive = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getActiveTriggerType() == .automatic
-            }, object: nil
-        )
-        wait(for: [automaticActive], timeout: 3.0)
+        wait(for: [displayScheduled], timeout: 5.0)
+        guard case .waitingDelay(.automatic) = userpilot.experienceStateMachine.getCurrentState() else {
+            XCTFail("Automatic A must keep its trigger while waiting for the display delay")
+            return
+        }
         XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
-        XCTAssertTrue(requestedManualIds.isEmpty)
+        XCTAssertTrue(requestedManualIds.value.isEmpty)
+
+        displayDelay.fire()
+        wait(for: [automaticPresented], timeout: 5.0)
+        XCTAssertEqual(userpilot.experienceStateMachine.getActiveTriggerType(), .automatic)
+        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
+        XCTAssertTrue(requestedManualIds.value.isEmpty)
         // The real renderer consumes this entry through getActiveMobileContent().
         XCTAssertEqual(experiencesPublisher.getActiveMobileContent()?.experienceId(), 77)
 
@@ -201,13 +215,13 @@ final class ExperiencesPublisherTests: XCTestCase {
         )
         close.isCloseEvent = true
         experiencesPublisher.publishInternalSDKEvent(close)
-        XCTAssertTrue(requestedManualIds.isEmpty, "The close signal precedes actual UI dismissal")
+        XCTAssertTrue(requestedManualIds.value.isEmpty, "The close signal precedes actual UI dismissal")
+        publisher.presentationHost.presentedExperience = nil
         experiencesPublisher.experienceDidFinishDismissing()
-        wait(for: [manualReplayed], timeout: 2.0)
+        wait(for: [manualReplayed], timeout: 5.0)
 
-        XCTAssertEqual(requestedManualIds, ["manual-B"])
+        XCTAssertEqual(requestedManualIds.value, ["manual-B"])
         XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
-        experiencesPublisher.logout()
     }
 
     func testLogout_discardsManualRequestCachedBehindThemeLoading() {
@@ -235,6 +249,14 @@ final class ExperiencesPublisherTests: XCTestCase {
     }
 
     func testCachedManualRequest_doesNotBypassAutomaticScreenTargetingAfterThemeLoads() throws {
+        let displayScheduled = expectation(description: "automatic A reaches its display delay")
+        let displayDelay = MockExperienceDisplayDelay { displayScheduled.fulfill() }
+        let publisher = MockPresentingExperiencesPublisher(container: userpilot.container)
+        experiencesPublisher = publisher
+        publisher.mockSetDelayUtils(displayDelay)
+        publisher.presentationHost.onPresent = { XCTFail("Automatic A must respect its screen target") }
+        defer { publisher.logout() }
+
         experiencesPublisher.mockSetCurrentScreen(title: "Home")
         var payload = MockContentFactory.makeFlowContentPayload()
         var flow = try XCTUnwrap(payload["mobile_contents"] as? [String: Any])
@@ -252,14 +274,14 @@ final class ExperiencesPublisherTests: XCTestCase {
             }
         }
         experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, Message(payload: payload), true)
-        wait(for: [themeRequested], timeout: 1.0)
+        wait(for: [themeRequested], timeout: 5.0)
         experiencesPublisher.triggerExperience("manual-B")
         let cached = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in
                 self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
             }, object: nil
         )
-        wait(for: [cached], timeout: 2.0)
+        wait(for: [cached], timeout: 5.0)
         userpilot.themeHandler.onGetThemeById = { _ in
             ThemeData(carousel: nil, slideOut: nil, survey: nil)
         }
@@ -269,8 +291,17 @@ final class ExperiencesPublisherTests: XCTestCase {
             Message(payload: ["id": 1, "theme_data": [:]]), true
         )
 
-        wait(for: [manualReplayed], timeout: 3.0)
+        wait(for: [displayScheduled], timeout: 5.0)
+        guard case .waitingDelay(.automatic) = userpilot.experienceStateMachine.getCurrentState() else {
+            XCTFail("Caching manual B must not change automatic A's trigger")
+            return
+        }
+        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
+
+        displayDelay.fire()
+        wait(for: [manualReplayed], timeout: 5.0)
         XCTAssertNil(userpilot.experienceStateMachine.getActiveContent(), "Automatic A must respect its screen target")
+        XCTAssertNil(publisher.presentationHost.presentedExperience)
         XCTAssertNil(experiencesPublisher.getActiveMobileContent())
         XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
     }
@@ -1511,6 +1542,55 @@ final class ExperiencesPublisherTests: XCTestCase {
                 themeData: ThemeData(carousel: nil, slideOut: nil, survey: nil)
             )
         )
+    }
+}
+
+/// Exercises the publisher's real presentation path without creating a UIKit window or animations.
+private final class MockPresentingExperiencesPublisher: ExperiencesPublisher {
+    let presentationHost = MockExperiencePresentationHost()
+
+    override func experiencePresentationHost() -> UIViewController? {
+        presentationHost
+    }
+}
+
+private final class MockExperiencePresentationHost: UIViewController {
+    var presentedExperience: UIViewController?
+    var onPresent: (() -> Void)?
+
+    override func present(_ viewControllerToPresent: UIViewController, animated: Bool, completion: (() -> Void)? = nil) {
+        presentedExperience = viewControllerToPresent
+        onPresent?()
+        completion?()
+    }
+}
+
+/// Scheduling occurs on the experience queue; tests explicitly fire the captured action on main.
+private final class MockExperienceDisplayDelay: DelayUtils {
+    private let pendingAction = AtomicReference<(() -> Void)?>(nil)
+    private let onSchedule: () -> Void
+
+    init(onSchedule: @escaping () -> Void) {
+        self.onSchedule = onSchedule
+        super.init()
+    }
+
+    override func delayAction(delayTime: TimeInterval, action: @escaping () -> Void) {
+        pendingAction.value = action
+        onSchedule()
+    }
+
+    override func cancelDelay() {
+        pendingAction.value = nil
+    }
+
+    func fire(file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(Thread.isMainThread, file: file, line: line)
+        guard let action = pendingAction.getAndSet(nil) else {
+            XCTFail("Expected a scheduled display action", file: file, line: line)
+            return
+        }
+        action()
     }
 }
 
