@@ -699,6 +699,85 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(publishedEvents.isEmpty)
     }
 
+    func testOfflineUserSwitch_dropsOldSDKRequestsAndKeepsNewRequests() {
+        userpilot.storage.userId = "user-a"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        let published = recordPublishedEvents()
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_theme"))
+
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.first?.event.userId, "user-b")
+        userpilot.offlineEventsHandler.shouldSaveOffline = false
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        XCTAssertEqual(published(), ["get_mobile_theme"])
+    }
+
+    func testDisconnectedUserSwitch_dropsOldSDKRequestsAndKeepsIdentify() {
+        userpilot.storage.userId = "user-a"
+        let published = recordPublishedEvents()
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
+    }
+
+    func testResumeWithQueuedUserSwitch_dropsSDKRequestsCachedAfterIdentify() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        let published = recordPublishedEvents()
+
+        analyticsPublisher.resume()
+        userpilot.socketManager.isJoiningSocket = false
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+    }
+
+    func testUserSwitchLogout_dropsSDKRequestsAndPreservesQueuedIdentify() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        let published = recordPublishedEvents()
+
+        analyticsPublisher.logout(clearCachedIdentifyEvent: false)
+
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
+        userpilot.storage.userId = "user-b"
+        userpilot.socketManager.isJoiningSocket = false
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+    }
+
+    func testOfflineIdentifyForSameUser_preservesCachedSDKRequests() {
+        userpilot.storage.userId = "user-a"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        let published = recordPublishedEvents()
+        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+
+        analyticsPublisher.publish(Event(type: .identify("user-a")))
+        userpilot.offlineEventsHandler.shouldSaveOffline = false
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        XCTAssertEqual(published(), ["get_mobile_content"])
+    }
+
     func testIsExperienceSeen_shouldUseSeenSetForContentType() throws {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.

@@ -295,8 +295,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         experiencesPublisher?.logout()
         // Clear seen contents from screenSessionStateMachine
         screenSessionStateMachine?.resetState()
-        // Clear all queues for app logout; on user switch keep them so the new
-        // user's identify re-establishes the connection after the old channel closes
+        // Clear SDK requests for the old user; retain queued analytics during a switch
+        // so the new user's identify can re-establish the connection.
         clearAllCachedProperties(clearCachedIdentifyEvent)
         // Old-user offline events must never replay under a new user
         offlineEventsHandler.clearLocalEvents()
@@ -315,7 +315,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             if storage.userId.isNotEmpty, userId != storage.userId {
                 userSessionStateMachine.markUserSwitch()
             }
-            storage.userId = userId
+            updateUserId(userId)
         }
         // connect() gates itself on the socket state - always safe to call
         if storage.userId.isNotEmpty { openSocket() }
@@ -473,7 +473,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         // offline event belongs to that user, and old persisted events are cleared
         // before this identify is saved.
         if event.isIdentifyEvent, let userId = event.userId, !userId.isEmpty {
-            storage.userId = userId
+            updateUserId(userId)
         }
 
         offlineEventsHandler.saveEventToLocalStorage(
@@ -535,10 +535,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
 
         if let userId = event.userId, !userId.isEmpty {
-            storage.userId = userId
+            updateUserId(userId)
         } else if let cachedUserId = getUserIdFromQueue() {
-            storage.userId = cachedUserId
+            updateUserId(cachedUserId)
         }
+    }
+
+    /// SDK requests belong to the current user, even when no socket is connected yet.
+    private func updateUserId(_ userId: String) {
+        if storage.userId.isNotEmpty, storage.userId != userId {
+            cachedSDKEvents.clear()
+        }
+        storage.userId = userId
     }
 
     private func isUserSwitchIdentifyEvent(_ event: Event?) -> Bool {
@@ -1071,15 +1079,15 @@ extension AnalyticsPublisher: NetworkMonitoringDelegate {
 private extension AnalyticsPublisher {
 
     /**
-     * Clears all cached properties on app-level logout; user switch keeps them.
+     * Clears cached SDK requests on every logout; user switches retain queued analytics.
      *
      * - Parameter clearCachedIdentifyEvent: Whether to clear the cached identify event
      */
     private func clearAllCachedProperties(_ clearCachedIdentifyEvent: Bool = false) {
+        cachedSDKEvents.clear()
         guard clearCachedIdentifyEvent else { return }
         eventsQueue.clear()
         initialQueue.clear()
-        cachedSDKEvents.clear()
         self.clearCachedIdentifyEvent()
     }
 
