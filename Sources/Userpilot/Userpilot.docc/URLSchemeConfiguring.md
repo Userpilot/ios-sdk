@@ -2,13 +2,15 @@
 
 The Userpilot iOS SDK includes support for a custom URL scheme that supports previewing Userpilot experiences.
 
+For a focused technical walkthrough of Builder preview links, see <doc:ScanQRCodeForReview>.
+
 ## Overview
 
 Configuring the Userpilot URL scheme involves adding a `CFBundleURLTypes` value and then directing the incoming URL to the Userpilot iOS SDK.
 
 ## Register the Custom URL Scheme
 
-Update your `Info.plist` to register the custom URL scheme. Replace `USERPILOT_TOKEN` in the snippet below with your app's Userpilot Token. This value can be obtained from your [Environments Page](https://run.userpilot.io/environment).
+Update your `Info.plist` to register the custom URL scheme. Replace `APP_TOKEN` in the snippet below with the Userpilot Token your app is configured with. This value can be obtained from your [Environments Page](https://run.userpilot.io/environment).
 
 For example, if your Userpilot Token is `NX-12345678` your url scheme value would be `userpilot-nx-12345678`.
 
@@ -22,11 +24,15 @@ For example, if your Userpilot Token is `NX-12345678` your url scheme value woul
         <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string>userpilot-USERPILOT_TOKEN</string>
+            <string>userpilot-APP_TOKEN</string>
         </array>
     </dict>
 </array>
 ```
+
+Use the token exactly as passed to the SDK, in lowercase. Keep the `STG-` prefix
+for staging: `STG-NX-12345678` uses `userpilot-stg-nx-12345678`, while
+`NX-12345678` uses `userpilot-nx-12345678`.
 
 ## Handle the Custom URL Scheme
 

@@ -18,10 +18,27 @@ class CustomEventViewController: BaseViewController {
         }
     }
     @IBOutlet weak var eventPropertiesStackView: UIStackView!
+    @IBOutlet weak var trackEventButton: UIButton!
 
     internal var eventPropertiesViews: [String: PropertyView] = [:]
 
+    private lazy var advanceEventButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Advance event", for: .normal)
+        button.applyLiquidGlassStyle(.regular, title: "Advance event")
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(onAdvanceEventTapped), for: .touchUpInside)
+        return button
+    }()
+
     // MARK: - Override
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Track event"
+        wrapPrimaryScrollContentInCard()
+        installAdvanceEventButton()
+    }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -34,16 +51,35 @@ class CustomEventViewController: BaseViewController {
         trackEvent()
     }
 
-    @IBAction func onBackButtonClicked(_ sender: UIButton) {
-        close()
-    }
-
     @IBAction func onAddEventProperty(_ sender: UIButton) {
         showAddEventPropertyDiaog()
     }
 
-    @IBAction func onAdvanceEventButtonClicked(_ sender: UIButton) {
+    @objc private func onAdvanceEventTapped() {
         FlowRoutingManager.shared.openViewController(EventsViewController.newInstance())
+    }
+
+    private func installAdvanceEventButton() {
+        let trackButton = trackEventButton
+            ?? view.subviews.compactMap({ $0 as? UIButton }).first
+        guard let trackButton else { return }
+
+        view.addSubview(advanceEventButton)
+
+        // Move the track button's bottom constraint onto the advance button.
+        let trackBottomConstraints = view.constraints.filter {
+            ($0.firstItem as? UIView) == trackButton && $0.firstAttribute == .bottom
+                || ($0.secondItem as? UIView) == trackButton && $0.secondAttribute == .bottom
+        }
+        NSLayoutConstraint.deactivate(trackBottomConstraints)
+
+        NSLayoutConstraint.activate([
+            advanceEventButton.leadingAnchor.constraint(equalTo: trackButton.leadingAnchor),
+            advanceEventButton.trailingAnchor.constraint(equalTo: trackButton.trailingAnchor),
+            advanceEventButton.topAnchor.constraint(equalTo: trackButton.bottomAnchor, constant: 8),
+            advanceEventButton.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        ])
     }
 
 }

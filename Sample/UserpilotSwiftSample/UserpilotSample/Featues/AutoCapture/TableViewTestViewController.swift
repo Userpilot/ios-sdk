@@ -33,33 +33,8 @@ class TableViewTestViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "TableView Test"
-        view.backgroundColor = .systemBackground
-        setupBackButton()
+        view.backgroundColor = SampleAppearance.screenBackground
         setupTableView()
-    }
-
-    private func setupBackButton() {
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("< Back", for: .normal)
-        backButton.titleLabel?.font = .systemFont(ofSize: 17)
-        backButton.contentHorizontalAlignment = .leading
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(backButton)
-
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            backButton.heightAnchor.constraint(equalToConstant: 32)
-        ])
-    }
-
-    @objc private func backTapped() {
-        if let nav = navigationController {
-            nav.popViewController(animated: true)
-        } else {
-            dismiss(animated: true)
-        }
     }
 
     // MARK: - Setup
@@ -70,11 +45,12 @@ class TableViewTestViewController: UIViewController {
         tableView.dataSource = self
         tableView.register(CustomTableViewCell.self, forCellReuseIdentifier: cellIdentifier)
         tableView.rowHeight = 70
+        tableView.backgroundColor = SampleAppearance.screenBackground
 
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)

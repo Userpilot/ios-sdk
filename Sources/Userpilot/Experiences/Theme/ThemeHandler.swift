@@ -92,6 +92,9 @@ internal class ThemeHandler: ThemeHandling {
         static let imageSize = CGFloat(300)
         static let closeButtonAlpha = 0.8
         static let dismissButtonMargin = CGFloat(10)
+        /// The height of `UPStepsBarProgressView`. Its layers are fully rounded,
+        /// so this also drives their corner radius.
+        static let stepsProgressBarHeight = CGFloat(5)
         static let iconImageDimensions = 38
         static let npsImageDimensions = 100
 
@@ -107,6 +110,12 @@ internal class ThemeHandler: ThemeHandling {
         static let npsDismissDarkBackgroundBrightness = CGFloat(0.25)
         static let npsDismissButtonHeight = CGFloat(34)
         static let npsDismissButtonTextSize = CGFloat(14)
+
+        /// NPS header layout: the steps progress bar sits at the very top of the sheet and the dismiss
+        /// button hangs below its container, so the button needs a margin to clear the bar.
+        static let npsProgressBarTopInset = CGFloat(20)
+        static let npsDismissButtonTopMargin = CGFloat(8)
+        static let npsDismissButtonBottomOverhang = CGFloat(10)
 
         /// Survey
         static let surveyItemRatingMinWidth: Int = 80

@@ -49,15 +49,15 @@ final class InteractionEventCacheTests: XCTestCase {
             textLengthForDedupe: 2
         )
 
-        wait(for: [expectation], timeout: AutoCaptureConstants.interactionDebounceInterval + 0.5)
+        wait(for: [expectation], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.5)
 
         XCTAssertEqual(publishedEvents.count, 1)
         XCTAssertEqual(publishedEvents.first?.interactionEventName, InteractionEventType.textChange.rawValue)
         XCTAssertEqual(
-            publishedEvents.first?.properties?[AutoCaptureConstants.targetClass] as? String,
+            publishedEvents.first?.properties?[Constants.AutoCapture.targetClass] as? String,
             "LatestTextField"
         )
-        XCTAssertEqual(publishedEvents.first?.properties?[AutoCaptureConstants.textLength] as? Int, 2)
+        XCTAssertEqual(publishedEvents.first?.properties?[Constants.AutoCapture.textLength] as? Int, 2)
     }
 
     func testDeliveredTextLengthIsDeduplicatedUntilCacheIsFlushed() {
@@ -76,7 +76,7 @@ final class InteractionEventCacheTests: XCTestCase {
             textLengthForDedupe: 3
         )
 
-        wait(for: [firstDelivery], timeout: AutoCaptureConstants.interactionDebounceInterval + 0.5)
+        wait(for: [firstDelivery], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.5)
         XCTAssertEqual(publishedEvents.count, 1)
 
         let duplicateDelivery = XCTestExpectation(description: "duplicate text length should not publish")
@@ -91,7 +91,7 @@ final class InteractionEventCacheTests: XCTestCase {
             textLengthForDedupe: 3
         )
 
-        wait(for: [duplicateDelivery], timeout: AutoCaptureConstants.interactionDebounceInterval + 0.2)
+        wait(for: [duplicateDelivery], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.2)
 
         InteractionEventCache.flushAll()
 
@@ -107,7 +107,7 @@ final class InteractionEventCacheTests: XCTestCase {
             textLengthForDedupe: 3
         )
 
-        wait(for: [afterFlushDelivery], timeout: AutoCaptureConstants.interactionDebounceInterval + 0.5)
+        wait(for: [afterFlushDelivery], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.5)
         XCTAssertEqual(publishedEvents.count, 2)
     }
 
@@ -127,12 +127,12 @@ final class InteractionEventCacheTests: XCTestCase {
         )
         InteractionEventCache.flushAll()
 
-        wait(for: [expectation], timeout: AutoCaptureConstants.interactionDebounceInterval + 0.2)
+        wait(for: [expectation], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.2)
     }
 
     private func textPayload(length: Int, targetClass: String = "UITextField") -> InteractionPayload {
         var payload = InteractionPayload(interactionType: .textFieldChanged, elementType: targetClass)
-        payload.sourceProperties = [AutoCaptureConstants.textLength: length]
+        payload.sourceProperties = [Constants.AutoCapture.textLength: length]
         return payload
     }
 }

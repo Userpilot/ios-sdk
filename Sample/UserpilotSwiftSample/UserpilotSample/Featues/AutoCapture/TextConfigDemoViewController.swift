@@ -51,7 +51,6 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Text Config Demo"
-        view.backgroundColor = .systemBackground
         setupUI()
     }
 
@@ -69,10 +68,7 @@ class TextConfigDemoViewController: DemoBackButtonViewController {
         scrollView.addSubview(contentView)
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: demoBackButtonTopInset
-            ),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -517,7 +513,6 @@ private final class ScreenAPIContainerDemoViewController: DemoBackButtonViewCont
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Container Screen Demo"
-        view.backgroundColor = .systemBackground
         setupBody()
         embedChild()
     }
@@ -547,10 +542,7 @@ private final class ScreenAPIContainerDemoViewController: DemoBackButtonViewCont
         view.addSubview(childHostView)
 
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: demoBackButtonTopInset + 20
-            ),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
 
@@ -592,10 +584,8 @@ internal final class DefaultIgnoreInnerHierarchyContainerView: UIView {
 internal extension UIButton {
 
     func applyDemoStyle(backgroundColor: UIColor) {
-        self.backgroundColor = backgroundColor
-        setTitleColor(.white, for: .normal)
-        layer.cornerRadius = 8
-        heightAnchor.constraint(equalToConstant: 50).isActive = true
+        applyLiquidGlassStyle(.prominent, tintColor: backgroundColor)
+        heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight).isActive = true
     }
 }
 // swiftlint:enable all

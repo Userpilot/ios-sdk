@@ -34,8 +34,8 @@ internal extension UITextField {
             elementType: "UITextField"
         )
 
-        payload.sourceProperties[AutoCaptureConstants.hasText] = !(text?.isEmpty ?? true)
-        payload.sourceProperties[AutoCaptureConstants.textLength] = text?.count ?? 0
+        payload.sourceProperties[Constants.AutoCapture.hasText] = !(text?.isEmpty ?? true)
+        payload.sourceProperties[Constants.AutoCapture.textLength] = text?.count ?? 0
         payload.placeholder = placeholder
 
         let effectiveView = userpilotEffectiveViewForCapture()
@@ -58,7 +58,7 @@ internal extension UITextField {
         InteractionEventCache.sendDebouncedInteraction(
             payload,
             for: self,
-            textLengthForDedupe: payload.sourceProperties[AutoCaptureConstants.textLength] as? Int
+            textLengthForDedupe: payload.sourceProperties[Constants.AutoCapture.textLength] as? Int
         )
     }
 }
@@ -82,8 +82,8 @@ internal extension UITextView {
             elementType: "UITextView"
         )
 
-        payload.sourceProperties[AutoCaptureConstants.hasText] = !text.isEmpty
-        payload.sourceProperties[AutoCaptureConstants.textLength] = text.count
+        payload.sourceProperties[Constants.AutoCapture.hasText] = !text.isEmpty
+        payload.sourceProperties[Constants.AutoCapture.textLength] = text.count
 
         let effectiveView = userpilotEffectiveViewForCapture()
         // SwiftUI sibling text views otherwise resolve to identical hierarchy strings; override the
@@ -105,7 +105,7 @@ internal extension UITextView {
         InteractionEventCache.sendDebouncedInteraction(
             payload,
             for: self,
-            textLengthForDedupe: payload.sourceProperties[AutoCaptureConstants.textLength] as? Int
+            textLengthForDedupe: payload.sourceProperties[Constants.AutoCapture.textLength] as? Int
         )
     }
 }

@@ -49,9 +49,9 @@
                                 </subviews>
                             </stackView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="cxu-UJ-F3l" customClass="OutlineButton" customModule="UserPilotSample" customModuleProvider="target">
-                                <rect key="frame" x="16" y="135.66666666666666" width="325" height="45.333333333333343"/>
+                                <rect key="frame" x="16" y="135.66666666666666" width="325" height="52"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="45.329999999999998" id="aDZ-zy-29u"/>
+                                    <constraint firstAttribute="height" constant="52" id="aDZ-zy-29u"/>
                                 </constraints>
                                 <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
                                 <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
@@ -80,10 +80,10 @@
                     </view>
                 </subviews>
                 <constraints>
-                    <constraint firstAttribute="trailing" secondItem="ATD-5Q-E5i" secondAttribute="trailing" constant="10" id="FtK-ml-W7L"/>
-                    <constraint firstItem="ATD-5Q-E5i" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="10" id="Sos-0X-4mb"/>
-                    <constraint firstItem="ATD-5Q-E5i" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="10" id="dCG-da-Zj7"/>
-                    <constraint firstAttribute="bottom" secondItem="ATD-5Q-E5i" secondAttribute="bottom" constant="10" id="rOa-xx-fAS"/>
+                    <constraint firstAttribute="trailing" secondItem="ATD-5Q-E5i" secondAttribute="trailing" constant="16" id="FtK-ml-W7L"/>
+                    <constraint firstItem="ATD-5Q-E5i" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="8" id="Sos-0X-4mb"/>
+                    <constraint firstItem="ATD-5Q-E5i" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="16" id="dCG-da-Zj7"/>
+                    <constraint firstAttribute="bottom" secondItem="ATD-5Q-E5i" secondAttribute="bottom" constant="8" id="rOa-xx-fAS"/>
                 </constraints>
             </tableViewCellContentView>
             <viewLayoutGuide key="safeArea" id="njF-e1-oar"/>

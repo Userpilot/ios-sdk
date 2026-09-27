@@ -63,7 +63,8 @@ fastlane/test_output
 # Mac OS X
 *.DS_Store
 
-# AI agent tooling (Cursor / Claude / local agent memory)
+# AI agent tooling (local while evaluating — not tracked)
+# Keeps files on disk across branch switches; use git rm --cached if they were previously tracked.
 .agents/
 .claude/
 .cursor/
@@ -72,3 +73,8 @@ CLAUDE.md
 
 # Locally generated agent specs/plans — not project documentation
 docs/superpowers/
+plan/
+
+# Local GitHub Actions cleanup helper and audit records
+/scripts/cleanup-github-actions.py
+/.local/github-actions-cleanup/

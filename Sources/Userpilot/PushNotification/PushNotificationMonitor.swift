@@ -27,6 +27,12 @@ internal protocol PushNotificationMonitoring: AnyObject {
     /// - Parameter deviceToken: The device token received from APNs.
     func setPushToken(_ deviceToken: Data?)
 
+    /// Re-publishes the current device token even when its value has not changed.
+    ///
+    /// `setPushToken(_:)` is value-guarded and is therefore a no-op for a returning user whose
+    /// token is unchanged. This re-asserts the token ↔ user pairing on the backend.
+    func resyncPushToken()
+
     /// Refreshes the push authorization status and calls the completion handler with the updated status.
     ///
     /// - Parameter completion: A closure that is called with the updated authorization status.
@@ -40,12 +46,6 @@ internal protocol PushNotificationMonitoring: AnyObject {
     ///
     /// - Returns: A boolean indicating whether the notification was successfully handled.
     func didReceiveNotification(response: UNNotificationResponse, completionHandler: @escaping () -> Void) -> Bool
-
-    /// Attempts to handle a deferred notification response.
-    ///
-    /// - Returns: A boolean indicating whether the deferred response was successfully processed.
-    @discardableResult
-    func attemptDeferredNotificationResponse() -> Bool
 }
 
 /// `PushNotificationMonitor` is responsible for managing push notifications,
@@ -58,7 +58,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     private let config: Userpilot.Config
     private let storage: DataStoring
     private let analyticsPublisher: AnalyticsPublishing
-    private let socketManager: SocketEvents
+    private let socketManager: SocketManaging
     private let linkOpener: LinkOpening
 
     // MARK: - Push Token Management
@@ -73,7 +73,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         pushAuthorizationStatus == .authorized && storage.pushToken.isNotEmpty
     }
 
-    private var deferredNotification: UserpilotNotification?
     // Later, we could make this as configuration option,
     // to request the permission many times till we get it.
     private var didRequestPermissions = false
@@ -86,7 +85,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-        self.socketManager = container.resolve(SocketEvents.self)
+        self.socketManager = container.resolve(SocketManaging.self)
         self.linkOpener = container.resolve(LinkOpening.self)
 
         PushNotificationAutoConfig.register(observer: self)
@@ -102,20 +101,48 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         // Cache the token in all cases so in next identify in same session, we will sync it
         cachedToken = deviceToken
         guard
-            let newToken = deviceToken?.map({ String(format: "%02x", $0) }).joined(),
+            let newToken = deviceToken.map(hexString(from:)),
             storage.pushToken != newToken
         else {
             return
         }
 
         if analyticsPublisher.canRequestEvent {
-            analyticsPublisher.publishInternalSDKEvent(
-                PushNotificationTokenEvent(
-                    appToken: config.token,
-                    userId: storage.userId,
-                    token: newToken),
-                socketSubscription: self)
+            publishTokenEvent(newToken)
         }
+    }
+
+    /// Re-publishes the current device token even when its value has not changed.
+    ///
+    /// `setPushToken(_:)` is value-guarded, so a returning user whose APNs token did not change
+    /// would otherwise never re-pair token ↔ user on the backend. Driven by `AnalyticsPublisher`
+    /// after it forwards an identify that carries no new user data.
+    func resyncPushToken() {
+        // Prefer the token the OS handed us this launch; fall back to the persisted one for a warm
+        // start where `didRegisterForRemoteNotificationsWithDeviceToken` has not fired yet.
+        guard
+            let token = cachedToken.map(hexString(from:)) ?? storage.pushToken,
+            token.isNotEmpty,
+            analyticsPublisher.canRequestEvent
+        else {
+            return
+        }
+
+        publishTokenEvent(token)
+    }
+
+    /// Hex representation of a raw APNs device token.
+    private func hexString(from deviceToken: Data) -> String {
+        deviceToken.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Publishes the `user_token` event for the given hex token.
+    private func publishTokenEvent(_ token: String) {
+        analyticsPublisher.publishInternalSDKEvent(
+            PushNotificationTokenEvent(
+                appToken: config.token,
+                userId: storage.userId,
+                token: token))
     }
 
     /// Handles the socket event for sending the push token.
@@ -142,7 +169,6 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         if let cachedToken {
             setPushToken(cachedToken)
         }
-        attemptDeferredNotificationResponse()
     }
 
     // MARK: - Refresh Push Status
@@ -250,49 +276,17 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
             return false
         }
 
-        // Handle deferred notification if analytics event is not yet allowed
-        guard analyticsPublisher.canRequestEvent else {
-            deferredNotification = parsedNotification
-            completionHandler?()
-            return true
-        }
+        // Neither step below needs an open socket: publishInternalSDKEvent caches the event while
+        // the socket is closed and persists it to the offline store while the network is down,
+        // and the deeplink is pure client-side navigation through LinkOpener. Reporting here also
+        // keeps `created_at` at tap time rather than reconnect time.
+        reportNotificationOpened(parsedNotification)
 
         // Process the notification and respond accordingly
         executeNotificationResponse(
             userpilot: userpilot,
             parsedNotification: parsedNotification,
             completionHandler: completionHandler
-        )
-
-        return true
-    }
-
-    /// Attempts to process a deferred notification response if it was previously deferred.
-    ///
-    /// - Returns: A boolean indicating whether the deferred response was successfully processed.
-    @discardableResult
-    func attemptDeferredNotificationResponse() -> Bool {
-        guard
-            let parsedNotification = deferredNotification,
-            let userpilot = userpilot
-        else { return false }
-
-        defer { deferredNotification = nil }
-
-        if let appToken = parsedNotification.appToken, !appToken.isEmpty, appToken != config.token {
-            config.logger.info("Deferred notification response skipped")
-            return false
-        }
-
-        guard parsedNotification.userId == storage.userId else {
-            config.logger.info("Deferred notification response skipped")
-            return false
-        }
-
-        executeNotificationResponse(
-            userpilot: userpilot,
-            parsedNotification: parsedNotification,
-            completionHandler: nil
         )
 
         return true
@@ -309,19 +303,27 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         parsedNotification: UserpilotNotification,
         completionHandler: (() -> Void)? = nil
     ) {
-        if parsedNotification.isTest != "true" {
-            let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
-            analyticsPublisher.publishInternalSDKEvent(
-                PushNotificationOpenedEvent(payload: properties),
-                socketSubscription: self
-            )
-        }
-
         if let url = parsedNotification.deeplink {
             linkOpener.handleURL(url)
         }
 
         completionHandler?()
+    }
+
+    /// Publishes the `opened_push_notification` event for a tap.
+    ///
+    /// Called from `processNotification(_:completionHandler:)` the moment the tap arrives,
+    /// whatever the connection state — `publishInternalSDKEvent` caches it while the socket is
+    /// closed and persists it to the offline store while the network is down.
+    ///
+    /// - Parameter parsedNotification: The validated notification that was opened.
+    private func reportNotificationOpened(_ parsedNotification: UserpilotNotification) {
+        guard parsedNotification.isTest != "true" else { return }
+
+        let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
+        analyticsPublisher.publishInternalSDKEvent(
+            PushNotificationOpenedEvent(payload: properties)
+        )
     }
 
 }

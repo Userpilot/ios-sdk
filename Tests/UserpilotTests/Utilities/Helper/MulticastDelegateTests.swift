@@ -32,6 +32,35 @@ final class MulticastDelegateTests: XCTestCase {
         XCTAssertEqual(second.calls, 2)
     }
 
+    /// A delegate that reaches back into the multicast from inside its own callback — the shape of
+    /// `AnalyticsPublisher` resolving a lazily-built subscriber while a socket callback is being
+    /// dispatched, which registers it on the socket thread mid-`invoke`.
+    private final class ReentrantDelegate {
+        var calls = 0
+        var onCall: (() -> Void)?
+    }
+
+    func testInvokeLetsADelegateRegisterAnotherFromItsOwnCallback() {
+        let multicast = MulticastDelegate<ReentrantDelegate>()
+        let first = ReentrantDelegate()
+        let late = ReentrantDelegate()
+        multicast.add(first)
+        first.onCall = { multicast.add(late) }
+
+        // Hangs if callbacks are dispatched while the lock is held (NSLock is not recursive),
+        // and would mutate mid-iteration if the walk used the live table instead of a snapshot.
+        multicast.invoke { $0.calls += 1; $0.onCall?() }
+
+        // The late registration lands, but not in the pass that was already snapshotted.
+        XCTAssertEqual(first.calls, 1)
+        XCTAssertEqual(late.calls, 0)
+
+        multicast.invoke { $0.calls += 1; $0.onCall?() }
+
+        XCTAssertEqual(first.calls, 2)
+        XCTAssertEqual(late.calls, 1)
+    }
+
     func testMulticastDoesNotRetainDelegates() {
         let multicast = MulticastDelegate<Delegate>()
         var delegate: Delegate? = Delegate()

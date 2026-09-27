@@ -200,34 +200,51 @@ extension UIWindow {
         let useRedactedInner = (effectiveView !== view)
 
         var eventProperties: [String: Any] = [
-            AutoCaptureConstants.targetClass: String(describing: type(of: effectiveView)),
-            AutoCaptureConstants.hierarchy: path
+            Constants.AutoCapture.targetClass: String(describing: type(of: effectiveView)),
+            Constants.AutoCapture.hierarchy: path
         ]
 
         if let capture = view.resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
             if let labelViewType = capture.viewType {
-                eventProperties[AutoCaptureConstants.targetClass] = labelViewType
+                eventProperties[Constants.AutoCapture.targetClass] = labelViewType
             }
-            if let text = capture.labeledView.resolvedInteractionText(capture.label) {
-                eventProperties[AutoCaptureConstants.targetText] = text
+            if let resolvedLabel = capture.labeledView.resolvedInteractionText(capture.label) {
+                eventProperties[Constants.AutoCapture.targetText] = resolvedLabel
             }
         } else if useRedactedInner {
-            if let text = view.ignoreInnerHierarchyTextPlaceholder() {
-                eventProperties[AutoCaptureConstants.targetText] = text
+            if let placeholder = view.ignoreInnerHierarchyTextPlaceholder() {
+                eventProperties[Constants.AutoCapture.targetText] = placeholder
             }
         } else {
             if let accessibilityIdentifier = view.accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
-                eventProperties[AutoCaptureConstants.accessibilityIdentifier] = accessibilityIdentifier
+                eventProperties[Constants.AutoCapture.accessibilityIdentifier] = accessibilityIdentifier
             }
             if let accessibilityLabel = view.getAccessibilityLabelContent() {
-                eventProperties[AutoCaptureConstants.accessibilityLabel] = accessibilityLabel
+                eventProperties[Constants.AutoCapture.accessibilityLabel] = accessibilityLabel
             }
-            if let text = view.getTextContent() {
-                eventProperties[AutoCaptureConstants.targetText] = text
+            if let text = sectionContainerText(for: view) ?? view.getTextContent() {
+                eventProperties[Constants.AutoCapture.targetText] = text
             }
         }
 
         InstanceResolver.shared.handleClickTracked(eventProperties, source: view)
+    }
+
+    /// Text for a tap that landed inside a table section header/footer or a collection
+    /// supplementary view.
+    ///
+    /// These are single logical elements like rows are, so the container's own text is published
+    /// rather than whichever leaf the finger hit — the same rule
+    /// ``UITableViewCell/userpilotResolvedCellText(touchedView:)`` applies to cells. Returns `nil`
+    /// for taps outside such a container, leaving the regular leaf resolution in place.
+    private func sectionContainerText(for view: UIView) -> String? {
+        if let headerFooter = view.findParentTableViewHeaderFooter() {
+            return headerFooter.userpilotResolvedHeaderFooterText(touchedView: view)
+        }
+        if let reusable = view.findParentCollectionReusableView() {
+            return reusable.userpilotResolvedSupplementaryText(touchedView: view)
+        }
+        return nil
     }
 
 }

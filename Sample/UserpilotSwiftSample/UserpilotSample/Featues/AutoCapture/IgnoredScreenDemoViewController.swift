@@ -17,7 +17,6 @@ class IgnoredScreenDemoViewController: DemoBackButtonViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Ignored Screen Demo"
-        view.backgroundColor = .systemBackground
         setupBody()
     }
 
@@ -48,10 +47,7 @@ class IgnoredScreenDemoViewController: DemoBackButtonViewController {
         view.addSubview(button)
 
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: demoBackButtonTopInset + 20
-            ),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
 

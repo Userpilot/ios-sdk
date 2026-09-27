@@ -36,13 +36,11 @@ internal final class InstanceResolver {
 
     // MARK: - One-shot warning state
 
-    /// Lock guarding `didLogNoOwnerDrop`. Plain `NSLock` is enough — this is only
-    /// touched on the rare warning path.
-    private let warningLock = NSLock()
-
     /// `true` once the "no owner and no default fallback" warning has been emitted.
     /// Logging once per process keeps the system log clean while still surfacing the issue.
-    private var didLogNoOwnerDrop = false
+    ///
+    /// Claimed with `getAndSet(true)`, so exactly one caller ever sees `false`.
+    private let didLogNoOwnerDrop = AtomicReference<Bool>(false)
 
     // MARK: - Target Resolution (public to module)
 
@@ -275,10 +273,7 @@ private extension InstanceResolver {
     func defaultOrNil() -> Userpilot? {
         if let target = registry.default { return target }
 
-        warningLock.lock()
-        let alreadyLogged = didLogNoOwnerDrop
-        didLogNoOwnerDrop = true
-        warningLock.unlock()
+        let alreadyLogged = didLogNoOwnerDrop.getAndSet(true)
 
         if !alreadyLogged {
             // No registered default means no logger to call. Use the system log directly.

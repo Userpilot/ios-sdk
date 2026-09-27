@@ -23,6 +23,12 @@ class EventTableViewCell: UITableViewCell, ReusableTableCellView, TableViewCellF
 
     var onTrackEvent: ((String?, String?) -> Void)?
 
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
+    }
+
     func bindCell(_ indexPath: IndexPath) {
         eventName.text = "\("event_title".localized) \(indexPath.row)"
     }

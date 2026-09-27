@@ -6,6 +6,7 @@
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -19,24 +20,6 @@
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="SMc-8F-yVD">
-                    <rect key="frame" x="16.000000000000004" y="75" width="49.333333333333343" height="40"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="40" id="sEr-jC-hlj"/>
-                    </constraints>
-                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                    <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
-                    <connections>
-                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="wUM-eG-Qo4"/>
-                    </connections>
-                </button>
-                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Screen One" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="9ii-3T-s3F">
-                    <rect key="frame" x="142" y="83" width="109" height="24"/>
-                    <fontDescription key="fontDescription" type="boldSystem" pointSize="20"/>
-                    <color key="textColor" name="MineShaft"/>
-                    <nil key="highlightedColor"/>
-                </label>
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="sTU-x5-qF7">
                     <rect key="frame" x="24" y="131" width="345" height="621"/>
                     <subviews>
@@ -79,10 +62,10 @@
                         </view>
                     </subviews>
                 </stackView>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="h3b-cK-SXv">
-                    <rect key="frame" x="24" y="768" width="345" height="40"/>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="h3b-cK-SXv" customClass="LiquidGlassButton" customModule="UserpilotSample" customModuleProvider="target">
+                    <rect key="frame" x="24" y="756" width="345" height="52"/>
                     <constraints>
-                        <constraint firstAttribute="height" constant="40" id="1Ss-rs-9bb"/>
+                        <constraint firstAttribute="height" constant="52" id="1Ss-rs-9bb"/>
                     </constraints>
                     <color key="tintColor" name="AccentColor"/>
                     <state key="normal" title="Button"/>
@@ -95,31 +78,28 @@
                 </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="Bae-jg-Sc6"/>
-            <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+            <color key="backgroundColor" systemColor="systemGroupedBackgroundColor"/>
             <constraints>
-                <constraint firstItem="9ii-3T-s3F" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="SMc-8F-yVD" secondAttribute="trailing" constant="8" symbolic="YES" id="CgZ-MN-Eht"/>
                 <constraint firstItem="Bae-jg-Sc6" firstAttribute="trailing" secondItem="sTU-x5-qF7" secondAttribute="trailing" constant="24" id="E1j-q2-MBV"/>
                 <constraint firstItem="Bae-jg-Sc6" firstAttribute="trailing" secondItem="h3b-cK-SXv" secondAttribute="trailing" constant="24" id="Nhx-ER-Arh"/>
-                <constraint firstItem="SMc-8F-yVD" firstAttribute="leading" secondItem="Bae-jg-Sc6" secondAttribute="leading" constant="16" id="OFp-GX-Gf6"/>
                 <constraint firstItem="h3b-cK-SXv" firstAttribute="top" secondItem="sTU-x5-qF7" secondAttribute="bottom" constant="16" id="TJ3-73-0iZ"/>
-                <constraint firstItem="SMc-8F-yVD" firstAttribute="top" secondItem="Bae-jg-Sc6" secondAttribute="top" constant="16" id="ThI-yp-Jo6"/>
                 <constraint firstItem="Bae-jg-Sc6" firstAttribute="bottom" secondItem="h3b-cK-SXv" secondAttribute="bottom" constant="10" id="Z9J-Vq-LwF"/>
-                <constraint firstItem="sTU-x5-qF7" firstAttribute="top" secondItem="9ii-3T-s3F" secondAttribute="bottom" constant="24" id="eRW-uw-Ghq"/>
+                <constraint firstItem="sTU-x5-qF7" firstAttribute="top" secondItem="Bae-jg-Sc6" secondAttribute="top" constant="16" id="eRW-uw-Ghq"/>
                 <constraint firstItem="h3b-cK-SXv" firstAttribute="leading" secondItem="Bae-jg-Sc6" secondAttribute="leading" constant="24" id="ejq-bt-Zeq"/>
-                <constraint firstItem="9ii-3T-s3F" firstAttribute="centerY" secondItem="SMc-8F-yVD" secondAttribute="centerY" id="mfS-HC-bRu"/>
-                <constraint firstItem="9ii-3T-s3F" firstAttribute="centerX" secondItem="bta-6C-5oK" secondAttribute="centerX" id="o5G-AE-1Qz"/>
                 <constraint firstItem="sTU-x5-qF7" firstAttribute="leading" secondItem="Bae-jg-Sc6" secondAttribute="leading" constant="24" id="qWk-yQ-WIa"/>
             </constraints>
             <point key="canvasLocation" x="109.16030534351144" y="-11.267605633802818"/>
         </view>
     </objects>
     <resources>
-        <image name="arrow.backward" catalog="system" width="128" height="95"/>
         <namedColor name="AccentColor">
             <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
         </namedColor>
         <namedColor name="MineShaft">
             <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
+        <systemColor name="systemGroupedBackgroundColor">
+            <color red="0.94901960784313721" green="0.94901960784313721" blue="0.96862745098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </systemColor>
     </resources>
 </document>

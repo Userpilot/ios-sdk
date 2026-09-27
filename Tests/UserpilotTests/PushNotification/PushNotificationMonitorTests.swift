@@ -67,22 +67,19 @@ final class PushNotificationMonitorTests: PushNotificationMonitorTestCase {
     func testSetPushToken_tracksEvent_whenNewValidTokenIsSet() throws {
         // Arrange
         var publishedEvent: SDKEvent?
-        var callbackSubscription: SocketSubscription?
         userpilot.storage.pushToken = ""
         userpilot.storage.userId = "user-00000"
         let token = Data("token-00000".utf8)
         let expectedToken = token.map({ String(format: "%02x", $0) }).joined()
 
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, subscription in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
-            callbackSubscription = subscription
         }
 
         // Act
         pushNotificationMonitor.setPushToken(token)
 
         // Assert
-        XCTAssertTrue(callbackSubscription === pushNotificationMonitor)
         let tokenEvent = try XCTUnwrap(publishedEvent as? PushNotificationTokenEvent)
         XCTAssertEqual(tokenEvent.eventName, SDKEventsName.pushNotificationToken.rawValue)
         XCTAssertEqual(tokenEvent.eventPayload["app_token"] as? String, userpilot.config.token)
@@ -116,7 +113,7 @@ final class PushNotificationMonitorTests: PushNotificationMonitorTestCase {
 
         var publishedEvent: SDKEvent?
         userpilot.storage.userId = "user-00000"
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event, _ in
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
             publishedEvent = event
         }
 

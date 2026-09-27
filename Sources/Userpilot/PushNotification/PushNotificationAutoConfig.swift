@@ -44,18 +44,27 @@ internal enum PushNotificationAutoConfig {
         // pointer identity, so adding the same observer twice does not duplicate.
         pushNotificationMonitors.add(observer as AnyObject)
         let pendingResponse = response
-        if pendingResponse != nil {
-            response = nil
-        }
         lock.unlock()
 
         // Process any cached response that arrived before this monitor existed.
-        if let pendingResponse = pendingResponse {
-            _ = observer.didReceiveNotification(
-                response: pendingResponse,
-                completionHandler: {}
-            )
+        guard let pendingResponse = pendingResponse else { return }
+
+        let didHandle = observer.didReceiveNotification(
+            response: pendingResponse,
+            completionHandler: {}
+        )
+
+        // Consume it only if this observer actually claimed it. A monitor
+        // declines a response belonging to another token or another user, and
+        // clearing the cache regardless would let the first monitor to register
+        // swallow a response meant for an instance still coming up.
+        guard didHandle else { return }
+
+        lock.lock()
+        if self.response === pendingResponse {
+            self.response = nil
         }
+        lock.unlock()
     }
 
     /// Returns a snapshot of all currently registered monitors.
@@ -88,10 +97,17 @@ internal enum PushNotificationAutoConfig {
     }
 
     /// Called when a push notification is received and handled by the app.
-    /// If the response contains a Userpilot app token, it is routed directly to the
-    /// matching instance. Otherwise, registered monitors are tried until one handles
-    /// the response. If no monitor handles it, the completion handler is executed
-    /// without any special handling.
+    /// Registered monitors are tried until one handles the response. A response
+    /// nobody can handle is cached and replayed to the next monitor to register,
+    /// so a tap that arrives before the SDK is configured is not lost.
+    ///
+    /// Responses are not routed by app token here: every monitor already compares
+    /// the payload's token against its own instance before claiming a response, so
+    /// looking the instance up first only duplicated that check — and when the
+    /// instance for that token did not exist yet, it dropped the response instead
+    /// of caching it. That is the normal cold-start ordering for the Flutter,
+    /// React Native and Capacitor wrappers, which configure the SDK from their own
+    /// runtime, well after the notification is delivered.
     ///
     /// - Parameters:
     ///   - response: The response to the notification containing the user's interaction with the notification.
@@ -100,58 +116,30 @@ internal enum PushNotificationAutoConfig {
         _ response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let userInfo = response.notification.request.content.userInfo
-        if
-            let parsedNotification = UserpilotNotification(userInfo: userInfo),
-            let appToken = parsedNotification.appToken,
-            !appToken.isEmpty {
-            guard let instance = Userpilot.instance(forToken: appToken) else {
-                completionHandler()
-                return
-            }
-
-            let didHandle = instance.didReceiveNotification(
-                response: response,
-                completionHandler: completionHandler
-            )
-            if !didHandle {
-                completionHandler()
-            }
-            return
-        }
-
-        // Snapshot monitors and, when there are none, cache the response under the SAME
-        // lock acquisition. This serialises against `register(observer:)`: a registering
-        // monitor is either already in this snapshot (delivered below), or its `register`
-        // runs after we cache and therefore observes `response` and replays it. Splitting
-        // these into two separate lock acquisitions would let a monitor register in the
-        // gap and miss the push.
-        lock.lock()
-        let monitors = pushNotificationMonitors.allObjects.compactMap {
-            $0 as? PushNotificationMonitoring
-        }
-        if monitors.isEmpty {
-            // No monitor yet (e.g. plugin lifecycle race) — cache so the next monitor to
-            // register can replay the response.
-            self.response = response
-        }
-        lock.unlock()
-
-        guard !monitors.isEmpty else {
-            completionHandler()
-            return
-        }
-
         // Stop at the first monitor that claims the response. Only one monitor
         // executes the completion handler so we don't trigger UIKit's "called
         // completionHandler more than once" assertion.
-        for monitor in monitors {
+        for monitor in currentMonitors() {
             let didHandle = monitor.didReceiveNotification(
                 response: response,
                 completionHandler: completionHandler
             )
-            if didHandle { return }
+            if didHandle {
+                // A newer response was handled, so an older cached one is stale.
+                lock.lock()
+                self.response = nil
+                lock.unlock()
+                return
+            }
         }
+
+        // Nobody could take it — usually because the instance it belongs to has not
+        // been configured yet. Hold it for the next monitor to register, which
+        // replays it from `register(observer:)`.
+        lock.lock()
+        self.response = response
+        lock.unlock()
+
         completionHandler()
     }
 

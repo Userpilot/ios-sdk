@@ -43,19 +43,19 @@ final class InteractionPayloadTests: XCTestCase {
 
         let dict = payload.toDictionary()
 
-        XCTAssertEqual(dict[AutoCaptureConstants.targetClass] as? String, "UIButton")
-        XCTAssertEqual(dict[AutoCaptureConstants.targetText] as? String, "Continue")
-        XCTAssertEqual(dict[AutoCaptureConstants.accessibilityLabel] as? String, "Continue label")
-        XCTAssertEqual(dict[AutoCaptureConstants.accessibilityIdentifier] as? String, "continue_button")
-        XCTAssertEqual(dict[AutoCaptureConstants.hierarchy] as? String, "Root/UIButton[0]")
-        XCTAssertEqual(dict[AutoCaptureConstants.targetAction] as? String, "continueTapped:")
-        XCTAssertEqual(dict[AutoCaptureConstants.ownerTargetClass] as? String, "ViewController")
-        XCTAssertEqual(dict[AutoCaptureConstants.targetViewName] as? String, "continueButton")
-        XCTAssertEqual(dict[AutoCaptureConstants.placeholder] as? String, "Placeholder")
-        XCTAssertEqual(dict[AutoCaptureConstants.dialogTitle] as? String, "Dialog")
-        XCTAssertEqual(dict[AutoCaptureConstants.dialogMessage] as? String, "Message")
-        XCTAssertEqual(dict[AutoCaptureConstants.section] as? Int, 2)
-        XCTAssertEqual(dict[AutoCaptureConstants.selectedIndex] as? Int, 4)
+        XCTAssertEqual(dict[Constants.AutoCapture.targetClass] as? String, "UIButton")
+        XCTAssertEqual(dict[Constants.AutoCapture.targetText] as? String, "Continue")
+        XCTAssertEqual(dict[Constants.AutoCapture.accessibilityLabel] as? String, "Continue label")
+        XCTAssertEqual(dict[Constants.AutoCapture.accessibilityIdentifier] as? String, "continue_button")
+        XCTAssertEqual(dict[Constants.AutoCapture.hierarchy] as? String, "Root/UIButton[0]")
+        XCTAssertEqual(dict[Constants.AutoCapture.targetAction] as? String, "continueTapped:")
+        XCTAssertEqual(dict[Constants.AutoCapture.ownerTargetClass] as? String, "ViewController")
+        XCTAssertEqual(dict[Constants.AutoCapture.targetViewName] as? String, "continueButton")
+        XCTAssertEqual(dict[Constants.AutoCapture.placeholder] as? String, "Placeholder")
+        XCTAssertEqual(dict[Constants.AutoCapture.dialogTitle] as? String, "Dialog")
+        XCTAssertEqual(dict[Constants.AutoCapture.dialogMessage] as? String, "Message")
+        XCTAssertEqual(dict[Constants.AutoCapture.section] as? Int, 2)
+        XCTAssertEqual(dict[Constants.AutoCapture.selectedIndex] as? Int, 4)
     }
 
     func testInteractionPayloadSourceDictionaryReturnsControlProperties() {
@@ -83,15 +83,15 @@ final class InteractionPayloadTests: XCTestCase {
 
         let dict = payload.toDictionary()
 
-        XCTAssertEqual(dict[AutoCaptureConstants.screenName] as? String, "Home")
-        XCTAssertEqual(dict[AutoCaptureConstants.screenClass] as? String, "HomeViewController")
-        XCTAssertEqual(dict[AutoCaptureConstants.screenType] as? String, "UIViewController")
-        XCTAssertEqual(dict[AutoCaptureConstants.navigationTitle] as? String, "Dashboard")
-        XCTAssertEqual(dict[AutoCaptureConstants.vcAccessibilityIdentifier] as? String, "home_vc")
-        XCTAssertEqual(dict[AutoCaptureConstants.vcAccessibilityLabel] as? String, "Home VC")
-        XCTAssertEqual(dict[AutoCaptureConstants.screenNameMatchesPreviousScreen] as? Bool, true)
-        XCTAssertEqual(dict[AutoCaptureConstants.uiFramework] as? String, Userpilot.AppFramework.SwiftUI.rawValue)
-        XCTAssertEqual(dict[AutoCaptureConstants.source] as? String, AutoCaptureConstants.autoCaptureSourceValue)
+        XCTAssertEqual(dict[Constants.AutoCapture.screenName] as? String, "Home")
+        XCTAssertEqual(dict[Constants.AutoCapture.screenClass] as? String, "HomeViewController")
+        XCTAssertEqual(dict[Constants.AutoCapture.screenType] as? String, "UIViewController")
+        XCTAssertEqual(dict[Constants.AutoCapture.navigationTitle] as? String, "Dashboard")
+        XCTAssertEqual(dict[Constants.AutoCapture.vcAccessibilityIdentifier] as? String, "home_vc")
+        XCTAssertEqual(dict[Constants.AutoCapture.vcAccessibilityLabel] as? String, "Home VC")
+        XCTAssertEqual(dict[Constants.AutoCapture.screenNameMatchesPreviousScreen] as? Bool, true)
+        XCTAssertEqual(dict[Constants.AutoCapture.uiFramework] as? String, Userpilot.AppFramework.SwiftUI.rawValue)
+        XCTAssertEqual(dict[Constants.AutoCapture.source] as? String, Constants.AutoCapture.autoCaptureSourceValue)
     }
 
     func testManualScreenTrackingPayloadUsesScreenTitleAsNameAndClass() {
@@ -100,6 +100,6 @@ final class InteractionPayloadTests: XCTestCase {
 
         XCTAssertEqual(payload.currentScreen, "Manual Screen")
         XCTAssertEqual(payload.screenClass, "Manual Screen")
-        XCTAssertEqual(dict[AutoCaptureConstants.uiFramework] as? String, Userpilot.AppFramework.UIKit.rawValue)
+        XCTAssertEqual(dict[Constants.AutoCapture.uiFramework] as? String, Userpilot.AppFramework.UIKit.rawValue)
     }
 }

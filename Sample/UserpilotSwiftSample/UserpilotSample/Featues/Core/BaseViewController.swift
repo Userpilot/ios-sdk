@@ -10,6 +10,11 @@ import UIKit
 
 class BaseViewController: UIViewController {
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = SampleAppearance.screenBackground
+    }
+
     // MARK: - Helper methods
     func close() {
         self.navigationController?.popViewController(animated: true)

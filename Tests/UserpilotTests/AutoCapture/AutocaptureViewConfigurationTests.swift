@@ -60,8 +60,8 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
 
         let dialogText = alert.userpilotDialogText()
 
-        XCTAssertEqual(dialogText.title, AutoCaptureConstants.reductText)
-        XCTAssertEqual(dialogText.message, AutoCaptureConstants.reductText)
+        XCTAssertEqual(dialogText.title, Constants.AutoCapture.reductText)
+        XCTAssertEqual(dialogText.message, Constants.AutoCapture.reductText)
     }
 
     func testDialogTextKeepsNilFieldsWhenRedacted() {
@@ -70,7 +70,7 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
 
         let dialogText = alert.userpilotDialogText()
 
-        XCTAssertEqual(dialogText.title, AutoCaptureConstants.reductText)
+        XCTAssertEqual(dialogText.title, Constants.AutoCapture.reductText)
         XCTAssertNil(dialogText.message)
     }
 
@@ -79,7 +79,7 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         // Without a resolvable Userpilot owner, capture defaults to enabled — opt-in still redacts.
         XCTAssertEqual(view.resolvedInteractionText("Visible"), "Visible")
         view.userpilotRedactText = true
-        XCTAssertEqual(view.resolvedInteractionText("Visible"), AutoCaptureConstants.reductText)
+        XCTAssertEqual(view.resolvedInteractionText("Visible"), Constants.AutoCapture.reductText)
     }
 
     func testAccessibilityLabelContentUsesOptInPlaceholderAndOmitsNilOwnerDefaults() {
@@ -90,13 +90,13 @@ final class AutocaptureViewConfigurationTests: XCTestCase {
         XCTAssertEqual(view.getAccessibilityLabelContent(), "Accessible Field")
 
         view.userpilotRedactAccessibilityLabel = true
-        XCTAssertEqual(view.getAccessibilityLabelContent(), AutoCaptureConstants.reductText)
+        XCTAssertEqual(view.getAccessibilityLabelContent(), Constants.AutoCapture.reductText)
     }
 
     func testIgnoreInnerHierarchyPlaceholderUsesRedactionWhenCaptureDefaultsEnabled() {
         let view = UIView()
         // Without a resolvable owner, text capture defaults to enabled.
-        XCTAssertEqual(view.ignoreInnerHierarchyTextPlaceholder(), AutoCaptureConstants.reductText)
+        XCTAssertEqual(view.ignoreInnerHierarchyTextPlaceholder(), Constants.AutoCapture.reductText)
     }
 
     func testResponderClassDefaultsAreUsedUntilExplicitlyOverridden() {

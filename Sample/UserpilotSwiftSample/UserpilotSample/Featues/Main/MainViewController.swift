@@ -8,24 +8,33 @@
 import Foundation
 import UIKit
 
-class MainViewController: BaseViewController {
+final class MainViewController: BaseViewController {
 
-    // MARK: - IBOutlet
+    private let tableView = UITableView(frame: .zero, style: .insetGrouped)
+    private let items: [Content] = [
+        .configurations,
+        .identify,
+        .screens,
+        .events,
+        .eventsLog,
+        .debug,
+        .autoCapture
+    ]
 
-    @IBOutlet weak var contentTableView: UITableView! {
-        didSet {
-            contentTableView.register(UITableViewCell.self, forCellReuseIdentifier: "cellIdentifier")
-        }
+    init() {
+        super.init(nibName: nil, bundle: nil)
     }
 
-    // MARK: - Properties
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
 
-    internal lazy var content: [Content] = [.identify, .screens, .events, .eventsLog, .configurations, .autoCapture, .configurations]
-
-    // MARK: - Override
     override func viewDidLoad() {
         super.viewDidLoad()
+        title = "Userpilot"
+        setupTable()
         UserpilotManager.shared.settings()
+        presentConfigIfNeeded()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -33,41 +42,72 @@ class MainViewController: BaseViewController {
         UserpilotManager.shared.screen("main")
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        if let appToken: String? = StorageManager.shared.get(forKey: StorageManager.Keys.appToken),
-           appToken == nil {
-            showConfigurationDialog()
+    private func setupTable() {
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.backgroundColor = SampleAppearance.screenBackground
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+        view.addSubview(tableView)
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+
+    /// Mirrors Android MainActivity: open Configuration when no app token is saved.
+    private func presentConfigIfNeeded() {
+        let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken) ?? ""
+        guard appToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.openConfigScreen()
         }
     }
 
-    internal func showConfigurationDialog() {
-        DialogManager.shared().showConfigurationDialog { [weak self] in
-            guard self != nil else { return }
-            self?.showAlertWithAction()
+    private func openConfigScreen() {
+        if FlowRoutingManager.shared.visibleViewController is ConfigViewController {
+            return
         }
+        FlowRoutingManager.shared.openViewController(ConfigViewController())
     }
 
-    private func showAlertWithAction() {
-        let alert = UIAlertController(
-            title: "Confirm",
-            message: "Restart the App to take the new configuration",
-            preferredStyle: .alert
-        )
-        let okAction = UIAlertAction(title: "OK", style: .default) { _ in
-            exit(0)
-        }
-        alert.addAction(okAction)
-        present(alert, animated: true)
+    static func newInstance() -> MainViewController {
+        MainViewController()
     }
 }
 
-// MARK: - Instance
+extension MainViewController: UITableViewDataSource, UITableViewDelegate {
 
-extension MainViewController {
-
-    static func newInstance() -> MainViewController {
-        return MainViewController()
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        items.count
     }
 
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
+        cell.textLabel?.text = items[indexPath.row].title
+        cell.accessoryType = .disclosureIndicator
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        switch items[indexPath.row] {
+        case .identify:
+            FlowRoutingManager.shared.openViewController(IdentifyViewController.newInstance())
+        case .screens:
+            FlowRoutingManager.shared.openViewController(ScreenOneViewController.newInstance())
+        case .events:
+            FlowRoutingManager.shared.openViewController(CustomEventViewController.newInstance())
+        case .configurations:
+            openConfigScreen()
+        case .eventsLog:
+            FlowRoutingManager.shared.openViewController(SDKEventsViewController.newInstance())
+        case .debug:
+            FlowRoutingManager.shared.openViewController(DebugViewController.newInstance())
+        case .autoCapture:
+            FlowRoutingManager.shared.openViewController(AutoCaptureHubViewController.newInstance())
+        }
+    }
 }

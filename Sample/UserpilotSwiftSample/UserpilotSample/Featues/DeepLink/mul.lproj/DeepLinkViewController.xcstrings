@@ -247,30 +247,6 @@
         }
       }
     },
-    "HsP-Oi-Qbw.normalTitle" : {
-      "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"HsP-Oi-Qbw\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Button"
-          }
-        }
-      }
-    },
-    "ipL-FR-aAC.text" : {
-      "comment" : "Class = \"UILabel\"; text = \"Movies Gallery\"; ObjectID = \"ipL-FR-aAC\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Movies Gallery"
-          }
-        }
-      }
-    },
     "iyX-CP-MPO.text" : {
       "comment" : "Class = \"UILabel\"; text = \"Conan\"; ObjectID = \"iyX-CP-MPO\";",
       "extractionState" : "stale",

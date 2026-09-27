@@ -3,7 +3,7 @@
   "strings" : {
     "1JW-us-yJb.normalTitle" : {
       "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"1JW-us-yJb\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -75,7 +75,7 @@
     },
     "Dmf-Y6-2UJ.normalTitle" : {
       "comment" : "Class = \"UIButton\"; normalTitle = \"Logout\"; ObjectID = \"Dmf-Y6-2UJ\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -93,7 +93,7 @@
     },
     "DMR-Yt-jkv.text" : {
       "comment" : "Class = \"UILabel\"; text = \"Identify\"; ObjectID = \"DMR-Yt-jkv\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

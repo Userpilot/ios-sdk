@@ -52,15 +52,41 @@ internal extension UITableViewCell {
             payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
         } else if effectiveView !== self {
             payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
+            payload.elementText = effectiveView.ignoreInnerHierarchyTextPlaceholder()
         } else {
-            payload.elementText = touchedView?.getTextContent()
+            payload.elementText = userpilotResolvedCellText(touchedView: touchedView)
             payload.accessibilityIdentifier = accessibilityIdentifier
             payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
         }
 
         // Send to the owning instance's engine
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
+    }
+
+    /// Resolves `target_text` for a row selection, in priority order.
+    ///
+    /// The interacted element is the **row**, not the leaf view under the finger, so the row's own
+    /// title wins: two taps on the same row publish the same text no matter where they land, and a
+    /// cell that renders a large text blob (a JSON preview, a long description) can no longer push
+    /// that blob into the payload ahead of its title.
+    ///
+    /// 1. `textLabel` (standard cells) / `UIListContentConfiguration.text` (iOS 14+ cells)
+    /// 2. First visible, non-redacted text inside `contentView` (custom cells)
+    /// 3. The touched view itself (rows whose only text lives outside `contentView`)
+    ///
+    /// Text-capture policy (config flag, `userpilotRedactText`) and bounding are applied by
+    /// ``UIView/resolvedInteractionText(_:)`` / ``UIView/getTextContent()``.
+    ///
+    /// - Parameter touchedView: The specific view that was touched
+    /// - Returns: The resolved text content or nil
+    func userpilotResolvedCellText(touchedView: UIView?) -> String? {
+        if let title = userpilotCellTitle() {
+            return title.owner.resolvedInteractionText(title.text)
+        }
+        if let rowText = contentView.userpilotFirstTextInSubtree() {
+            return resolvedInteractionText(rowText)
+        }
+        return touchedView?.getTextContent()
     }
 
     // MARK: - Private Helpers
@@ -77,54 +103,59 @@ internal extension UITableViewCell {
         return nil
     }
 
-    /// Resolves text content from the cell with priority order
-    /// - Parameter touchedView: The specific view that was touched
-    /// - Returns: The resolved text content or nil
-    private func resolveTextContent(touchedView: UIView?) -> String? {
-        // 1. Try cell's textLabel first (standard cells)
-        if let text = textLabel?.text, !text.isEmpty {
-            return text
+    /// The cell's own title, together with the view that owns it.
+    ///
+    /// The owner matters: text-capture policy is resolved against a view's responder chain,
+    /// which runs UPWARD. Resolving a child label's text against the cell therefore never sees
+    /// that label's own `userpilotRedactText`, and published it verbatim. Resolving against the
+    /// label covers both — the label itself and every ancestor, the cell included.
+    private func userpilotCellTitle() -> (text: String, owner: UIView)? {
+        if let label = textLabel, let text = label.text, !text.isEmpty {
+            return (text, label)
         }
-
-        // 2. Try the specific touched view if it has text
-        if let touchedView = touchedView {
-            if let text = extractText(from: touchedView), !text.isEmpty {
-                return text
-            }
-        }
-
-        // 3. Search contentView for any text
-        return findTextInView(contentView)
-    }
-
-    /// Extracts text from a specific view
-    private func extractText(from view: UIView) -> String? {
-        if let label = view as? UILabel {
-            return label.text
-        }
-        if let button = view as? UIButton {
-            return button.currentTitle ?? button.titleLabel?.text
-        }
-        if let textField = view as? UITextField {
-            return textField.placeholder // Don't capture actual text for privacy
+        if #available(iOS 14.0, *),
+           let text = UIKitViewResolver.listConfigurationText(contentConfiguration) {
+            // A content configuration renders through views the host cannot mark
+            // individually, so the cell is the correct scope for the policy.
+            return (text, self)
         }
         return nil
     }
+}
 
-    /// Recursively searches for text content in a view hierarchy
-    private func findTextInView(_ view: UIView) -> String? {
-        // Check current view
-        if let text = extractText(from: view), !text.isEmpty {
-            return text
+// MARK: - UITableViewHeaderFooterView Auto Capture
+
+internal extension UITableViewHeaderFooterView {
+
+    /// Resolves `target_text` for a tap that landed inside a section header or footer.
+    ///
+    /// Same rule as a row: the element is the header, so its own title wins over whichever leaf
+    /// view the finger hit. See ``UITableViewCell/userpilotResolvedCellText(touchedView:)``.
+    ///
+    /// - Parameter touchedView: The specific view that was touched
+    /// - Returns: The resolved text content or nil
+    func userpilotResolvedHeaderFooterText(touchedView: UIView?) -> String? {
+        if let title = userpilotHeaderFooterTitle() {
+            return title.owner.resolvedInteractionText(title.text)
         }
-
-        // Search subviews
-        for subview in view.subviews {
-            if let text = findTextInView(subview) {
-                return text
-            }
+        if let headerText = contentView.userpilotFirstTextInSubtree() {
+            return resolvedInteractionText(headerText)
         }
+        return touchedView?.getTextContent()
+    }
 
+    // MARK: - Private Helpers
+
+    /// The header/footer's own title, together with the view that owns it.
+    /// Same owner rule as ``UITableViewCell/userpilotCellTitle()``.
+    private func userpilotHeaderFooterTitle() -> (text: String, owner: UIView)? {
+        if let label = textLabel, let text = label.text, !text.isEmpty {
+            return (text, label)
+        }
+        if #available(iOS 14.0, *),
+           let text = UIKitViewResolver.listConfigurationText(contentConfiguration) {
+            return (text, self)
+        }
         return nil
     }
 }

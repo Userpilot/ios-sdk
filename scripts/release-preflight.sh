@@ -2,7 +2,7 @@
 #
 # Shared green gate for the Userpilot iOS SDK.
 #
-# Local (release-sdk / pre-release-check) and GitHub Actions (ci.yml) run the
+# Local (release-sdk / pre-release-check) and GitHub Actions (quality-gate.yml) run the
 # same steps via this script so a PR cannot skip a check that a release needs.
 #
 #   scripts/release-preflight.sh

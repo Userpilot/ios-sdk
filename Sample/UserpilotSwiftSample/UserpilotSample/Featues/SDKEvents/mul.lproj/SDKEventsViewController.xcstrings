@@ -21,7 +21,7 @@
     },
     "ISF-Pl-bqV.normalTitle" : {
       "comment" : "Class = \"UIButton\"; normalTitle = \"Button\"; ObjectID = \"ISF-Pl-bqV\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -39,7 +39,7 @@
     },
     "O4G-I1-J0c.text" : {
       "comment" : "Class = \"UILabel\"; text = \"Events log\"; ObjectID = \"O4G-I1-J0c\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

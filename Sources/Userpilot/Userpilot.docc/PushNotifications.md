@@ -6,6 +6,16 @@ There are two options for configuring push notification: automatic or manual.
 
 > Tip: Automatic configuration is the quickest and simplest way to configure push notifications and is recommended for most customers. Refer to <doc:PushNotificationsManually> for manual configuration instructions.
 
+## Notification taps while offline
+
+In SDK 1.4.0 and later, a valid notification tap for the current user routes its
+deep link without waiting for an open analytics connection. The SDK records the
+open at tap time and persists it when the device is offline. Test notifications
+navigate without recording a push-open analytics event. The destination may still
+need a network connection to load its content.
+
+See <doc:UserpilotNanvigationHandler> for startup routing and <doc:OfflineMode> for storage and delivery limits.
+
 ## Prerequisites
 
 It is recommended to have [configured your iOS push settings in Userpilot settings Studio](https://run.userpilot.io/settings/mobile) before configuring push notifications in your app.

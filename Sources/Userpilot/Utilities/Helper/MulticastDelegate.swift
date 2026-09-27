@@ -50,41 +50,52 @@ internal struct Multicast<T> {
 }
 
 /// A class that manages multiple delegates using weak references to prevent retain cycles.
+///
+/// Thread-safe. `NSLock` is not recursive, so callbacks must run outside it: `currentDelegates()`
+/// is the only reader of the storage and `invoke` takes no lock. A subscriber registering from
+/// inside its own callback — which happens on the socket thread — would otherwise deadlock.
 internal final class MulticastDelegate<T> {
 
     // MARK: - Properties
 
-    /// A set of weak references to the delegates, preventing retain cycles.
-    /// `NSHashTable.weakObjects()` ensures delegates are automatically removed when deallocated.
+    /// Guards `delegates`. `NSHashTable` is not thread-safe and the table is reached from the
+    /// socket transport and push-resolution threads as well as the caller's.
+    private let lock = NSLock()
+
+    /// Weak references to the delegates, so registering never keeps a subscriber alive.
     private let delegates: NSHashTable<AnyObject> = NSHashTable.weakObjects()
 
     // MARK: - Methods
 
-    /// Adds a new delegate to the multicast list.
-    /// - Parameter delegate: The delegate to be added.
+    /// Adds a delegate, ignoring duplicates.
     func add(_ delegate: T) {
-        // Add the delegate only if it's not already in the list.
-        if !delegates.contains(delegate as AnyObject) {
-            delegates.add(delegate as AnyObject)
+        let object = delegate as AnyObject
+        lock.withLock {
+            guard !delegates.contains(object) else { return }
+            delegates.add(object)
         }
     }
 
-    /// Removes a specific delegate from the multicast list.
-    /// - Parameter delegateToRemove: The delegate to be removed.
+    /// Removes a delegate.
     func remove(_ delegateToRemove: T) {
-        // Iterating in reverse to safely remove elements while iterating.
-        for delegate in delegates.allObjects.reversed() where delegate === delegateToRemove as AnyObject {
-            delegates.remove(delegate)
+        let object = delegateToRemove as AnyObject
+        lock.withLock {
+            for delegate in delegates.allObjects where delegate === object {
+                delegates.remove(delegate)
+            }
         }
     }
 
-    /// Invokes a closure on all the delegates in the multicast list.
-    /// - Parameter invocation: A closure that takes a delegate and performs an action.
+    /// Invokes `invocation` on every live delegate. Holds no lock — see the note on the type.
     func invoke(_ invocation: (T) -> Void) {
-        // Ensure that force-casting is safe by iterating through the delegates.
-        for delegate in delegates.allObjects.reversed() {
-            guard let castedDelegate = delegate as? T else { continue }
-            invocation(castedDelegate)
+        currentDelegates().forEach(invocation)
+    }
+
+    /// The only read of `delegates`. The snapshot holds each delegate strongly while the caller
+    /// iterates it, so a subscriber cannot deallocate mid-callback.
+    private func currentDelegates() -> [T] {
+        lock.withLock {
+            delegates.allObjects.reversed().compactMap { $0 as? T }
         }
     }
 }

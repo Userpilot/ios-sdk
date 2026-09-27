@@ -20,25 +20,6 @@
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Movies Gallery" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ipL-FR-aAC">
-                    <rect key="frame" x="142.66666666666666" y="86" width="107.66666666666666" height="18"/>
-                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
-                    <nil key="textColor"/>
-                    <nil key="highlightedColor"/>
-                </label>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="HsP-Oi-Qbw">
-                    <rect key="frame" x="16" y="75" width="40" height="40"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="40" id="gKH-oC-tfd"/>
-                        <constraint firstAttribute="width" constant="40" id="iJV-Kz-a0D"/>
-                    </constraints>
-                    <color key="tintColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                    <state key="normal" title="Button"/>
-                    <buttonConfiguration key="configuration" style="plain" image="arrow.backward" catalog="system"/>
-                    <connections>
-                        <action selector="onBackButtonClicked:" destination="-1" eventType="touchUpInside" id="4d2-rB-d4x"/>
-                    </connections>
-                </button>
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="y89-Kn-lox">
                     <rect key="frame" x="24" y="128" width="345" height="616"/>
                     <subviews>
@@ -286,15 +267,15 @@
                 </stackView>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="50A-tj-FgA">
                     <rect key="frame" x="0.0" y="722" width="393" height="130"/>
-                    <color key="backgroundColor" white="1" alpha="0.40000000000000002" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="130" id="fmh-73-BxQ"/>
                     </constraints>
                 </view>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="gjl-Cw-RCq">
-                    <rect key="frame" x="24" y="752" width="345" height="50"/>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="gjl-Cw-RCq" customClass="LiquidGlassButton" customModule="UserpilotSample" customModuleProvider="target">
+                    <rect key="frame" x="24" y="750" width="345" height="52"/>
                     <constraints>
-                        <constraint firstAttribute="height" constant="50" id="lpA-gX-4t5"/>
+                        <constraint firstAttribute="height" constant="52" id="lpA-gX-4t5"/>
                     </constraints>
                     <color key="tintColor" name="AccentColor"/>
                     <state key="normal" title="Button"/>
@@ -304,7 +285,7 @@
                 </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="a5X-Uu-wo0"/>
-            <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+            <color key="backgroundColor" systemColor="systemGroupedBackgroundColor"/>
             <constraints>
                 <constraint firstItem="y89-Kn-lox" firstAttribute="leading" secondItem="a5X-Uu-wo0" secondAttribute="leading" constant="24" id="3ok-Ll-L5U"/>
                 <constraint firstItem="a5X-Uu-wo0" firstAttribute="trailing" secondItem="y89-Kn-lox" secondAttribute="trailing" constant="24" id="3rr-ec-hDw"/>
@@ -312,19 +293,14 @@
                 <constraint firstItem="50A-tj-FgA" firstAttribute="trailing" secondItem="a5X-Uu-wo0" secondAttribute="trailing" id="C8g-Fw-Fgx"/>
                 <constraint firstAttribute="bottom" secondItem="50A-tj-FgA" secondAttribute="bottom" id="FN9-D5-wxG"/>
                 <constraint firstItem="50A-tj-FgA" firstAttribute="leading" secondItem="a5X-Uu-wo0" secondAttribute="leading" id="FXx-Ta-JX8"/>
-                <constraint firstItem="ipL-FR-aAC" firstAttribute="centerX" secondItem="L9l-xU-RB3" secondAttribute="centerX" id="K2M-7q-I37"/>
-                <constraint firstItem="y89-Kn-lox" firstAttribute="top" secondItem="ipL-FR-aAC" secondAttribute="bottom" constant="24" id="Ll7-2m-Ew8"/>
+                <constraint firstItem="y89-Kn-lox" firstAttribute="top" secondItem="a5X-Uu-wo0" secondAttribute="top" constant="16" id="Ll7-2m-Ew8"/>
                 <constraint firstItem="a5X-Uu-wo0" firstAttribute="bottom" secondItem="gjl-Cw-RCq" secondAttribute="bottom" constant="16" id="UgB-Oa-tZm"/>
                 <constraint firstItem="a5X-Uu-wo0" firstAttribute="trailing" secondItem="gjl-Cw-RCq" secondAttribute="trailing" constant="24" id="dno-xa-3iV"/>
-                <constraint firstItem="HsP-Oi-Qbw" firstAttribute="leading" secondItem="a5X-Uu-wo0" secondAttribute="leading" constant="16" id="eQj-Pb-N7Q"/>
-                <constraint firstItem="HsP-Oi-Qbw" firstAttribute="top" secondItem="a5X-Uu-wo0" secondAttribute="top" constant="16" id="fnb-pO-619"/>
-                <constraint firstItem="ipL-FR-aAC" firstAttribute="centerY" secondItem="HsP-Oi-Qbw" secondAttribute="centerY" id="tyU-ZP-1Ri"/>
             </constraints>
             <point key="canvasLocation" x="136.64122137404578" y="20.422535211267608"/>
         </view>
     </objects>
     <resources>
-        <image name="arrow.backward" catalog="system" width="128" height="95"/>
         <image name="batman" width="532.5" height="710"/>
         <image name="conan" width="403" height="496"/>
         <image name="dragonball" width="640" height="360"/>
@@ -333,6 +309,9 @@
         <namedColor name="AccentColor">
             <color red="0.40400001406669617" green="0.39599999785423279" blue="0.9100000262260437" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
         </namedColor>
+        <systemColor name="systemGroupedBackgroundColor">
+            <color red="0.94901960784313721" green="0.94901960784313721" blue="0.96862745098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </systemColor>
         <systemColor name="systemOrangeColor">
             <color red="1" green="0.58431372549019611" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>

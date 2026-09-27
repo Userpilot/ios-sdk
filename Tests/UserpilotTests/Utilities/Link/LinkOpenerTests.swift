@@ -25,6 +25,21 @@ final class LinkOpenerTests: XCTestCase {
         urlOpener = MockURLOpener()
         linkOpener.urlOpener = urlOpener
         navigationDelegate = MockNavigationDelegate()
+        // In production `Userpilot.init` opens routing; these tests build the opener directly, so
+        // they must do it themselves or every link would sit in the pending slot. The holding
+        // behaviour itself is covered by the routing-gate tests at the bottom of this file.
+        linkOpener.processPendingDeepLink()
+    }
+
+    /// Runs `act`, then waits out the main-queue hop `LinkOpener.route` delivers through.
+    ///
+    /// The barrier is enqueued after that hop, and the main queue is FIFO, so when it fires the
+    /// delivery has already happened — deterministic, with no sleeps.
+    private func routing(_ act: () -> Void) {
+        act()
+        let delivered = expectation(description: "deep link routed")
+        DispatchQueue.main.async { delivered.fulfill() }
+        wait(for: [delivered], timeout: 1.0)
     }
 
     override func tearDown() {
@@ -47,7 +62,7 @@ final class LinkOpenerTests: XCTestCase {
         }
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertEqual(capturedURL, url)
@@ -61,7 +76,7 @@ final class LinkOpenerTests: XCTestCase {
         let url = URL(string: "myapp://deeplink")!
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertFalse(urlOpener.openCalled)
@@ -76,7 +91,7 @@ final class LinkOpenerTests: XCTestCase {
         urlOpener.topViewControllerToReturn = UIViewController()
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertTrue(urlOpener.topViewControllerCalled)
@@ -90,7 +105,7 @@ final class LinkOpenerTests: XCTestCase {
         urlOpener.topViewControllerToReturn = UIViewController()
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertTrue(urlOpener.topViewControllerCalled)
@@ -103,7 +118,7 @@ final class LinkOpenerTests: XCTestCase {
         let url = URL(string: "http://example.com")!
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertTrue(urlOpener.openCalled)
@@ -116,7 +131,7 @@ final class LinkOpenerTests: XCTestCase {
         let url = URL(string: "https://example.com")!
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertTrue(urlOpener.openCalled)
@@ -130,7 +145,7 @@ final class LinkOpenerTests: XCTestCase {
         urlOpener.topViewControllerToReturn = nil
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertTrue(urlOpener.topViewControllerCalled)
@@ -165,7 +180,7 @@ final class LinkOpenerTests: XCTestCase {
         let url = URL(string: "HTTP://EXAMPLE.COM")!
 
         // Act
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         // Assert
         XCTAssertTrue(urlOpener.topViewControllerCalled)
@@ -184,10 +199,107 @@ final class LinkOpenerTests: XCTestCase {
         let url = URL(string: urlString)!
         mockUserpilot.config.useInAppBrowser = false
 
-        linkOpener.handleURL(url)
+        routing { linkOpener.handleURL(url) }
 
         XCTAssertTrue(urlOpener.openCalled)
         XCTAssertEqual(urlOpener.lastOpenedURL, url)
+    }
+
+    // MARK: - Routing Gate Tests
+
+    /// A fresh opener with routing still closed, as it is while the SDK is starting up.
+    private func unopenedLinkOpener() -> LinkOpener {
+        let opener = LinkOpener(container: mockUserpilot.container)
+        opener.urlOpener = urlOpener
+        return opener
+    }
+
+    func testHandleURL_beforeRoutingOpens_holdsTheLink() {
+        // Arrange
+        mockUserpilot.navigationDelegate = navigationDelegate
+        var navigated = false
+        navigationDelegate.onNavigate = { _ in navigated = true }
+        let url = URL(string: "myapp://deeplink")!
+
+        // Act
+        routing { unopenedLinkOpener().handleURL(url) }
+
+        // Assert — nothing is delivered by either route while the host may not be ready.
+        XCTAssertFalse(navigated)
+        XCTAssertFalse(urlOpener.openCalled)
+    }
+
+    func testProcessPendingDeepLink_deliversTheHeldLink() {
+        // Arrange
+        mockUserpilot.navigationDelegate = navigationDelegate
+        var capturedURL: URL?
+        navigationDelegate.onNavigate = { capturedURL = $0 }
+        let url = URL(string: "myapp://deeplink")!
+        let opener = unopenedLinkOpener()
+        opener.handleURL(url)
+
+        // Act
+        routing { opener.processPendingDeepLink() }
+
+        // Assert
+        XCTAssertEqual(capturedURL, url)
+    }
+
+    func testProcessPendingDeepLink_deliversOnlyTheNewestHeldLink() {
+        // Arrange
+        mockUserpilot.navigationDelegate = navigationDelegate
+        var captured: [URL] = []
+        navigationDelegate.onNavigate = { captured.append($0) }
+        let older = URL(string: "myapp://older")!
+        let newer = URL(string: "myapp://newer")!
+        let opener = unopenedLinkOpener()
+        opener.handleURL(older)
+        opener.handleURL(newer)
+
+        // Act
+        routing { opener.processPendingDeepLink() }
+
+        // Assert — one slot: a newer tap supersedes an older, still-undelivered one.
+        XCTAssertEqual(captured, [newer])
+    }
+
+    func testProcessPendingDeepLink_isIdempotent() {
+        // Arrange
+        mockUserpilot.navigationDelegate = navigationDelegate
+        var captured: [URL] = []
+        navigationDelegate.onNavigate = { captured.append($0) }
+        let url = URL(string: "myapp://deeplink")!
+        let opener = unopenedLinkOpener()
+        opener.handleURL(url)
+
+        // Act — the init backstop opens routing, then the host assigns a delegate and opens again.
+        routing {
+            opener.processPendingDeepLink()
+            opener.processPendingDeepLink()
+        }
+
+        // Assert — the tap is delivered once, not once per trigger.
+        XCTAssertEqual(captured, [url])
+    }
+
+    func testHandleURL_afterRoutingOpens_deliversImmediately() {
+        // Arrange
+        mockUserpilot.navigationDelegate = navigationDelegate
+        var captured: [URL] = []
+        navigationDelegate.onNavigate = { captured.append($0) }
+        let first = URL(string: "myapp://first")!
+        let second = URL(string: "myapp://second")!
+        let opener = unopenedLinkOpener()
+        opener.processPendingDeepLink()
+
+        // Act — experience CTAs, which can only ever fire after the host is up.
+        routing {
+            opener.handleURL(first)
+            opener.handleURL(second)
+        }
+
+        // Assert — no holding, and no single slot that could drop the second tap.
+        XCTAssertEqual(captured, [first, second])
     }
 }
 

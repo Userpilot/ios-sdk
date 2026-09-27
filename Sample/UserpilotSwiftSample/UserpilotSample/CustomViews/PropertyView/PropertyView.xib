@@ -63,7 +63,7 @@
                     </subviews>
                 </stackView>
             </subviews>
-            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+            <color key="backgroundColor" systemColor="secondarySystemGroupedBackgroundColor"/>
             <constraints>
                 <constraint firstItem="FGK-gH-Ula" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" constant="16" id="1ul-G5-C4R"/>
                 <constraint firstAttribute="trailing" secondItem="b2N-8J-nfp" secondAttribute="trailing" constant="16" id="FaR-HU-jRT"/>
@@ -85,7 +85,7 @@
         <namedColor name="MineShaft">
             <color red="0.13300000131130219" green="0.13300000131130219" blue="0.13300000131130219" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
-        <systemColor name="systemBackgroundColor">
+        <systemColor name="secondarySystemGroupedBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>
     </resources>

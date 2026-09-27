@@ -96,9 +96,8 @@ internal class AutoCaptureCoordinater {
 
     /// Per-instance stop/resume gate. When `true`, this instance records no screen
     /// or interaction events until `resumeAutoCapture()` is called; other instances
-    /// are unaffected. Guarded by `stopResumeLock`.
-    private let stopResumeLock = NSLock()
-    private var _isStopped = false
+    /// are unaffected.
+    private let stoppedState = AtomicReference<Bool>(false)
 
     // MARK: - Computed Helpers
 
@@ -247,7 +246,7 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
         let leaf = screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
         if !leaf.isEmpty {
             let escaped = leaf.replacingOccurrences(of: "\"", with: "\\\"")
-            properties[AutoCaptureConstants.hierarchy] = "\(escaped):attr__index=\"\(tabIndex)\""
+            properties[Constants.AutoCapture.hierarchy] = "\(escaped):attr__index=\"\(tabIndex)\""
             appendScreenNameSegmentToHierarchy(&properties)
         }
 
@@ -277,21 +276,15 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
 
     /// `true` while this instance's capture is paused. Thread-safe.
     var isStopped: Bool {
-        stopResumeLock.lock()
-        defer { stopResumeLock.unlock() }
-        return _isStopped
+        stoppedState.value
     }
 
     func stopAutoCapture() {
-        stopResumeLock.lock()
-        _isStopped = true
-        stopResumeLock.unlock()
+        stoppedState.value = true
     }
 
     func resumeAutoCapture() {
-        stopResumeLock.lock()
-        _isStopped = false
-        stopResumeLock.unlock()
+        stoppedState.value = false
     }
 }
 
@@ -454,7 +447,7 @@ private extension AutoCaptureCoordinater {
         String(describing: UICollectionView.self),
         String(describing: UIStackView.self),
         String(describing: UIView.self),
-        AutoCaptureConstants.swiftUIView
+        Constants.AutoCapture.swiftUIView
     ]
 
     /// SwiftUI framework-internal layout / hosting scaffolding classes that surface as the resolved
@@ -516,9 +509,9 @@ private extension AutoCaptureCoordinater {
     /// True when any identifying string is present (including redacted placeholder).
     private func windowTouchHasMetadata(_ properties: [String: Any]) -> Bool {
         let keys: [String] = [
-            AutoCaptureConstants.targetText,
-            AutoCaptureConstants.accessibilityLabel,
-            AutoCaptureConstants.accessibilityIdentifier
+            Constants.AutoCapture.targetText,
+            Constants.AutoCapture.accessibilityLabel,
+            Constants.AutoCapture.accessibilityIdentifier
         ]
         for key in keys {
             guard let string = properties[key] as? String else { continue }
@@ -531,13 +524,13 @@ private extension AutoCaptureCoordinater {
 
     /// Drops taps on structural containers, private `_UI…` internals, and bare SwiftUI views when there is no signal.
     private func shouldPublishWindowLevelTouch(_ properties: [String: Any]) -> Bool {
-        guard let elementType = properties[AutoCaptureConstants.targetClass] as? String else {
+        guard let elementType = properties[Constants.AutoCapture.targetClass] as? String else {
             return false
         }
         if windowTouchIsPrivateUIKitElementType(elementType) {
             return false
         }
-        let hierarchy = properties[AutoCaptureConstants.hierarchy] as? String
+        let hierarchy = properties[Constants.AutoCapture.hierarchy] as? String
         if windowTouchIsSystemKeyboardChrome(elementType: elementType, hierarchy: hierarchy) {
             return false
         }
@@ -555,23 +548,23 @@ private extension AutoCaptureCoordinater {
 
     /// Maps window `sendEvent` dictionaries into the same payload shape as other interaction paths.
     private func interactionPayload(fromWindowClick properties: [String: Any]) -> InteractionPayload? {
-        guard let elementType = properties[AutoCaptureConstants.targetClass] as? String else {
+        guard let elementType = properties[Constants.AutoCapture.targetClass] as? String else {
             return nil
         }
         var payload = InteractionPayload(
             interactionType: .tap,
             elementType: elementType
         )
-        if let targetText = properties[AutoCaptureConstants.targetText] as? String {
+        if let targetText = properties[Constants.AutoCapture.targetText] as? String {
             payload.elementText = targetText
         }
-        if let accessibilityLabel = properties[AutoCaptureConstants.accessibilityLabel] as? String {
+        if let accessibilityLabel = properties[Constants.AutoCapture.accessibilityLabel] as? String {
             payload.accessibilityLabel = accessibilityLabel
         }
-        if let targetResourceId = properties[AutoCaptureConstants.accessibilityIdentifier] as? String {
+        if let targetResourceId = properties[Constants.AutoCapture.accessibilityIdentifier] as? String {
             payload.accessibilityIdentifier = targetResourceId
         }
-        payload.hierarchy = properties[AutoCaptureConstants.hierarchy] as? String
+        payload.hierarchy = properties[Constants.AutoCapture.hierarchy] as? String
         return payload
     }
 
@@ -584,18 +577,18 @@ private extension AutoCaptureCoordinater {
     /// When hierarchy was built with no owning VC, the root is
     /// `unknownScreenHierarchyPlaceholder`; swap in the tracked screen class.
     private func replaceUnknownScreenPlaceholderInHierarchy(_ properties: inout [String: Any]) {
-        let placeholder = AutoCaptureConstants.unknownScreenHierarchyPlaceholder
-        guard var hierarchy = properties[AutoCaptureConstants.hierarchy] as? String,
+        let placeholder = Constants.AutoCapture.unknownScreenHierarchyPlaceholder
+        guard var hierarchy = properties[Constants.AutoCapture.hierarchy] as? String,
               hierarchy.contains(placeholder) else { return }
         guard let screenClass = screenNameTracker.getCurrentPayload()?.screenClass,
               !screenClass.isEmpty else { return }
         hierarchy = hierarchy.replacingOccurrences(of: placeholder, with: screenClass)
-        properties[AutoCaptureConstants.hierarchy] = hierarchy
+        properties[Constants.AutoCapture.hierarchy] = hierarchy
     }
 
     /// Appends `;SCREEN_NAME` to the view hierarchy using `screenNameTracker`.
     private func appendScreenNameSegmentToHierarchy(_ properties: inout [String: Any]) {
-        guard var hierarchy = properties[AutoCaptureConstants.hierarchy] as? String,
+        guard var hierarchy = properties[Constants.AutoCapture.hierarchy] as? String,
               !hierarchy.isEmpty,
               let payload = screenNameTracker.getCurrentPayload() else { return }
 
@@ -604,7 +597,7 @@ private extension AutoCaptureCoordinater {
 
         let escaped = screenClass.replacingOccurrences(of: "\"", with: "\\\"")
         hierarchy += ";\(escaped)"
-        properties[AutoCaptureConstants.hierarchy] = hierarchy
+        properties[Constants.AutoCapture.hierarchy] = hierarchy
     }
 
     /// Shared `mobile_autocapture` merge and publish. `publishInteractionPayload`
@@ -650,7 +643,7 @@ private extension AutoCaptureCoordinater {
         guard config.enableInteractionAutoCapture else { return }
         var payload = InteractionPayload(
             interactionType: .viewPresented,
-            elementType: AutoCaptureConstants.elementTypeUIAlertController
+            elementType: Constants.AutoCapture.elementTypeUIAlertController
         )
         payload.dialogTitle = screen.alertTitle
         payload.dialogMessage = screen.alertMessage
@@ -663,7 +656,7 @@ private extension AutoCaptureCoordinater {
         // `updateScreen(...)` is called).
         let dialogClass = screen.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
         let leaf = dialogClass.isEmpty
-            ? AutoCaptureConstants.elementTypeUIAlertController
+            ? Constants.AutoCapture.elementTypeUIAlertController
             : dialogClass.replacingOccurrences(of: "\"", with: "\\\"")
         payload.hierarchy = "\(leaf):attr__index=\"0\""
 
@@ -675,8 +668,8 @@ private extension AutoCaptureCoordinater {
     /// Builds the properties dictionary for a tab-selection event.
     func buildTabProperties(name: String, index: Int) -> [String: Any] {
         let props: [String: Any] = [
-            AutoCaptureConstants.tabName: name,
-            AutoCaptureConstants.tabIndex: index
+            Constants.AutoCapture.tabName: name,
+            Constants.AutoCapture.tabIndex: index
         ]
         return props
     }
@@ -685,10 +678,10 @@ private extension AutoCaptureCoordinater {
     /// Always includes the raw interaction type and the UI framework tag.
     func buildInternalProperties(for interactionType: InteractionType) -> [String: Any] {
         var result: [String: String] = [
-            AutoCaptureConstants.rawInteractionType: interactionType.rawValue
+            Constants.AutoCapture.rawInteractionType: interactionType.rawValue
         ]
         if let framework = config.appFramework?.rawValue {
-            result[AutoCaptureConstants.uiFramework] = framework
+            result[Constants.AutoCapture.uiFramework] = framework
         }
         return result
     }
@@ -736,7 +729,7 @@ extension AutoCaptureCoordinater {
         screenNameTracker.updateScreen(with: screenPayload)
         let event = Event(
             type: .screen(title),
-            properties: [AutoCaptureConstants.source: AutoCaptureConstants.autoCaptureSourceValue]
+            properties: [Constants.AutoCapture.source: Constants.AutoCapture.autoCaptureSourceValue]
         )
         analyticsPublisher.publish(event)
 

@@ -9,15 +9,22 @@ import UIKit
 
 // swiftlint:disable all
 internal class NPSContainerView: UIView {
-    
+
     // MARK: - UI Components
 
     /// A container for the dismiss button, with a fixed height.
+    /// The button is pinned to the container's bottom, so the height leaves room for the steps progress
+    /// bar above it and the two never overlap.
     private lazy var buttonDismissContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 45).isActive = true
+        let height = ThemeHandler.DefaultValues.npsProgressBarTopInset
+            + ThemeHandler.DefaultValues.stepsProgressBarHeight
+            + ThemeHandler.DefaultValues.npsDismissButtonTopMargin
+            + ThemeHandler.DefaultValues.npsDismissButtonHeight
+            - ThemeHandler.DefaultValues.npsDismissButtonBottomOverhang
+        view.heightAnchor.constraint(equalToConstant: height).isActive = true
         return view
     }()
     
@@ -59,7 +66,8 @@ internal class NPSContainerView: UIView {
     private lazy var barStepsProgressView: UPStepsBarProgressView = {
         let progressView = UPStepsBarProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.heightAnchor.constraint(equalToConstant: 5).isActive = true
+        progressView.heightAnchor.constraint(
+            equalToConstant: ThemeHandler.DefaultValues.stepsProgressBarHeight).isActive = true
         return progressView
     }()
     
@@ -222,7 +230,9 @@ internal class NPSContainerView: UIView {
             // Define constraints
             storedConstraints.append(contentsOf: [
                 // Constraints for the content stack view (full-screen with padding)
-                barStepsProgressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,constant: 20),
+                barStepsProgressView.topAnchor.constraint(
+                    equalTo: safeAreaLayoutGuide.topAnchor,
+                    constant: ThemeHandler.DefaultValues.npsProgressBarTopInset),
                 barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
                 barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
 
@@ -532,7 +542,9 @@ extension NPSContainerView {
         NSLayoutConstraint.activate([
             buttonDismiss.heightAnchor.constraint(
                 equalToConstant: ThemeHandler.DefaultValues.npsDismissButtonHeight),
-            buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor, constant: 10),
+            buttonDismiss.bottomAnchor.constraint(
+                equalTo: buttonDismissContainerView.bottomAnchor,
+                constant: ThemeHandler.DefaultValues.npsDismissButtonBottomOverhang),
             // Keep the chip inside the content margins, otherwise its trailing edge sits flush with the screen
             buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor)
         ])

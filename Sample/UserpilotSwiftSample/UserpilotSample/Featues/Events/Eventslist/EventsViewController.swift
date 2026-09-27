@@ -17,10 +17,16 @@ class EventsViewController: BaseViewController {
             tableView.rowHeight = UITableView.automaticDimension
             tableView.estimatedRowHeight = 217
             tableView.register(cellFromNib: EventTableViewCell.self)
+            tableView.backgroundColor = SampleAppearance.screenBackground
         }
     }
 
     // MARK: - override
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Events"
+    }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -28,10 +34,6 @@ class EventsViewController: BaseViewController {
     }
 
     // MARK: - IBAction
-
-    @IBAction func onBackButtonClicked(_ sender: UIButton) {
-        close()
-    }
 
     // MARK: - Track Event
 

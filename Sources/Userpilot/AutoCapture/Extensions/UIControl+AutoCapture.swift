@@ -92,7 +92,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.isChecked] = switchControl.isOn
+                payload.sourceProperties[Constants.AutoCapture.isChecked] = switchControl.isOn
             }
 
         case let slider as UISlider:
@@ -101,7 +101,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.selectedValue] = slider.value
+                payload.sourceProperties[Constants.AutoCapture.selectedValue] = slider.value
             }
 
         case let segmentedControl as UISegmentedControl:
@@ -110,10 +110,11 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.selectedIndex] = segmentedControl.selectedSegmentIndex
+                payload.sourceProperties[Constants.AutoCapture.selectedIndex] = segmentedControl.selectedSegmentIndex
                 let raw = segmentedControl.titleForSegment(at: segmentedControl.selectedSegmentIndex)
-                if let title = resolvedInteractionText(raw) {
-                    payload.sourceProperties[AutoCaptureConstants.selectedValue] = title
+                let title = resolvedInteractionText(raw)
+                if let title {
+                    payload.sourceProperties[Constants.AutoCapture.selectedValue] = title
                 }
             }
 
@@ -127,7 +128,7 @@ internal extension UIControl {
             // bound value. Drop `selected_value` for SwiftUI rather than emit a misleading 0. In UIKit
             // `UIStepper.value` is authoritative, so it's still captured there.
             if config.enableInteractionValueCapture, config.appFramework != .SwiftUI {
-                payload.sourceProperties[AutoCaptureConstants.selectedValue] = stepper.value
+                payload.sourceProperties[Constants.AutoCapture.selectedValue] = stepper.value
             }
 
         case let datePicker as UIDatePicker:
@@ -136,7 +137,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.selectedDate] =
+                payload.sourceProperties[Constants.AutoCapture.selectedDate] =
                     ISO8601DateFormatter().string(from: datePicker.date)
             }
 
@@ -146,7 +147,7 @@ internal extension UIControl {
                 elementType: elementType
             )
             if config.enableInteractionValueCapture {
-                payload.sourceProperties[AutoCaptureConstants.selectedIndex] = pageControl.currentPage
+                payload.sourceProperties[Constants.AutoCapture.selectedIndex] = pageControl.currentPage
             }
 
         default:
@@ -157,7 +158,7 @@ internal extension UIControl {
             payload.elementText = getTextContent()
         }
 
-        // Add common properties (getters omit / redact per capture policy)
+        // Add common properties (getters return "****" when redaction/config disables capture)
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
 
