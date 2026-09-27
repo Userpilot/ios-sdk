@@ -84,7 +84,7 @@ extension Userpilot {
         // swiftlint:disable:next identifier_name
         var enableInteractionAccessibilityLabelCapture: Bool = true
 
-        /// Whether or not to enable capturing control values. Defaults to true.
+        /// Whether or not to enable capturing control values. Defaults to false.
         /// If set to true, the SDK will capture values from controls such as:
         /// - UISwitch: captures the on/off state
         /// - UISegmentedControl: captures the selected segment value
@@ -92,7 +92,7 @@ extension Userpilot {
         /// - UIStepper: captures the selected step value
         /// - UIPickerView: captures the selected value
         /// - UIDatePicker: captures the selected date/time value
-        var enableInteractionValueCapture: Bool = true
+        var enableInteractionValueCapture: Bool = false
 
         /// When true (default), a tap event is not sent for UITextField/UITextView when the action is
         /// a text-editing action (e.g. textChanged:, editingChanged:). Only the text_field_changed /
@@ -318,7 +318,7 @@ extension Userpilot {
         }
 
         /// Enables or disables capturing control values during interaction tracking.
-        /// When enabled (default), the SDK will capture values from controls such as:
+        /// Disabled by default. When enabled, the SDK will capture values from controls such as:
         /// - UISwitch: on/off state
         /// - UISegmentedControl: selected segment value
         /// - UISlider: selected value
