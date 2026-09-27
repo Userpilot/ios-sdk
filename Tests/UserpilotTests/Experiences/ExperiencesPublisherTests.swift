@@ -141,10 +141,198 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
+        XCTAssertTrue(publishedExperienceIds.isEmpty, "B must wait until A has finished dismissing")
+        experiencesPublisher.experienceDidFinishDismissing()
 
         // Assert
         wait(for: [replayExpectation], timeout: 1.0)
         XCTAssertEqual(publishedExperienceIds, ["cached-experience-id"])
+    }
+
+    func testAutomaticExperience_keepsItsTriggerAndReplaysManualRequestAfterThemeAndDismissal() throws {
+        let themeRequested = expectation(description: "automatic A waits for its theme")
+        let manualReplayed = expectation(description: "manual B requested after dismissal")
+        var requestedManualIds: [String] = []
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            if event is ThemeContentEvent {
+                themeRequested.fulfill()
+            } else if let event = event as? ExperienceContentEvent {
+                requestedManualIds.append(event.experienceId)
+                manualReplayed.fulfill()
+            }
+        }
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent, nil,
+            Message(payload: MockContentFactory.makeFlowContentPayload()), true
+        )
+        wait(for: [themeRequested], timeout: 1.0)
+
+        experiencesPublisher.triggerExperience("manual-B")
+        let cached = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
+            }, object: nil
+        )
+        wait(for: [cached], timeout: 2.0)
+        XCTAssertFalse(userpilot.experienceStateMachine.isManualTrigger())
+        XCTAssertTrue(requestedManualIds.isEmpty)
+
+        userpilot.themeHandler.onGetThemeById = { _ in
+            ThemeData(carousel: nil, slideOut: nil, survey: nil)
+        }
+        experiencesPublisher.onSocketEventSent(
+            SDKEventsName.fetchExperienceTheme.rawValue, ["theme_id": 1],
+            Message(payload: ["id": 1, "theme_data": [:]]), true
+        )
+        let automaticActive = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getActiveTriggerType() == .automatic
+            }, object: nil
+        )
+        wait(for: [automaticActive], timeout: 3.0)
+        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
+        XCTAssertTrue(requestedManualIds.isEmpty)
+        // The real renderer consumes this entry through getActiveMobileContent().
+        XCTAssertEqual(experiencesPublisher.getActiveMobileContent()?.experienceId(), 77)
+
+        let close = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 77]
+        )
+        close.isCloseEvent = true
+        experiencesPublisher.publishInternalSDKEvent(close)
+        XCTAssertTrue(requestedManualIds.isEmpty, "The close signal precedes actual UI dismissal")
+        experiencesPublisher.experienceDidFinishDismissing()
+        wait(for: [manualReplayed], timeout: 2.0)
+
+        XCTAssertEqual(requestedManualIds, ["manual-B"])
+        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
+        experiencesPublisher.logout()
+    }
+
+    func testLogout_discardsManualRequestCachedBehindThemeLoading() {
+        let themeRequested = expectation(description: "automatic A waits for its theme")
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            if event is ThemeContentEvent { themeRequested.fulfill() }
+        }
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent, nil,
+            Message(payload: MockContentFactory.makeFlowContentPayload()), true
+        )
+        wait(for: [themeRequested], timeout: 1.0)
+        experiencesPublisher.triggerExperience("manual-B")
+        let cached = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
+            }, object: nil
+        )
+        wait(for: [cached], timeout: 2.0)
+
+        experiencesPublisher.logout()
+
+        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
+        XCTAssertNil(userpilot.experienceStateMachine.getCachedExperienceId())
+    }
+
+    func testCachedManualRequest_doesNotBypassAutomaticScreenTargetingAfterThemeLoads() throws {
+        experiencesPublisher.mockSetCurrentScreen(title: "Home")
+        var payload = MockContentFactory.makeFlowContentPayload()
+        var flow = try XCTUnwrap(payload["mobile_contents"] as? [String: Any])
+        flow["screen_type"] = "selected"
+        flow["screens"] = ["OtherScreen"]
+        payload["mobile_contents"] = flow
+        let themeRequested = expectation(description: "automatic A waits for theme")
+        let manualReplayed = expectation(description: "manual B continues after A fails targeting")
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            if event is ThemeContentEvent {
+                themeRequested.fulfill()
+            } else if let event = event as? ExperienceContentEvent {
+                XCTAssertEqual(event.experienceId, "manual-B")
+                manualReplayed.fulfill()
+            }
+        }
+        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, Message(payload: payload), true)
+        wait(for: [themeRequested], timeout: 1.0)
+        experiencesPublisher.triggerExperience("manual-B")
+        let cached = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
+            }, object: nil
+        )
+        wait(for: [cached], timeout: 2.0)
+        userpilot.themeHandler.onGetThemeById = { _ in
+            ThemeData(carousel: nil, slideOut: nil, survey: nil)
+        }
+
+        experiencesPublisher.onSocketEventSent(
+            SDKEventsName.fetchExperienceTheme.rawValue, ["theme_id": 1],
+            Message(payload: ["id": 1, "theme_data": [:]]), true
+        )
+
+        wait(for: [manualReplayed], timeout: 3.0)
+        XCTAssertNil(userpilot.experienceStateMachine.getActiveContent(), "Automatic A must respect its screen target")
+        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
+        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
+    }
+
+    func testCachedManualRequest_continuesAfterEmptyManualContentResponse() {
+        assertCachedManualContinuesAfterEmptyResponse(eventSent: true)
+    }
+
+    func testCachedManualRequest_continuesAfterFailedManualContentResponse() {
+        assertCachedManualContinuesAfterEmptyResponse(eventSent: false)
+    }
+
+    func testManualRequest_continuesWhenPreviousContentCannotFetchItsTheme() {
+        userpilot.analyticsPublisher.canRequestEvent = false
+        let manualRequested = expectation(description: "manual B is not blocked by abandoned theme preparation")
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            guard let event = event as? ExperienceContentEvent else { return }
+            XCTAssertEqual(event.experienceId, "manual-B")
+            manualRequested.fulfill()
+        }
+
+        experiencesPublisher.onSocketEventSent(
+            EventType.screenEvent, nil,
+            Message(payload: MockContentFactory.makeFlowContentPayload()), true
+        )
+        experiencesPublisher.triggerExperience("manual-B")
+
+        wait(for: [manualRequested], timeout: 2.0)
+        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
+        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
+    }
+
+    private func assertCachedManualContinuesAfterEmptyResponse(eventSent: Bool) {
+        let firstRequested = expectation(description: "manual A requested")
+        let nextRequested = expectation(description: "manual B requested after A resolves without content")
+        var requestedIds: [String] = []
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            guard let event = event as? ExperienceContentEvent else { return }
+            requestedIds.append(event.experienceId)
+            if event.experienceId == "manual-A" {
+                firstRequested.fulfill()
+            } else if event.experienceId == "manual-B" {
+                nextRequested.fulfill()
+            }
+        }
+        experiencesPublisher.triggerExperience("manual-A")
+        wait(for: [firstRequested], timeout: 1.0)
+        experiencesPublisher.triggerExperience("manual-B")
+        let cached = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
+            }, object: nil
+        )
+        wait(for: [cached], timeout: 2.0)
+
+        experiencesPublisher.onSocketEventSent(
+            SDKEventsName.fetchExperienceContent.rawValue, nil, Message(payload: [:]), eventSent
+        )
+
+        wait(for: [nextRequested], timeout: 2.0)
+        XCTAssertEqual(requestedIds, ["manual-A", "manual-B"])
+        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
     }
 
     // MARK: - endExperience Tests
@@ -558,6 +746,14 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
+
+        experiencesPublisher.experienceDidFinishDismissing()
+        let drained = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                !self.userpilot.experienceStateMachine.hasCachedExperience()
+            }, object: nil
+        )
+        wait(for: [drained], timeout: 2.0)
 
         // Assert
         XCTAssertNil(userpilot.experienceStateMachine.getCachedExperienceContent())
@@ -1244,6 +1440,59 @@ final class ExperiencesPublisherTests: XCTestCase {
             repeatProcessed.fulfill()
         }
         wait(for: [repeatProcessed], timeout: 1.0)
+    }
+
+    func testPreviewThankYouDismissal_releasesPreviewAndReplaysCachedManualRequest() throws {
+        let fetched = expectation(description: "preview requested")
+        let rendered = expectation(description: "preview session owns rendered content")
+        var completion: ((Result<PreviewExperience, RemoteSourceError>) -> Void)?
+        userpilot.remoteSource.onFetchPreviewExperience = { _, callback in
+            completion = callback
+            fetched.fulfill()
+        }
+        userpilot.themeHandler.onSaveTheme = { _ in rendered.fulfill() }
+        experiencesPublisher.triggerPreviewExperience("preview-A", [])
+        wait(for: [fetched], timeout: 1.0)
+        completion?(.success(try makePreviewExperience(themeId: 33)))
+        wait(for: [rendered], timeout: 1.0)
+        XCTAssertNotNil(experiencesPublisher.getActiveMobileContent())
+
+        let survey = MockContentFactory.makeSurveyContent()
+        userpilot.experienceStateMachine.markActive(.preview, .survey(content: survey))
+        experiencesPublisher.showThankYouMessage(survey, MockContentFactory.makeSurveyTheme(), 1)
+        let thankYouPresented = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceOverlayWindow.rootViewController?.presentedViewController
+                    is ThankYouBottomSheetViewController
+            }, object: nil
+        )
+        wait(for: [thankYouPresented], timeout: 3.0)
+        let thankYou = try XCTUnwrap(
+            userpilot.experienceOverlayWindow.rootViewController?.presentedViewController
+                as? ThankYouBottomSheetViewController
+        )
+        let manualRequested = expectation(description: "manual B starts after preview thank-you dismissal")
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            guard let event = event as? ExperienceContentEvent else { return }
+            XCTAssertEqual(event.experienceId, "manual-B")
+            manualRequested.fulfill()
+        }
+        experiencesPublisher.triggerExperience("manual-B")
+        let cached = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
+            }, object: nil
+        )
+        wait(for: [cached], timeout: 2.0)
+        XCTAssertTrue(experiencesPublisher.isPreviewExperienceMode())
+
+        // Exercise the production completion closure without depending on UIKit animation timing.
+        thankYou.onDismissCompleted()
+
+        wait(for: [manualRequested], timeout: 2.0)
+        XCTAssertFalse(experiencesPublisher.isPreviewExperienceMode())
+        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
+        thankYou.dismiss(animated: false)
     }
 
     private func makePreviewExperience(themeId: Int) throws -> PreviewExperience {

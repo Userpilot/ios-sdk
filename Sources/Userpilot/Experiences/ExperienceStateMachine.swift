@@ -51,12 +51,6 @@ internal enum ExperienceFlowState {
     /// its `triggerType`, so without it a previewed survey's thank-you screen looks like a real one
     /// and publishes real events.
     case showingThankYou(isPreview: Bool)
-
-    /// Manual experience cached because another experience is in progress.
-    case cachedPendingManual(experienceId: String)
-
-    /// Automatic experience cached because another experience is in progress.
-    case cachedPendingAutomatic(experience: ExperienceContent)
 }
 
 // MARK: - State Checks
@@ -66,7 +60,7 @@ extension ExperienceFlowState {
     /// Checks if experience was manually triggered.
     func isManualTrigger() -> Bool {
         switch self {
-        case .pendingManual, .cachedPendingManual:
+        case .pendingManual:
             return true
         case .waitingDelay(let triggerType), .active(let triggerType, _):
             return triggerType == .manual
@@ -109,16 +103,6 @@ extension ExperienceFlowState {
         }
     }
 
-    /// Checks if a cached experience is waiting to be processed.
-    func hasCachedExperience() -> Bool {
-        switch self {
-        case .cachedPendingManual, .cachedPendingAutomatic:
-            return true
-        default:
-            return false
-        }
-    }
-
     /// Checks if screen validation should be bypassed.
     func shouldBypassScreenValidation() -> Bool {
         isManualTrigger() || isPreviewMode()
@@ -144,10 +128,6 @@ extension ExperienceFlowState: CustomStringConvertible {
             return "Active(\(triggerType), content=\(type(of: content)))"
         case .showingThankYou(let isPreview):
             return "ShowingThankYou(preview=\(isPreview))"
-        case .cachedPendingManual(let experienceId):
-            return "CachedPendingManual(id=\(experienceId))"
-        case .cachedPendingAutomatic:
-            return "CachedPendingAutomatic"
         }
     }
 }
@@ -193,6 +173,7 @@ internal protocol ExperienceStateManaging: AnyObject {
     func markShowingThankYou()
     func markCachedManual(_ experienceId: String)
     func markCachedAutomatic(_ experience: ExperienceContent)
+    func clearCachedExperience()
 
     // MARK: - Active Experience Component Management
 
@@ -210,6 +191,7 @@ internal protocol ExperienceStateManaging: AnyObject {
     // MARK: - High-Level Operations
 
     func markActiveFromCurrentState(content: ExperienceContent)
+    func processCachedExperience() -> ExperienceStateMachine.CachedExperienceAction
 }
 
 // MARK: - ExperienceStateMachine
@@ -217,11 +199,21 @@ internal protocol ExperienceStateManaging: AnyObject {
 /// Manages experience flow state transitions and provides thread-safe access to current state.
 internal final class ExperienceStateMachine {
 
+    /// Work saved while another experience is being prepared or displayed.
+    enum CachedExperienceAction {
+        case none
+        case triggerManual(experienceId: String)
+        case processAutomatic(experience: ExperienceContent)
+    }
+
     // MARK: - Properties
 
     private let logger: Logging
     private let state: AtomicReference<ExperienceFlowState>
     private var activeComponent: WeakExperienceReference?
+
+    /// A queued request must not replace the current experience's trigger or rendering state.
+    private let cachedExperience = AtomicReference<CachedExperienceAction>(.none)
 
     // MARK: - Initialization
 
@@ -262,7 +254,10 @@ extension ExperienceStateMachine: ExperienceStateManaging {
     }
 
     func hasCachedExperience() -> Bool {
-        state.value.hasCachedExperience()
+        if case .none = cachedExperience.value {
+            return false
+        }
+        return true
     }
 
     // MARK: - State Transition Methods
@@ -311,13 +306,25 @@ extension ExperienceStateMachine: ExperienceStateManaging {
     }
 
     func markCachedManual(_ experienceId: String) {
-        state.value = .cachedPendingManual(experienceId: experienceId)
+        cachedExperience.value = .triggerManual(experienceId: experienceId)
         logger.info("Experience state: CachedPendingManual(id=%@)", experienceId)
     }
 
     func markCachedAutomatic(_ experience: ExperienceContent) {
-        state.value = .cachedPendingAutomatic(experience: experience)
-        logger.info("Experience state: CachedPendingAutomatic")
+        let action = cachedExperience.update { current in
+            if case .triggerManual = current { return current }
+            return .processAutomatic(experience: experience)
+        }
+        if case .triggerManual = action {
+            logger.info("Experience cache: automatic content ignored - manual request has priority")
+        } else {
+            logger.info("Experience state: CachedPendingAutomatic")
+        }
+    }
+
+    /// Abandons cached work on logout, screen changes, and preview replacement.
+    func clearCachedExperience() {
+        cachedExperience.value = .none
     }
 
     // MARK: - Active Experience Component Management
@@ -352,20 +359,25 @@ extension ExperienceStateMachine: ExperienceStateManaging {
     // MARK: - State Query Helpers
 
     func getCachedExperienceId() -> String? {
-        if case .cachedPendingManual(let experienceId) = state.value {
+        if case .triggerManual(let experienceId) = cachedExperience.value {
             return experienceId
         }
         return nil
     }
 
     func getCachedExperienceContent() -> ExperienceContent? {
-        if case .cachedPendingAutomatic(let experience) = state.value {
+        if case .processAutomatic(let experience) = cachedExperience.value {
             return experience
         }
         return nil
     }
 
     // MARK: - High-Level Operations
+
+    /// Takes the queued request once without changing the active experience's state.
+    func processCachedExperience() -> CachedExperienceAction {
+        cachedExperience.getAndSet(.none)
+    }
 
     func markActiveFromCurrentState(content: ExperienceContent) {
         let triggerType: TriggerType

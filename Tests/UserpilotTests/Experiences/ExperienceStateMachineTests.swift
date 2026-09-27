@@ -175,10 +175,10 @@ final class ExperienceStateMachineTests: XCTestCase {
         stateManager.markCachedManual("cached-exp")
 
         // Assert
-        if case .cachedPendingManual(let experienceId) = stateManager.getCurrentState() {
-            XCTAssertEqual(experienceId, "cached-exp")
+        if case .idle = stateManager.getCurrentState() {
+            // Caching does not replace the current experience's state.
         } else {
-            XCTFail("Expected cachedPendingManual state")
+            XCTFail("Caching must preserve the current state")
         }
         XCTAssertTrue(stateManager.hasCachedExperience())
         XCTAssertEqual(stateManager.getCachedExperienceId(), "cached-exp")
@@ -192,10 +192,10 @@ final class ExperienceStateMachineTests: XCTestCase {
         stateManager.markCachedAutomatic(content)
 
         // Assert
-        if case .cachedPendingAutomatic(let cachedContent) = stateManager.getCurrentState() {
-            XCTAssertEqual(cachedContent.experienceId(), content.experienceId())
+        if case .idle = stateManager.getCurrentState() {
+            // Caching does not replace the current experience's state.
         } else {
-            XCTFail("Expected cachedPendingAutomatic state")
+            XCTFail("Caching must preserve the current state")
         }
         XCTAssertTrue(stateManager.hasCachedExperience())
         XCTAssertEqual(stateManager.getCachedExperienceContent()?.experienceId(), content.experienceId())
@@ -219,6 +219,73 @@ final class ExperienceStateMachineTests: XCTestCase {
         }
         XCTAssertFalse(stateManager.isActive())
         XCTAssertNil(stateManager.getActiveComponent())
+    }
+
+    func testCachedManual_survivesAutomaticThemeDelayPresentationAndDismissal() {
+        let content = makeExperienceContent()
+        stateManager.markAutomaticTrigger(content)
+        stateManager.markCachedManual("manual-B")
+
+        if case .pendingAutomatic = stateManager.getCurrentState() {
+            // A is still automatic while its theme is loading.
+        } else {
+            XCTFail("Caching B must not replace A's pending trigger")
+        }
+        XCTAssertFalse(stateManager.shouldBypassScreenValidation())
+
+        stateManager.markWaitingDelay(.automatic)
+        XCTAssertEqual(stateManager.getCachedExperienceId(), "manual-B")
+        stateManager.markActiveFromCurrentState(content: content)
+        XCTAssertEqual(stateManager.getActiveTriggerType(), .automatic)
+        XCTAssertEqual(stateManager.getCachedExperienceId(), "manual-B")
+        stateManager.markIdle()
+        XCTAssertEqual(stateManager.getCachedExperienceId(), "manual-B")
+    }
+
+    func testCachedManual_doesNotReplaceActivePreviewOrThankYouState() {
+        let content = makeExperienceContent()
+        stateManager.markActive(.preview, content)
+        stateManager.markCachedManual("manual-B")
+
+        XCTAssertTrue(stateManager.isPreviewMode())
+        XCTAssertEqual(stateManager.getActiveContent()?.experienceId(), content.experienceId())
+        stateManager.markShowingThankYou()
+        XCTAssertTrue(stateManager.isPreviewMode())
+        XCTAssertEqual(stateManager.getCachedExperienceId(), "manual-B")
+    }
+
+    func testCachedAutomatic_doesNotOverwriteQueuedManualRequest() {
+        stateManager.markWaitingDelay(.automatic)
+        stateManager.markCachedManual("manual-B")
+        stateManager.markCachedAutomatic(makeExperienceContent())
+
+        XCTAssertEqual(stateManager.getCachedExperienceId(), "manual-B")
+        XCTAssertNil(stateManager.getCachedExperienceContent())
+        if case .waitingDelay(let trigger) = stateManager.getCurrentState() {
+            XCTAssertEqual(trigger, .automatic)
+        } else {
+            XCTFail("Caching content must preserve the active delay")
+        }
+    }
+
+    func testProcessCachedExperience_takesManualRequestOnceWithoutChangingActiveContent() {
+        let content = makeExperienceContent()
+        stateManager.markActive(.automatic, content)
+        stateManager.markCachedManual("manual-B")
+
+        if case .triggerManual(let id) = stateManager.processCachedExperience() {
+            XCTAssertEqual(id, "manual-B")
+        } else {
+            XCTFail("Expected cached manual B")
+        }
+        XCTAssertEqual(stateManager.getActiveTriggerType(), .automatic)
+        XCTAssertEqual(stateManager.getActiveContent()?.experienceId(), content.experienceId())
+        if case .none = stateManager.processCachedExperience() {
+            // Duplicate dismissal cannot replay B twice.
+        } else {
+            XCTFail("Cached request must only be consumed once")
+        }
+        XCTAssertFalse(stateManager.hasCachedExperience())
     }
 
     // MARK: - Component Management
