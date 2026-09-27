@@ -25,6 +25,7 @@ internal final class PreviewSessionTracker {
     private let lock = NSLock()
     private var nextId: UInt64 = 0
     private var activeId: UInt64?
+    private var renderedId: UInt64?
 
     /// Starts a new preview session, superseding any previous one.
     /// - Returns: The id to carry through this attempt's async hops.
@@ -66,5 +67,22 @@ internal final class PreviewSessionTracker {
         lock.lock()
         activeId = nil
         lock.unlock()
+    }
+
+    /// Records the session whose preview actually reached the screen. That session is the only one
+    /// the close of this preview is entitled to end.
+    func markRendered(_ id: UInt64) {
+        lock.lock()
+        defer { lock.unlock() }
+        renderedId = id
+    }
+
+    /// Whether the preview on screen still owns the live session. False once a newer scan has begun
+    /// one, so that scan outlives the close of the preview it replaced.
+    func ownsRenderedSession() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let renderedId else { return false }
+        return activeId == renderedId
     }
 }

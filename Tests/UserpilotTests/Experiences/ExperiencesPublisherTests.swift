@@ -648,6 +648,8 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
+        // The preview is settled once the dismissal actually lands, not on the close event.
+        experiencesPublisher.experienceDidFinishDismissing()
 
         // Assert
         XCTAssertNil(publishedEvent)
@@ -692,6 +694,8 @@ final class ExperiencesPublisherTests: XCTestCase {
 
         // Act
         experiencesPublisher.publishInternalSDKEvent(closeEvent)
+        // The preview is settled once the dismissal actually lands, not on the close event.
+        experiencesPublisher.experienceDidFinishDismissing()
 
         // Assert
         XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
@@ -1022,6 +1026,126 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Assert — only the current preview renders; the abandoned one is dropped
         wait(for: [latestThemeSaved], timeout: 1.0)
         XCTAssertFalse(savedThemeIds.contains(11))
+    }
+
+    func testTriggerPreviewExperience_shouldSurviveTheCloseOfTheExperienceItReplaces() {
+        // Arrange — an experience on screen that reports its dismissal *before* the close
+        // completion runs, which is the order the real renderers use: `closeExperience` calls
+        // `onDismissStep()` and only then invokes the completion.
+        let onScreen = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: onScreen)
+
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 15]
+        )
+        closeEvent.isCloseEvent = true
+        onScreen.onTriggerClose = { [weak self] _ in
+            self?.experiencesPublisher.publishInternalSDKEvent(closeEvent)
+        }
+
+        let fetchExpectation = XCTestExpectation(description: "preview fetch requested")
+        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
+            completion(.failure(.emptyResponse))
+            fetchExpectation.fulfill()
+        }
+
+        // Act — a QR deep link starts a preview while that experience is still closing
+        experiencesPublisher.triggerPreviewExperience("19", [])
+
+        // Assert — the replaced experience's close must not tear down the incoming preview
+        wait(for: [fetchExpectation], timeout: 1.0)
+    }
+
+    func testTriggerPreviewExperience_shouldSurviveTheCloseOfThePreviewItReplaces() throws {
+        // Arrange — a first preview whose response landed, so it owns the live session
+        let firstFetch = XCTestExpectation(description: "first preview fetch requested")
+        var firstCompletion: ((Result<PreviewExperience, RemoteSourceError>) -> Void)?
+        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
+            firstCompletion = completion
+            firstFetch.fulfill()
+        }
+        let firstRendered = XCTestExpectation(description: "first preview reached render")
+        userpilot.themeHandler.onSaveTheme = { theme in
+            if theme.id == 11 { firstRendered.fulfill() }
+        }
+        experiencesPublisher.triggerPreviewExperience("first", [])
+        wait(for: [firstFetch], timeout: 1.0)
+        firstCompletion?(.success(try makePreviewExperience(themeId: 11)))
+        wait(for: [firstRendered], timeout: 1.0)
+
+        // ...and is now the experience on screen, closing the same way the real renderers do
+        let onScreen = MockUPExperience()
+        experiencesPublisher.mockActiveExperience(experience: onScreen)
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        userpilot.experienceStateMachine.markActive(.preview, .flow(content: flow))
+
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 10]
+        )
+        closeEvent.isCloseEvent = true
+        onScreen.onTriggerClose = { [weak self] _ in
+            self?.experiencesPublisher.publishInternalSDKEvent(closeEvent)
+        }
+
+        let secondFetch = XCTestExpectation(description: "second preview fetch requested")
+        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
+            completion(.failure(.emptyResponse))
+            secondFetch.fulfill()
+        }
+
+        // Act — a second QR scan arrives while that preview is still on screen
+        experiencesPublisher.triggerPreviewExperience("second", [])
+
+        // Assert — a scan always wins: the outgoing preview owns only its own session
+        wait(for: [secondFetch], timeout: 1.0)
+    }
+
+    func testPublishInternalSDKEvent_shouldEndPreviewSession_WhenTheRenderedPreviewCloses() throws {
+        // Arrange — a preview that reached the screen the way it does in production: that handoff
+        // is what records the session the close is then entitled to end.
+        let fetchExpectation = XCTestExpectation(description: "preview fetch requested")
+        var fetchCompletion: ((Result<PreviewExperience, RemoteSourceError>) -> Void)?
+        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
+            fetchCompletion = completion
+            fetchExpectation.fulfill()
+        }
+        let rendered = XCTestExpectation(description: "preview reached render")
+        userpilot.themeHandler.onSaveTheme = { theme in
+            if theme.id == 33 { rendered.fulfill() }
+        }
+        experiencesPublisher.triggerPreviewExperience("19", [])
+        wait(for: [fetchExpectation], timeout: 1.0)
+        fetchCompletion?(.success(try makePreviewExperience(themeId: 33)))
+        wait(for: [rendered], timeout: 1.0)
+
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeFlowContentPayload()
+                .toJSONString()?
+                .toFlowContent()?
+                .flowContent
+        )
+        userpilot.experienceStateMachine.markActive(.preview, .flow(content: flow))
+        XCTAssertTrue(experiencesPublisher.isPreviewExperienceMode())
+
+        let closeEvent = MockSDKEvent(
+            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
+            eventPayload: ["mobile_content_id": 19]
+        )
+        closeEvent.isCloseEvent = true
+
+        // Act — the close event, then the dismissal callback that every renderer reaches
+        experiencesPublisher.publishInternalSDKEvent(closeEvent)
+        experiencesPublisher.experienceDidFinishDismissing()
+
+        // Assert — the preview that was on screen does own its session, so closing it ends it
+        XCTAssertFalse(experiencesPublisher.isPreviewExperienceMode())
     }
 
     private func makePreviewExperience(themeId: Int) throws -> PreviewExperience {

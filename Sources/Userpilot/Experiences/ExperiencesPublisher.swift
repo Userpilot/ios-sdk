@@ -338,7 +338,23 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
     }
 
     /// Cleans up the overlay after the actual UIKit dismissal completion fires.
+    ///
+    /// This is the one hook every renderer reaches — through `onExperienceDismissalCompleted()`
+    /// when the user closes it, and through `endExperience`'s completion when an incoming scan
+    /// replaces it — so it is where the preview session is settled, mirroring Android's
+    /// `completeExperienceDismissal`.
     func experienceDidFinishDismissing() {
+        // Settle the preview that just went away. Its session is ended only while the preview that
+        // rendered under it still owns it: a scan that arrived while this experience was closing
+        // has already begun the next session, and that one must outlive this close — otherwise the
+        // scan would dismiss the content on screen and show nothing.
+        if experienceStateMachine.isPreviewMode() {
+            if previewSessionTracker.ownsRenderedSession() {
+                resetProcessingPreviewExperienceStatus()
+            } else {
+                resetProcessingExperienceStatus()
+            }
+        }
         performOn(.main) { [weak self] in
             self?.hideExperienceOverlayIfIdle()
         }
@@ -405,7 +421,11 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
      */
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
         tryCatch {
-            if isPreviewExperienceMode() {
+            // Deliberately the state machine alone, not `isPreviewExperienceMode()`: a QR deep link
+            // claims its preview session before the experience it replaces has finished closing, so
+            // the wider check would route that experience's own close into this branch and let it
+            // cancel the session belonging to the preview that replaced it.
+            if experienceStateMachine.isPreviewMode() {
                 if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
                     activeExperience = nil
                     requestFakeScreenReloadEventDate = Date()
@@ -413,7 +433,6 @@ internal class ExperiencesPublisher: ExperiencesPublishing {
                         sdkEvent.getContentType(),
                         sdkEvent.getContentId()
                     )
-                    resetProcessingPreviewExperienceStatus()
                 }
                 return
             }
@@ -1260,6 +1279,8 @@ extension ExperiencesPublisher {
 
             experienceQueue.async { [weak self] in
                 guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
+                // This session is the one about to be on screen, so it is the one its close owns.
+                self.previewSessionTracker.markRendered(previewSessionId)
                 self.pendingExperiences.append(experience)
                 self.themeHandler.saveTheme(theme)
                 self.openExperienceFlow()
