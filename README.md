@@ -191,6 +191,8 @@ userpilot.triggerExperience("<EXPERIENCE_ID>")
 
 If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
 
+Interaction value capture is disabled by default. Call `.enableInteractionValueCapture(true)` on the configuration to capture control values when interaction autocapture is enabled.
+
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
