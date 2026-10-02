@@ -348,7 +348,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      *
      * Routing order:
      * 1. Drop while the app is not active.
-     * 2. Ignore unchanged identifies and cache pending user updates.
+     * 2. Cache identify events as the pending user.
      * 3. Hold in `initialQueue` until network readiness is known (NWPathMonitor is async).
      * 4. Persist to local storage when the network is known unavailable.
      * 5. Drop during socket shutdown.
@@ -373,8 +373,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Handle app state - drop events when app is not in active state
             guard sessionMonitorer?.isAppActive ?? false else { return }
 
-            // Drop identify events that carry nothing new. Non-identify events skip this.
-            if event.isIdentifyEvent, didHandleIdentifyEvent(event) { return }
+            // Cache the pending user until the backend acknowledges the identify
+            if event.isIdentifyEvent { storage.temporaryUser = event.toUser().toJson() }
 
             // Hold events while network monitor is still resolving initial state
             if !networkMonitor.isReady {
@@ -480,26 +480,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             event: event,
             clearStoredEventsFirst: isOfflineUserSwitch
         )
-    }
-
-    /**
-     * Drops identify events that carry nothing new, and caches the pending user for the rest.
-     *
-     * - Parameter event: The identify event to handle
-     * - Returns: true if the event should be ignored, false if processing should continue
-     */
-    private func didHandleIdentifyEvent(_ event: Event) -> Bool {
-        // A pending identify has not reached the backend yet, so a closed socket means
-        // `onSocketClosed` is replaying it, not a fresh host-app call. A replay must go through or
-        // the reconnect never re-identifies the user.
-        let isPendingReplay = storage.temporaryUser != nil && !socketManager.isSocketOpened
-        let carriesNoNewData = storage.user.isNotEmpty
-            && User.fromJson(storage.user).isSameIdentifyEvent(event: event)
-
-        let shouldIgnore = carriesNoNewData && !isPendingReplay
-        // Update temporary cached user in storage
-        if !shouldIgnore { storage.temporaryUser = event.toUser().toJson() }
-        return shouldIgnore
     }
 
     /**
