@@ -343,6 +343,46 @@ final class ExperienceStateMachineTests: XCTestCase {
         XCTAssertEqual(stateManager.getActiveTriggerType(), .automatic)
     }
 
+    // MARK: - Flow Progress
+
+    func testBeginFlow_owesNextStep_whenFlowHasMoreThanOneStep() {
+        stateManager.beginFlow(steps: [.content, .thankYou])
+
+        XCTAssertTrue(stateManager.hasNextFlowStep())
+    }
+
+    func testAdvanceFlowStep_stopsOwingAStep_whenLastOneIsReached() {
+        stateManager.beginFlow(steps: [.content, .thankYou])
+
+        stateManager.advanceFlowStep()
+
+        XCTAssertFalse(stateManager.hasNextFlowStep())
+    }
+
+    func testBeginFlow_tracksNothing_whenContentRendersInOneGo() {
+        // A single-step experience is not a flow: nothing is owed after its renderer goes away,
+        // so a dismissal means the experience is genuinely over.
+        stateManager.beginFlow(steps: [.content])
+
+        XCTAssertFalse(stateManager.hasNextFlowStep())
+    }
+
+    func testMarkIdle_abandonsRunningFlow() {
+        stateManager.beginFlow(steps: [.content, .thankYou])
+
+        stateManager.markIdle()
+
+        XCTAssertFalse(stateManager.hasNextFlowStep())
+    }
+
+    func testClearFlow_abandonsRunningFlow() {
+        stateManager.beginFlow(steps: [.content, .thankYou])
+
+        stateManager.clearFlow()
+
+        XCTAssertFalse(stateManager.hasNextFlowStep())
+    }
+
     private func makeExperienceContent() -> ExperienceContent {
         .survey(content: MockContentFactory.makeSurveyContent(id: Int.random(in: 1...10_000)))
     }

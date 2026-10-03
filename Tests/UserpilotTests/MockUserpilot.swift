@@ -145,9 +145,6 @@ class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
 
 class MockExperiencesPublisher: ExperiencesPublishing {
     var previewExperienceMode = false
-    func isPreviewExperienceMode() -> Bool {
-        return previewExperienceMode
-    }
 
     var onGetActiveMobileContent: (() -> ExperienceContent)?
     func getActiveMobileContent() -> ExperienceContent? {
@@ -202,6 +199,13 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     var onShowThankYouMessage: ((SurveyContent, SurveyTheme, Int64) -> Void)?
     func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme, _ submissionId: Int64) {
         onShowThankYouMessage?(surveyContent, surveyTheme, submissionId)
+    }
+
+    /// Defaults to true so survey tests keep reaching the thank-you branch, which is what the
+    /// real publisher reports for a list survey ending in its completed module.
+    var onHasNextFlowStep: (() -> Bool)?
+    func hasNextFlowStep() -> Bool {
+        onHasNextFlowStep?() ?? true
     }
 
     var onUpdateScreen: ((String) -> Void)?

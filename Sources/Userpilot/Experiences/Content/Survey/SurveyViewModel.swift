@@ -101,7 +101,10 @@ internal class SurveyViewModel {
     @discardableResult
     func showThankYouMessage() -> Bool {
         guard let surveyContent, let surveyTheme else { return false }
-        if surveyContent.modules.last?.type == .completed {
+        // Ask the flow whether a second step is owed, rather than re-deriving it from the content:
+        // the flow is what the publisher acts on when this renderer dismisses, so a disagreement
+        // between the two is what would strand the experience half-finished.
+        if experiencesPublisher.hasNextFlowStep() {
             experiencesPublisher.showThankYouMessage(surveyContent, surveyTheme, submissionId)
             return true
         }

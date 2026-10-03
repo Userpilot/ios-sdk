@@ -66,6 +66,14 @@ internal protocol ExperienceStateManaging: AnyObject {
     func markCachedAutomatic(_ experience: ExperienceContent)
     func clearCachedExperience()
 
+    // MARK: - Flow Progress (see ExperienceStateMachine+Flow)
+
+    func beginFlow(_ content: ExperienceContent)
+    func beginFlow(steps: [ExperienceStateMachine.FlowStep])
+    func hasNextFlowStep() -> Bool
+    func advanceFlowStep()
+    func clearFlow()
+
     // MARK: - Active Experience Component Management
 
     func setActiveComponent(_ component: UPExperience)
@@ -99,12 +107,20 @@ internal final class ExperienceStateMachine {
 
     // MARK: - Properties
 
-    private let logger: Logging
+    /// Not `private` so `ExperienceStateMachine+Flow` can log its step transitions.
+    let logger: Logging
     private let state: AtomicReference<ExperienceFlowState>
     private var activeComponent: WeakExperienceReference?
 
     /// A queued request must not replace the current experience's trigger or rendering state.
     private let cachedExperience = AtomicReference<CachedExperienceAction>(.none)
+
+    /// Progress through the running flow, or nil when the experience is a single step.
+    ///
+    /// Kept beside `state` rather than inside it for the same reason as `activeComponent`: a flow
+    /// outlives the individual states its steps move through. Read and written only by
+    /// `ExperienceStateMachine+Flow`, which is why it is not `private`.
+    let flowProgress = AtomicReference<FlowProgress?>(nil)
 
     // MARK: - Initialization
 
@@ -155,6 +171,7 @@ extension ExperienceStateMachine: ExperienceStateManaging {
 
     func markIdle() {
         activeComponent = nil
+        flowProgress.value = nil
         state.value = .idle
         logger.info("Experience state: Idle")
     }

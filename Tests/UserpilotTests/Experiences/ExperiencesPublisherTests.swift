@@ -1141,7 +1141,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         // Act
         experiencesPublisher.showThankYouMessage(mockSurveyContent, mockSurveyTheme, 0)
 
-        // Assert - `triggerThankYouMessageView` calls `markShowingThankYou()` synchronously
+        // Assert - `presentThankYouMessage` calls `markShowingThankYou()` synchronously
         // before it hops to main, so the state is already set when the call returns. Waiting a
         // second bought nothing and raced its own timeout; it also let the main-queue block's
         // nil-host path reset the state back.
@@ -1442,7 +1442,7 @@ final class ExperiencesPublisherTests: XCTestCase {
                 .flowContent
         )
         userpilot.experienceStateMachine.markActive(.preview, .flow(content: flow))
-        XCTAssertTrue(experiencesPublisher.isPreviewExperienceMode())
+        XCTAssertTrue(userpilot.experienceStateMachine.isPreviewMode())
 
         let closeEvent = MockSDKEvent(
             eventName: SDKEventsName.flowExperienceDismissed.rawValue,
@@ -1455,7 +1455,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         experiencesPublisher.experienceDidFinishDismissing()
 
         // Assert — the preview that was on screen does own its session, so closing it ends it
-        XCTAssertFalse(experiencesPublisher.isPreviewExperienceMode())
+        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
 
         let repeatProcessed = expectation(description: "NPS stays suppressed after closing the preview")
         experiencesPublisher.updateScreen("Home")
@@ -1515,13 +1515,13 @@ final class ExperiencesPublisherTests: XCTestCase {
             }, object: nil
         )
         wait(for: [cached], timeout: 2.0)
-        XCTAssertTrue(experiencesPublisher.isPreviewExperienceMode())
+        XCTAssertTrue(userpilot.experienceStateMachine.isPreviewMode())
 
         // Exercise the production completion closure without depending on UIKit animation timing.
         thankYou.onDismissCompleted()
 
         wait(for: [manualRequested], timeout: 2.0)
-        XCTAssertFalse(experiencesPublisher.isPreviewExperienceMode())
+        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
         XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
         thankYou.dismiss(animated: false)
     }
