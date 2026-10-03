@@ -30,18 +30,11 @@ internal protocol UserpilotRemoteSourcing: AnyObject {
 /// It fetches SDK settings and preview experiences from remote servers.
 internal class UserpilotRemoteSource {
 
-    // MARK: - Properties
+    // MARK: - Dependencies
 
-    /// A configuration instance holding SDK-related configuration details.
     private let config: Userpilot.Config
-
-    /// Logger instance for logging information and errors.
     private let logger: Logging
-
-    /// Storage used to store user-related data.
     private let storage: DataStoring
-
-    /// URLSession to request API
     private let session: URLSession
 
     // MARK: - Initialization

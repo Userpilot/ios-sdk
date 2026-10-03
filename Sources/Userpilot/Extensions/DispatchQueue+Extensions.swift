@@ -32,7 +32,7 @@ internal enum QueueType {
     /// Stored, not built per access: as a computed value every `performOn(.background)` call got its
     /// own queue, so work dispatched to `.background` was never serialized against other work on it.
     private static let backgroundQueue = DispatchQueue(
-        label: "com.userpilot.sdk.background",
+        label: Constants.DispatchQueues.background,
         qos: .background,
         target: nil
     )

@@ -27,13 +27,9 @@ internal protocol SessionMonitoring: AnyObject {
 
 internal class SessionMonitor: SessionMonitoring {
 
-    /// The analytics publisher responsible for flushing and resuming events.
+    // Dependencies
     private let analyticsPublisher: AnalyticsPublishing
-
-    /// Network monitor to pause/resume on lifecycle changes.
     private let networkMonitor: NetworkMonitoring
-
-    /// The storage used to store user-related data.
     private let storage: DataStoring
 
     /// A flag to mintor app status.
@@ -81,7 +77,7 @@ internal class SessionMonitor: SessionMonitoring {
         // The one activation no notification can deliver: the SDK was created *after*
         // the app was already `.active`, so `didBecomeActive` has already fired and will
         // not fire again until the next activation. Catch up on the current state.
-        DispatchQueue.main.async { [weak self] in
+        performOn(.main) { [weak self] in
             guard let self, UIApplication.shared.applicationState == .active else { return }
             self.onAppStart()
         }

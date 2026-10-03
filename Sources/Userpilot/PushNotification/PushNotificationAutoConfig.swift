@@ -39,12 +39,12 @@ internal enum PushNotificationAutoConfig {
     ///
     /// - Parameter observer: The `PushNotificationMonitoring` instance that will handle push notifications.
     static func register(observer: PushNotificationMonitoring) {
-        lock.lock()
-        // `NSHashTable.weakObjects()` is keyed by `ObjectIdentifier`-equivalent
-        // pointer identity, so adding the same observer twice does not duplicate.
-        pushNotificationMonitors.add(observer as AnyObject)
-        let pendingResponse = response
-        lock.unlock()
+        let pendingResponse = lock.withLock {
+            // `NSHashTable.weakObjects()` is keyed by `ObjectIdentifier`-equivalent
+            // pointer identity, so adding the same observer twice does not duplicate.
+            pushNotificationMonitors.add(observer as AnyObject)
+            return response
+        }
 
         // Process any cached response that arrived before this monitor existed.
         guard let pendingResponse = pendingResponse else { return }
@@ -60,21 +60,20 @@ internal enum PushNotificationAutoConfig {
         // swallow a response meant for an instance still coming up.
         guard didHandle else { return }
 
-        lock.lock()
-        if self.response === pendingResponse {
-            self.response = nil
+        lock.withLock {
+            if self.response === pendingResponse {
+                self.response = nil
+            }
         }
-        lock.unlock()
     }
 
     /// Returns a snapshot of all currently registered monitors.
     private static func currentMonitors() -> [PushNotificationMonitoring] {
-        lock.lock()
-        let snapshot = pushNotificationMonitors.allObjects.compactMap {
-            $0 as? PushNotificationMonitoring
+        lock.withLock {
+            pushNotificationMonitors.allObjects.compactMap {
+                $0 as? PushNotificationMonitoring
+            }
         }
-        lock.unlock()
-        return snapshot
     }
 
     /// Configures the app to automatically handle push notifications by swizzling necessary methods.
@@ -126,9 +125,9 @@ internal enum PushNotificationAutoConfig {
             )
             if didHandle {
                 // A newer response was handled, so an older cached one is stale.
-                lock.lock()
-                self.response = nil
-                lock.unlock()
+                lock.withLock {
+                    self.response = nil
+                }
                 return
             }
         }
@@ -136,9 +135,9 @@ internal enum PushNotificationAutoConfig {
         // Nobody could take it — usually because the instance it belongs to has not
         // been configured yet. Hold it for the next monitor to register, which
         // replays it from `register(observer:)`.
-        lock.lock()
-        self.response = response
-        lock.unlock()
+        lock.withLock {
+            self.response = response
+        }
 
         completionHandler()
     }

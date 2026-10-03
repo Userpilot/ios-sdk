@@ -26,14 +26,12 @@ internal class AtomicReference<T> {
     /// Gets or sets the current value atomically.
     var value: T {
         get {
-            lock.lock()
-            defer { lock.unlock() }
-            return _value
+            lock.withLock { _value }
         }
         set {
-            lock.lock()
-            defer { lock.unlock() }
-            _value = newValue
+            lock.withLock {
+                _value = newValue
+            }
         }
     }
 
@@ -41,11 +39,11 @@ internal class AtomicReference<T> {
     /// - Parameter newValue: The new value
     /// - Returns: The previous value
     func getAndSet(_ newValue: T) -> T {
-        lock.lock()
-        defer { lock.unlock() }
-        let oldValue = _value
-        _value = newValue
-        return oldValue
+        lock.withLock {
+            let oldValue = _value
+            _value = newValue
+            return oldValue
+        }
     }
 
     /// Atomically sets the value to the given updated value if the current value equals the expected value.
@@ -55,13 +53,13 @@ internal class AtomicReference<T> {
     /// - Returns: true if successful, false if the actual value was not equal to the expected value
     @discardableResult
     func compareAndSet(expected: T, new: T) -> Bool where T: Equatable {
-        lock.lock()
-        defer { lock.unlock() }
-        if _value == expected {
-            _value = new
-            return true
+        lock.withLock {
+            if _value == expected {
+                _value = new
+                return true
+            }
+            return false
         }
-        return false
     }
 
     /// Performs an atomic operation with the current value.
@@ -69,19 +67,17 @@ internal class AtomicReference<T> {
     /// - Returns: The new value after the operation
     @discardableResult
     func update(_ block: (T) -> T) -> T {
-        lock.lock()
-        defer { lock.unlock() }
-        _value = block(_value)
-        return _value
+        lock.withLock {
+            _value = block(_value)
+            return _value
+        }
     }
 
     /// Performs an atomic read operation with the current value.
     /// - Parameter block: A closure that receives the current value
     /// - Returns: The result of the block
     func read<R>(_ block: (T) -> R) -> R {
-        lock.lock()
-        defer { lock.unlock() }
-        return block(_value)
+        lock.withLock { block(_value) }
     }
 }
 

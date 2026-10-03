@@ -135,7 +135,7 @@ internal extension UIViewController {
         // first screen event to miss the custom name.
         if config.appFramework == .SwiftUI,
            screenClassName.contains("HostingController") {
-            DispatchQueue.main.async { [weak self] in
+            performOn(.main) { [weak self] in
                 guard let self else { return }
                 owningInstance.autoCaptureCoordinator.trackScreen(buildScreenTrackingPayload(config: config))
             }
