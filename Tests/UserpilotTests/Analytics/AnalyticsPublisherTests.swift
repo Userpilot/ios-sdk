@@ -53,7 +53,103 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(pending.userId, "user-123")
         XCTAssertEqual(pending.properties["plan"] as? String, "pro")
         XCTAssertEqual(pending.company["id"] as? String, "company-123")
+        XCTAssertEqual(userpilot.storage.userId, "user-123")
         XCTAssertEqual(userpilot.storage.user, "", "Unacknowledged data must not be committed")
+    }
+
+    func testPublish_userSwitch_shouldDropOldQueuedEventsAtAdmission() {
+        userpilot.storage.userId = "user-a"
+        userpilot.storage.user = User(userId: "user-a").toJson() ?? ""
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.publish(Event(type: .event("old-user-event")))
+
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(userpilot.storage.user, "")
+        XCTAssertTrue(userpilot.offlineEventsHandler.didClearLocalEvents)
+        XCTAssertTrue(userpilot.container.resolve(UserSessionStateManaging.self).isUserSwitching())
+    }
+
+    func testPublish_userSwitchWhileNetworkStatePending_shouldDropOldInitialEvents() {
+        userpilot.storage.userId = "user-a"
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.publish(Event(type: .event("old-user-event")))
+
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+
+        let queued = analyticsPublisher.mockGetInitialQueue()
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+    }
+
+    func testNetworkReady_afterPendingUserSwitch_shouldRouteOnlyNewUserEvents() {
+        userpilot.storage.userId = "user-a"
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.publish(Event(type: .event("old-user-event")))
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        analyticsPublisher.publish(Event(type: .screen("user-b-screen")))
+
+        userpilot.networkMonitor.isReady = true
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.networkMonitorDidUpdate(
+            isReady: true,
+            isNetworkAvailable: true
+        )
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertTrue(analyticsPublisher.mockGetInitialQueue().isEmpty)
+        XCTAssertEqual(queued.count, 2)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(queued.last?.screenTitle, "user-b-screen")
+    }
+
+    func testPublish_rapidUserSwitch_shouldKeepOnlyLatestIdentify() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isJoiningSocket = true
+
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        analyticsPublisher.publish(Event(type: .screen("user-b-screen")))
+        analyticsPublisher.publish(Event(type: .identify("user-c"), properties: ["plan": "pro"]))
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(userpilot.storage.userId, "user-c")
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-c")
+        XCTAssertEqual(queued.first?.properties?["plan"] as? String, "pro")
+    }
+
+    func testPublish_duplicatePendingIdentify_shouldKeepSingleQueuedEvent() {
+        userpilot.storage.userId = ""
+        userpilot.socketManager.isJoiningSocket = true
+        let identify = Event(type: .identify("user-a"), properties: ["plan": "pro"])
+
+        analyticsPublisher.publish(identify)
+        analyticsPublisher.publish(identify)
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-a")
+    }
+
+    func testPublish_userSwitchShutdown_shouldQueueFollowingNewUserEvents() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.socketManager.isShutdownState = true
+        analyticsPublisher.publish(Event(type: .screen("user-b-screen")))
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(queued.count, 2)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(queued.last?.screenTitle, "user-b-screen")
     }
 
     func testPublish_screenEvent_shouldSetupScreenSessionStateMachine() {
@@ -255,8 +351,8 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent, Constants.Event.screenEvent])
         XCTAssertEqual(sent.last?.1?[Constants.Analytics.screenTitleProperty] as? String, "Home")
         let screenMetadata = sent.last?.1?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(screenMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, latestUserId != "old-user")
-        XCTAssertEqual(screenMetadata?[Constants.Analytics.fakeReload] as? Bool, latestUserId == "old-user")
+        XCTAssertEqual(screenMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(screenMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
         analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         XCTAssertEqual(sent.count, 2)
@@ -331,7 +427,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onClose = { closeCalled = true }
 
         // Act
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
 
         // Assert
         XCTAssertTrue(closeCalled)
@@ -348,10 +444,21 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { _, _ in publishLogoutEventCalled = true }
 
         // Act
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
 
         // Assert
         XCTAssertTrue(publishLogoutEventCalled)
+    }
+
+    func testLogout_shouldClearInitialQueue() {
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.publish(Event(type: .identify("user-a")))
+        XCTAssertEqual(analyticsPublisher.mockGetInitialQueue().count, 1)
+
+        analyticsPublisher.logout()
+
+        XCTAssertTrue(analyticsPublisher.mockGetInitialQueue().isEmpty)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
     // MARK: - Socket Subscription Tests
@@ -689,7 +796,7 @@ class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
 
         // Act — the SDK is torn down
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
 
         // Act — a socket opens for the next session
         userpilot.socketManager.isSocketOpened = true
@@ -704,11 +811,13 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.offlineEventsHandler.shouldSaveOffline = true
         let published = recordPublishedEvents()
         analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.publish(Event(type: .event("old-user-event")))
 
         analyticsPublisher.publish(Event(type: .identify("user-b")))
         analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_theme"))
 
         XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
         XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.first?.event.userId, "user-b")
         userpilot.offlineEventsHandler.shouldSaveOffline = false
         userpilot.socketManager.isSocketOpened = true
@@ -731,7 +840,77 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
     }
 
-    func testResumeWithQueuedUserSwitch_dropsSDKRequestsCachedAfterIdentify() {
+    func testUserSwitchSocketClose_shouldReconnectWithoutReplayingQueuedIdentify() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.socketManager.isShutdownState = true
+        analyticsPublisher.publish(Event(type: .screen("user-b-screen")))
+
+        var connectCount = 0
+        userpilot.socketManager.onConnect = { connectCount += 1 }
+        userpilot.socketManager.isShutdownState = false
+        analyticsPublisher.onSocketClosed()
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(connectCount, 1)
+        XCTAssertEqual(queued.count, 2)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(queued.last?.screenTitle, "user-b-screen")
+        let state = userpilot.container.resolve(UserSessionStateManaging.self).getCurrentState()
+        guard case .userSwitching = state else {
+            XCTFail("Socket close must not advance identify state before the identify is sent")
+            return
+        }
+    }
+
+    func testUserSwitchSocketClose_whileInactive_shouldWaitForResume() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+
+        var connectCount = 0
+        userpilot.socketManager.onConnect = { connectCount += 1 }
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.sessionMonitor.isAppActive = false
+        analyticsPublisher.onSocketClosed()
+
+        XCTAssertEqual(connectCount, 0)
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
+
+        userpilot.sessionMonitor.isAppActive = true
+        analyticsPublisher.resume()
+        XCTAssertEqual(connectCount, 1)
+    }
+
+    func testUserSwitch_shouldSendIdentifyBeforeNewUserSDKRequests() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.socketManager.isShutdownState = true
+        analyticsPublisher.publishInternalSDKEvent(
+            MockSDKEvent(eventName: "new-user-content-request")
+        )
+
+        let published = recordPublishedEvents()
+        userpilot.socketManager.isShutdownState = false
+        analyticsPublisher.onSocketClosed()
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.onSocketOpened()
+
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        analyticsPublisher.onSocketEventSent(
+            Constants.Event.identifyEvent, nil, Message(), true
+        )
+        XCTAssertEqual(
+            published(),
+            [Constants.Event.identifyEvent, "new-user-content-request"]
+        )
+    }
+
+    func testResumeWithQueuedUserSwitch_keepsNewUserSDKRequestsBehindIdentify() {
         userpilot.storage.userId = "user-a"
         userpilot.socketManager.isJoiningSocket = true
         analyticsPublisher.publish(Event(type: .identify("user-b")))
@@ -745,23 +924,29 @@ class AnalyticsPublisherTests: XCTestCase {
 
         XCTAssertEqual(userpilot.storage.userId, "user-b")
         XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        analyticsPublisher.onSocketEventSent(
+            Constants.Event.identifyEvent, nil, Message(), true
+        )
+        XCTAssertEqual(
+            published(),
+            [Constants.Event.identifyEvent, "get_mobile_content"]
+        )
     }
 
-    func testUserSwitchLogout_dropsSDKRequestsAndPreservesQueuedIdentify() {
+    func testAppLogout_dropsQueuedIdentifyAndSDKRequests() {
         userpilot.storage.userId = "user-a"
         userpilot.socketManager.isJoiningSocket = true
         analyticsPublisher.publish(Event(type: .identify("user-b")))
         analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
         let published = recordPublishedEvents()
 
-        analyticsPublisher.logout(clearCachedIdentifyEvent: false)
+        analyticsPublisher.logout()
 
-        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
-        userpilot.storage.userId = "user-b"
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         userpilot.socketManager.isJoiningSocket = false
         userpilot.socketManager.isSocketOpened = true
         analyticsPublisher.onSocketOpened()
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        XCTAssertTrue(published().isEmpty)
     }
 
     func testOfflineIdentifyForSameUser_preservesCachedSDKRequests() {
@@ -1132,8 +1317,8 @@ class AnalyticsPublisherTests: XCTestCase {
     /// The pipeline is ACK-gated: `processEvent` claims a single-flight gate and only releases it
     /// when the socket resolves the in-flight head through `onSocketEventSent`. `MockSocketManager`
     /// has no backend, so the ACK is simulated here — asynchronously, the way the real push receipt
-    /// arrives. Without it only the first event is ever published and every later one waits for the
-    /// `pushTimeout + 2` (12s) watchdog, so any multi-event expectation fails on timeout, and any
+    /// arrives. Without it only the first event is ever published and every later one stays queued,
+    /// so any multi-event expectation fails on timeout, and any
     /// single-event expectation passes for the wrong reason (the gate caps it at one regardless of
     /// whether the throttle works).
     private func publishAndCountSocketPublishes(
@@ -1284,10 +1469,9 @@ class AnalyticsPublisherTests: XCTestCase {
 
     // MARK: - User Switch With A Screen Tracked Right After Identify
 
-    /// A user switch blanks the user id via `clean()` while the new user's identify waits in the
-    /// queue to be replayed by `onSocketClosed`. Any event queued behind that identify — a screen
-    /// tracked right after `identify` — must survive the replay, otherwise the queue empties and
-    /// the post-identify screen event goes out carrying the *previous* screen.
+    /// A user switch selects the new id immediately and retains its identify before closing the old
+    /// socket. Any event queued behind that identify — a screen tracked right after `identify` —
+    /// must survive teardown, otherwise the post-identify screen uses the previous title.
     func testUserSwitch_withQueuedScreen_shouldPublishQueuedScreenTitleAndSkipPostIdentifyScreen() {
         // Arrange: user N is identified and sitting on the "online queue" screen
         userpilot.storage.userId = "userN"
@@ -1310,10 +1494,8 @@ class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.publish(Event(type: .screen("queue s1 home")))
         userpilot.socketManager.isJoiningSocket = false
 
-        // Act: the identify is processed, which switches user and tears the old socket down
-        analyticsPublisher.onSocketOpened()
-
-        // Act: the socket close replays the pending identify, then the connection comes back
+        // Act: admission already selected user A and retained the identify before teardown.
+        // The close callback reconnects without dequeuing or republishing it.
         userpilot.socketManager.isSocketOpened = false
         analyticsPublisher.onSocketClosed()
         userpilot.socketManager.isSocketOpened = true
@@ -1421,6 +1603,26 @@ class AnalyticsPublisherTests: XCTestCase {
         ])
         XCTAssertEqual(sent.last?.1?[Constants.Analytics.eventNameProperty] as? String, "Purchase")
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.eventTitle, "Purchase")
+        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
+    func testFailedPush_dropsOnlyTheCurrentEventAndPublishesTheNext() {
+        userpilot.storage.userId = "user-1"
+        userpilot.socketManager.isSocketOpened = true
+        var titles: [String] = []
+        userpilot.socketManager.onPublish = { _, payload in
+            titles.append(payload?[Constants.Analytics.eventNameProperty] as? String ?? "")
+        }
+
+        analyticsPublisher.publish(Event(type: .event("First")))
+        analyticsPublisher.publish(Event(type: .event("Second")))
+        XCTAssertEqual(titles, ["First"])
+
+        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), false)
+
+        XCTAssertEqual(titles, ["First", "Second"])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.eventTitle), ["Second"])
         analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }

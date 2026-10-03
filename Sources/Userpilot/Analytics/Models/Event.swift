@@ -149,6 +149,65 @@ extension Event: Codable {
 }
 
 extension Event {
+    /**
+     * Stable key for event throttling.
+     * Non-AutoCapture events use `eventTitle`, or `eventName` when
+     * the title is empty; autocapture uses screen + interaction/tab context.
+     */
+    func trackEventThrottleKey() -> String {
+        guard case .autoCaptureEvent = type else {
+            return eventTitle.isEmpty ? eventName : eventTitle
+        }
+
+        let properties = properties ?? [:]
+        func property(_ key: String) -> String {
+            return Self.throttleString(from: properties[key])
+        }
+
+        let rawInteraction = property(Constants.AutoCapture.rawInteractionType)
+
+        return [
+            throttleScreenName,
+            eventName,
+            rawInteraction.isEmpty ? (interactionEventName ?? "") : rawInteraction,
+            property(Constants.AutoCapture.tabName),
+            property(Constants.AutoCapture.tabIndex),
+            property(Constants.AutoCapture.hierarchy),
+            property(Constants.AutoCapture.accessibilityIdentifier),
+            property(Constants.AutoCapture.dialogTitle),
+            property(Constants.AutoCapture.targetText),
+            property(Constants.AutoCapture.section),
+            property(Constants.AutoCapture.selectedIndex),
+            property(Constants.AutoCapture.selectedValue),
+            property(Constants.AutoCapture.placeholder),
+            property(Constants.AutoCapture.accessibilityLabel)
+        ].joined(separator: "|")
+    }
+
+    /// Resolves a display class from the screen context captured with an autocapture event.
+    private var throttleScreenName: String {
+        guard let screen, !screen.isEmpty else { return "" }
+
+        let keys = [
+            Constants.AutoCapture.screenClass,
+            Constants.AutoCapture.screenTitle,
+            Constants.AutoCapture.screenName
+        ]
+        for key in keys {
+            if let name = screen[key] as? String, !name.isEmpty {
+                return name
+            }
+        }
+        return ""
+    }
+
+    private static func throttleString(from value: Any?) -> String {
+        guard let value else { return "" }
+        if let string = value as? String { return string }
+        if let number = value as? NSNumber { return number.stringValue }
+        return String(describing: value)
+    }
+
     func toUser() -> User {
         return User(userId: userId ?? "",
                     properties: properties ?? [:],

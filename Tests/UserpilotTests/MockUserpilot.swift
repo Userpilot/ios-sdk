@@ -311,9 +311,9 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onReset?()
     }
 
-    var onLogout: ((Bool) -> Void)?
-    func logout(clearCachedIdentifyEvent: Bool) {
-        onLogout?(clearCachedIdentifyEvent)
+    var onLogout: (() -> Void)?
+    func logout() {
+        onLogout?()
     }
 
     var canRequestEvent: Bool = true
@@ -441,9 +441,13 @@ class MockNetworkMonitor: NetworkMonitoring {
 // MARK: - Mock Offline Events Handler
 
 class MockOfflineEventsHandler: OfflineEventsHandling {
+    struct SavedEvent {
+        let event: Event
+    }
+
     var shouldSaveOffline: Bool = false
     var hasCachedEvents: Bool = false
-    var savedEvents: [(event: Event, clearStoredEventsFirst: Bool)] = []
+    var savedEvents: [SavedEvent] = []
     var savedSDKEvents: [SDKEvent] = []
     var didRestoreEvents = false
     var didClearLocalEvents = false
@@ -454,8 +458,8 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
     var holdRestoreCompletion = false
     private var heldRestoreCompletion: (() -> Void)?
 
-    func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool) {
-        savedEvents.append((event, clearStoredEventsFirst))
+    func saveEventToLocalStorage(event: Event) {
+        savedEvents.append(SavedEvent(event: event))
     }
 
     func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent) {

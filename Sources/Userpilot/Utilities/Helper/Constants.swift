@@ -53,11 +53,6 @@ internal enum Constants {
 
         /// Session gap after which a new session starts.
         static let sessionDuration = TimeInterval(30 * 60)
-
-        /// Watchdog for a stuck event-processing cycle. Must stay ABOVE the socket
-        /// push timeout so socket ok/error/timeout callbacks always resolve the
-        /// in-flight event first; the watchdog only fires when NO callback arrived.
-        static let stuckProcessingWatchdog: TimeInterval = Constants.Socket.pushTimeout + 2.0
     }
 
     /// Offline batch event payload keys (wire format).
@@ -99,7 +94,6 @@ internal enum Constants {
         static let networkMonitorState = "com.userpilot.network-monitor-state-queue"
         static let offlineEvents = "com.userpilot.offline-events-queue"
         static let background = "com.userpilot.background-queue"
-        static let analyticsWatchdog = "com.userpilot.analytics-watchdog-queue"
         static let eventQueue = "com.userpilot.event-queue"
         static let experienceQueue = "com.userpilot.experience-queue"
         static let screenSessionState = "com.userpilot.screen-session-state-queue"

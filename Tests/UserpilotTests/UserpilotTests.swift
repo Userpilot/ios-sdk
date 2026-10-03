@@ -209,7 +209,7 @@ class UserpilotTests: XCTestCase {
     func testLogout_resetsUserAndEmitsLogoutEvent() throws {
         // Arrange
         var logoutCalled = false
-        userpilot.analyticsPublisher.onLogout = { _ in logoutCalled = true }
+        userpilot.analyticsPublisher.onLogout = { logoutCalled = true }
 
         // Act
         userpilot.logout()

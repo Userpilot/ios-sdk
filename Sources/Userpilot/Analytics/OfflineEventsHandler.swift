@@ -22,23 +22,18 @@ internal protocol OfflineEventsHandling: AnyObject {
     /// Fast check to determine if there are cached events in local storage
     var hasCachedEvents: Bool { get }
 
-    /// Saves an event to local storage when network is unavailable
-    /// - Parameter clearStoredEventsFirst: Set on an offline user switch — batch items
-    ///   carry no user id, so the old user's stored events must not be replayed
-    ///   under the new user.
-    func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool)
+    /// Saves an admitted event to local storage when network is unavailable.
+    func saveEventToLocalStorage(event: Event)
 
     /// Saves an internal SDK event to local storage when network is unavailable.
     ///
-    /// Unlike `saveEventToLocalStorage` there is no `clearStoredEventsFirst`: an internal
-    /// event is never an identify event, so an offline user switch cannot arrive here.
     func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent)
 
     /// Restores events from local storage and publishes them as a batch
     /// - Parameter completion: Optional callback invoked when restoration is complete
     func restoreEventsFromLocalStorage(completion: (() -> Void)?)
 
-    /// Clears all events from local storage
+    /// Cancels the current restore and clears all events from local storage.
     func clearLocalEvents()
 }
 
@@ -72,7 +67,7 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
         qos: .utility
     )
 
-    /// Completion callback to be invoked after offline events are sent
+    /// Completion callback invoked after the offline batch resolves.
     private var offlineRestoreCompletion: (() -> Void)?
 
     // MARK: - Initialization
@@ -113,17 +108,12 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
      *
      * - Parameter event: The event to save to local storage
      */
-    func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool = false) {
+    func saveEventToLocalStorage(event: Event) {
         tryCatch {
             // Prefer the stored user id, fall back to the event's own (covers an
             // offline identify arriving before storage.userId is set).
             let userId = storage.userId.isNotEmpty ? storage.userId : (event.userId ?? "")
             guard !userId.isEmpty else { return }
-
-            // Offline user switch: drop the previous user's stored events first.
-            if clearStoredEventsFirst {
-                eventDatabaseStorage.deleteAllEvents()
-            }
 
             // Create event storage from event
             guard let eventStorage = EventStorage(event, config.token, userId) else {
@@ -146,10 +136,8 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
      * The event is wrapped in a `StoredOfflineEvent` envelope marked `.internalEvent` so the
      * replay path can tell it apart from an analytics row.
      *
-     * There is deliberately no `clearStoredEventsFirst` counterpart to
-     * `saveEventToLocalStorage`: an internal event is never an identify event, so an offline
-     * user switch cannot arrive through this path. An `SDKEvent` also carries no user id of
-     * its own, so an empty `storage.userId` drops the event rather than falling back.
+     * An `SDKEvent` carries no user id of its own, so an empty `storage.userId` drops the event
+     * rather than falling back.
      *
      * - Parameter sdkEvent: The internal SDK event to save to local storage
      */
@@ -182,19 +170,18 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
      * - Event queue is empty
      *
      * Events are sent as a single batch request to minimize socket overhead.
-     * The entire operation runs on a dedicated serial background queue.
+     * Reading and decoding run on the dedicated offline-events queue.
      *
      * - Parameter completion: Optional callback invoked when restoration and sending is complete
      */
     func restoreEventsFromLocalStorage(completion: (() -> Void)? = nil) {
-        offlineEventsQueue.async(flags: .barrier) { [weak self] in
-            guard let self else {
-                completion?()
-                return
-            }
-            tryCatch {
-                // getAllEventsAndDelete already runs on its own background queue
-                self.eventDatabaseStorage.getAllEventsAndDelete { [weak self] localEvents in
+        tryCatch {
+            // getAllEventsAndDelete already runs on its own background queue
+            let queue = self.offlineEventsQueue
+            self.eventDatabaseStorage.getAllEventsAndDelete { [weak self] localEvents in
+                // Completion may query the database again, so even an empty result must
+                // leave the database queue before invoking it.
+                queue.async { [weak self] in
                     guard let self else {
                         completion?()
                         return
@@ -208,88 +195,76 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
                     self.logger.info(
                         "🗃️ Restoring %{public}d events from local storage", localEvents.count)
 
-                    // Process events on our serial queue (heavy operation)
-                    self.offlineEventsQueue.async { [weak self] in
-                        guard let self else {
-                            completion?()
-                            return
+                    var eventsList: [[String: Any]] = []
+
+                    let currentUserId = self.storage.userId
+
+                    for eventStorage in localEvents {
+                        // The batch goes out on the current user's channel and its items
+                        // carry no user id, so anything stored under a previous user would be
+                        // reported as this user's activity. Identify admission clears storage
+                        // on a user switch; this is the second line of defence for any row that
+                        // outlived that transition.
+                        if currentUserId.isEmpty || eventStorage.userId != currentUserId {
+                            self.logger.error(
+                                "⚠️ Dropping offline event stored for another user: %{public}@",
+                                eventStorage.requestId.uuidString)
+                            continue
                         }
 
-                        var eventsList: [[String: Any]] = []
-
-                        // Who the batch will be attributed to. Empty only if storage was cleared
-                        // under us, and then there is nobody to compare against - replay as
-                        // before rather than drop everything.
-                        let currentUserId = self.storage.userId
-
-                        for eventStorage in localEvents {
-                            // The batch goes out on the current user's channel and its items
-                            // carry no user id, so anything stored under a previous user would be
-                            // reported as this user's activity. `saveEventToLocalStorage` clears
-                            // on an offline user switch; this is the second line of defence for a
-                            // row that outlived that clear.
-                            if currentUserId.isNotEmpty, eventStorage.userId != currentUserId {
-                                self.logger.error(
-                                    "⚠️ Dropping offline event stored for another user: %{public}@",
-                                    eventStorage.requestId.uuidString)
-                                continue
-                            }
-
-                            guard let stored = eventStorage.toStoredEvent(), stored.isSupportedSchema else {
-                                self.logger.error("⚠️ Failed to decode event from local storage")
-                                continue
-                            }
-
-                            var eventData: [String: Any]?
-
-                            // The internal check comes first: an internal row's `eventType`
-                            // carries the SDK event name, not an analytics event name, so it
-                            // must never reach a `switch event.type` branch.
-                            if stored.isInternalEvent {
-                                eventData = self.buildInternalEventData(
-                                    stored: stored, eventStorage: eventStorage)
-                            } else if let event = stored.event {
-                                switch event.type {
-                                case .identify:
-                                    eventData = self.buildIdentifyEventData(
-                                        event: event, eventStorage: eventStorage)
-                                case .screen:
-                                    eventData = self.buildScreenEventData(
-                                        event: event, eventStorage: eventStorage)
-                                case .event, .autoCaptureEvent:
-                                    eventData = self.buildTrackEventData(
-                                        event: event, eventStorage: eventStorage)
-                                }
-                            } else {
-                                // Decoded cleanly but carries neither an internal payload nor an
-                                // analytics event — nothing this version knows how to replay.
-                                self.logger.error(
-                                    "⚠️ Dropping unsupported offline event: %{public}@", stored.eventType)
-                            }
-
-                            if let eventData = eventData {
-                                eventsList.append(eventData)
-                            }
+                        guard let stored = eventStorage.toStoredEvent(), stored.isSupportedSchema else {
+                            self.logger.error("⚠️ Failed to decode event from local storage")
+                            continue
                         }
 
-                        if !eventsList.isEmpty {
-                            // Store completion to be called after socket sends the batch
-                            self.offlineRestoreCompletion = completion
+                        var eventData: [String: Any]?
 
-                            let batchPayload: [String: Any] = [
-                                Constants.OfflineEvents.eventsProperty: eventsList
-                            ]
-                            self.socketManager.publish(
-                                Constants.Event.batchEventsEvent,
-                                payload: batchPayload
-                            )
-                            self.logger.info(
-                                "🗃️ Restored %{public}d events from local storage as batch",
-                                eventsList.count
-                            )
+                        // The internal check comes first: an internal row's `eventType`
+                        // carries the SDK event name, not an analytics event name, so it
+                        // must never reach a `switch event.type` branch.
+                        if stored.isInternalEvent {
+                            eventData = self.buildInternalEventData(
+                                stored: stored, eventStorage: eventStorage)
+                        } else if let event = stored.event {
+                            switch event.type {
+                            case .identify:
+                                eventData = self.buildIdentifyEventData(
+                                    event: event, eventStorage: eventStorage)
+                            case .screen:
+                                eventData = self.buildScreenEventData(
+                                    event: event, eventStorage: eventStorage)
+                            case .event, .autoCaptureEvent:
+                                eventData = self.buildTrackEventData(
+                                    event: event, eventStorage: eventStorage)
+                            }
                         } else {
-                            completion?()
+                            // Decoded cleanly but carries neither an internal payload nor an
+                            // analytics event — nothing this version knows how to replay.
+                            self.logger.error(
+                                "⚠️ Dropping unsupported offline event: %{public}@", stored.eventType)
                         }
+
+                        if let eventData = eventData {
+                            eventsList.append(eventData)
+                        }
+                    }
+
+                    if !eventsList.isEmpty {
+                        self.offlineRestoreCompletion = completion
+
+                        let batchPayload: [String: Any] = [
+                            Constants.OfflineEvents.eventsProperty: eventsList
+                        ]
+                        self.socketManager.publish(
+                            Constants.Event.batchEventsEvent,
+                            payload: batchPayload
+                        )
+                        self.logger.info(
+                            "🗃️ Restored %{public}d events from local storage as batch",
+                            eventsList.count
+                        )
+                    } else {
+                        completion?()
                     }
                 }
             }
@@ -486,10 +461,9 @@ extension OfflineEventsHandler: SocketSubscription {
             } else {
                 logger.error("⚠️ Offline batch events send failed or timed out")
             }
-            if let completion = offlineRestoreCompletion {
-                offlineRestoreCompletion = nil
-                completion()
-            }
+            let completion = offlineRestoreCompletion
+            offlineRestoreCompletion = nil
+            completion?()
         }
     }
 

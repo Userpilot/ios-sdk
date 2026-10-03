@@ -430,7 +430,7 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         storage.user = ""
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
         clean()
     }
 

@@ -154,16 +154,16 @@ class OfflineEventsHandlerTests: XCTestCase {
         XCTAssertEqual(names, ["mine"], "a row stored for another user must not be replayed")
     }
 
-    /// With no current user there is nobody to compare against, so replay rather than drop.
-    func testRestore_keepsEveryRow_whenNoUserIsStored() throws {
+    /// With no current user there is no safe socket owner for the batch, so every row is dropped.
+    func testRestore_dropsEveryRow_whenNoUserIsStored() throws {
         storage.userId = ""
         let older = try XCTUnwrap(
             EventStorage(Event(type: .event("older")), userpilot.config.token, "user-2"))
         eventStore.events = [older]
 
-        let batch = try captureRestoredBatch()
+        let published = publishedEventNamesDuringRestore()
 
-        XCTAssertEqual(batch.count, 1)
+        XCTAssertTrue(published.isEmpty)
     }
 
     private func captureRestoredBatch(
@@ -299,13 +299,11 @@ class OfflineEventsHandlerTests: XCTestCase {
     }
 
     func testRestore_preservesTheOrderTheStoreReturnsForMixedRows() throws {
-        handler.saveEventToLocalStorage(
-            event: Event(type: .screen("Home")), clearStoredEventsFirst: false)
+        handler.saveEventToLocalStorage(event: Event(type: .screen("Home")))
         handler.saveSDKEventToLocalStorage(
             MockSDKEvent(
                 eventName: "dismissed_mobile_content", eventPayload: ["mobile_content_id": 42]))
-        handler.saveEventToLocalStorage(
-            event: Event(type: .event("purchase")), clearStoredEventsFirst: false)
+        handler.saveEventToLocalStorage(event: Event(type: .event("purchase")))
 
         let events = try captureRestoredBatch()
 

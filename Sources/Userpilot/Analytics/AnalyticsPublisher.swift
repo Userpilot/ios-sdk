@@ -35,7 +35,7 @@ internal protocol AnalyticsPublishing: AnyObject {
     func reset()
 
     /// Logout user from socket
-    func logout(clearCachedIdentifyEvent: Bool)
+    func logout()
 
     /// check socket state
     var canRequestEvent: Bool { get }
@@ -100,33 +100,26 @@ extension AnalyticsPublishing {
  */
 internal class AnalyticsPublisher {
 
-    // MARK: - Properties
+    // MARK: - Dependencies
 
-    /// A weak reference to ExperienceRendering would be expected here to avoid a retain cycle with AnalyticsPublisher
+    // Keep the container and owner weak to avoid retaining the service graph.
     private weak var container: DIContainer?
-
-    /// Weak reference to the owning `Userpilot` instance.
     private weak var userpilot: Userpilot?
-
-    /// The configuration settings for the `Userpilot` SDK.
     private let config: Userpilot.Config
-
-    /// SDK logger.
     private let logger: Logging
-
-    /// The storage used to store user-related data.
     private let storage: DataStoring
-
-    /// The experience publisher.
+    private let screenNameTracker: ScreenNameTracking
+    private let socketManager: SocketManaging
+    private let offlineEventsHandler: OfflineEventsHandling
+    private let networkMonitor: NetworkMonitoring
+    private let userSessionStateMachine: UserSessionStateManaging
+    // Resolve circular dependencies on demand, after their registration completes.
     private weak var experiencesPublisher: ExperiencesPublishing? {
         return container?.resolve(ExperiencesPublishing.self)
     }
-
-    /// Session monitoring to track app state
     private weak var sessionMonitorer: SessionMonitoring? {
         return container?.resolve(SessionMonitoring.self)
     }
-
     /// Push notification monitoring, used to re-assert the device token for a returning user.
     ///
     /// `AnalyticsPublishing` is registered *before* `PushNotificationMonitoring` in
@@ -136,21 +129,6 @@ internal class AnalyticsPublisher {
         return container?.resolve(PushNotificationMonitoring.self)
     }
 
-    /// The screen name tracker.
-    private let screenNameTracker: ScreenNameTracking
-
-    /// Manages socket connections and event publishing over web socket.
-    private let socketManager: SocketManaging
-
-    /// Offline events handler for managing local storage and batch sending.
-    private let offlineEventsHandler: OfflineEventsHandling
-
-    /// Network monitor to check initial network readiness.
-    private let networkMonitor: NetworkMonitoring
-
-    /// The user session state machine.
-    private let userSessionStateMachine: UserSessionStateManaging
-
     // MARK: - Queues & State
 
     /// Internal SDK events cached while the socket is reconnecting. Responses are
@@ -159,7 +137,7 @@ internal class AnalyticsPublisher {
     ///
     /// `EventQueue` and not a plain array: the cache is appended from the caller's thread (main,
     /// for the experience view models) but drained from whichever thread runs the processing
-    /// cycle — including `watchdogQueue`. The single-flight gate does not cover it, because
+    /// cycle. The single-flight gate does not cover it, because
     /// `publishInternalSDKEvent` appends *before* claiming the cycle.
     private lazy var cachedSDKEvents = EventQueue<SDKEvent>()
 
@@ -175,8 +153,7 @@ internal class AnalyticsPublisher {
     private var startSession = true
 
     /// Serialized live analytics event queue. The head stays enqueued until its
-    /// socket ACK arrives (peek-then-dequeue-on-ACK), so a watchdog restart can
-    /// re-attempt the same head without duplicating an acknowledged send.
+    /// socket success, error, or timeout callback arrives.
     private lazy var eventsQueue = EventQueue<Event>()
 
     /// Holds events until the network monitor produces its first reliable state.
@@ -185,14 +162,9 @@ internal class AnalyticsPublisher {
     /// Single-flight gate: exactly one processing cycle may be in flight.
     private lazy var isProcessingEvent: AtomicReference<Bool> = AtomicReference(false)
 
-    /// Watchdog for a stuck processing cycle (no socket callback arrived at all).
-    private var processingWatchdog: DispatchWorkItem?
-
-    /// Real-time queue for the watchdog, decoupled from event processing.
-    private let watchdogQueue = DispatchQueue(
-        label: Constants.DispatchQueues.analyticsWatchdog,
-        qos: .utility
-    )
+    /// True only while an old user's transport is intentionally closing. Events admitted after
+    /// the switch already belong to the new user and must remain queued during this short window.
+    private lazy var isRestartingSocketForUserSwitch = AtomicReference(false)
 
     // MARK: - Initialization
 
@@ -247,9 +219,10 @@ extension AnalyticsPublisher: AnalyticsPublishing {
     func flush() {
         tryCatch {
             let events = eventsQueue.getAndClear()
+            let hasPendingUserSwitch = userSessionStateMachine.isUserSwitching()
             // A user switch discards the queue and caches only the latest requested identity.
-            if let latestIdentify = events.last(where: { $0.isIdentifyEvent }),
-               events.contains(where: { $0.isIdentifyEvent && $0.userId != storage.userId }) {
+            if hasPendingUserSwitch,
+               let latestIdentify = events.last(where: { $0.isIdentifyEvent }) {
                 storage.temporaryUser = latestIdentify.toUser().toJson()
                 eventsQueue.enqueue(latestIdentify)
             } else {
@@ -265,21 +238,18 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 }
             }
             closeSocket()
-            userSessionStateMachine.markUserBackFromBackground()
+            if !hasPendingUserSwitch {
+                userSessionStateMachine.markUserBackFromBackground()
+            }
             resetProcessingEventStatus()
         }
     }
 
     /**
-     * Clears all cached data and closes the socket connection.
-     *
-     * - Parameter clearCachedIdentifyEvent: If true, indicates this logout comes from app level,
-     *        meaning the user is logged out and there is no new login. This will clear the
-     *        push token from the backend. On user switch, the backend handles clearing the
-     *        push token from the old user.
+     * Clears all cached data and closes the socket connection for an app-level logout.
      */
-    func logout(clearCachedIdentifyEvent: Bool = false) {
-        if clearCachedIdentifyEvent && canRequestEvent {
+    func logout() {
+        if canRequestEvent {
             if let token = storage.pushToken {
                 publishInternalSDKEvent(
                     UserLogoutEvent(
@@ -295,9 +265,8 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         experiencesPublisher?.logout()
         // Clear seen contents from screenSessionStateMachine
         screenSessionStateMachine?.resetState()
-        // Clear SDK requests for the old user; retain queued analytics during a switch
-        // so the new user's identify can re-establish the connection.
-        clearAllCachedProperties(clearCachedIdentifyEvent)
+        // App logout is a full teardown. User switching is handled at identify admission.
+        clearAllCachedProperties()
         // Old-user offline events must never replay under a new user
         offlineEventsHandler.clearLocalEvents()
         // Close socket connection
@@ -310,14 +279,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      */
     func resume() {
         updateSessionState()
-        if let userId = getUserIdFromQueue() {
-            // Preserve the switch before the socket adopts the queued user's channel.
-            if storage.userId.isNotEmpty, userId != storage.userId {
-                userSessionStateMachine.markUserSwitch()
-            }
-            updateUserId(userId)
-        }
-        // connect() gates itself on the socket state - always safe to call
         if storage.userId.isNotEmpty { openSocket() }
     }
 
@@ -362,8 +323,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     func publish(_ event: Event, isInternalEvent: Bool) {
         tryCatch {
-            var event = event
-
             // Keep experience targeting on the current screen immediately — events
             // queue now, and targeting must not lag behind navigation.
             if let screenTitle = event.screenTitle {
@@ -373,34 +332,66 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             // Handle app state - drop events when app is not in active state
             guard sessionMonitorer?.isAppActive ?? false else { return }
 
-            // Drop identify events that carry nothing new. Non-identify events skip this.
-            if event.isIdentifyEvent, didHandleIdentifyEvent(event) { return }
+            // Identity ownership changes as soon as an identify is accepted. A nil decision means
+            // the identify is unchanged and suppressed; non-identify events are always admitted.
+            guard let didSwitchUser = handleEventAdmission(event) else { return }
+            routeAcceptedEvent(
+                event,
+                isInternalEvent: isInternalEvent,
+                didSwitchUser: didSwitchUser
+            )
+        }
+    }
 
+    /// Routes an event that already passed app-state and identify admission.
+    private func routeAcceptedEvent(
+        _ event: Event,
+        isInternalEvent: Bool,
+        didSwitchUser: Bool
+    ) {
+        tryCatch {
             // Hold events while network monitor is still resolving initial state
             if !networkMonitor.isReady {
                 initialQueue.enqueue(event, isInternalEvent: isInternalEvent)
+                finishUserSwitchRoutingIfNeeded(didSwitchUser, shouldConnect: false)
                 return
             }
 
             // Network monitor is ready and reports no network: persist locally
             if offlineEventsHandler.shouldSaveOffline {
-                if event.isScreenEvent, !shouldStoreScreenEventOffline(event) { return }
+                if event.isScreenEvent,
+                   !setupScreenEvent(event),
+                   experiencesPublisher?.canRequestScreenEvent() != true {
+                    return
+                }
                 if rejectsAutoCaptureWithoutScreen(event) { return }
                 // Something needs sending and we believe we are offline, so this is the moment
                 // to re-verify. `NWPathMonitor` only reports interface transitions, so a probe
                 // that failed while the interface stayed up never retries on its own. The call
                 // is throttled inside the monitor, so a burst of events is still one probe.
                 networkMonitor.recheckIfOffline()
-                handleOfflineEvent(event)
+                offlineEventsHandler.saveEventToLocalStorage(event: event)
+                finishUserSwitchRoutingIfNeeded(didSwitchUser, shouldConnect: false)
                 return
             }
 
             // Check if socket is in shutdown state
-            // For example: getting event while logging out, ignore the event
-            guard !socketManager.isShutdownState else { return }
+            // App logout still rejects events. An intentional user-switch shutdown is different:
+            // the identity has already changed, so following events belong in the new user's queue.
+            guard !socketManager.isShutdownState
+                || isRestartingSocketForUserSwitch.value else { return }
 
             // Valid state to process the event - add it to the events queue
             cacheEvent(event, isInternalEvent: isInternalEvent)
+
+            // The new identify is safely retained. Only now may the old transport be closed.
+            if didSwitchUser {
+                finishUserSwitchRoutingIfNeeded(true, shouldConnect: true)
+                return
+            }
+
+            // A close already in progress will reconnect from onSocketClosed.
+            guard !socketManager.isShutdownState else { return }
 
             // If socket is joining, the event waits in the queue until the
             // connection is established (drained from onSocketOpened)
@@ -409,35 +400,78 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             if canRequestEvent {
                 processEvent()
             } else {
-                handleClosedSocket(event)
+                // A track/screen after app logout has no owner and cannot open a socket.
+                guard storage.userId.isNotEmpty else { return }
+                openSocket()
             }
         }
     }
 
-    /**
-     * Records an offline screen event in the screen session and reports whether it is worth
-     * persisting.
-     *
-     * The state update always runs: screen state is local bookkeeping, so it must not wait for
-     * the network. `setupScreenEvent(_:)` is the only place a new screen session starts with an
-     * empty seen set, and restored offline events go to the backend as a raw batch that never
-     * re-enters `screen(_:)` - so navigation performed offline would otherwise stay invisible to
-     * the session, and content already seen on a screen would remain suppressed when the user
-     * came back to it online.
-     *
-     * The verdict mirrors `screen(_:)`: a move to a different screen is always kept, while a
-     * repeat of the screen the user is already on is kept only when
-     * `ExperiencesPublishing.canRequestScreenEvent()` allows it. Without that second check the
-     * screen event the host surface re-emits when a Userpilot experience is dismissed - dropped
-     * outright while online - would be persisted and later replayed as a genuine screen view,
-     * making the backend re-evaluate content for a screen the user never actually re-entered.
-     *
-     * - Parameter event: The offline screen event to record
-     * - Returns: true when the event should be persisted
-     */
-    private func shouldStoreScreenEventOffline(_ event: Event) -> Bool {
-        let isNewScreen = setupScreenEvent(event)
-        return isNewScreen || experiencesPublisher?.canRequestScreenEvent() == true
+    /// Classifies an event and applies identity changes before network-specific routing.
+    ///
+    /// - Returns: nil when an unchanged identify should be suppressed; otherwise whether the event
+    ///   changed the current user.
+    private func handleEventAdmission(_ event: Event) -> Bool? {
+        guard event.isIdentifyEvent else {
+            return false
+        }
+
+        let carriesNoNewData = storage.user.isNotEmpty
+            && User.fromJson(storage.user).isSameIdentifyEvent(event: event)
+        let matchesPendingIdentify = storage.temporaryUser.map {
+            User.fromJson($0).isSameIdentifyEvent(event: event)
+        } ?? false
+        guard !carriesNoNewData, !matchesPendingIdentify else { return nil }
+
+        storage.temporaryUser = event.toUser().toJson()
+
+        guard let userId = event.userId, !userId.isEmpty else {
+            return false
+        }
+
+        let previousUserId = storage.userId
+        guard previousUserId.isNotEmpty, previousUserId != userId else {
+            storage.userId = userId
+            return false
+        }
+
+        userSessionStateMachine.markUserSwitch()
+        startSession = true
+        experiencesPublisher?.logout()
+        screenSessionStateMachine?.resetState()
+
+        // The caller selected immediate isolation: no unsent data from the previous user survives.
+        eventsQueue.clear()
+        initialQueue.clear()
+        cachedSDKEvents.clear()
+        offlineEventsHandler.clearLocalEvents()
+        resetProcessingEventStatus()
+
+        userpilot?.clean()
+        storage.userId = userId
+        return true
+    }
+
+    /// Restarts an old user's transport only after the new identify has been retained.
+    private func finishUserSwitchRoutingIfNeeded(
+        _ didSwitchUser: Bool,
+        shouldConnect: Bool
+    ) {
+        guard didSwitchUser else { return }
+
+        if socketManager.isSocketOpened
+            || socketManager.isJoiningSocket
+            || socketManager.isShutdownState {
+            isRestartingSocketForUserSwitch.value = true
+            if !socketManager.isShutdownState {
+                closeSocket()
+            }
+            return
+        }
+
+        if shouldConnect {
+            openSocket()
+        }
     }
 
     /**
@@ -461,101 +495,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         return true
     }
 
-    /**
-     * Persists an event to local storage while offline.
-     * On an offline user switch the old user's stored events are cleared first,
-     * because batch items carry no user id.
-     */
-    private func handleOfflineEvent(_ event: Event) {
-        let isOfflineUserSwitch = isUserSwitchIdentifyEvent(event)
-
-        // Android parity: once a different user is identified, every following
-        // offline event belongs to that user, and old persisted events are cleared
-        // before this identify is saved.
-        if event.isIdentifyEvent, let userId = event.userId, !userId.isEmpty {
-            updateUserId(userId)
-        }
-
-        offlineEventsHandler.saveEventToLocalStorage(
-            event: event,
-            clearStoredEventsFirst: isOfflineUserSwitch
-        )
-    }
-
-    /**
-     * Drops identify events that carry nothing new, and caches the pending user for the rest.
-     *
-     * - Parameter event: The identify event to handle
-     * - Returns: true if the event should be ignored, false if processing should continue
-     */
-    private func didHandleIdentifyEvent(_ event: Event) -> Bool {
-        // A pending identify has not reached the backend yet, so a closed socket means
-        // `onSocketClosed` is replaying it, not a fresh host-app call. A replay must go through or
-        // the reconnect never re-identifies the user.
-        let isPendingReplay = storage.temporaryUser != nil && !socketManager.isSocketOpened
-        let carriesNoNewData = storage.user.isNotEmpty
-            && User.fromJson(storage.user).isSameIdentifyEvent(event: event)
-
-        let shouldIgnore = carriesNoNewData && !isPendingReplay
-        // Update temporary cached user in storage
-        if !shouldIgnore { storage.temporaryUser = event.toUser().toJson() }
-        return shouldIgnore
-    }
-
-    /**
-     * Handles events when socket is closed by attempting to open connection.
-     *
-     * - Parameter event: The event to handle
-     */
-    private func handleClosedSocket(_ event: Event) {
-        // Update userId from cached identify event or current event
-        updateUserIdFromEvent(event)
-
-        // Only proceed if we have a valid userId.
-        // This could be a valid case when user logged out and sent track or screen
-        // event; in this case return and don't process the event, ignore it.
-        guard !storage.userId.isEmpty else { return }
-
-        openSocket()
-    }
-
-    /**
-     * Updates the stored user ID from the event, prioritizing current event over cached identify event.
-     *
-     * - Parameter event: The event containing potential user ID
-     */
-    private func updateUserIdFromEvent(_ event: Event) {
-        // When socket is closed then handle user session state
-        if event.isIdentifyEvent {
-            if storage.userId == event.userId {
-                userSessionStateMachine.markAwaitingInitialScreen()
-            } else {
-                userSessionStateMachine.markUserSwitch()
-            }
-        }
-
-        if let userId = event.userId, !userId.isEmpty {
-            updateUserId(userId)
-        } else if let cachedUserId = getUserIdFromQueue() {
-            updateUserId(cachedUserId)
-        }
-    }
-
-    /// SDK requests belong to the current user, even when no socket is connected yet.
-    private func updateUserId(_ userId: String) {
-        if storage.userId.isNotEmpty, storage.userId != userId {
-            cachedSDKEvents.clear()
-        }
-        storage.userId = userId
-    }
-
-    private func isUserSwitchIdentifyEvent(_ event: Event?) -> Bool {
-        guard let event else { return false }
-        return event.isIdentifyEvent
-            && storage.userId.isNotEmpty
-            && event.userId != storage.userId
-    }
-
     // MARK: - Serialized Event Processing
 
     /**
@@ -563,21 +502,19 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      *
      * Priority order:
      * 1. Persisted offline events (restored and sent as one batch).
-     * 2. Cached internal SDK events.
-     * 3. The head of the live analytics queue.
+     * 2. A pending identify at the live queue head.
+     * 3. Cached internal SDK events.
+     * 4. The head of the live analytics queue.
      *
      * The head event is sent with a peek — it is dequeued only when its socket
      * ACK arrives in `onSocketEventSent`. The cycle is released by the socket
-     * callbacks (ok/error/timeout), socket close, flush, or the watchdog.
+     * callbacks (ok/error/timeout), socket close, or flush.
      */
     private func processEvent() {
         tryCatch {
             // Single-flight gate: only one processing cycle may run
             guard isProcessingEvent.compareAndSet(expected: false, new: true) else { return }
-            scheduleProcessingWatchdog()
-
-            // Bail out when the socket can't accept events (e.g. a watchdog retry
-            // after a disconnect) — publishing into a dead channel never resolves.
+            // Keep queued events pending while the socket cannot accept them.
             // A half-open transport is recovered by SocketManager on the next
             // connect attempt. onSocketOpened restarts processing.
             guard canRequestEvent else {
@@ -585,11 +522,16 @@ extension AnalyticsPublisher: AnalyticsPublishing {
                 return
             }
 
-            if isUserSwitchIdentifyEvent(eventsQueue.getFirst()) {
-                offlineEventsHandler.clearLocalEvents()
+            if restoreOfflineEventsIfNeeded() {
+                return
             }
 
-            if restoreOfflineEventsIfNeeded() {
+            // A newly selected user must be identified before any SDK request admitted after the
+            // switch. Those requests are already safe to keep, but must not overtake this head.
+            if let event = eventsQueue.getFirst(), event.isIdentifyEvent {
+                if !publishQueuedEvent(event) {
+                    skipHeadEvent()
+                }
                 return
             }
 
@@ -674,11 +616,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
      * - Parameter event: The event to cache
      */
     private func cacheEvent(_ event: Event, isInternalEvent: Bool = false) {
-        // An empty user id means the queue is orphaned (app-level logout) and must not leak into
-        // the next user's session. A user switch is the exception: `clean()` blanks the id while
-        // the new user's identify is still pending, and the queue already holds that user's
-        // events — clearing here would drop them (e.g. a screen tracked right after `identify`).
-        if storage.userId.isEmpty, storage.temporaryUser.orEmpty().isEmpty {
+        // An empty user id means the queue is orphaned after app-level logout.
+        // Identify admission always selects a non-empty id before reaching this method.
+        if storage.userId.isEmpty {
             eventsQueue.clear()
         }
         if event.isScreenEvent,
@@ -687,7 +627,7 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         }
         switch event.type {
         case .event, .autoCaptureEvent:
-            if eventThrottle.shouldThrottle(eventTitle: trackEventThrottleKey(event)) { return }
+            if eventThrottle.shouldThrottle(eventTitle: event.trackEventThrottleKey()) { return }
         default:
             break
         }
@@ -696,25 +636,9 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
     // MARK: - Event Senders
 
-    /**
-     * Identifies the user and handles the identify event.
-     * If a new user ID is detected, it closes the socket and cleans up for user switching;
-     * the queued identify is re-published from `onSocketClosed`.
-     *
-     * - Parameter event: The identify event containing user information
-     * - Returns: true when a push went out or the switch is being handled asynchronously
-     */
+    /// Sends an identify that already passed identity admission.
     private func identify(_ event: Event) -> Bool {
-        guard let userId = event.userId else { return false }
-
-        // If new user ID detected, close socket and clean up while it's connected
-        if storage.userId.isNotEmpty && userId != storage.userId {
-            // Mark as switch so the post-identify fake reload will be false
-            userSessionStateMachine.markUserSwitch()
-            userpilot?.clean()
-            logout(clearCachedIdentifyEvent: false)
-            return true
-        }
+        guard event.userId != nil else { return false }
 
         socketManager.publish(event.eventName, payload: identifyPayload(for: event))
 
@@ -732,18 +656,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
             payload[Constants.Analytics.identifyCompanyProperty] = company
         }
         return payload
-    }
-
-    /**
-     * Re-publishes the device push token alongside an acknowledged identify.
-     *
-     * `PushNotificationMonitor.setPushToken` only publishes when the token value changes, so a
-     * returning user whose token is unchanged would otherwise never re-pair token ↔ user on the
-     * backend. Called once the identify is on the backend so it sees the user first.
-     */
-    private func syncPushToken() {
-        guard canRequestEvent else { return }
-        pushNotificationMonitor?.resyncPushToken()
     }
 
     /**
@@ -791,60 +703,6 @@ extension AnalyticsPublisher: AnalyticsPublishing {
         broadcastEvent(event, event.eventTitle, properties: payload)
         socketManager.publish(event.eventName, payload: payload)
         return true
-    }
-
-    // MARK: - Throttle Keys
-
-    /**
-     * Stable key for event throttling.
-     * Non-AutoCapture events use `eventTitle`, or `eventName` when
-     * the title is empty; autocapture uses screen + interaction/tab context.
-     */
-    private func trackEventThrottleKey(_ event: Event) -> String {
-        guard case .autoCaptureEvent = event.type else {
-            let eventTitle = event.eventTitle
-            return eventTitle.isEmpty ? event.eventName : eventTitle
-        }
-
-        let properties = event.properties ?? [:]
-        func prop(_ key: String) -> String {
-            trackEventThrottleString(from: properties[key])
-        }
-
-        let rawInteraction = prop(Constants.AutoCapture.rawInteractionType)
-
-        return [
-            trackEventThrottleScreenName(from: event.screen),
-            event.eventName,
-            rawInteraction.isEmpty ? (event.interactionEventName ?? "") : rawInteraction,
-            prop(Constants.AutoCapture.tabName),
-            prop(Constants.AutoCapture.tabIndex),
-            prop(Constants.AutoCapture.hierarchy),
-            prop(Constants.AutoCapture.accessibilityIdentifier),
-            prop(Constants.AutoCapture.dialogTitle),
-            prop(Constants.AutoCapture.targetText),
-            prop(Constants.AutoCapture.section),
-            prop(Constants.AutoCapture.selectedIndex),
-            prop(Constants.AutoCapture.selectedValue),
-            prop(Constants.AutoCapture.placeholder),
-            prop(Constants.AutoCapture.accessibilityLabel)
-        ].joined(separator: "|")
-    }
-
-    /// Resolves a display class for throttling from `Event.screen` (set on autocapture events via `makeEvent`).
-    private func trackEventThrottleScreenName(from screen: Payload) -> String {
-        guard let screen, !screen.isEmpty else { return "" }
-        if let name = screen[Constants.AutoCapture.screenClass] as? String, !name.isEmpty { return name }
-        if let name = screen[Constants.AutoCapture.screenTitle] as? String, !name.isEmpty { return name }
-        if let name = screen[Constants.AutoCapture.screenName] as? String, !name.isEmpty { return name }
-        return ""
-    }
-
-    private func trackEventThrottleString(from value: Any?) -> String {
-        guard let value else { return "" }
-        if let string = value as? String { return string }
-        if let number = value as? NSNumber { return number.stringValue }
-        return String(describing: value)
     }
 
     // MARK: - Screen Management
@@ -898,45 +756,12 @@ extension AnalyticsPublisher: AnalyticsPublishing {
 
 }
 
-// MARK: - Watchdog & Processing Gate
+// MARK: - Processing Gate
 
 extension AnalyticsPublisher {
 
-    /**
-     * Schedules the stuck-cycle watchdog. Scheduled at the top of every claimed
-     * processing cycle; cancelled by `resetProcessingEventStatus()` from every
-     * socket resolution path.
-     *
-     * The interval is deliberately kept above the socket push timeout so socket
-     * ok/error/timeout callbacks always resolve the in-flight event first — the
-     * watchdog only fires when NO callback arrived at all (e.g. the push never
-     * left because the channel wasn't ready).
-     */
-    private func scheduleProcessingWatchdog() {
-        processingWatchdog?.cancel()
-
-        let watchdog = DispatchWorkItem { [weak self] in
-            guard let self, self.isProcessingEvent.value else { return }
-            // Watchdog recovery for a stuck processing cycle.
-            // If no socket resolution callback arrives (success, error, timeout, or close),
-            // reset the processing gate and retry the current queue head.
-            // This prevents the queue from stalling, but it is not a strict no-duplicate guarantee.
-            self.logger.error("⏱️ Event processing stuck with no socket callback, restarting queue")
-            self.resetProcessingEventStatus()
-            self.processEvent()
-        }
-
-        processingWatchdog = watchdog
-        watchdogQueue.asyncAfter(
-            deadline: .now() + Constants.Analytics.stuckProcessingWatchdog,
-            execute: watchdog
-        )
-    }
-
-    /// Releases the single-flight gate and cancels the pending watchdog.
+    /// Releases the single-flight gate.
     private func resetProcessingEventStatus() {
-        processingWatchdog?.cancel()
-        processingWatchdog = nil
         isProcessingEvent.value = false
     }
 
@@ -965,29 +790,39 @@ extension AnalyticsPublisher: SocketSubscription {
      */
     func onSocketOpened() {
         tryCatch {
+            isRestartingSocketForUserSwitch.value = false
             processEvent()
         }
     }
 
     /**
      * Socket closed callback.
-     * Handles user-switch reconnection: when the close came from switching users the
-     * new user's identify is still at the head of the queue and is re-published here.
+     * Handles user-switch reconnection without removing the identify already at the queue head.
      */
     func onSocketClosed() {
         tryCatch {
             resetProcessingEventStatus()
+            let wasRestartingForUserSwitch = isRestartingSocketForUserSwitch.value
+            isRestartingSocketForUserSwitch.value = false
+
+            // Background close: keep the accepted queue as-is. resume() reconnects using the user
+            // selected at identify admission.
+            guard sessionMonitorer?.isAppActive ?? false else { return }
+
+            // An intentional switch owns recovery even if the old channel happened to be errored.
+            if wasRestartingForUserSwitch {
+                if storage.userId.isNotEmpty, !eventsQueue.isEmpty() {
+                    openSocket()
+                }
+                return
+            }
+
             // Socket closed from error state, don't reopen, keep events for next open
             if socketManager.didCloseFromError { return }
-            // Background close: keep the queue as-is (a queued new-user identify is
-            // picked up by resume() on foreground). Re-publishing here would hit the
-            // app-inactive guard and silently drop the event.
-            guard sessionMonitorer?.isAppActive ?? false else { return }
-            // Events still queued: the close came from a user switch, reopen the
-            // socket keeping the identify event as the first event to process
-            if let event = eventsQueue.dequeue() {
-                userSessionStateMachine.markUserSwitch()
-                publish(event, isInternalEvent: true)
+
+            // The queue already owns every accepted event. Reconnect without dequeue/republish.
+            if storage.userId.isNotEmpty, !eventsQueue.isEmpty() {
+                openSocket()
             }
         }
     }
@@ -1031,7 +866,9 @@ extension AnalyticsPublisher: SocketSubscription {
                 // The token senders are value-guarded, so a returning user whose token is unchanged
                 // would otherwise never re-pair token ↔ user. Once the identify is on the backend,
                 // re-assert it so the pairing is always restated alongside the user.
-                syncPushToken()
+                if canRequestEvent {
+                    pushNotificationMonitor?.resyncPushToken()
+                }
             }
 
             if eventName == Constants.Event.screenEvent {
@@ -1068,7 +905,8 @@ extension AnalyticsPublisher: NetworkMonitoringDelegate {
         let pendingEvents = initialQueue.getAndClear()
         guard !pendingEvents.isEmpty else { return }
         pendingEvents.forEach { event in
-            publish(event)
+            guard sessionMonitorer?.isAppActive ?? false else { return }
+            routeAcceptedEvent(event, isInternalEvent: false, didSwitchUser: false)
         }
     }
 
@@ -1078,17 +916,12 @@ extension AnalyticsPublisher: NetworkMonitoringDelegate {
 
 private extension AnalyticsPublisher {
 
-    /**
-     * Clears cached SDK requests on every logout; user switches retain queued analytics.
-     *
-     * - Parameter clearCachedIdentifyEvent: Whether to clear the cached identify event
-     */
-    private func clearAllCachedProperties(_ clearCachedIdentifyEvent: Bool = false) {
+    /// Clears all pending work for an app-level logout.
+    private func clearAllCachedProperties() {
         cachedSDKEvents.clear()
-        guard clearCachedIdentifyEvent else { return }
         eventsQueue.clear()
         initialQueue.clear()
-        self.clearCachedIdentifyEvent()
+        clearCachedIdentifyEvent()
     }
 
     /** Clears the cached identify event after it has been successfully sent */
@@ -1173,24 +1006,16 @@ extension AnalyticsPublisher {
         }
     }
 
-    /// Pushes an SDK event onto the socket.
-    ///
-    /// Separate from `publishInternalSDKEvent` so the drain below cannot re-enter the
-    /// caching route above and put the event straight back into the cache it came from.
-    private func sendSDKEvent(_ sdkEvent: SDKEvent) {
-        socketManager.publish(
-            sdkEvent.eventName,
-            payload: sdkEvent.eventPayload
-        )
-    }
-
     /** Sends any cached SDK events while the socket can accept them */
     private func processSDKEvent() {
         tryCatch {
             // Socket readiness is checked before the dequeue, never after: taking an event the
             // socket cannot send would drop it.
             while canRequestEvent, let sdkEvent = cachedSDKEvents.dequeue() {
-                sendSDKEvent(sdkEvent)
+                socketManager.publish(
+                    sdkEvent.eventName,
+                    payload: sdkEvent.eventPayload
+                )
             }
         }
     }
@@ -1374,11 +1199,6 @@ extension AnalyticsPublisher {
         // every other registered instance's underlying UI as well. Route through
         // the resolver so all instances briefly suppress autocapture together.
         InstanceResolver.shared.suppressScreenAutoCaptureAfterSDKContent()
-    }
-
-    /// Acts as the cached identify event: the pending identify still in the queue.
-    func getUserIdFromQueue() -> String? {
-        eventsQueue.find(where: { $0.isIdentifyEvent })?.userId
     }
 
 }
