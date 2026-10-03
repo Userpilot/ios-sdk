@@ -50,26 +50,30 @@ internal final class AppFrameworkDetector {
     /// 3. `UIScene.didActivateNotification` (catches SwiftUI App lifecycle and
     ///    multi-scene apps).
     private func start() {
-        DispatchQueue.main.async { [weak self] in
-            self?.detectIfNeeded()
+        performOn(.main) { [weak self] in
+            guard let self else { return }
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(self.handleNotification),
+                name: UIWindow.didBecomeKeyNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(self.handleNotification),
+                name: UIScene.didActivateNotification,
+                object: nil
+            )
+            self.detectIfNeeded()
         }
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleNotification),
-            name: UIWindow.didBecomeKeyNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleNotification),
-            name: UIScene.didActivateNotification,
-            object: nil
-        )
     }
 
     @objc private func handleNotification() {
-        detectIfNeeded()
+        if Thread.isMainThread {
+            detectIfNeeded()
+        } else {
+            performOn(.main) { [weak self] in self?.detectIfNeeded() }
+        }
     }
 
     /// Performs a single detection attempt. Stops observing as soon as the
@@ -83,8 +87,10 @@ internal final class AppFrameworkDetector {
 
         guard let detected = Self.detect() else { return }
 
-        config.appFramework = detected
+        let didSetFramework = config.setDetectedAppFramework(detected)
         stopObserving()
+
+        guard didSetFramework else { return }
 
         config.logger.info(
             "🔎 Userpilot auto-detected app framework: %{public}@",

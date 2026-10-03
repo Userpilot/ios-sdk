@@ -47,8 +47,8 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     /// Associated object key for storing untracked screen flags
     internal static var untrackedScreenKey: UInt8 = 0
 
-    /// The current screen tracking payload
-    private var currentPayload: ScreenTrackingPayload?
+    /// UIKit and wrapper callers write screen context while analytics reads snapshots on other queues.
+    private let currentPayload = AtomicReference<ScreenTrackingPayload?>(nil)
 
     // MARK: - Initialization
 
@@ -63,18 +63,18 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     /// Updates the current screen with full payload
     /// - Parameter payload: The screen tracking payload
     func updateScreen(with payload: ScreenTrackingPayload) {
-        currentPayload = payload
+        currentPayload.value = payload
     }
 
     /// Returns the current screen tracking payload
     /// - Returns: The current screen payload or nil
     func getCurrentPayload() -> ScreenTrackingPayload? {
-        return currentPayload
+        return currentPayload.value
     }
 
     /// Builds a screen context dictionary from the current payload for event properties
     func buildScreenDictionary() -> [String: Any] {
-        guard let payload = currentPayload else {
+        guard let payload = currentPayload.value else {
             return [:]
         }
         return payload.toDictionary()
@@ -82,7 +82,12 @@ internal final class ScreenNameTracker: ScreenNameTracking {
 
     /// Builds a screen context dictionary from the current payload for event properties
     func buildScreenDictionaryForEvent() -> [String: String] {
-        guard let payload = currentPayload else {
+        Self.buildScreenDictionaryForEvent(from: currentPayload.value)
+    }
+
+    /// Builds every field from one retained snapshot, including callers that attach hierarchy metadata.
+    static func buildScreenDictionaryForEvent(from payload: ScreenTrackingPayload?) -> [String: String] {
+        guard let payload else {
             return [:]
         }
 
@@ -99,7 +104,7 @@ internal final class ScreenNameTracker: ScreenNameTracking {
     }
 
     func buildScreenDictionaryForWrapperEvent() -> [String: String] {
-        guard let payload = currentPayload else {
+        guard let payload = currentPayload.value else {
             return [:]
         }
 
@@ -113,6 +118,6 @@ internal final class ScreenNameTracker: ScreenNameTracking {
 
     /// Resets all tracked state to initial values
     func reset() {
-        currentPayload = nil
+        currentPayload.value = nil
     }
 }

@@ -50,7 +50,17 @@ extension Userpilot {
         /// is attached. Set explicitly via `appFramework(_:)` to override
         /// auto-detection (recommended when you want deterministic tagging
         /// from the very first event).
-        var appFramework: AppFramework?
+        var appFramework: AppFramework? {
+            get { appFrameworkState.value }
+            set { appFrameworkState.value = newValue }
+        }
+
+        private let appFrameworkState = AtomicReference<AppFramework?>(nil)
+
+        /// Runtime detection must not overwrite an explicit configuration racing with it.
+        func setDetectedAppFramework(_ framework: AppFramework) -> Bool {
+            appFrameworkState.compareAndSet(expected: nil, new: framework)
+        }
 
         /// Disable request push notifications permission by SDK.
         var disableRequestPushPermission: Bool = false

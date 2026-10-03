@@ -63,13 +63,8 @@ internal class AutoCaptureCoordinater {
 
     // MARK: - Dependencies
 
-    /// Publishes enriched analytics events to the configured backend.
     private let analyticsPublisher: AnalyticsPublishing
-
-    /// SDK configuration: holds feature flags, framework info, and the logger.
     private let config: Userpilot.Config
-
-    /// Tracks the current screen name/class and navigation history.
     private let screenNameTracker: ScreenNameTracking
 
     /// Process-wide instance registry, injected so the external-source forwarding
@@ -79,11 +74,11 @@ internal class AutoCaptureCoordinater {
     /// Protects pending SwiftUI screen state and SDK-content dismissal suppression.
     private let screenCaptureStateLock = NSLock()
 
-    /// Pending SwiftUI hosting screen payload used to coalesce parent/child hosting appearances.
-    private var pendingSwiftUIScreenPayload: ScreenTrackingPayload?
+    /// The identity is checked again on main so suppression or stop can invalidate queued delivery.
+    private var pendingSwiftUIScreenID: UUID?
 
-    /// Work item for delayed SwiftUI screen publication.
-    private var pendingSwiftUIScreenWorkItem: DispatchWorkItem?
+    /// DelayUtils synchronizes scheduling and cancellation; callbacks run on main.
+    private let swiftUIScreenDelay = DelayUtils()
 
     /// Ignore automatic screen events until this date, used after SDK content fake reloads.
     private var suppressScreenCaptureUntil: Date?
@@ -101,20 +96,10 @@ internal class AutoCaptureCoordinater {
 
     // MARK: - Computed Helpers
 
-    /// Reusable internal properties shared across all events.
-    /// Provides UIFramework tagging for every event without repetition.
-
-    /// Returns the current screen dictionary, or nil if screen context is unavailable.
-    /// Centralises the nil-check so call sites stay clean.
-    private var currentScreenDictionary: [String: Any]? {
-        guard screenNameTracker.getCurrentPayload() != nil else { return nil }
-        return screenNameTracker.buildScreenDictionaryForEvent()
-    }
-
-    /// same as currentScreenDictionary but for wrappers
+    /// Captures wrapper context once so reset or another screen cannot split the presence check and read.
     private var currentScreenDictionaryForWrappers: [String: Any]? {
-        guard screenNameTracker.getCurrentPayload() != nil else { return nil }
-        return screenNameTracker.buildScreenDictionaryForWrapperEvent()
+        guard let screen = screenNameTracker.getCurrentPayload() else { return nil }
+        return [Constants.AutoCapture.screenTitle: screen.screenClass]
     }
 
     // MARK: - Initialization
@@ -217,15 +202,11 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
     /// cancels any pending SwiftUI coalesced screen event and suppresses automatic screen capture
     /// briefly while UIKit/SwiftUI settles back to the already tracked screen.
     func suppressScreenAutoCaptureAfterSDKContent() {
-        screenCaptureStateLock.lock()
-        let workItem = pendingSwiftUIScreenWorkItem
-        pendingSwiftUIScreenWorkItem?.cancel()
-        pendingSwiftUIScreenWorkItem = nil
-        pendingSwiftUIScreenPayload = nil
-        suppressScreenCaptureUntil = Date().addingTimeInterval(sdkContentDismissalSuppressionInterval)
-        screenCaptureStateLock.unlock()
-
-        workItem?.cancel()
+        screenCaptureStateLock.withLock {
+            pendingSwiftUIScreenID = nil
+            swiftUIScreenDelay.cancelDelay()
+            suppressScreenCaptureUntil = Date().addingTimeInterval(sdkContentDismissalSuppressionInterval)
+        }
     }
 
     // MARK: - Tab Tracking
@@ -233,6 +214,7 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
     func handleTabSelected(name tabName: String, index tabIndex: Int, screenClass: String) {
         guard isInteractionTrackingActive else { return }
 
+        let screen = screenNameTracker.getCurrentPayload()
         let interactionType = InteractionType.tabSelected
         var properties = buildTabProperties(name: tabName, index: tabIndex)
         let internalProps = buildInternalProperties(for: interactionType)
@@ -247,12 +229,13 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
         if !leaf.isEmpty {
             let escaped = leaf.replacingOccurrences(of: "\"", with: "\\\"")
             properties[Constants.AutoCapture.hierarchy] = "\(escaped):attr__index=\"\(tabIndex)\""
-            appendScreenNameSegmentToHierarchy(&properties)
+            appendScreenNameSegmentToHierarchy(&properties, screen: screen)
         }
 
         let event = makeEvent(
             type: EventType.autoCaptureEvent,
             properties: properties,
+            screen: screen,
             interactionEventName: interactionType.toInteractionEventType().rawValue
         )
 
@@ -281,6 +264,10 @@ extension AutoCaptureCoordinater: AutoCaptureCoordinating {
 
     func stopAutoCapture() {
         stoppedState.value = true
+        screenCaptureStateLock.withLock {
+            pendingSwiftUIScreenID = nil
+            swiftUIScreenDelay.cancelDelay()
+        }
     }
 
     func resumeAutoCapture() {
@@ -300,17 +287,12 @@ private extension AutoCaptureCoordinater {
     /// reload event. When the window expires this property clears the stored date and allows normal
     /// screen capture to resume.
     var shouldSuppressScreenAutoCapture: Bool {
-        screenCaptureStateLock.lock()
-        defer { screenCaptureStateLock.unlock() }
-
-        guard let suppressScreenCaptureUntil else { return false }
-
-        if Date() < suppressScreenCaptureUntil {
-            return true
+        screenCaptureStateLock.withLock {
+            guard let suppressScreenCaptureUntil else { return false }
+            if Date() < suppressScreenCaptureUntil { return true }
+            self.suppressScreenCaptureUntil = nil
+            return false
         }
-
-        self.suppressScreenCaptureUntil = nil
-        return false
     }
 
     /// `true` when interaction tracking is enabled for this instance and not paused
@@ -339,46 +321,29 @@ private extension AutoCaptureCoordinater {
     ///
     /// - Parameter screen: The latest SwiftUI hosting-controller screen payload.
     func coalesceSwiftUIScreen(_ screen: ScreenTrackingPayload) {
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.publishPendingSwiftUIScreenIfAllowed()
+        screenCaptureStateLock.withLock {
+            guard !isStopped else { return }
+            let identifier = UUID()
+            pendingSwiftUIScreenID = identifier
+            swiftUIScreenDelay.delayAction(delayTime: swiftUIScreenCoalescingDelay) { [weak self] in
+                self?.publishPendingSwiftUIScreenIfAllowed(screen, identifier: identifier)
+            }
         }
-
-        screenCaptureStateLock.lock()
-        let previousWorkItem = pendingSwiftUIScreenWorkItem
-        pendingSwiftUIScreenPayload = screen
-        pendingSwiftUIScreenWorkItem = workItem
-        screenCaptureStateLock.unlock()
-
-        previousWorkItem?.cancel()
-        DispatchQueue.main.asyncAfter(
-            deadline: .now() + swiftUIScreenCoalescingDelay,
-            execute: workItem
-        )
     }
 
-    /// Publishes the latest coalesced SwiftUI hosting payload if suppression is not active.
-    ///
-    /// This method runs from the delayed coalescing work item and owns the lock while it reads and
-    /// clears pending state. The actual publish happens after unlocking to avoid holding state lock
-    /// while analytics callbacks run.
-    func publishPendingSwiftUIScreenIfAllowed() {
-        let screenToPublish: ScreenTrackingPayload? = {
-            screenCaptureStateLock.lock()
-            defer { screenCaptureStateLock.unlock() }
-
+    /// Claims the coalesced payload under the lock and publishes on main after releasing it.
+    /// An expired callback must not consume a newer screen or publish after stop/suppression.
+    func publishPendingSwiftUIScreenIfAllowed(_ screen: ScreenTrackingPayload, identifier: UUID) {
+        let shouldPublish = screenCaptureStateLock.withLock {
+            guard pendingSwiftUIScreenID == identifier else { return false }
+            pendingSwiftUIScreenID = nil
             if let suppressScreenCaptureUntil {
-                if Date() < suppressScreenCaptureUntil { return nil }
+                if Date() < suppressScreenCaptureUntil { return false }
                 self.suppressScreenCaptureUntil = nil
             }
-
-            guard let screen = pendingSwiftUIScreenPayload else { return nil }
-
-            pendingSwiftUIScreenPayload = nil
-            pendingSwiftUIScreenWorkItem = nil
-            return screen
-        }()
-
-        guard let screen = screenToPublish else { return }
+            return true
+        }
+        guard shouldPublish, !isStopped else { return }
         publishScreen(screen)
     }
 
@@ -401,12 +366,10 @@ private extension AutoCaptureCoordinater {
 
         screenNameTracker.updateScreen(with: screen)
 
-        // Bail out if the tracker hasn't resolved a valid screen class yet.
-        guard let screenClass = screenNameTracker.getCurrentPayload()?.screenClass else { return }
-
         let event = makeEvent(
-            type: EventType.screen(screenEventIdentity(screenClass: screenClass, screen: screen)),
-            properties: screenNameTracker.buildScreenDictionary()
+            type: EventType.screen(screenEventIdentity(screenClass: screen.screenClass, screen: screen)),
+            properties: screen.toDictionary(),
+            screen: screen
         )
 
         publishWithForwarding(event)
@@ -576,21 +539,27 @@ private extension AutoCaptureCoordinater {
 
     /// When hierarchy was built with no owning VC, the root is
     /// `unknownScreenHierarchyPlaceholder`; swap in the tracked screen class.
-    private func replaceUnknownScreenPlaceholderInHierarchy(_ properties: inout [String: Any]) {
+    private func replaceUnknownScreenPlaceholderInHierarchy(
+        _ properties: inout [String: Any],
+        screen: ScreenTrackingPayload?
+    ) {
         let placeholder = Constants.AutoCapture.unknownScreenHierarchyPlaceholder
         guard var hierarchy = properties[Constants.AutoCapture.hierarchy] as? String,
               hierarchy.contains(placeholder) else { return }
-        guard let screenClass = screenNameTracker.getCurrentPayload()?.screenClass,
+        guard let screenClass = screen?.screenClass,
               !screenClass.isEmpty else { return }
         hierarchy = hierarchy.replacingOccurrences(of: placeholder, with: screenClass)
         properties[Constants.AutoCapture.hierarchy] = hierarchy
     }
 
     /// Appends `;SCREEN_NAME` to the view hierarchy using `screenNameTracker`.
-    private func appendScreenNameSegmentToHierarchy(_ properties: inout [String: Any]) {
+    private func appendScreenNameSegmentToHierarchy(
+        _ properties: inout [String: Any],
+        screen: ScreenTrackingPayload?
+    ) {
         guard var hierarchy = properties[Constants.AutoCapture.hierarchy] as? String,
               !hierarchy.isEmpty,
-              let payload = screenNameTracker.getCurrentPayload() else { return }
+              let payload = screen else { return }
 
         let screenClass = payload.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !screenClass.isEmpty else { return }
@@ -603,17 +572,19 @@ private extension AutoCaptureCoordinater {
     /// Shared `mobile_autocapture` merge and publish. `publishInteractionPayload`
     /// applies the interaction guard first; dialog events call this directly.
     private func publishAutoCaptureInteractionPayload(_ interaction: InteractionPayload) {
+        let screen = screenNameTracker.getCurrentPayload()
         var properties: [String: Any] = [:]
         properties.merge(interaction.toDictionary()) { _, new in new }
         var internalProps = buildInternalProperties(for: interaction.interactionType)
         internalProps.merge(interaction.toSourceDictionary()) { _, new in new }
         properties.merge(internalProps) { _, new in new }
-        replaceUnknownScreenPlaceholderInHierarchy(&properties)
-        appendScreenNameSegmentToHierarchy(&properties)
+        replaceUnknownScreenPlaceholderInHierarchy(&properties, screen: screen)
+        appendScreenNameSegmentToHierarchy(&properties, screen: screen)
 
         let event = makeEvent(
             type: EventType.autoCaptureEvent,
             properties: properties,
+            screen: screen,
             interactionEventName: interaction.interactionType.toInteractionEventType().rawValue
         )
         publishWithForwarding(event)
@@ -698,12 +669,13 @@ private extension AutoCaptureCoordinater {
     func makeEvent(
         type: EventType,
         properties: [String: Any],
+        screen: ScreenTrackingPayload?,
         interactionEventName: String? = nil
     ) -> Event {
         Event(
             type: type,
             properties: properties,
-            screen: currentScreenDictionary,
+            screen: screen.map { ScreenNameTracker.buildScreenDictionaryForEvent(from: $0) },
             interactionEventName: interactionEventName
         )
     }
