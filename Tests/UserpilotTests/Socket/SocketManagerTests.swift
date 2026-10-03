@@ -163,6 +163,7 @@ final class SocketManagerTests: XCTestCase {
         let transport = try openAndJoinSocket()
 
         socketManager.publish("track", payload: ["metadata": ["name": "Button clicked"]])
+        drainMainQueue()
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         transport.reply(
@@ -183,6 +184,7 @@ final class SocketManagerTests: XCTestCase {
         let transport = try openAndJoinSocket()
 
         socketManager.publish("track", payload: ["metadata": ["name": "Button clicked"]])
+        drainMainQueue()
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         transport.reply(to: push, status: Constants.Socket.errorKey)
@@ -197,6 +199,7 @@ final class SocketManagerTests: XCTestCase {
         let transport = try openAndJoinSocket()
 
         socketManager.publish("track", payload: ["metadata": ["name": "Button clicked"]])
+        drainMainQueue()
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         transport.reply(to: push, status: Constants.Socket.timeoutKey)
@@ -206,12 +209,39 @@ final class SocketManagerTests: XCTestCase {
         XCTAssertFalse(sentEvent.status)
     }
 
+    func testPublishWithoutChannelNotifiesSubscribersWithFailure() throws {
+        socketManager.registerCallback(subscription)
+        let payload: Payload = ["event_name": "Purchase"]
+
+        socketManager.publish("track", payload: payload)
+        drainMainQueue()
+
+        XCTAssertTrue(transports.isEmpty)
+        XCTAssertEqual(subscription.sentEvents.count, 1)
+        let sentEvent = try XCTUnwrap(subscription.sentEvents.first)
+        XCTAssertEqual(sentEvent.event, "track")
+        XCTAssertEqual(sentEvent.payload?["event_name"] as? String, "Purchase")
+        XCTAssertFalse(sentEvent.status)
+        XCTAssertEqual(sentEvent.message.status, Constants.Socket.errorKey)
+    }
+
+    func testPublishWithoutChannelSuppressesFailureWhenAppIsInactive() {
+        socketManager.registerCallback(subscription)
+        userpilot.sessionMonitor.isAppActive = false
+
+        socketManager.publish("track", payload: nil)
+        drainMainQueue()
+
+        XCTAssertTrue(subscription.sentEvents.isEmpty)
+    }
+
     func testPublishResolutionIsSuppressedWhenAppIsInactive() throws {
         socketManager.registerCallback(subscription)
         let transport = try openAndJoinSocket()
         userpilot.sessionMonitor.isAppActive = false
 
         socketManager.publish("track", payload: ["metadata": ["name": "Button clicked"]])
+        drainMainQueue()
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         transport.reply(
@@ -228,6 +258,7 @@ final class SocketManagerTests: XCTestCase {
         let transport = try openAndJoinSocket()
 
         socketManager.publish("track", payload: ["metadata": ["name": "Button clicked"]])
+        drainMainQueue()
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         socketManager.close()

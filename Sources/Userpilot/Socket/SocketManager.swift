@@ -96,7 +96,7 @@ internal class SocketManager {
     /// Guards `storedPhoenixSocket` / `storedPhoenixChannel`.
     ///
     /// Both are replaced on the main queue by `createAndConnectSocket()` while the state getters
-    /// read them from other queues (the analytics watchdog, the experience queue). As plain stored
+    /// read them from other queues (analytics callers, the experience queue). As plain stored
     /// properties that was a load-then-retain race: the reader loads the pointer, the writer
     /// releases the last reference, and the reader dereferences freed memory. Reading under the lock
     /// hands the caller its own strong reference for the duration of the access.
@@ -144,22 +144,12 @@ internal class SocketManager {
         }
     }
 
-    /// SDK instance.
+    // Dependencies
     private weak var userpilot: Userpilot?
-
-    /// SDK Config.
     private let config: Userpilot.Config
-
-    /// SDK storage.
     private let storage: DataStoring
-
-    /// Auto property decorator.
     private let autoPropertyDecorator: AutoPropertyDecoratoring
-
-    /// SDK logger
     private let logger: Logging
-
-    /// SDK settings detector.
     private let userpilotRemoteSource: UserpilotRemoteSourcing
 
     /// socket susbcriber
@@ -543,38 +533,43 @@ extension SocketManager: SocketManaging {
 
     /// Implementation to publish an event over the WebSocket
     ///
-    /// Runs on the caller's queue - unlike the connect/teardown paths, which are all serialized on
-    /// main. That is safe for the transport itself (`sendBuffer` is a `SynchronizedArray` and a send
-    /// on a cancelled task just fails its completion), and it stays on the caller's queue so pushes
-    /// are not reordered relative to the caller.
-    ///
-    /// Message refs used to be the catch here: `Socket.makeRef()` was an unguarded read-modify-write,
-    /// so a push racing the heartbeat (`com.phoenix.socket.heartbeat`, not main) could duplicate a
-    /// ref and misroute its ACK. That is now fixed at the source - `makeRef()` is lock-guarded - so
-    /// publishing off the caller's queue no longer trades ref safety for ordering.
+    /// Channel selection, push creation and response registration share the main queue with
+    /// transport callbacks and teardown. Enqueuing every send also preserves flush-before-close
+    /// ordering when the caller publishes a batch of events and then closes the socket.
     func publish(
         _ eventName: String,
         payload: Payload
     ) {
-        _ = tryCatch {
-            phoenixChannel?
-                .push(
-                    eventName,
-                    payload: payload ?? [:],
-                    timeout: Constants.Socket.pushTimeout
-                )?
-                .receive(Constants.Socket.successKey) { [weak self] message in
-                    self?.notifyEventSent(eventName, payload, message, true)
+        performOn(.main) { [weak self] in
+            guard let self else { return }
+            _ = tryCatch {
+                guard let channel = self.phoenixChannel, channel.joinedOnce,
+                    let push = channel.push(
+                        eventName,
+                        payload: payload ?? [:],
+                        timeout: Constants.Socket.pushTimeout
+                    ) else {
+                    // No Phoenix push means no timeout will fire; resolve the send here.
+                    self.logger.error("Socket could not create push for event: %{public}@", eventName)
+                    self.notifyEventSent(eventName, payload, Message(
+                        topic: Constants.Socket.channelTopic,
+                        event: eventName,
+                        payload: ["status": Constants.Socket.errorKey]
+                    ), false)
+                    return
                 }
-                .receive(Constants.Socket.errorKey) { [weak self] message in
-                    self?.notifyEventSent(eventName, payload, message, false)
-                }
-                .receive(Constants.Socket.timeoutKey) { [weak self] message in
-                    // Without this hook a timed-out push resolves silently and the
-                    // ACK-gated analytics queue stalls until the watchdog fires.
-                    self?.logger.error("⏱️ SOCKET push timed out for event: %{public}@", eventName)
-                    self?.notifyEventSent(eventName, payload, message, false)
-                }
+                push
+                    .receive(Constants.Socket.successKey) { [weak self] message in
+                        self?.notifyEventSent(eventName, payload, message, true)
+                    }
+                    .receive(Constants.Socket.errorKey) { [weak self] message in
+                        self?.notifyEventSent(eventName, payload, message, false)
+                    }
+                    .receive(Constants.Socket.timeoutKey) { [weak self] message in
+                        self?.logger.error("⏱️ SOCKET push timed out for event: %{public}@", eventName)
+                        self?.notifyEventSent(eventName, payload, message, false)
+                    }
+            }
         }
     }
 
