@@ -84,6 +84,7 @@ internal class NetworkMonitor: NetworkMonitoring {
         label: Constants.DispatchQueues.networkMonitor,
         qos: .utility
     )
+    private let networkQueueKey = DispatchSpecificKey<Bool>()
 
     private let stateQueue = DispatchQueue(
         label: Constants.DispatchQueues.networkMonitorState, attributes: .concurrent)
@@ -101,6 +102,8 @@ internal class NetworkMonitor: NetworkMonitoring {
     // also routes events to offline storage.
     private let reachabilityTimeout: TimeInterval = 5.0
     private var currentReachabilityIndex = 0
+    // Created, completed, and cancelled on networkQueue.
+    private var cancelReachabilityProbe: (() -> Void)?
 
     /// Stands in for ``checkInternetReachability(host:completion:)`` so tests can drive a
     /// failing probe to recovery without opening real sockets. `nil` in production.
@@ -152,6 +155,7 @@ internal class NetworkMonitor: NetworkMonitoring {
         self.config = container.resolve(Userpilot.Config.self)
         self.storage = container.resolve(DataStoring.self)
         self.logger = config.logger
+        networkQueue.setSpecific(key: networkQueueKey, value: true)
     }
 
     deinit {
@@ -185,7 +189,9 @@ internal class NetworkMonitor: NetworkMonitoring {
             pathMonitor?.start(queue: networkQueue)
 
             // Trigger initial reachability check
-            self.performReachabilityCheck()
+            networkQueue.async { [weak self] in
+                self?.performReachabilityCheck()
+            }
 
             logger.debug("🌐 NetworkMonitor started with internet validation")
         }
@@ -193,14 +199,28 @@ internal class NetworkMonitor: NetworkMonitoring {
 
     func stopMonitoring() {
         tryCatch {
-            markNotReadyForBackground()
-            debounceWorkItem?.cancel()
-            debounceWorkItem = nil
+            let stop = {
+                self.debounceWorkItem?.cancel()
+                self.debounceWorkItem = nil
 
-            pathMonitor?.cancel()
-            pathMonitor = nil
+                self.pathMonitor?.pathUpdateHandler = nil
+                self.pathMonitor?.cancel()
+                self.pathMonitor = nil
 
-            logger.debug("🌐 NetworkMonitor stopped")
+                // Discard the probe before resetting readiness; cancellation is not a result.
+                self.cancelReachabilityProbe?()
+                self.cancelReachabilityProbe = nil
+                self.markNotReadyForBackground()
+
+                self.logger.debug("🌐 NetworkMonitor stopped")
+            }
+
+            // A callback or deinit can stop us from networkQueue itself.
+            if DispatchQueue.getSpecific(key: networkQueueKey) == true {
+                stop()
+            } else {
+                networkQueue.sync(execute: stop)
+            }
         }
     }
 
@@ -341,11 +361,20 @@ internal class NetworkMonitor: NetworkMonitoring {
         )
 
         var didComplete = false
-        let timeoutWorkItem = DispatchWorkItem { [weak connection] in
+        let timeoutWorkItem = DispatchWorkItem { [weak self, weak connection] in
             guard !didComplete else { return }
             didComplete = true
+            connection?.stateUpdateHandler = nil
             connection?.cancel()
+            self?.cancelReachabilityProbe = nil
             completion(false)
+        }
+
+        cancelReachabilityProbe = {
+            didComplete = true
+            timeoutWorkItem.cancel()
+            connection.stateUpdateHandler = nil
+            connection.cancel()
         }
 
         connection.stateUpdateHandler = { [weak self] state in
@@ -355,14 +384,18 @@ internal class NetworkMonitor: NetworkMonitoring {
             case .ready:
                 didComplete = true
                 timeoutWorkItem.cancel()
+                connection.stateUpdateHandler = nil
                 connection.cancel()
+                self?.cancelReachabilityProbe = nil
                 self?.logger.debug("🌐 Reachability check succeeded: %{public}@", host)
                 completion(true)
 
             case .failed(let error):
                 didComplete = true
                 timeoutWorkItem.cancel()
+                connection.stateUpdateHandler = nil
                 connection.cancel()
+                self?.cancelReachabilityProbe = nil
                 self?.logger.debug(
                     "🌐 Reachability check failed: %{public}@ - %{public}@",
                     host, error.localizedDescription)
@@ -372,6 +405,8 @@ internal class NetworkMonitor: NetworkMonitoring {
                 if !didComplete {
                     didComplete = true
                     timeoutWorkItem.cancel()
+                    connection.stateUpdateHandler = nil
+                    self?.cancelReachabilityProbe = nil
                     completion(false)
                 }
 
