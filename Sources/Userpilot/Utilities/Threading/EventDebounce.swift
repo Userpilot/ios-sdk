@@ -31,27 +31,31 @@ internal final class EventDebounce<Value> {
 
     /// Serial queue that owns all mutable state. Every read/write of
     /// `workItems` and `latestValues` must happen on this queue.
-    private let queue = DispatchQueue(label: Constants.DispatchQueues.debounceQueue)
+    private let queue: DispatchQueue
 
     /// Maps a debounce key to its pending work item.
     private var workItems: [String: DispatchWorkItem] = [:]
 
-    /// Stores the most recent value for each pending key.
-    private var latestValues: [String: Value] = [:]
+    /// Values remain pending after timer expiry until delivery claims them. This lets cancellation
+    /// drop queued callbacks and lets a main-thread flush keep text changes ahead of screen changes.
+    private var latestValues: [String: (id: UUID, value: Value)] = [:]
 
     // MARK: - Initialization
 
     /// - Parameters:
     ///   - delay: Quiet period after the last `schedule` call before `onDeliver` runs.
     ///   - deliveryQueue: Queue on which `onDeliver` is invoked (default: `.main`).
+    ///   - queue: Serial state queue, injectable for tests. Must be separate from `deliveryQueue`.
     ///   - onDeliver: Called with the latest value for that key when the debounce fires.
     ///                Always invoked on `deliveryQueue`. Must be thread-safe.
     init(
         delay: TimeInterval,
         deliveryQueue: DispatchQueue = .main,
+        queue: DispatchQueue = DispatchQueue(label: Constants.DispatchQueues.debounceQueue),
         onDeliver: @escaping (Value) -> Void
     ) {
         self.delay = delay
+        self.queue = queue
         self.deliveryQueue = deliveryQueue
         self.onDeliver = onDeliver
         self.deliversOnMainQueue = deliveryQueue === DispatchQueue.main
@@ -69,22 +73,13 @@ internal final class EventDebounce<Value> {
         }
     }
 
-    /// Cancels all pending work and drops buffered values without delivering them.
-    ///
-    /// - Note: "cancel" accurately reflects the behavior — values are discarded,
-    ///   not flushed/delivered. Renamed from `clear()` to avoid ambiguity.
-    ///
-    /// - Important: Do NOT call this from within the internal serial queue
-    ///   (e.g. from inside `onDeliver` if `deliveryQueue === queue`) or a
-    ///   deadlock will occur. In practice this is not an issue because
-    ///   `deliveryQueue` defaults to `.main` and is a different queue.
+    /// Cancels timers and queued deliveries that have not yet been claimed to run.
+    /// A callback already claimed by `deliveryQueue` is allowed to finish; callbacks run outside `queue`.
+    /// Safe from `onDeliver`, but must not be called from the private owning queue.
     func cancelAll() {
-        // `queue.sync` is intentional: callers of `cancelAll()` need a
-        // synchronous guarantee that no further deliveries will occur after
-        // this call returns. Safe as long as the caller is not already on
-        // `queue` — see the doc-comment warning above.
         queue.sync {
-            cancelAllLocked()
+            cancelTimersLocked()
+            latestValues.removeAll()
         }
     }
 
@@ -93,7 +88,7 @@ internal final class EventDebounce<Value> {
         cancelAll()
     }
 
-    /// Delivers every buffered value right away and clears the pending state.
+    /// Flushes buffered values, including values whose timers have already expired.
     ///
     /// The opposite of `cancelAll()`: values are delivered instead of dropped. Use it when the caller
     /// is about to publish an event that the pending values must precede — e.g. a manual `screen`
@@ -103,19 +98,20 @@ internal final class EventDebounce<Value> {
     /// handler runs inline, so the caller keeps the ordering guarantee. Otherwise delivery is
     /// dispatched onto `deliveryQueue` as usual.
     func flushPending() {
-        let pending: [Value] = queue.sync {
-            drainPendingLocked()
+        let pending: [(key: String, id: UUID)] = queue.sync {
+            cancelTimersLocked()
+            return latestValues.map { (key: $0.key, id: $0.value.id) }
         }
         guard !pending.isEmpty else { return }
 
         if deliversOnMainQueue, Thread.isMainThread {
-            pending.forEach { onDeliver($0) }
+            pending.forEach { deliverIfPending(key: $0.key, identifier: $0.id) }
             return
         }
 
         deliveryQueue.async { [weak self] in
             guard let self else { return }
-            pending.forEach { self.onDeliver($0) }
+            pending.forEach { self.deliverIfPending(key: $0.key, identifier: $0.id) }
         }
     }
 
@@ -123,58 +119,39 @@ internal final class EventDebounce<Value> {
 
     /// Must be called on `queue`.
     private func scheduleLocked(key: String, value: Value) {
-        // Cancel any existing timer for this key.
         workItems[key]?.cancel()
+        let identifier = UUID()
+        latestValues[key] = (identifier, value)
 
-        // Always keep the freshest value.
-        latestValues[key] = value
-
-        // FIX: Schedule on `queue` (not DispatchQueue.main) so that:
-        //  1. `cancel()` is atomic — if the item hasn't started on `queue`
-        //     yet, cancelling it prevents it from ever running.
-        //  2. The work item body runs directly on `queue`, so no second
-        //     `queue.async` hop is needed and all state access is safe.
-        //  3. The stale-item identity guard remains correct and sufficient.
-        var workItem: DispatchWorkItem!
-        workItem = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            // Identity check: if a newer item has replaced this one,
-            // bail out. This is the canonical GCD stale-cancellation pattern.
-            guard self.workItems[key] === workItem else { return }
+        // Capture the identity rather than the work item, which would retain its own closure.
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.latestValues[key]?.id == identifier else { return }
             self.workItems.removeValue(forKey: key)
-            guard let toSend = self.latestValues.removeValue(forKey: key) else { return }
-            self.deliver(toSend)
+            self.deliveryQueue.async { [weak self] in
+                self?.deliverIfPending(key: key, identifier: identifier)
+            }
         }
-
         workItems[key] = workItem
-        // Schedule on the internal serial queue — NOT DispatchQueue.main.
         queue.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
+    /// Cancels timers while retaining values until delivery or cancellation claims them.
     /// Must be called on `queue`.
-    private func cancelAllLocked() {
-        _ = drainPendingLocked()
-    }
-
-    /// Cancels every pending work item and returns the buffered values.
-    /// Must be called on `queue`.
-    private func drainPendingLocked() -> [Value] {
-        for (_, item) in workItems {
+    private func cancelTimersLocked() {
+        for item in workItems.values {
             item.cancel()
         }
         workItems.removeAll()
-
-        let pending = Array(latestValues.values)
-        latestValues.removeAll()
-        return pending
     }
 
-    /// Hops to `deliveryQueue` and invokes the caller-supplied handler.
-    /// Always called from `queue`; delivery always lands on `deliveryQueue`.
-    private func deliver(_ value: Value) {
-        deliveryQueue.async { [weak self] in
-            guard let self else { return }
-            self.onDeliver(value)
+    /// Called on `deliveryQueue` (or inline on main for a flush). Claim under the owner queue,
+    /// then invoke outside it so a handler can schedule, cancel, or flush without deadlocking.
+    private func deliverIfPending(key: String, identifier: UUID) {
+        let pending: Value? = queue.sync {
+            guard latestValues[key]?.id == identifier else { return nil }
+            return latestValues.removeValue(forKey: key)?.value
         }
+        guard let pending else { return }
+        onDeliver(pending)
     }
 }

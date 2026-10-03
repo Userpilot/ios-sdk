@@ -13,132 +13,69 @@
 
 import Foundation
 
+/// Synchronous throttle checks and resets are safe to call from any thread.
+/// Expiration uses monotonic time; rejected duplicates do not extend the throttle period.
 internal class EventThrottle {
 
-    // MARK: - Properties
-
-    /// The minimum duration (in seconds) between consecutive events for the same name.
     private let throttleDuration: TimeInterval
+    private let lock = NSLock()
 
-    /// Tracks currently active generic events.
-    private var activeEvents: Set<String> = []
+    private var eventExpirations: [String: DispatchTime] = [:]
+    private var activeScreen: (name: String, expiresAt: DispatchTime)?
 
-    /// Tracks the currently active screen event (only one screen event is active at a time).
-    private var activeScreenEvent: String?
-
-    /// Serial dispatch queue for thread-safe operations.
-    private let queue = DispatchQueue(label: Constants.DispatchQueues.throttleQueue)
-
-    // MARK: - Initialization
-
-    /**
-     Initializes the EventThrottle with a specified throttle duration.
-     
-     - Parameter throttleDuration: The minimum time interval (in seconds) that must pass before the same event
-       can be processed again.
-     */
     init(throttleDuration: TimeInterval) {
         self.throttleDuration = throttleDuration
     }
 
-    // MARK: - Public Methods
-
-    /**
-     Checks if a generic event should be throttled based on its name.
-     
-     - Parameter eventTitle: The name of the event to check.
-     - Returns: `true` if the event should be throttled, `false` otherwise.
-     */
+    /// Returns true while the same generic event is within its throttle period.
     func shouldThrottle(eventTitle: String) -> Bool {
-        return shouldThrottle(eventName: eventTitle, isScreenEvent: false)
-    }
+        lock.withLock {
+            let now = DispatchTime.now()
 
-    /**
-     Checks if a screen event should be throttled based on its name.
-     
-     - Parameter screenTitle: The name of the screen event to check.
-     - Returns: `true` if the screen event should be throttled, `false` otherwise.
-     */
-    func shouldThrottleScreenEvent(screenTitle: String) -> Bool {
-        return shouldThrottle(eventName: screenTitle, isScreenEvent: true)
-    }
+            // Remove expired keys so old event names do not accumulate.
+            eventExpirations = eventExpirations.filter {
+                $0.value > now
+            }
 
-    /**
-     Clears all tracked events (both generic and screen).
-     */
-    func clear() {
-        queue.sync {
-            activeEvents.removeAll()
-            activeScreenEvent = nil
+            if eventExpirations[eventTitle] != nil {
+                return true
+            }
+
+            eventExpirations[eventTitle] = now + throttleDuration
+            return false
         }
     }
 
-    /**
-     Shuts down the throttle utility by clearing all active events.
-     */
+    /// Throttles repeats of the current screen; a different screen is accepted immediately.
+    func shouldThrottleScreenEvent(screenTitle: String) -> Bool {
+        lock.withLock {
+            let now = DispatchTime.now()
+
+            if let screen = activeScreen,
+               screen.name == screenTitle,
+               now < screen.expiresAt {
+                return true
+            }
+
+            // A different screen, or an expired repeat, starts a new window.
+            activeScreen = (
+                name: screenTitle,
+                expiresAt: now + throttleDuration
+            )
+            return false
+        }
+    }
+
+    /// Clears generic and screen throttle periods immediately.
+    func clear() {
+        lock.withLock {
+            eventExpirations.removeAll()
+            activeScreen = nil
+        }
+    }
+
+    /// Clears pending throttle state. Alias for `clear()`.
     func shutdown() {
         clear()
-    }
-
-    // MARK: - Private Methods
-
-    /**
-     Determines whether an event should be throttled, updating the active set if it's not throttled.
-     
-     - Parameters:
-        - eventName: The name of the event to check.
-        - isScreenEvent: `true` if this is a screen event, `false` otherwise.
-     - Returns: `true` if the event should be throttled, `false` otherwise.
-     */
-    private func shouldThrottle(
-        eventName: String,
-        isScreenEvent: Bool
-    ) -> Bool {
-        return queue.sync {
-            if isScreenEvent {
-                // Throttle if the same screen event is active
-                if activeScreenEvent == eventName {
-                    return true
-                } else {
-                    activeScreenEvent = eventName
-                    scheduleRemoval(of: eventName, isScreenEvent: true)
-                    return false
-                }
-            } else {
-                // Throttle if the same generic event is active
-                if activeEvents.contains(eventName) {
-                    return true
-                } else {
-                    activeEvents.insert(eventName)
-                    scheduleRemoval(of: eventName, isScreenEvent: false)
-                    return false
-                }
-            }
-        }
-    }
-
-    /**
-     Schedules the removal of an event from the appropriate active set after the throttle duration.
-     
-     - Parameters:
-        - eventName: The name of the event to remove.
-        - isScreenEvent: `true` if this is a screen event, `false` otherwise.
-     */
-    private func scheduleRemoval(
-        of eventName: String,
-        isScreenEvent: Bool
-    ) {
-        DispatchQueue.global().asyncAfter(deadline: .now() + throttleDuration) { [weak self] in
-            guard let self else { return }
-            self.queue.sync {
-                if isScreenEvent {
-                    if self.activeScreenEvent == eventName {
-                        self.activeScreenEvent = nil
-                    }
-                } else {
-                    self.activeEvents.remove(eventName)
-                }
-            }
-        }
     }
 }

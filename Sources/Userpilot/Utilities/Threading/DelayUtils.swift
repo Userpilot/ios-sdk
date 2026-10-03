@@ -11,93 +11,56 @@
 
 import Foundation
 
+/// Safe to schedule, cancel, or check pending work from any thread. Actions run on main.
+/// State changes are synchronous; cancellation cannot stop an action already claimed for execution.
 internal class DelayUtils {
 
-    /// The current work item that can be cancelled
-    private var currentWorkItem: DispatchWorkItem?
+    private let lock = NSLock()
+    private var pendingTask: (id: UUID, workItem: DispatchWorkItem)?
 
-    /// Queue for thread-safe operations
-    private let queue = DispatchQueue(label: Constants.DispatchQueues.delayQueue, qos: .userInteractive)
-
-    /**
-     Executes an action after a specified delay.
-     Any previously scheduled action will be automatically cancelled.
-     
-     - Parameters:
-        - delayTime: The delay time in seconds before executing the action
-        - action: The closure to execute after the delay
-     */
+    /// Schedules an action on main, replacing any task still pending. The default delay is 0.5 seconds.
     func delayAction(delayTime: TimeInterval = 0.5, action: @escaping () -> Void) {
-        queue.async { [weak self] in
-            // Cancel any existing delayed action
-            self?.currentWorkItem?.cancel()
-
-            // Create new work item
-            let workItem = DispatchWorkItem {
-                // Execute on main queue if it's UI-related work
-                DispatchQueue.main.async {
-                    action()
-                }
+        let taskID = UUID()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            let shouldRun = self.lock.withLock {
+                // An old callback must not consume a replacement task.
+                guard self.pendingTask?.id == taskID else { return false }
+                self.pendingTask = nil
+                return true
             }
+            guard shouldRun else { return }
+            action()
+        }
 
-            // Store the work item so it can be cancelled later
-            self?.currentWorkItem = workItem
-
-            // Schedule the work item
+        lock.withLock {
+            pendingTask?.workItem.cancel()
+            pendingTask = (taskID, workItem)
             DispatchQueue.main.asyncAfter(deadline: .now() + delayTime, execute: workItem)
         }
     }
 
-    /**
-     Executes an action after a specified delay without cancelling previous actions.
-     
-     - Parameters:
-        - delayTime: The delay time in seconds before executing the action
-        - action: The closure to execute after the delay
-     */
+    /// Schedules an independent action on main; replacement and `cancelDelay()` do not affect it.
     func delayActionWithoutCancel(delayTime: TimeInterval, action: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + delayTime) {
-            action()
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delayTime, execute: action)
     }
 
-    /**
-     Cancels any currently scheduled delayed action.
-
-     Always hops to `queue` — it must not short-circuit on a pending-action check made from the
-     caller's thread. `delayAction` assigns `currentWorkItem` *inside* `queue`, so between it
-     returning and its block running there is a window where a timer is on its way but the
-     property is still unset. A check there reads "nothing pending", skips the cancel, and the
-     action fires anyway — an experience shown after the reset that was meant to stop it.
-     Going through the serial queue orders this cancel behind that assignment instead.
-
-     A no-op when nothing is scheduled, so no guard is needed.
-     */
+    /// Cancels the pending task immediately. An action already claimed for execution may finish.
     func cancelDelay() {
-        queue.async { [weak self] in
-            self?.currentWorkItem?.cancel()
-            self?.currentWorkItem = nil
+        lock.withLock {
+            pendingTask?.workItem.cancel()
+            pendingTask = nil
         }
     }
 
-    /**
-     Checks if there's a currently scheduled action that hasn't been executed yet.
-
-     Reads on `queue`, which owns `currentWorkItem`; never call this from within `queue`.
-
-     - Returns: `true` if there's a pending action, `false` otherwise
-     */
+    /// Returns whether a task is waiting to run; clears before its action is called.
     func hasPendingAction() -> Bool {
-        return queue.sync {
-            currentWorkItem != nil && currentWorkItem?.isCancelled == false
+        lock.withLock {
+            pendingTask != nil
         }
     }
 
-    /**
-     Executes an action with a default delay of 0.5 seconds.
-     
-     - Parameter action: The closure to execute after the delay
-     */
+    /// Schedules an action with the default delay of 0.5 seconds.
     func delayAction(action: @escaping () -> Void) {
         delayAction(delayTime: 0.5, action: action)
     }
