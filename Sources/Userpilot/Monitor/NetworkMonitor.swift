@@ -354,11 +354,7 @@ internal class NetworkMonitor: NetworkMonitoring {
             return
         }
 
-        let connection = NWConnection(
-            host: NWEndpoint.Host(host),
-            port: port,
-            using: .tcp
-        )
+        let connection = NWConnection(host: NWEndpoint.Host(host), port: port, using: .tcp)
 
         var didComplete = false
         let timeoutWorkItem = DispatchWorkItem { [weak self, weak connection] in
@@ -377,38 +373,33 @@ internal class NetworkMonitor: NetworkMonitoring {
             connection.cancel()
         }
 
+        // Settles the probe from a terminal connection state. A `.cancelled` connection is
+        // already cancelled, so it skips `cancel()`.
+        let settle: (_ reachable: Bool, _ cancelConnection: Bool) -> Void = { [weak self] reachable, cancel in
+            didComplete = true
+            timeoutWorkItem.cancel()
+            connection.stateUpdateHandler = nil
+            if cancel { connection.cancel() }
+            self?.cancelReachabilityProbe = nil
+            completion(reachable)
+        }
+
         connection.stateUpdateHandler = { [weak self] state in
             guard !didComplete else { return }
 
             switch state {
             case .ready:
-                didComplete = true
-                timeoutWorkItem.cancel()
-                connection.stateUpdateHandler = nil
-                connection.cancel()
-                self?.cancelReachabilityProbe = nil
                 self?.logger.debug("🌐 Reachability check succeeded: %{public}@", host)
-                completion(true)
+                settle(true, true)
 
             case .failed(let error):
-                didComplete = true
-                timeoutWorkItem.cancel()
-                connection.stateUpdateHandler = nil
-                connection.cancel()
-                self?.cancelReachabilityProbe = nil
                 self?.logger.debug(
                     "🌐 Reachability check failed: %{public}@ - %{public}@",
                     host, error.localizedDescription)
-                completion(false)
+                settle(false, true)
 
             case .cancelled:
-                if !didComplete {
-                    didComplete = true
-                    timeoutWorkItem.cancel()
-                    connection.stateUpdateHandler = nil
-                    self?.cancelReachabilityProbe = nil
-                    completion(false)
-                }
+                settle(false, false)
 
             default:
                 break
