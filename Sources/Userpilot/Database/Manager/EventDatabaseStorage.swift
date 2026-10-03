@@ -59,6 +59,7 @@ internal class EventDatabaseStorage: EventStoring {
         qos: .userInitiated
     )
     private let decoder = JSONDecoder()
+    private let queueKey = DispatchSpecificKey<Bool>()
 
     /// Logger used for internal logging of operations and errors.
     private let logger: Logging
@@ -68,6 +69,7 @@ internal class EventDatabaseStorage: EventStoring {
     init(container: DIContainer) {
         let config = container.resolve(Userpilot.Config.self)
         self.logger = config.logger
+        queue.setSpecific(key: queueKey, value: true)
 
         // Application Support, not Documents: Documents is user-visible (Files app)
         // and semantically for user-created content. The events DB is SDK-internal.
@@ -198,7 +200,7 @@ internal class EventDatabaseStorage: EventStoring {
 
     deinit {
         tryCatch {
-            _ = queue.sync {
+            _ = onDatabaseQueue {
                 sqlite3_close(database)
             }
         }
@@ -246,7 +248,7 @@ internal class EventDatabaseStorage: EventStoring {
     func getAllEventsAndDelete(completion: @escaping ([EventStorage]) -> Void) {
         tryCatch {
             queue.async { [weak self] in
-                guard let self = self else {
+                guard let self else {
                     completion([])
                     return
                 }
@@ -292,7 +294,7 @@ internal class EventDatabaseStorage: EventStoring {
      * - Returns: Storage statistics including count, size, and limit information
      */
     func getStorageStats() -> DatabaseStats {
-        return queue.sync { [weak self] in
+        return onDatabaseQueue { [weak self] in
             guard let self = self else {
                 return DatabaseStats(
                     eventCount: 0,
@@ -325,13 +327,22 @@ internal class EventDatabaseStorage: EventStoring {
      * - Returns: true if there are stored events, false otherwise
      */
     func hasEvents() -> Bool {
-        return queue.sync { [weak self] in
+        return onDatabaseQueue { [weak self] in
             guard let self = self else { return false }
             return self.getEventCount() > 0
         }
     }
 
     // MARK: - Private Methods
+
+    /// Completions may synchronously query the store, and the final reference may be released
+    /// on its queue. Both must reuse queue ownership rather than synchronously dispatch to self.
+    private func onDatabaseQueue<T>(_ action: () -> T) -> T {
+        if DispatchQueue.getSpecific(key: queueKey) == true {
+            return action()
+        }
+        return queue.sync(execute: action)
+    }
 
     /*
      * Internal save implementation with limit checking
