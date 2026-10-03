@@ -145,7 +145,7 @@ internal protocol UserSessionStateManaging: AnyObject {
 /// - Providing thread-safe state transitions
 /// - Logging all state changes for debugging
 /// - Determining post-identification context and screen requirements
-internal class UserSessionStateMachine {
+internal class UserSessionStateMachine: UserSessionStateManaging {
 
     // MARK: - Properties
 
@@ -241,16 +241,12 @@ internal class UserSessionStateMachine {
      * instead to preserve the user switch context.
      */
     func markAwaitingInitialScreen() {
-        let currentState = state.value
-        let newState: UserSessionState
-
-        if case .userSwitching = currentState {
-            newState = .userSwitchingAwaitingScreen
-        } else {
-            newState = .awaitingInitialScreen
+        let newState = state.update { current in
+            if case .userSwitching = current {
+                return .userSwitchingAwaitingScreen
+            }
+            return .awaitingInitialScreen
         }
-
-        state.value = newState
         logger.info("📝 User session state: %@", String(describing: newState))
     }
 
@@ -323,10 +319,6 @@ internal class UserSessionStateMachine {
         return !isUserSwitching()
     }
 }
-
-// MARK: - UserSessionStateManaging Conformance
-
-extension UserSessionStateMachine: UserSessionStateManaging {}
 
 // MARK: - PostIdentificationScreenConfig
 

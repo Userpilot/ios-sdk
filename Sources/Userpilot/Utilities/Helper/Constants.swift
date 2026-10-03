@@ -102,6 +102,7 @@ internal enum Constants {
         static let analyticsWatchdog = "com.userpilot.analytics-watchdog-queue"
         static let eventQueue = "com.userpilot.event-queue"
         static let experienceQueue = "com.userpilot.experience-queue"
+        static let screenSessionState = "com.userpilot.screen-session-state-queue"
         static let delayQueue = "com.userpilot.delay-queue"
         static let diContainerQueue = "com.userpilot.dicontainer-queue"
         static let throttleQueue = "com.userpilot.throttle-queue"

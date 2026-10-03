@@ -12,13 +12,23 @@
 import Foundation
 
 /// Holds screen-session state used when publishing screen and fake-reload events.
+/// Seen-content reads, updates, and resets run synchronously on a private serial queue.
 internal class ScreenSessionStateMachine {
     /// The current event associated with the screen view.
-    var event: Event
+    let event: Event
+
+    private let queue = DispatchQueue(label: Constants.DispatchQueues.screenSessionState)
+    private var storedSeenExperiences: Set<Int>
+    private var storedSeenSurveys: Set<Int>
 
     /// IDs for flow and survey experiences seen during this screen session.
-    var seenExperiences: Set<Int>
-    var seenSurveys: Set<Int>
+    var seenExperiences: Set<Int> {
+        queue.sync { storedSeenExperiences }
+    }
+
+    var seenSurveys: Set<Int> {
+        queue.sync { storedSeenSurveys }
+    }
 
     /// Initializes a new `ScreenSessionStateMachine` instance.
     ///
@@ -28,23 +38,25 @@ internal class ScreenSessionStateMachine {
     ///   - seenSurveys: A set of IDs representing seen surveys. Defaults to an empty set.
     init(event: Event, seenExperiences: Set<Int> = [], seenSurveys: Set<Int> = []) {
         self.event = event
-        self.seenExperiences = seenExperiences
-        self.seenSurveys = seenSurveys
+        self.storedSeenExperiences = seenExperiences
+        self.storedSeenSurveys = seenSurveys
     }
 
     /// Clears tracked content for the active screen session.
     func resetState() {
-        seenExperiences.removeAll()
-        seenSurveys.removeAll()
+        queue.sync {
+            storedSeenExperiences.removeAll()
+            storedSeenSurveys.removeAll()
+        }
     }
 
     /// Adds a flow experience ID to the seen set.
     func updateSeenFlowExperiences(_ experienceId: Int) {
-        seenExperiences.insert(experienceId)
+        _ = queue.sync { storedSeenExperiences.insert(experienceId) }
     }
 
     /// Adds a survey experience ID to the seen set.
     func updateSeenSurveyExperiences(_ experienceId: Int) {
-        seenSurveys.insert(experienceId)
+        _ = queue.sync { storedSeenSurveys.insert(experienceId) }
     }
 }
