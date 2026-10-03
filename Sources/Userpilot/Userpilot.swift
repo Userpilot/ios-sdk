@@ -256,8 +256,10 @@ public class Userpilot: NSObject {
         container.register(InstanceRegistering.self, value: Registry.shared)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
+        // V2 core classes under test. The V1 classes stay in the target; swap these three
+        // registrations back to SocketManager, AnalyticsPublisher and ExperiencesPublisher to roll back.
         container.registerLazy(SocketManaging.self) { container in
-            SocketManager(container: container)
+            SocketManagerV2(container: container)
         }
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
@@ -272,10 +274,10 @@ public class Userpilot: NSObject {
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
         container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
-        container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
+        container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisherV2.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
-        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
+        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisherV2.init)
         container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
 
         // Only spin up the auto-detector when the host app didn't set the
