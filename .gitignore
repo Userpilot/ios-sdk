@@ -4,6 +4,7 @@
 
 ## User settings
 xcuserdata/
+.derivedData/
 
 ## Obj-C/Swift specific
 *.hmap
