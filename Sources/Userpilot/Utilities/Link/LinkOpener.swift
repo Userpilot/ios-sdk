@@ -25,10 +25,8 @@ internal class LinkOpener: LinkOpening {
     private let config: Userpilot.Config
     private let logger: Logging
 
-    /// Guards `canRoute` and `pendingURL`: a deep link can arrive on the socket thread, while
-    /// the gate is opened from the main thread and from wherever a host assigns its delegate.
-    private let routingLock = NSLock()
-
+    /// Routing state is owned by main, together with delegate delivery, so a new link
+    /// cannot overtake the pending link while another thread opens the gate.
     /// False until the host has had its chance to wire up — see `processPendingDeepLink()`.
     private var canRoute = false
 
@@ -52,18 +50,16 @@ internal class LinkOpener: LinkOpening {
     // MARK: - LinkOpening
 
     func handleURL(_ url: URL) {
-        tryCatch {
-            routingLock.lock()
-            let canRoute = self.canRoute
-            if !canRoute { pendingURL = url }
-            routingLock.unlock()
-
-            guard canRoute else {
-                logger.info("🔗 Holding deep link until the host can route it")
-                return
+        performOn(.main) { [weak self] in
+            guard let self else { return }
+            tryCatch {
+                guard self.canRoute else {
+                    self.pendingURL = url
+                    self.logger.info("🔗 Holding deep link until the host can route it")
+                    return
+                }
+                self.route(url)
             }
-
-            route(url)
         }
     }
 
@@ -77,14 +73,14 @@ internal class LinkOpener: LinkOpening {
     ///
     /// Idempotent — later calls with nothing held do nothing.
     func processPendingDeepLink() {
-        routingLock.lock()
-        canRoute = true
-        let held = pendingURL
-        pendingURL = nil
-        routingLock.unlock()
-
-        guard let held = held else { return }
-        route(held)
+        performOn(.main) { [weak self] in
+            guard let self else { return }
+            self.canRoute = true
+            let held = self.pendingURL
+            self.pendingURL = nil
+            guard let held else { return }
+            self.route(held)
+        }
     }
 
     // MARK: - Private Methods
@@ -94,37 +90,34 @@ internal class LinkOpener: LinkOpening {
     /// Both branches reach host UI — the navigation delegate drives the app's navigation stack,
     /// and the fallback presents a view controller — so neither is safe off main.
     private func route(_ url: URL) {
-        performOn(.main) { [weak self] in
-            guard let self = self else { return }
-            guard let userpilot = self.userpilot else {
-                self.logger.error("❌ Cannot open URL - Userpilot instance is nil")
-                return
-            }
+        guard let userpilot = self.userpilot else {
+            self.logger.error("❌ Cannot open URL - Userpilot instance is nil")
+            return
+        }
 
-            // If a delegate is provided from the host application, preference is to use it for
-            // handling navigation and invoking the completion handler.
-            if let delegate = userpilot.navigationDelegate {
-                self.logger.info(
-                    "🔗 UserpilotNavigationDelegate opening %{private}@", url.absoluteString)
-                delegate.navigate(to: url)
-                return
-            }
+        // If a delegate is provided from the host application, preference is to use it for
+        // handling navigation and invoking the completion handler.
+        if let delegate = userpilot.navigationDelegate {
+            self.logger.info(
+                "🔗 UserpilotNavigationDelegate opening %{private}@", url.absoluteString)
+            delegate.navigate(to: url)
+            return
+        }
 
-            // If no delegate provided, fall back to automatic handling behavior provided by the
-            // UIApplication - caveat, the completion callback may execute before the app has
-            // fully navigated to the destination.
+        // If no delegate provided, fall back to automatic handling behavior provided by the
+        // UIApplication - caveat, the completion callback may execute before the app has
+        // fully navigated to the destination.
 
-            // SFSafariViewController only supports HTTP and HTTPS URLs and crashes otherwise,
-            // and scheme links crash the universal link opener, so check here to be sure we route safely.
-            if url.isWebLink {
-                if self.config.useInAppBrowser {
-                    self.openInAppBrowser(url)
-                } else {
-                    self.openExternalBrowser(url)
-                }
+        // SFSafariViewController only supports HTTP and HTTPS URLs and crashes otherwise,
+        // and scheme links crash the universal link opener, so check here to be sure we route safely.
+        if url.isWebLink {
+            if self.config.useInAppBrowser {
+                self.openInAppBrowser(url)
             } else {
-                self.openSchemeLink(url)
+                self.openExternalBrowser(url)
             }
+        } else {
+            self.openSchemeLink(url)
         }
     }
 

@@ -77,7 +77,7 @@ internal class DeepLinkHandler: DeepLinkHandling {
         if Thread.isMainThread {
             dispatch(action: action)
         } else {
-            DispatchQueue.main.async { [weak self] in
+            performOn(.main) { [weak self] in
                 self?.dispatch(action: action)
             }
         }
@@ -124,14 +124,18 @@ internal class DeepLinkHandler: DeepLinkHandling {
 
     @objc
     private func sceneDidActivate() {
-        logger?.info("✅ Scene activated, handling %d deferred deep link(s)", actionsToHandle.count)
+        if !Thread.isMainThread {
+            performOn(.main) { [weak self] in self?.sceneDidActivate() }
+            return
+        }
 
-        actionsToHandle.forEach(handle(action:))
-
-        // Reset after handling to avoid handling notifications multiple times.
+        let pendingActions = actionsToHandle
         actionsToHandle.removeAll()
         NotificationCenter.default.removeObserver(
             self, name: UIScene.didActivateNotification, object: nil)
+        logger?.info("✅ Scene activated, handling %d deferred deep link(s)", pendingActions.count)
+
+        pendingActions.forEach(handle(action:))
     }
 }
 

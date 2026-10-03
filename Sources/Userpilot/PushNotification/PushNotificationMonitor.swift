@@ -66,6 +66,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     private(set) var pushAuthorizationStatus: UNAuthorizationStatus = .notDetermined
 
     // cached token when it comes from OS, and keep it cached so if user is switched, then send it to new user
+    // Production reads and writes run on main, alongside socket callbacks.
     private var cachedToken: Data?
 
     /// A computed property indicating whether push notifications are enabled.
@@ -96,8 +97,17 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
 
     /// Sets the push token and stores it in the analytics publisher or caches it for later use.
     ///
+    /// Runs immediately on main. Calls from other threads are scheduled asynchronously on main.
+    ///
     /// - Parameter deviceToken: The device token received from APNs.
     func setPushToken(_ deviceToken: Data?) {
+        guard Thread.isMainThread else {
+            performOn(.main) { [weak self] in
+                self?.setPushToken(deviceToken)
+            }
+            return
+        }
+
         // Cache the token in all cases so in next identify in same session, we will sync it
         cachedToken = deviceToken
         guard
@@ -182,15 +192,15 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         #if targetEnvironment(simulator)
         print("🔧 Running on Simulator - push notification settings are not available.")
         // Optionally simulate a status (e.g., .notDetermined or .authorized)
-        DispatchQueue.main.async {
+        performOn(.main) {
             UIApplication.shared.registerForRemoteNotifications()
             completion?(.authorized)
         }
         #else
         print("📱 Running on Device - checking push notification settings...")
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            DispatchQueue.main.async {
-                self.handlePushStatusUpdate(settings.authorizationStatus, completion: completion)
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            performOn(.main) { [weak self] in
+                self?.handlePushStatusUpdate(settings.authorizationStatus, completion: completion)
             }
         }
         #endif
@@ -215,7 +225,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
                 if granted {
                     self?.config.logger.info("Push notification permission granted.")
                     // Register for remote notifications if permission is granted
-                    DispatchQueue.main.async {
+                    performOn(.main) {
                         UIApplication.shared.registerForRemoteNotifications()
                     }
                 } else {
