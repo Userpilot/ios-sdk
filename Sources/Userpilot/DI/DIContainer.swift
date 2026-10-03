@@ -27,6 +27,10 @@ internal class DIContainer {
         attributes: .concurrent
     )
 
+    /// Prevents concurrent first resolutions from creating duplicate instances.
+    /// Recursive so a factory can resolve its dependencies on the same thread.
+    private let resolutionLock = NSRecursiveLock()
+
     /// A dictionary of initializers for lazy component creation.
     private var initializers: [String: (DIContainer) -> Any] = [:]
 
@@ -102,25 +106,27 @@ internal class DIContainer {
      */
     @discardableResult
     func resolve<Component>(_ type: Component.Type) -> Component {
-        let key = String(describing: Component.self)
+        return resolutionLock.withLock {
+            let key = String(describing: Component.self)
 
-        // Check if the component is already registered.
-        if let component = componentQueue.sync(execute: { components[key] as? Component }) {
-            return component
-        }
-
-        // If not, use the initializer to create the component.
-        if let initializer = initializers[key] {
-            // swiftlint:disable:next force_cast
-            let component = initializer(self) as! Component
-            // Store the component in the container.
-            componentQueue.sync(flags: .barrier) {
-                components[key] = component
+            // Check if the component is already registered.
+            if let component = componentQueue.sync(execute: { components[key] as? Component }) {
+                return component
             }
-            return component
-        }
 
-        // Throw an error if the component type is not registered.
-        fatalError("Unable to resolve type \(key)")
+            // If not, use the initializer to create the component.
+            if let initializer = initializers[key] {
+                // swiftlint:disable:next force_cast
+                let component = initializer(self) as! Component
+                // Store the component in the container.
+                componentQueue.sync(flags: .barrier) {
+                    components[key] = component
+                }
+                return component
+            }
+
+            // Throw an error if the component type is not registered.
+            fatalError("Unable to resolve type \(key)")
+        }
     }
 }

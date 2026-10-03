@@ -26,6 +26,9 @@ import Foundation
 /// lives in `UserDefaults` so reinstalls and re-launches behave correctly.
 internal enum StorageMigrator {
 
+    /// Serializes the legacy claim and copy across all SDK instances in this process.
+    private static let migrationLock = NSLock()
+
     /// Highest storage-migration schema version this SDK build knows how to apply.
     ///
     /// Version history:
@@ -78,44 +81,46 @@ internal enum StorageMigrator {
         system: UserDefaults? = nil,
         token: String = ""
     ) {
-        guard let target = target else { return }
+        migrationLock.withLock {
+            guard let target = target else { return }
 
-        // Already at (or beyond) the current version — fast path.
-        if target.integer(forKey: migrationVersionKey) >= currentMigrationVersion { return }
+            // Already at (or beyond) the current version — fast path.
+            if target.integer(forKey: migrationVersionKey) >= currentMigrationVersion { return }
 
-        // Defensive: if the new suite already holds any known key, do not
-        // overwrite it from legacy. Protects the rare reinstall-then-rollback
-        // path where v2 ran, wrote real data, and a future repair invocation
-        // would otherwise copy stale legacy data on top.
-        if hasAnyKnownKey(in: target) {
-            markMigrated(target)
-            return
-        }
-
-        // First-token-wins claim. Only the first tenant ever absorbs legacy
-        // data; subsequent tenants see the claim and skip the copy so the
-        // same legacy bytes do not appear in two tenants. Falls back to the
-        // pre-rename claim key so claims written by older builds are honored.
-        if let system = system, !token.isEmpty {
-            let claimed = system.string(forKey: legacyOwnerTokenKey)
-                ?? system.string(forKey: legacyOwnerTokenKeyV0)
-            if let claimed = claimed, claimed != token {
+            // Defensive: if the new suite already holds any known key, do not
+            // overwrite it from legacy. Protects the rare reinstall-then-rollback
+            // path where v2 ran, wrote real data, and a future repair invocation
+            // would otherwise copy stale legacy data on top.
+            if hasAnyKnownKey(in: target) {
                 markMigrated(target)
                 return
             }
-        }
 
-        guard let legacy = legacy, hasAnyKnownKey(in: legacy) else {
-            // Nothing to migrate — fresh install or already cleaned up.
+            // First-token-wins claim. Only the first tenant ever absorbs legacy
+            // data; subsequent tenants see the claim and skip the copy so the
+            // same legacy bytes do not appear in two tenants. Falls back to the
+            // pre-rename claim key so claims written by older builds are honored.
+            if let system = system, !token.isEmpty {
+                let claimed = system.string(forKey: legacyOwnerTokenKey)
+                    ?? system.string(forKey: legacyOwnerTokenKeyV0)
+                if let claimed = claimed, claimed != token {
+                    markMigrated(target)
+                    return
+                }
+            }
+
+            guard let legacy = legacy, hasAnyKnownKey(in: legacy) else {
+                // Nothing to migrate — fresh install or already cleaned up.
+                markMigrated(target)
+                return
+            }
+
+            copyKnownKeys(from: legacy, into: target)
+            if let system = system, !token.isEmpty {
+                system.set(token, forKey: legacyOwnerTokenKey)
+            }
             markMigrated(target)
-            return
         }
-
-        copyKnownKeys(from: legacy, into: target)
-        if let system = system, !token.isEmpty {
-            system.set(token, forKey: legacyOwnerTokenKey)
-        }
-        markMigrated(target)
     }
 
     /// Records `currentMigrationVersion` in the tenant suite so every subsequent

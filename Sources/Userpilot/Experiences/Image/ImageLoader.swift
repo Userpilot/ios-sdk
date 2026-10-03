@@ -38,6 +38,8 @@ internal protocol ImageLoading: AnyObject {
 
 internal class ImageLoader: ImageLoading {
 
+    /// Background reads of imageCache can overlap URLSession writes; decoding stays outside the lock.
+    private let cacheLock = NSLock()
     private var blurCache = [String: UIImage]()
     private var imageCache = [String: UIImage]()
 
@@ -52,7 +54,7 @@ internal class ImageLoader: ImageLoading {
                 let url = URL(string: url)
             else { return }
 
-            if let image = imageCache[url.absoluteString] {
+            if let image = cacheLock.withLock({ self.imageCache[url.absoluteString] }) {
                 setImage(target, image)
                 return
             }
@@ -99,7 +101,7 @@ internal class ImageLoader: ImageLoading {
                 return
             }
             if let image = self.createImage(from: data, size: size) {
-                self.imageCache[url.absoluteString] = image
+                self.cacheLock.withLock { self.imageCache[url.absoluteString] = image }
                 completion(image)
             } else {
                 completion(nil)
