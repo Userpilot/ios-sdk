@@ -1261,27 +1261,6 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(publishCount, 1)
     }
 
-    func testPublish_withSameIdentifyEvent_shouldNotReprocess() {
-        // Arrange
-        let userId = "test-user"
-        let properties = ["name": "John"]
-        let identifyEvent = Event(type: .identify(userId), properties: properties)
-
-        // Set up existing user
-        let user = User(userId: userId, properties: properties, company: [:])
-        userpilot.storage.user = user.toJson() ?? ""
-
-        var publishIdentifyEventCalled = false
-        userpilot.socketManager.onPublish = { _, _ in publishIdentifyEventCalled = true }
-
-        // Act
-        analyticsPublisher.publish(identifyEvent)
-
-        // Assert
-        // Should not reprocess same identify event
-        XCTAssertFalse(publishIdentifyEventCalled)
-    }
-
     // MARK: - User Switch With A Screen Tracked Right After Identify
 
     /// A user switch blanks the user id via `clean()` while the new user's identify waits in the
@@ -1514,22 +1493,14 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(published(), [])
     }
 
-    func testDuplicateIdentifyIsDropped() {
+    /// Identify de-duplication is the backend's job, so an identify matching the cached user is
+    /// still sent.
+    func testIdentifyCarryingNothingNewIsForwarded() {
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
         analyticsPublisher.publish(
             Event(type: .identify("reload-user"), properties: ["plan": "pro"]))
-
-        XCTAssertEqual(published(), [])
-    }
-
-    func testIdentifyCarryingNewDataIsForwarded() {
-        arrangeReloadableScreen()
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.publish(
-            Event(type: .identify("reload-user"), properties: ["plan": "enterprise"]))
 
         XCTAssertEqual(published(), [Constants.Event.identifyEvent])
     }
