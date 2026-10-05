@@ -100,10 +100,7 @@ final class SurveyViewModel: SurveyViewModeling {
         }
 
         // Setup theme
-        let baseTheme = themeHandler.getThemeById(surveyContent.baseThemeId)
-        surveyTheme = themeHandler.mergeSurveyThemes(
-            baseTheme, surveyContent.surveyTheme.themeData
-        )
+        surveyTheme = themeHandler.surveyTheme(for: surveyContent)
 
         // Keep the original content check: removing a disabled thank-you module does not
         // change whether the backend supplied an empty survey.

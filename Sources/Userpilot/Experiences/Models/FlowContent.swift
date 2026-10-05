@@ -62,8 +62,11 @@ internal struct FlowContent: Decodable {
 }
 
 internal extension FlowContent {
-    /// Embedded theme data takes precedence; the cache is consulted only when that data is absent.
+    /// A resolved app theme decides first; then embedded theme data, then the cached base theme.
     func isBottomSheet(using themes: ThemeHandling) -> Bool {
+        if let appTheme = themes.appTheme {
+            return !appTheme.isDialogExperience
+        }
         if let themeData = mobileTheme.themeData {
             return themeData.general?.contentAlignment == .bottom
         }

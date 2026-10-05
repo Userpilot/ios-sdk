@@ -104,14 +104,9 @@ internal class ExperienceViewModel: ExperienceViewModeling {
         bindData?(canBindContent(flowContent))
     }
 
-    /// Keeps one merged theme per step using the content's base, flow and step overrides.
+    /// Keeps one merged theme per step: the app theme when resolved, else the content's own themes.
     private func prepareThemes(for content: FlowContent) {
-        let baseTheme = themeHandler.getThemeById(content.baseThemeId)
-        content.steps.forEach { step in
-            mergedTheme.append(
-                themeHandler.mergeExperienceThemes(baseTheme, content.mobileTheme.themeData, step.mobileTheme)
-            )
-        }
+        mergedTheme.append(contentsOf: themeHandler.flowThemes(for: content))
     }
 
     /// Prevents binding incomplete backend content without changing renderer fallback behavior.

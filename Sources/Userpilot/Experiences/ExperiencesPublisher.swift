@@ -109,7 +109,7 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
     /// Preparation steps of the one accepted operation, not separate admission gates.
     private enum Phase {
         case content
-        case theme(Int)
+        case theme(ThemeKey)
         case delay
         case visible
         case dismissing
@@ -410,17 +410,37 @@ extension ExperiencesPublisher {
         prepare(operation)
     }
 
-    /// Continues the operation waiting for this theme. A failed reply releases the gate.
+    /// Continues the operation waiting for this theme. A failed app theme reply falls back to the
+    /// content's own theme; any other failed reply releases the gate.
     private func receiveTheme(_ operation: Operation, _ message: Message, success: Bool) {
         assertOnQueue()
-        guard case .theme(let themeID) = operation.phase else { return }
-        guard success, let theme = message.payload.toJSONString()?.toMobileTheme(), theme.id == themeID else {
-            logger.info("Experience dropped - theme request failed")
-            finish(operation)
-            return
+        guard case .theme(let key) = operation.phase else { return }
+        let response = message.payload.toJSONString()
+        logger.debug("🎨 Theme response for %{public}@ (success: %{public}@): %{public}@",
+                     String(describing: key), String(success), response ?? "nil")
+        let theme = success ? response?.toMobileTheme() : nil
+        switch key {
+        case .id(let themeID):
+            guard let theme, theme.id == themeID else {
+                logger.info("Experience dropped - theme request failed")
+                finish(operation)
+                return
+            }
+            themes.saveTheme(theme)
+        case .title(let title):
+            guard let theme, themes.saveAppTheme(theme, title: title) else {
+                logger.info("App theme %@ unavailable - using the experience's own theme", title)
+                themes.markAppThemeUnavailable(title)
+                prepare(operation)
+                return
+            }
         }
-        themes.saveTheme(theme)
         schedulePresentation(operation)
+    }
+
+    /// Each connection fetches the app theme again, so dashboard edits reach the next experience.
+    func onSocketOpened() {
+        themes.resetAppThemes()
     }
 
     /// Socket loss abandons preparation still waiting for a content/theme reply.
@@ -442,7 +462,8 @@ extension ExperiencesPublisher {
 
 extension ExperiencesPublisher {
 
-    /// NPS and cached themes go straight to the display delay; otherwise request the one missing theme.
+    /// NPS and cached themes go straight to the display delay; otherwise request the one missing theme,
+    /// which is the app theme while one is selected and available.
     private func prepare(_ operation: Operation) {
         assertOnQueue()
         guard let content = operation.content else {
@@ -454,7 +475,7 @@ extension ExperiencesPublisher {
             finish(operation)
             return
         }
-        if content.asNPSContent() != nil || themes.getThemeById(content.experienceThemeId()) != nil {
+        guard let themeKey = themes.requiredThemeKey(for: content) else {
             schedulePresentation(operation)
             return
         }
@@ -463,9 +484,8 @@ extension ExperiencesPublisher {
             finish(operation)
             return
         }
-        let themeID = content.experienceThemeId()
-        operation.phase = .theme(themeID)
-        request(ThemeContentEvent(themeId: themeID, token: config.token), for: operation)
+        operation.phase = .theme(themeKey)
+        request(ThemeContentEvent(key: themeKey, token: config.token), for: operation)
     }
 
     /// The completion belongs to this operation; cancellation also covers time in the SDK queue.

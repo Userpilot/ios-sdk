@@ -316,7 +316,7 @@ extension ExperiencesPublisherTests {
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload().toJSONString()?.toFlowContent()?.flowContent
         )
-        let theme = ThemeContent(id: 1, themeData: ThemeData(carousel: nil, slideOut: nil, survey: nil))
+        let theme = ThemeContent(id: 1, title: nil, themeData: ThemeData(carousel: nil, slideOut: nil, survey: nil))
         return PreviewExperience(flow: flow, survey: nil, contentType: "flow", theme: theme)
     }
 }

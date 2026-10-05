@@ -27,7 +27,7 @@ final class ThemeHandlerTests: XCTestCase {
         // Arrange
         let themeId = 123
         let themeData = ThemeData(carousel: nil, slideOut: nil, survey: nil)
-        let themeContent = ThemeContent(id: themeId, themeData: themeData)
+        let themeContent = ThemeContent(id: themeId, title: nil, themeData: themeData)
 
         // Act
         themeHandler.saveTheme(themeContent)

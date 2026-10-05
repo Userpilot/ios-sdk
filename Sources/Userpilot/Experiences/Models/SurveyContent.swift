@@ -56,8 +56,11 @@ internal struct SurveyContent: Decodable {
 }
 
 internal extension SurveyContent {
-    /// Uses the embedded position when supplied, otherwise the cached survey theme's dialog flag.
+    /// A resolved app theme decides first; then the embedded position, then the cached theme's dialog flag.
     func isBottomSheet(using themes: ThemeHandling) -> Bool {
+        if let appTheme = themes.appTheme {
+            return !appTheme.isDialogSurvey
+        }
         if let position = surveyTheme.themeData?.general?.position {
             return position == .bottom
         }

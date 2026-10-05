@@ -97,6 +97,36 @@ class MockThemeHandler: ThemeHandling {
         return onGetThemeById?(themeId) ?? nil
     }
 
+    var appTheme: ThemeData?
+
+    var appThemeNames: [String?] = []
+    func setAppTheme(name: String?) {
+        appThemeNames.append(name)
+    }
+
+    /// Defaults to the content's own theme ID, matching behavior without an app theme.
+    var onRequiredThemeKey: ((ExperienceContent) -> ThemeKey?)?
+    func requiredThemeKey(for content: ExperienceContent) -> ThemeKey? {
+        if let onRequiredThemeKey { return onRequiredThemeKey(content) }
+        guard content.asNPSContent() == nil, getThemeById(content.experienceThemeId()) == nil else { return nil }
+        return .id(content.experienceThemeId())
+    }
+
+    var onSaveAppTheme: ((ThemeContent, String) -> Bool)?
+    func saveAppTheme(_ themeContent: ThemeContent, title: String) -> Bool {
+        return onSaveAppTheme?(themeContent, title) ?? false
+    }
+
+    var unavailableAppThemes: [String] = []
+    func markAppThemeUnavailable(_ title: String) {
+        unavailableAppThemes.append(title)
+    }
+
+    var resetAppThemesCount = 0
+    func resetAppThemes() {
+        resetAppThemesCount += 1
+    }
+
     var onMergeExperienceThemes: ((ThemeData?, ExperienceTheme?, ExperienceTheme?) -> ThemeData?)?
     func mergeExperienceThemes(
         _ baseTheme: ThemeData?,

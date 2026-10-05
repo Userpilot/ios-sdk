@@ -299,6 +299,25 @@ class UserpilotTests: XCTestCase {
         XCTAssertTrue(experienceEnded)
     }
 
+    /// Verifies the app theme title reaches the theme service unchanged
+    func testSetTheme_forwardsTitle() throws {
+        // Act
+        userpilot.setTheme(name: "Brand Dark ")
+        userpilot.setTheme(name: nil)
+
+        // Assert
+        XCTAssertEqual(userpilot.themeHandler.appThemeNames, ["Brand Dark ", nil])
+    }
+
+    /// Verifies a blank app theme title restores per-experience themes
+    func testSetTheme_clearsAppTheme_whenTitleIsBlank() throws {
+        // Act
+        userpilot.setTheme(name: "  ")
+
+        // Assert
+        XCTAssertEqual(userpilot.themeHandler.appThemeNames, [nil])
+    }
+
     // MARK: - Push
 
     /// Verifies that push token is passed to the push monitor
