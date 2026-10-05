@@ -10,15 +10,14 @@
 
 import Foundation
 
-/// Defaults retain the original fire-and-forget contract for legacy test doubles.
-/// The production manager implements the completion overloads directly.
+/// Convenience entry points forward every argument to the protocol requirement so dynamic dispatch
+/// preserves the concrete manager's cancellation and per-request completion handling.
 extension SocketManaging {
     func publish(
-        _ eventName: String, payload: Payload, userID: String? = nil,
-        shouldSend: @escaping () -> Bool = { true }, completion: SocketCompletion? = nil
+        _ eventName: String, payload: Payload,
+        shouldSend: @escaping () -> Bool, completion: SocketCompletion?
     ) {
-        guard shouldSend() else { return }
-        publish(eventName, payload: payload)
+        publish(eventName, payload: payload, userID: nil, shouldSend: shouldSend, completion: completion)
     }
 
     func close(completion: @escaping () -> Void) {

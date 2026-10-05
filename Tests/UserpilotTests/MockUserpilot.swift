@@ -274,6 +274,9 @@ class MockSocketManager: SocketManaging {
 
     var onClose: (() -> Void)?
     func close() {
+        isSocketOpened = false
+        isJoiningSocket = false
+        isShutdownState = false
         onClose?()
     }
 
@@ -288,6 +291,33 @@ class MockSocketManager: SocketManaging {
         payload: Payload
     ) {
         onPublish?(eventName, payload)
+    }
+
+    struct Request {
+        let event: String
+        let payload: Payload
+        let shouldSend: () -> Bool
+        let completion: SocketCompletion?
+    }
+    var requests: [Request] = []
+    var onPublishRequest: ((Request) -> Void)?
+
+    func publish(
+        _ eventName: String, payload: Payload, userID: String?,
+        shouldSend: @escaping () -> Bool, completion: SocketCompletion?
+    ) {
+        guard shouldSend() else { return }
+        let request = Request(event: eventName, payload: payload, shouldSend: shouldSend, completion: completion)
+        requests.append(request)
+        onPublish?(eventName, payload)
+        onPublishRequest?(request)
+    }
+
+    /// Resolve the captured request, matching production's per-push completion rather than a shared notification.
+    func completeNext(_ event: String, _ payload: Payload = nil, _ message: Message = Message(), _ success: Bool = true) {
+        guard let index = requests.firstIndex(where: { $0.event == event && $0.shouldSend() }) else { return }
+        let request = requests.remove(at: index)
+        request.completion?(message, success)
     }
 
 }
@@ -327,6 +357,24 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onPublishInternalSDKEvent?(sdkEvent)
     }
 
+    struct Request {
+        let event: SDKEvent
+        let shouldSend: () -> Bool
+        let completion: SocketCompletion?
+    }
+    var requests: [Request] = []
+    var onPublishRequest: ((Request) -> Void)?
+
+    func publishInternalSDKEvent(
+        _ sdkEvent: SDKEvent, shouldSend: @escaping () -> Bool, completion: SocketCompletion?
+    ) {
+        guard shouldSend() else { return }
+        let request = Request(event: sdkEvent, shouldSend: shouldSend, completion: completion)
+        requests.append(request)
+        onPublishInternalSDKEvent?(sdkEvent)
+        onPublishRequest?(request)
+    }
+
     var onPublishFakeReloadScreenEvent: ((ExperienceType?, Int?, Bool) -> Bool)?
     func publishFakeReloadScreenEvent(
         _ experienceType: ExperienceType?,
@@ -358,7 +406,6 @@ class MockStorage: DataStoring {
     var pushToken: String? = ""
     var userId: String = "user-id"
     var anonymousUserId: String = ""
-    var user: String = ""
     var temporaryUser: String?
     var sessionDate: Date?
     var configurationDate: Date?
@@ -391,11 +438,6 @@ class MockPushNotificationMonitor: PushNotificationMonitoring {
     var onSetPushToken: ((Data?) -> Void)?
     func setPushToken(_ deviceToken: Data?) {
         onSetPushToken?(deviceToken)
-    }
-
-    var onResyncPushToken: (() -> Void)?
-    func resyncPushToken() {
-        onResyncPushToken?()
     }
 
     var onRefreshPushStatus: (() -> Void)?
@@ -481,7 +523,7 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
         heldRestoreCompletion = completion
     }
 
-    /// Resolves a held restore the way the batch ACK does in `onSocketEventSent`.
+    /// Resolves a held restore through the batch request's own completion.
     func finishRestore() {
         let completion = heldRestoreCompletion
         heldRestoreCompletion = nil

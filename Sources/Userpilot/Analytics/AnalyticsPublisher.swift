@@ -79,13 +79,6 @@ internal protocol AnalyticsPublishing: AnyObject {
 
 extension AnalyticsPublishing {
 
-    func publishInternalSDKEvent(
-        _ sdkEvent: SDKEvent, shouldSend: @escaping () -> Bool = { true }, completion: SocketCompletion? = nil
-    ) {
-        guard shouldSend() else { return }
-        publishInternalSDKEvent(sdkEvent)
-    }
-
     /// Fake reload requested by experience close/dismiss flows.
     @discardableResult
     func publishFakeReloadScreenEvent(
