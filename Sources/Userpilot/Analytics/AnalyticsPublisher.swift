@@ -19,25 +19,25 @@ import UIKit
  to publish analytic events and manage the event lifecycle.
  */
 internal protocol AnalyticsPublishing: AnyObject {
-    /// Sends an event to the backend.
+    /// Admits a host or autocapture event while the app is active; delivery follows queue/offline policy.
     func publish(_ event: Event)
 
-    /// Flush any cached events or session data.
+    /// Best-effort background send of pending analytics, then closes the socket without awaiting ACKs.
     func flush()
 
-    /// Open socket connection.
+    /// Restores session timing and requests a connection when the app returns to foreground.
     func resume()
 
-    /// Reset state
+    /// Resets session-start and throttle state while retaining queued events.
     func reset()
 
-    /// Logout user from socket
+    /// Drops the outgoing user's work and closes after a best-effort push-token logout event.
     func logout()
 
-    /// check socket state
+    /// True once the socket channel is joined and ready for requests.
     var canRequestEvent: Bool { get }
 
-    /// publish experience event
+    /// Queues an internal SDK event, or persists an offline-eligible event while offline.
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// Keeps the reply and cancellation check with an event while it waits in the SDK queue.
@@ -45,7 +45,7 @@ internal protocol AnalyticsPublishing: AnyObject {
         _ sdkEvent: SDKEvent, shouldSend: @escaping () -> Bool, completion: SocketCompletion?
     )
 
-    /// publish fake reload event
+    /// Requests backend content re-evaluation through the analytics FIFO.
     /// - Returns: true when a screen refresh was accepted into the queue
     @discardableResult
     func publishFakeReloadScreenEvent(
@@ -54,7 +54,7 @@ internal protocol AnalyticsPublishing: AnyObject {
         isFakeReload: Bool
     ) -> Bool
 
-    /// update seen experiences
+    /// Records flow/survey IDs for the current screen's seen-content metadata.
     func experiencePublished(
         _ experienceType: ExperienceType,
         _ experienceId: Int
@@ -70,7 +70,7 @@ internal protocol AnalyticsPublishing: AnyObject {
      */
     func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool
 
-    /// For experience which are come from start session
+    /// Whether the current analytics screen belongs to the start of this session.
     var isStartSession: Bool { get }
 
     /// Current screen-session state.
@@ -162,8 +162,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private var startSession = true
     private var screen: ScreenSessionStateMachine?
 
-    /// Replaces V1 in the AnalyticsPublishing registration. Never construct both in one
-    /// container: both would subscribe to the same socket.
+    /// Restores a pending identify snapshot and subscribes once to this instance's socket and network monitor.
     init(container: DIContainer) {
         let config = container.resolve(Userpilot.Config.self)
         self.container = container
@@ -367,7 +366,8 @@ extension AnalyticsPublisher {
         }
     }
 
-    /// Prepares the same payloads as V1. Flush also uses this path, without acquiring an ACK slot.
+    /// Builds the wire payload and reserves its ACK slot. Background flush uses the same payload path
+    /// without awaiting a reply, so it cannot advance normal FIFO delivery.
     private func send(_ entry: Entry, awaitReply: Bool) -> Bool {
         let event = entry.event
         guard let payload = preparePayload(for: event) else { return false }
@@ -391,8 +391,8 @@ extension AnalyticsPublisher {
     }
 
     /// Builds an event's push payload, or nil when it must not be sent. Not pure: identify marks the
-    /// session as awaiting its first screen; screens replace the screen session, drain SDK events,
-    /// update experience screen context, and settle `startSession`.
+    /// session as awaiting its first screen; screens replace the analytics screen session,
+    /// drain SDK events, and settle `startSession`. Experience navigation was reported at admission.
     private func preparePayload(for event: Event) -> [String: Any]? {
         switch event.type {
         case .identify:

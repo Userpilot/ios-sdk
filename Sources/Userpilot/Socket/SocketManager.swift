@@ -64,6 +64,7 @@ internal final class SocketManager: SocketManaging {
 
     typealias SocketFactory = (_ endpoint: String, _ params: SwiftPhoenixClientPayload?) -> Socket
 
+    /// SDK lifecycle includes settings lookup and local teardown, which Phoenix's channel state cannot represent.
     /// Failed connections stay distinguishable after their Phoenix objects have been released.
     private enum Phase {
         case idle, fetchingSettings, joining, open, closing, failed
@@ -112,7 +113,7 @@ internal final class SocketManager: SocketManaging {
     }
     private var current: Connection?
 
-    /// Replaces V1 in the SocketManaging registration. Construction starts no work.
+    /// Resolves transport dependencies without fetching settings or opening a connection.
     init(
         container: DIContainer,
         socketFactory: @escaping SocketFactory = { endpoint, params in Socket(endpoint, params: params) }
@@ -170,6 +171,7 @@ internal final class SocketManager: SocketManaging {
     }
 
     /// Bind this queued send to its submitted connection; a replacement cannot become its destination.
+    /// This also lets the outgoing logout reach its original channel after storage has been cleared.
     func publish(
         _ eventName: String, payload: Payload, userID: String?,
         shouldSend: @escaping () -> Bool, completion: SocketCompletion?
