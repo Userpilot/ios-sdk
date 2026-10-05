@@ -1,11 +1,10 @@
 //
 //  UIPickerView+AutoCapture.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 16/03/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIPickerView+AutoCapture captures UIPickerView row selections by swizzling the
 //  `setDelegate:` setter. Each time a delegate is assigned, its
 //  `pickerView(_:didSelectRow:inComponent:)` method is swizzled so the SDK can

@@ -1,11 +1,10 @@
 //
 //  UIView+UserpilotLabel.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed
+//  Created by Userpilot on 07/06/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIView+UserpilotLabel stores SwiftUI-provided autocapture metadata on UIKit views using
 //  associated objects, and exposes resolution helpers used by window and control capture paths.
 //

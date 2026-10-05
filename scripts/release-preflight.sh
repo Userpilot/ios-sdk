@@ -11,12 +11,12 @@
 # Shared steps (CI jobs and a full local run):
 #   environment  Environment.swift is .PRODUCTION with placeholders; SocketManager
 #                routes through Environment and contains no NX- string (no hardcoded
-#                token/socket). Version.swift == Userpilot.podspec spec.version.
+#                token/socket). Configuration/Version.swift == Userpilot.podspec spec.version.
 #   test         xcodebuild test — compiles the SDK and runs UserpilotTests.
 #   lint         swiftlint --strict
 #   xcframework  scripts/build-xcframework.sh (device + simulator Release)
 #
-# Local-only extras (full run, not CI): CocoaPods trunk vs Version.swift. Needs the
+# Local-only extras (full run, not CI): CocoaPods trunk vs Configuration/Version.swift. Needs the
 # network; about whether a release would collide, not whether the code is safe to merge.
 #
 # Exit code: 0 = PASS, 1 = FAIL. Every requested step runs; failures aggregate
@@ -28,7 +28,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 ENVIRONMENT_FILE="Sources/Userpilot/Utilities/Config/Environment.swift"
 SOCKET_MANAGER_FILE="Sources/Userpilot/Socket/SocketManager.swift"
-VERSION_FILE="Sources/Userpilot/Version.swift"
+VERSION_FILE="Sources/Userpilot/Configuration/Version.swift"
 PODSPEC="Userpilot.podspec"
 TRUNK_API="https://trunk.cocoapods.org/api/v1/pods/Userpilot"
 XCFRAMEWORK_SCRIPT="scripts/build-xcframework.sh"
@@ -175,9 +175,9 @@ check_environment() {
   printf "    SPM       %-44s \033[1m%s\033[0m\n" "($VERSION_FILE)" "$swift_version"
   printf "    CocoaPods %-44s \033[1m%s\033[0m\n" "($PODSPEC)" "$podspec_version"
   if [ "$swift_version" = "$podspec_version" ]; then
-    pass "podspec version matches Version.swift"
+    pass "podspec version matches Configuration/Version.swift"
   else
-    fail "podspec version ($podspec_version) != Version.swift ($swift_version)"
+    fail "podspec version ($podspec_version) != Configuration/Version.swift ($swift_version)"
     info "SPM resolves by git tag and CocoaPods by spec.version — drift ships different code"
   fi
   echo
@@ -284,9 +284,9 @@ except Exception:
   latest_tag="$(git tag --list --sort=-v:refname | head -1)"
   if [ -n "$latest_tag" ]; then
     if [ "$latest_tag" = "$local_version" ]; then
-      pass "latest git tag ($latest_tag) matches Version.swift — SPM consumers get this code"
+      pass "latest git tag ($latest_tag) matches Configuration/Version.swift — SPM consumers get this code"
     else
-      info "latest git tag is $latest_tag (Version.swift is $local_version)"
+      info "latest git tag is $latest_tag (Configuration/Version.swift is $local_version)"
       info "expected before a release: the workflow creates the new tag."
     fi
   fi

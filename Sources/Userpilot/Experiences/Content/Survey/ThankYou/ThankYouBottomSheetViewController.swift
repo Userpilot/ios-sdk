@@ -2,10 +2,9 @@
 //  ThankYouBottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/01/2025.
+//  Created by Userpilot on 21/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A view to show Thank you message.
 //
 

@@ -1,11 +1,10 @@
 //
-//  UIDevice+Extension.swift
+//  UIDevice+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIDevice+Extension file contains an extension for the `UIDevice` class, providing helper
 //  methods to retrieve device-specific information such as a formatted identifier
 //  and device type.

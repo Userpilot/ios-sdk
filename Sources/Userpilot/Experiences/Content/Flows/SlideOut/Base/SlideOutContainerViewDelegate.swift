@@ -2,10 +2,9 @@
 //  SlideOutContainerViewDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/10/2024.
+//  Created by Userpilot on 21/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This protocol defines the delegate methods for handling user interactions
 //  within the `SlideOutContainerView`. It allows the implementing class to
 //  respond to events such as dismissing the view or handling button actions.

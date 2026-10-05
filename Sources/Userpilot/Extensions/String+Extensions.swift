@@ -1,11 +1,10 @@
 //
-//  String+Extension.swift
+//  String+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 27/08/2024.
+//  Created by Userpilot on 27/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  `String+Extension` contains extensions with helper methods for the `String` class.
 //  These extensions provide additional functionality for checking if strings and optional strings are not empty.
 //
@@ -279,6 +278,12 @@ internal extension String {
 // MARK: - Json converter
 
 internal extension String {
+    /// Decodes a JSON object without accepting scalar or array roots; invalid input stays absent.
+    func toJSONDictionary() -> [String: Any]? {
+        guard let jsonData = data(using: .utf8) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: jsonData, options: [])) as? [String: Any]
+    }
+
     /**
     Converts a JSON string into an array of a specified type using `JSONDecoder`.
          

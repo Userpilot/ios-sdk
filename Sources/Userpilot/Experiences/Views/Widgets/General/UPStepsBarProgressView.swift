@@ -1,14 +1,11 @@
 //
 //  UPStepsBarProgressView.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 30/01/2025.
+//  Created by Userpilot on 30/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
 //
-//
-//  UPStepsBarProgressView.swift
-//  Userpilot
-//
-//  Created by Motasem Hamed on 30/01/2025.
+//  Displays multi-step progress with configurable colors and right-to-left layout support.
 //
 
 import UIKit

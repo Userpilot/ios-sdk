@@ -1,12 +1,11 @@
 //
-//  Constants.swift
+//  FontsUtil.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 06/10/2024.
+//  Created by Userpilot on 06/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-// [Brief Description]
-// A utility class to load fonts from assets or system font.
+//  A utility class to load fonts from assets or system font.
 //
 
 import Foundation

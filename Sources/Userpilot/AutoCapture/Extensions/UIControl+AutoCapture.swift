@@ -1,11 +1,10 @@
 //
 //  UIControl+AutoCapture.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 17/02/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIControl+AutoCapture provides automatic interaction tracking for UIControl subclasses
 //  including buttons, switches, sliders, segmented controls, steppers, date pickers, and page controls.
 //

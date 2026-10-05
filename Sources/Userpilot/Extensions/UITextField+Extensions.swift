@@ -1,11 +1,10 @@
 //
-//  UITextField+Extension.swift
+//  UITextField+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 220/01/2025.
+//  Created by Userpilot on 16/06/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  `UITextField+Extension` contains extensions with helper methods for the `UITextField` class.
 //
 

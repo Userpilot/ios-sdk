@@ -1,11 +1,10 @@
 //
 //  InteractionEventCache.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 06/01/2026.
+//  Created by Userpilot on 06/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  High-frequency interactions (text field, text view, UISlider) are debounced per view via `EventDebounce`:
 //  after each change, wait `interactionDebounceInterval` with no further changes, then send once.
 //

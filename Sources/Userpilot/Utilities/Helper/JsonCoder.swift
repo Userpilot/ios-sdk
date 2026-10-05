@@ -2,10 +2,9 @@
 //  JsonCoder.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 05/11/2025.
+//  Created by Userpilot on 05/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Shared JSON encoder/decoder utilities used by the SDK.
 //
 

@@ -1,14 +1,14 @@
 //
-//  Untitled.swift
+//  UPLikertView+ExperienceView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This extension implements the UPExperienceView protocol for the UPLikertView class.
 //  It includes methods for checking the validity of an answer and retrieving the selected answer
 //  from the Likert scale, returning the data in a specific format.
+//
 
 extension UPLikertView: UPExperienceView {
 

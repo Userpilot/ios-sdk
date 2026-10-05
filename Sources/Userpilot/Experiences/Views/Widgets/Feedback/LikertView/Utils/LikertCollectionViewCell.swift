@@ -2,13 +2,14 @@
 //  LikertCollectionViewCell.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
-
+//
 //  This file contains the implementation of the `LikertCollectionViewCell` class,
 //  which represents an individual cell in the Likert scale collection view.
 //  Each cell can display either a label or an image, depending on the type of the rating item it represents,
 //  and visually reflects whether it is selected using the provided survey theme.
+//
 
 import UIKit
 

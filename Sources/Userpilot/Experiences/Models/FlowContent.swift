@@ -1,10 +1,10 @@
+//
 //  FlowContent.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
+//  Created by Userpilot on 29/09/2024.
 //  Copyright © 2021 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Represents the configuration and content of a carousel.
 //
 
@@ -59,6 +59,16 @@ internal struct FlowContent: Decodable {
         screenType == .all
     }
 
+}
+
+internal extension FlowContent {
+    /// Embedded theme data takes precedence; the cache is consulted only when that data is absent.
+    func isBottomSheet(using themes: ThemeHandling) -> Bool {
+        if let themeData = mobileTheme.themeData {
+            return themeData.general?.contentAlignment == .bottom
+        }
+        return themes.getThemeById(mobileTheme.id)?.isDialogExperience == false
+    }
 }
 
 // MARK: - Configuration

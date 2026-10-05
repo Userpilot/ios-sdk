@@ -2,10 +2,9 @@
 //  UPLikertView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/01/2025.
+//  Created by Userpilot on 18/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This custom view represents a Likert scale used in surveys, where users can rate a statement.
 //  It includes dynamic item width calculation based on the screen width and the number of items,
 //  and supports various configuration for displaying rating items, as well as low and high score labels.

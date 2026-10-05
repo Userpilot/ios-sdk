@@ -1,11 +1,10 @@
 //
-//  UIButton+Extension.swift
+//  UIButton+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 23/01/2025.
+//  Created by Userpilot on 23/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  `UIButton+Extension` contains extensions with helper methods for the `UIButton` class.
 //
 

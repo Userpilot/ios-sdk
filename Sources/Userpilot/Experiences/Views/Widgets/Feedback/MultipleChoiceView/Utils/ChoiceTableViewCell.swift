@@ -2,10 +2,9 @@
 //  ChoiceTableViewCell.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Custom UITableViewCell used to display a choice in the multiple-choice survey view.
 //  Includes icons, labels, and text field for "Other" option with dynamic styling and selection states.
 //

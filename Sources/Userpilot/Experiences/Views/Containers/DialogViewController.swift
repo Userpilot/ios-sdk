@@ -2,10 +2,9 @@
 //  DialogViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/10/2024.
+//  Created by Userpilot on 21/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A view controller that presents a modal dialog with a customizable content area.
 //  The dialog features a dimmed background and smooth presentation and dismissal animations.
 //  It allows dynamic content to be added and provides options for customizing the background color.

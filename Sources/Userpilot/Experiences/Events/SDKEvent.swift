@@ -2,10 +2,9 @@
 //  SDKEvent.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 24/11/2024.
+//  Created by Userpilot on 24/11/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This file defines the `SDKEvent` protocol and related event names used within the SDK
 //  to track and manage different types of user experience events.
 //
@@ -123,7 +122,7 @@ extension SDKEventsName {
     /// Excluded on purpose:
     /// - `fetchExperienceContent` / `fetchExperienceTheme`: request/response, a stale replay asks the
     ///   backend to re-answer a question with no consumer left.
-    /// - `pushNotificationToken`: already self-heals through `resyncPushToken()` on socket open;
+    /// - `pushNotificationToken`: the push monitor retries the current cached token on socket open;
     ///   replaying would send a stale token instead of the current one.
     /// - `userLogout`: logout also clears the offline store it would be written into.
     ///

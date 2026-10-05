@@ -2,12 +2,13 @@
 //  ExperienceContent.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 20/01/2025.
+//  Created by Userpilot on 20/01/2025.
 //  Copyright © 2021 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Represents the ExperienceContent like FlowContent & SurveyContent.
 //
+
+import Foundation
 
 // Enum that encapsulates different types of experience content: FlowContent and SurveyContent.
 internal enum ExperienceContent {
@@ -97,5 +98,22 @@ extension ExperienceContent {
         case .nps:
             return 0
         }
+    }
+
+    /// Survey/NPS configured delay, falling back to the default for flows and non-positive values.
+    func resolvedDelay() -> TimeInterval {
+        let configured = asSurveyContent()?.delayDuration ?? asNPSContent()?.delayDuration ?? 0
+        return configured > 0 ? configured : ThemeHandler.DefaultValues.delayTimeForExperience
+    }
+}
+
+internal extension String {
+    /// Decodes supported content in the existing flow → survey → NPS order; callers take the first.
+    func experienceCandidates() -> [ExperienceContent] {
+        var contents: [ExperienceContent] = []
+        if let flow = toFlowContent()?.flowContent { contents.append(.flow(content: flow)) }
+        if let survey = toSurveyContent()?.surveyContent { contents.append(.survey(content: survey)) }
+        if let nps = toNPSContent()?.npsContent { contents.append(.nps(content: nps)) }
+        return contents
     }
 }

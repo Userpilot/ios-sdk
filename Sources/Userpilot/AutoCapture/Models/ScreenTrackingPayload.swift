@@ -1,8 +1,11 @@
 //
 //  ScreenTrackingPayload.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 28/03/2026.
+//  Created by Userpilot on 28/03/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
+//
+//  Describes a captured screen and its controller, title and container metadata.
 //
 
 /// Payload containing comprehensive screen tracking information for auto capture events.
@@ -48,11 +51,12 @@ internal struct ScreenTrackingPayload: Equatable {
     /// per-tenant `ui_framework` value rather than reading from the SDK default
     /// fallback, which is wrong when multiple instances coexist.
     var appFramework: Userpilot.AppFramework?
+}
 
-    // MARK: - Conversion
+// MARK: - Event dictionaries
 
-    /// Converts the payload to a dictionary for event properties
-    /// - Returns: Dictionary representation of the payload
+extension ScreenTrackingPayload {
+    /// Screen properties keep optional values when present, including an empty navigation title.
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
             Constants.AutoCapture.screenName: currentScreen,
@@ -82,6 +86,66 @@ internal struct ScreenTrackingPayload: Equatable {
             dict[Constants.AutoCapture.uiFramework] = appFramework.rawValue
         }
         return dict
+    }
+
+    /// Native interaction context omits an empty navigation title and excludes screen-only metadata.
+    func toEventDictionary() -> [String: String] {
+        var screen = [
+            Constants.AutoCapture.screenTitle: screenClass,
+            Constants.AutoCapture.screenName: currentScreen
+        ]
+        if let navigationTitle, !navigationTitle.isEmpty {
+            screen[Constants.AutoCapture.navigationTitle] = navigationTitle
+        }
+        return screen
+    }
+
+    /// Wrapper interactions provide their own hierarchy and use only the tracked class as title.
+    func toWrapperEventDictionary() -> [String: String] {
+        [Constants.AutoCapture.screenTitle: screenClass]
+    }
+}
+
+// MARK: - Capture identity and hierarchy
+
+extension ScreenTrackingPayload {
+    /// UIKit keeps controller identity; SwiftUI uses its resolved logical name when present.
+    func screenEventIdentity(framework: Userpilot.AppFramework?) -> String {
+        guard framework == .SwiftUI else { return screenClass }
+        let logicalName = currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
+        return logicalName.isEmpty ? screenClass : logicalName
+    }
+
+    /// Diagnostic comparison for SwiftUI destinations that inherit a previous navigation title.
+    func matchesPreviousScreen(_ previousScreen: ScreenTrackingPayload?, framework: Userpilot.AppFramework?) -> Bool {
+        guard framework == .SwiftUI, let previousScreen else { return false }
+        let currentScreen = self.currentScreen.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !currentScreen.isEmpty else { return false }
+
+        let previousValues = [
+            previousScreen.currentScreen,
+            previousScreen.navigationTitle
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+
+        return previousValues.contains(currentScreen)
+    }
+
+    /// Replaces an unresolved owning controller using the original, untrimmed screen class.
+    func replaceUnknownScreenPlaceholder(in hierarchy: String) -> String {
+        let placeholder = Constants.AutoCapture.unknownScreenHierarchyPlaceholder
+        guard hierarchy.contains(placeholder), !screenClass.isEmpty else { return hierarchy }
+        return hierarchy.replacingOccurrences(of: placeholder, with: screenClass)
+    }
+
+    /// Appends the escaped screen class only when both the supplied hierarchy and class are nonempty.
+    func buildHierarchyPath(_ hierarchy: String) -> String {
+        guard !hierarchy.isEmpty else { return hierarchy }
+        let screenClass = self.screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !screenClass.isEmpty else { return hierarchy }
+        let escaped = screenClass.replacingOccurrences(of: "\"", with: "\\\"")
+        return hierarchy + ";\(escaped)"
     }
 }
 

@@ -1,16 +1,18 @@
-//  UIImageView+Extension.swift
 //
+//  UIImage+Extensions.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 07/11/2024.
+//  Created by Userpilot on 07/11/2024.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
-//  UIImageView+Extension file provides an extension for the `UIImageView` class,
-// offering a helper method `setImageWithCrossfade` to apply a smooth crossfade animation
-// when updating the image displayed in the image view.
+//  UIImage helpers decode experience images, resize static images, and load bundled
+//  resources. UIImageView applies the shared crossfade when an image is displayed.
 //
 
 import Foundation
+import ImageIO
 import UIKit
+import UniformTypeIdentifiers
 
 internal extension UIImageView {
     // set image with fade in animation
@@ -24,6 +26,13 @@ internal extension UIImageView {
 }
 
 internal extension UIImage {
+    /// Tries animation decoding first, then resizes the static-image fallback when possible.
+    static func decoded(from data: Data, size: CGSize) -> UIImage? {
+        if let image = animatedImage(from: data) { return image }
+        guard let image = UIImage(data: data) else { return nil }
+        return image.resized(to: size) ?? image
+    }
+
     // Resize image to specific size
     func resized(to size: CGSize) -> UIImage? {
         let renderer = UIGraphicsImageRenderer(size: size)
@@ -39,4 +48,36 @@ internal extension UIImage {
         return UIImage(named: imageName, in: Userpilot.resourceBundle, compatibleWith: nil)
     }
 
+    /// Keeps the existing ImageIO fallback on iOS 13, where UTType.gif is unavailable.
+    private static func animatedImage(from data: Data) -> UIImage? {
+        guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        if #available(iOS 14.0, *) {
+            guard let type = CGImageSourceGetType(imageSource), type == UTType.gif.identifier as CFString else {
+                return nil
+            }
+        }
+
+        var frames: [UIImage] = []
+        var totalDuration = 0.0
+        for index in 0..<CGImageSourceGetCount(imageSource) {
+            if let cgImage = CGImageSourceCreateImageAtIndex(imageSource, index, nil) {
+                frames.append(UIImage(cgImage: cgImage))
+                totalDuration += imageSource.frameDelay(at: index)
+            }
+        }
+        return UIImage.animatedImage(with: frames, duration: totalDuration)
+    }
+}
+
+private extension CGImageSource {
+    /// Prefers the unclamped GIF delay and retains the 0.1-second fallback for missing or invalid values.
+    func frameDelay(at index: Int) -> Double {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(self, index, nil) as? [CFString: Any],
+              let gifProperties = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any] else {
+            return 0.1
+        }
+        let delayTime = gifProperties[kCGImagePropertyGIFUnclampedDelayTime] as? Double ??
+            gifProperties[kCGImagePropertyGIFDelayTime] as? Double ?? 0.1
+        return delayTime > 0 ? delayTime : 0.1
+    }
 }

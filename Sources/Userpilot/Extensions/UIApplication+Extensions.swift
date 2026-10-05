@@ -1,11 +1,10 @@
 //
-//  UIApplication+TopViewController.swift
+//  UIApplication+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Userpilot on 2025-10-16.
+//  Created by Userpilot on 16/10/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Utilities to get the top view controller and open URLs.
 //
 

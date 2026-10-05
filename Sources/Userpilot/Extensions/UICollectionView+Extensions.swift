@@ -1,10 +1,10 @@
 //
-//  UICollectionView+Extension.swift
+//  UICollectionView+Extensions.swift
+//  Userpilot SDK
 //
+//  Created by Userpilot on 01/10/2024.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  Created by Motasem Hamed on 01/10/2024.
-//
-//  [Brief Description]
 //  UICollectionView+Extension file contains an extension for the `UIViewController` class, providing helper methods
 //  for obtaining class names, capturing screen events, and swizzling the `viewDidAppear` method
 //  to include custom tracking logic.

@@ -2,10 +2,10 @@
 //  Constants+AutoCapture.swift
 //  Userpilot SDK
 //
+//  Created by Userpilot on 08/07/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-// [Brief Description]
-// Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).
+//  Dictionary / JSON keys for Auto Capture payloads (UIKit, SwiftUI helpers, and screen context).
 //
 
 import Foundation

@@ -2,10 +2,9 @@
 //  ExperienceViewModel.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This class is responsible for managing the state and interactions of the carousel experience.
 //  It integrates with various dependencies such as the experiences publisher, theme handler,
 //  and storage to handle the experience flow, including data retrieval, theme merging, and
@@ -14,15 +13,37 @@
 
 import Foundation
 
-// swiftlint:disable line_length
+/// Flow state and lifecycle actions consumed by carousel and slide-out renderers.
+/// UIKit callbacks own these calls; only completed dismissal releases the publisher's renderer.
+protocol ExperienceViewModeling: AnyObject {
+    var imageLoader: ImageLoading { get }
+    var carouselTheme: [ExperienceTheme] { get }
+    var slideOutTheme: ExperienceTheme { get }
+    var flowContent: FlowContent? { get }
+    var slideOutContent: Step? { get }
+    var currentStep: Int { get }
+    var bindData: ((Bool) -> Void)? { get set }
+    var isRTL: Bool { get }
+    var carouselStepsCount: Int { get }
 
-internal class ExperienceViewModel {
+    func onStart()
+    func onExperienceSeen()
+    func onExperienceCompleted()
+    func onStepChanged(_ step: Int)
+    func onDismissStep()
+    func onDeepLinkTriggered()
+    func onExperienceDismissalCompleted()
+}
+
+/// Prepares flow content and reports engagement in the renderer's existing callback order.
+internal class ExperienceViewModel: ExperienceViewModeling {
 
     // MARK: - Properties
 
     /// Weak reference to the owning `Userpilot` instance.
     private weak var userpilot: Userpilot?
     private let experiencesPublisher: ExperiencesPublishing
+    private let rendererID: UUID?
     private let themeHandler: ThemeHandling
     private let storage: DataStoring
     private let logger: Logging
@@ -30,11 +51,9 @@ internal class ExperienceViewModel {
 
     /// A mutable list of merged theme data for the carousel.
     private var mergedTheme = [ThemeData]()
-    // Computed property for `carouselTheme`
     var carouselTheme: [ExperienceTheme] {
         return mergedTheme.compactMap { $0.carousel }
     }
-    // Computed property for `slideOutTheme`
     var slideOutTheme: ExperienceTheme {
         return mergedTheme.first?.slideOut ?? ExperienceTheme()
     }
@@ -59,6 +78,7 @@ internal class ExperienceViewModel {
     init(container: DIContainer) {
         self.userpilot = container.owner
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
+        self.rendererID = experiencesPublisher.activeRendererID
         self.themeHandler = container.resolve(ThemeHandling.self)
         self.storage = container.resolve(DataStoring.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
@@ -73,41 +93,39 @@ internal class ExperienceViewModel {
      */
     func onStart() {
         guard
-            let flowContent = experiencesPublisher.getActiveMobileContent()?.asFlowContent()
+            let flowContent = experiencesPublisher.getActiveMobileContent(rendererID: rendererID)?.asFlowContent()
         else {
             bindData?(false)
             return
         }
 
-        // Setup content
         self.flowContent = flowContent
-
-        // Setup theme
-        let baseTheme = themeHandler.getThemeById(flowContent.baseThemeId)
-        flowContent.steps.forEach { step in
-            mergedTheme.append(
-                themeHandler.mergeExperienceThemes(
-                    baseTheme,
-                    flowContent.mobileTheme.themeData,
-                    step.mobileTheme
-                )
-            )
-        }
-
-        // Handle safe area region in case there is an issue with the data
-        var shouldBindCarousel = true
-        if flowContent.steps.isEmpty ||
-            (flowContent.type == .carousel && carouselTheme.isEmpty) ||
-            (flowContent.type == .slideout &&
-             (mergedTheme.isEmpty || mergedTheme.first?.slideOut == nil)) {
-            shouldBindCarousel = false
-        }
-
-        // Bind data
-        bindData?(shouldBindCarousel)
+        prepareThemes(for: flowContent)
+        bindData?(canBindContent(flowContent))
     }
 
-    /// Return wither the content is RTL
+    /// Keeps one merged theme per step using the content's base, flow and step overrides.
+    private func prepareThemes(for content: FlowContent) {
+        let baseTheme = themeHandler.getThemeById(content.baseThemeId)
+        content.steps.forEach { step in
+            mergedTheme.append(
+                themeHandler.mergeExperienceThemes(baseTheme, content.mobileTheme.themeData, step.mobileTheme)
+            )
+        }
+    }
+
+    /// Prevents binding incomplete backend content without changing renderer fallback behavior.
+    private func canBindContent(_ content: FlowContent) -> Bool {
+        guard !content.steps.isEmpty else { return false }
+        switch content.type {
+        case .carousel:
+            return !carouselTheme.isEmpty
+        case .slideout:
+            return mergedTheme.first?.slideOut != nil
+        }
+    }
+
+    /// Resolves the content locale, retaining the English fallback for missing content.
     var isRTL: Bool {
         return (flowContent?.localeCode ?? "en").isRTL == true
     }
@@ -133,34 +151,15 @@ internal class ExperienceViewModel {
             let step = flowContent.steps.first
         else { return }
 
-        userpilot?.experienceDelegate?.onExperienceStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            experienceState: .started
-        )
-        logExperience(state: UserpilotExperienceState.started.rawValueString, experienceId: flowContent.id)
+        notifyExperienceState(.started, content: flowContent)
 
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            stepId: NSNumber(value: step.id),
-            stepState: .started,
-            step: 1,
-            totalSteps: NSNumber(value: flowContent.steps.count)
-        )
-        logStep(
-            state: UserpilotExperienceState.started.rawValueString,
-            experienceId: flowContent.id,
-            stepId: step.id,
-            step: 1,
-            totalSteps: flowContent.steps.count
-        )
+        notifyStepState(.started, stepId: step.id, step: 1, content: flowContent)
 
         let eventExperienceSeen = ExperienceFlowSeenEvent(flowId: flowContent.id)
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen, rendererID: rendererID)
 
         let eventStepSeen = ExperienceFlowStepSeenEvent(flowId: flowContent.id, stepId: step.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
     }
 
     /**
@@ -172,40 +171,21 @@ internal class ExperienceViewModel {
             let step = flowContent.steps.last
         else { return }
 
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            stepId: NSNumber(value: step.id),
-            stepState: .completed,
-            step: NSNumber(value: flowContent.steps.count),
-            totalSteps: NSNumber(value: flowContent.steps.count)
-        )
-        logStep(
-            state: UserpilotExperienceState.completed.rawValueString,
-            experienceId: flowContent.id,
-            stepId: step.id,
-            step: flowContent.steps.count,
-            totalSteps: flowContent.steps.count
-        )
+        notifyStepState(.completed, stepId: step.id, step: flowContent.steps.count, content: flowContent)
 
-        userpilot?.experienceDelegate?.onExperienceStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            experienceState: .completed
-        )
-        logExperience(state: UserpilotExperienceState.completed.rawValueString, experienceId: flowContent.id)
+        notifyExperienceState(.completed, content: flowContent)
 
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
         let eventStepCompleted = ExperienceFlowStepCompletedEvent(
             flowId: flowContent.id,
             stepId: step.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepCompleted)
+        experiencesPublisher.publishInternalSDKEvent(eventStepCompleted, rendererID: rendererID)
 
         let eventContentCompleted = ExperienceFlowCompletedEvent(
             flowId: flowContent.id,
             hasDeepLinkContent: hasDeepLink)
-        experiencesPublisher.publishInternalSDKEvent(eventContentCompleted)
+        experiencesPublisher.publishInternalSDKEvent(eventContentCompleted, rendererID: rendererID)
     }
 
     /**
@@ -224,92 +204,37 @@ internal class ExperienceViewModel {
             let oldStep = flowContent.steps[safe: step - 1]
         else { return }
 
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            stepId: NSNumber(value: currentStep.id),
-            stepState: .completed,
-            step: NSNumber(value: step),
-            totalSteps: NSNumber(value: flowContent.steps.count)
-        )
-        logStep(
-            state: UserpilotExperienceState.completed.rawValueString,
-            experienceId: flowContent.id,
-            stepId: currentStep.id,
-            step: step,
-            totalSteps: flowContent.steps.count
-        )
+        // Preserve the existing delegate/log ID; the completion event below uses the outgoing step.
+        notifyStepState(.completed, stepId: currentStep.id, step: step, content: flowContent)
 
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            stepId: NSNumber(value: currentStep.id),
-            stepState: .started,
-            step: NSNumber(value: step + 1),
-            totalSteps: NSNumber(value: flowContent.steps.count)
-        )
-        logStep(
-            state: UserpilotExperienceState.started.rawValueString,
-            experienceId: flowContent.id,
-            stepId: currentStep.id,
-            step: step + 1,
-            totalSteps: flowContent.steps.count
-        )
+        notifyStepState(.started, stepId: currentStep.id, step: step + 1, content: flowContent)
 
         let eventStepCompleted = ExperienceFlowStepCompletedEvent(
             flowId: flowContent.id,
             stepId: oldStep.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepCompleted)
+        experiencesPublisher.publishInternalSDKEvent(eventStepCompleted, rendererID: rendererID)
 
         let eventStepSeen = ExperienceFlowStepSeenEvent(
             flowId: flowContent.id,
             stepId: currentStep.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepSeen)
+        experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
     }
 
-    /**
-     Sends a socket event indicating that a step has been dismissed.
-     
-     - Parameter step: The step number that was dismissed.
-     */
+    /// Reports the furthest reached step as dismissed; renderer teardown is reported separately.
     func onDismissStep() {
         guard
             let flowContent,
             let step = flowContent.steps[safe: lastStep]
         else { return }
 
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            stepId: NSNumber(value: step.id),
-            stepState: .dismissed,
-            step: NSNumber(value: lastStep + 1),
-            totalSteps: NSNumber(value: flowContent.steps.count)
-        )
-        logStep(
-            state: UserpilotExperienceState.dismissed.rawValueString,
-            experienceId: flowContent.id,
-            stepId: step.id,
-            step: lastStep + 1,
-            totalSteps: flowContent.steps.count
-        )
+        notifyStepState(.dismissed, stepId: step.id, step: lastStep + 1, content: flowContent)
 
-        userpilot?.experienceDelegate?.onExperienceStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: flowContent.id),
-            experienceState: .dismissed
-        )
-        logExperience(state: UserpilotExperienceState.dismissed.rawValueString, experienceId: flowContent.id)
+        notifyExperienceState(.dismissed, content: flowContent)
 
         let eventExperienceDismissed = ExperienceFlowDismissedEvent(
             flowId: flowContent.id,
             stepId: step.id)
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed)
-    }
-
-    /// Notify the publisher after the experience view has finished dismissing.
-    func onExperienceDismissalCompleted() {
-        experiencesPublisher.experienceDidFinishDismissing()
+        experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed, rendererID: rendererID)
     }
 
     // MARK: - Deep Link Handling
@@ -324,6 +249,42 @@ internal class ExperienceViewModel {
             let url = URL(string: deepLink)
         else { return }
         experiencesPublisher.triggerDeepLink(url: url)
+    }
+
+    // MARK: - Engagement Reporting
+
+    /// Notifies the host before logging; callers publish socket events in their existing order.
+    private func notifyExperienceState(_ state: UserpilotExperienceState, content: FlowContent) {
+        userpilot?.experienceDelegate?.onExperienceStateChanged(
+            experienceType: .flow,
+            experienceId: NSNumber(value: content.id),
+            experienceState: state
+        )
+        logExperience(state: state.rawValueString, experienceId: content.id)
+    }
+
+    /// Keeps delegate arguments and their matching log together without changing event delivery.
+    private func notifyStepState(
+        _ state: UserpilotExperienceState,
+        stepId: Int,
+        step: Int,
+        content: FlowContent
+    ) {
+        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
+            experienceType: .flow,
+            experienceId: NSNumber(value: content.id),
+            stepId: NSNumber(value: stepId),
+            stepState: state,
+            step: NSNumber(value: step),
+            totalSteps: NSNumber(value: content.steps.count)
+        )
+        logStep(
+            state: state.rawValueString,
+            experienceId: content.id,
+            stepId: stepId,
+            step: step,
+            totalSteps: content.steps.count
+        )
     }
 
     // MARK: - Logging
@@ -347,6 +308,7 @@ internal class ExperienceViewModel {
         step: Int,
         totalSteps: Int
     ) {
+        // swiftlint:disable line_length
         logger.info(
             "🌠 Userpilot experience step -> type: Flow, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
             String(experienceId),
@@ -355,7 +317,13 @@ internal class ExperienceViewModel {
             String(step),
             String(totalSteps)
         )
+        // swiftlint:enable line_length
     }
 }
 
-// swiftlint:enable line_length
+extension ExperienceViewModel {
+    /// Notify the publisher after the experience view has finished dismissing.
+    func onExperienceDismissalCompleted() {
+        experiencesPublisher.experienceDidFinishDismissing(rendererID: rendererID)
+    }
+}

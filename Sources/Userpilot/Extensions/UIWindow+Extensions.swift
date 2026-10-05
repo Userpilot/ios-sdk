@@ -1,11 +1,10 @@
 //
 //  UIWindow+Extensions.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 06/01/2026.
+//  Created by Userpilot on 06/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIWindow+Extensions implements automatic click tracking by intercepting touch events
 //  at the window level, providing comprehensive analytics capture for both UIKit and SwiftUI.
 //

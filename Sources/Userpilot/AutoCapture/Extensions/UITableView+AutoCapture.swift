@@ -1,11 +1,10 @@
 //
 //  UITableView+AutoCapture.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 17/02/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UITableView+AutoCapture provides utilities for capturing UITableView cell interactions.
 //  Cell taps are captured via UIWindow.sendEvent when a UITableViewCell is touched.
 //

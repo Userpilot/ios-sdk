@@ -2,10 +2,9 @@
 //  UPMultipleChoiceView+TableView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Extension of `UPMultipleChoiceView` to conform to `UITableViewDelegate` and `UITableViewDataSource` protocols.
 //  Handles the logic for rendering choices, managing selections, and updating the view state.
 //

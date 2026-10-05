@@ -2,10 +2,9 @@
 //  ViewStateDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 9/01/2025.
+//  Created by Userpilot on 09/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A protocol that defines a delegate for observing view state changes.
 //
 

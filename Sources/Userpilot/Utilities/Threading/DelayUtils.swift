@@ -2,7 +2,7 @@
 //  DelayUtils.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 27/02/2025.
+//  Created by Userpilot on 27/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  A utility class for scheduling delayed execution of actions.

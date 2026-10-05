@@ -2,9 +2,9 @@
 //  UPIconTextContainerView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
+//  Created by Userpilot on 29/09/2024.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom container view that dynamically creates and manages multiple `UPIconTextView` components,
 //  arranged vertically within a `UIStackView`.
 //

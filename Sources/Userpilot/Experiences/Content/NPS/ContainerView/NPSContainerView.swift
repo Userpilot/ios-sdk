@@ -1,8 +1,11 @@
 //
 //  NPSContainerView.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 09/02/2025.
+//  Created by Userpilot on 09/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Builds the NPS question and feedback views, including their action and dismiss controls.
 //
 
 import UIKit

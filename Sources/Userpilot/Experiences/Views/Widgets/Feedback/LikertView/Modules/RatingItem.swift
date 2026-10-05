@@ -2,7 +2,7 @@
 //  RatingItem.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  This file contains the `RatingItem` struct, which represents an individual item in the Likert scale,

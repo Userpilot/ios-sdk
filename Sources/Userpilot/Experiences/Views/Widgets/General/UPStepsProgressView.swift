@@ -2,10 +2,9 @@
 //  UPStepsProgressView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
+//  Created by Userpilot on 29/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom view that acts as a step progress indicator, displaying a series of circular steps.
 //  This view visually indicates the progress of a user through a series of steps, allowing for
 //  customization of colors and animations.

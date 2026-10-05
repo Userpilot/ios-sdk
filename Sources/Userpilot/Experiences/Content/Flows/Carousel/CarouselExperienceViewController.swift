@@ -2,10 +2,9 @@
 //  CarouselExperienceViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This class is responsible for managing and displaying the carousel experience.
 //  It contains UI components such as a dismiss button, action button, step progress view,
 //  and a collection view to show the steps. The class integrates with the
@@ -41,13 +40,13 @@ internal class CarouselExperienceViewController: UIViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions.
-    internal let experienceViewModel: ExperienceViewModel
+    internal let experienceViewModel: ExperienceViewModeling
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
-    init(experienceViewModel: ExperienceViewModel) {
+    init(experienceViewModel: ExperienceViewModeling) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: "CarouselExperienceViewController", bundle: Userpilot.resourceBundle)
     }

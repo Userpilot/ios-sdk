@@ -2,10 +2,9 @@
 //  UPExperience.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/12/2024.
+//  Created by Userpilot on 29/12/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This protocol defines the behavior for handling the closure of Userpilot experiences.
 //
 

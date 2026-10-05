@@ -1,11 +1,10 @@
 //
 //  UIViewController+Extensions.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 05/01/2026.
+//  Created by Userpilot on 05/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIViewController+Extensions provides automatic screen tracking functionality
 //  through method swizzling and screen name resolution.
 //
@@ -24,7 +23,7 @@ internal extension UIViewController {
     @objc
     func userpilot__viewWillAppear(animated: Bool) {
         userpilot__viewWillAppear(animated: animated)
-        // Per-instance stop is enforced in `AutoCaptureCoordinater.trackScreen`,
+        // Per-instance stop is enforced in `AutoCaptureCoordinator.trackScreen`,
         // which `captureScreenIfNeeded()` routes to after resolving the owner.
         captureScreenIfNeeded()
     }

@@ -2,10 +2,9 @@
 //  SlideOutDialogViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 20/10/2024.
+//  Created by Userpilot on 20/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A view controller that presents a dialog with a slide-out container view.
 //  It is designed to display content related to the user experience and allows for
 //  dynamic updates via a provided view model.
@@ -27,13 +26,13 @@ internal class SlideOutDialogViewController: DialogViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions
-    internal let experienceViewModel: ExperienceViewModel
+    internal let experienceViewModel: ExperienceViewModeling
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     /// - Parameter experienceViewModel: The view model to bind with the dialog.
-    init(experienceViewModel: ExperienceViewModel) {
+    init(experienceViewModel: ExperienceViewModeling) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: nil, bundle: nil)
     }

@@ -1,8 +1,11 @@
 //
 //  NPSContent.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 09/02/2025.
+//  Created by Userpilot on 09/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Decodes NPS content, feedback options and presentation settings received from the backend.
 //
 
 import Foundation

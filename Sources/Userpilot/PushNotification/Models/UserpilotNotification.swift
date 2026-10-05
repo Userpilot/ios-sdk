@@ -1,11 +1,10 @@
 //
-//  ParsedNotification.swift
+//  UserpilotNotification.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/02/2025.
+//  Created by Userpilot on 18/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This struct is responsible for parsing and holding notification data received from Userpilot experiences.
 //
 
@@ -71,5 +70,23 @@ internal struct UserpilotNotification {
 
         self.deeplink = (data["deep_link"] as? String).flatMap { URL(string: $0) }
         self.isTest = data["is_test"] as? String
+    }
+}
+
+// MARK: - Notification Routing and Analytics
+
+extension UserpilotNotification {
+
+    /// Untokenized notifications can use the current instance, but the user must always match.
+    func matches(appToken: String, userId: String) -> Bool {
+        notificationType == "userpilot-notification"
+            && (self.appToken == nil || self.appToken?.isEmpty == true || self.appToken == appToken)
+            && self.userId == userId
+    }
+
+    /// Test notifications navigate normally but do not report an opened event.
+    var openedEventPayload: [String: Any]? {
+        guard isTest != "true" else { return nil }
+        return ["notification_id": Int(notificationId) ?? 0]
     }
 }

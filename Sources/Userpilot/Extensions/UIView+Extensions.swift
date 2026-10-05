@@ -2,10 +2,9 @@
 //  UIView+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/01/2025.
+//  Created by Userpilot on 21/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIView+Extensions provides helper methods and utilities for UIView
 //  including distance calculations, corner radius, first responder finding,
 //  and click tracking logic.

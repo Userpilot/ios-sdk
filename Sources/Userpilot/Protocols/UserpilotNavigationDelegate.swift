@@ -2,10 +2,9 @@
 //  UserpilotNavigationDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 03/10/2024.
+//  Created by Userpilot on 03/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This protocol allows the application to control navigation between screens
 //  when triggered by a Userpilot experience.
 //

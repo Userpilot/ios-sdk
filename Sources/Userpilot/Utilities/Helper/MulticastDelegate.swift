@@ -2,10 +2,9 @@
 //  MulticastDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  MulticastDelegate allows multiple delegates to be notified of an event or process.
 //  It enables multicasting by holding weak references to delegates, avoiding retain cycles
 //  and ensuring delegates are automatically removed when deallocated.

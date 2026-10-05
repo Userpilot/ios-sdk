@@ -2,9 +2,9 @@
 //  CountryTableViewCell.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom table view cell that displays a country's flag, name, and dial code.
 //
 

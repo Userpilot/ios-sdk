@@ -2,10 +2,9 @@
 //  EventQueue.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 02/11/2025.
+//  Created by Userpilot on 02/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Thread-safe FIFO queue with optional prioritization for internal events.
 //
 

@@ -1,11 +1,10 @@
 //
-//  Message+Extension.swift
+//  Socket+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 16/10/2024.
+//  Created by Userpilot on 16/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Extension property for Phoenix message to verify it's a valid message or not.
 //
 

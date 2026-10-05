@@ -2,10 +2,9 @@
 //  EventThrottle.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 11/11/2024.
+//  Created by Userpilot on 11/11/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Implements event throttling to prevent processing events with the same name
 //  more frequently than the specified throttle duration. Supports both generic
 //  and screen-specific event types.
@@ -63,6 +62,13 @@ internal class EventThrottle {
                 expiresAt: now + throttleDuration
             )
             return false
+        }
+    }
+
+    /// A generated refresh has already been admitted. Suppress the host screen callback it causes.
+    func recordScreenEvent(screenTitle: String) {
+        lock.withLock {
+            activeScreen = (name: screenTitle, expiresAt: .now() + throttleDuration)
         }
     }
 

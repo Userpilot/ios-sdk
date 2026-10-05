@@ -2,8 +2,10 @@
 //  EventType.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  Defines analytics event kinds and the names sent to the backend.
 //
 
 import Foundation

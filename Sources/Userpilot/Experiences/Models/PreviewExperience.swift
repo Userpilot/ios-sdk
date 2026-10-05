@@ -2,12 +2,14 @@
 //  PreviewExperience.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 03/11/2025.
+//  Created by Userpilot on 03/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Models preview experience payload and query parameters for preview content.
 //
+
+import Foundation
+
 // MARK: - Query Parameters
 
 internal struct PreviewExperienceQueryParams {
@@ -15,6 +17,19 @@ internal struct PreviewExperienceQueryParams {
     let appToken: String
     let contentType: String
     let contentId: String
+}
+
+internal extension PreviewExperienceQueryParams {
+    /// Preserves URLComponents encoding and the base URL fallback used by preview requests.
+    var requestURL: String {
+        var components = URLComponents(string: baseUrl)
+        components?.queryItems = [
+            URLQueryItem(name: "app_token", value: appToken),
+            URLQueryItem(name: "content_type", value: contentType),
+            URLQueryItem(name: "content_id", value: contentId)
+        ]
+        return components?.url?.absoluteString ?? baseUrl
+    }
 }
 
 // MARK: - Preview Experience Model

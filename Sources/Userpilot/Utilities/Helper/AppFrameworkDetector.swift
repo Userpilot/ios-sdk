@@ -2,9 +2,9 @@
 //  AppFrameworkDetector.swift
 //  Userpilot SDK
 //
+//  Created by Userpilot on 07/06/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Resolves the host app's UI framework (UIKit or SwiftUI) by inspecting
 //  the key window's root view controller and writes the result back to
 //  `Userpilot.Config.appFramework`.
@@ -69,11 +69,7 @@ internal final class AppFrameworkDetector {
     }
 
     @objc private func handleNotification() {
-        if Thread.isMainThread {
-            detectIfNeeded()
-        } else {
-            performOn(.main) { [weak self] in self?.detectIfNeeded() }
-        }
+        performOnMain { [weak self] in self?.detectIfNeeded() }
     }
 
     /// Performs a single detection attempt. Stops observing as soon as the

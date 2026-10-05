@@ -1,11 +1,10 @@
 //
 //  AutoCaptureSwizzler.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 22/01/2026.
+//  Created by Userpilot on 22/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  AutoCaptureSwizzler manages method swizzling for automatic screen and interaction tracking
 //  across UIKit and SwiftUI components.
 //

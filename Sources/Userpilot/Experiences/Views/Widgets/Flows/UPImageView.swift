@@ -2,10 +2,9 @@
 //  UPImageView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
+//  Created by Userpilot on 29/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom UIImageView subclass that configures itself based on a `Line` object.
 //
 

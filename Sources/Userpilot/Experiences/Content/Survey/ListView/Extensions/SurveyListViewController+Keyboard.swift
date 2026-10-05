@@ -1,8 +1,11 @@
 //
 //  SurveyListViewController+Keyboard.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 26/01/2025.
+//  Created by Userpilot on 26/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Updates the survey list layout and scrolling when the keyboard changes.
 //
 
 import UIKit

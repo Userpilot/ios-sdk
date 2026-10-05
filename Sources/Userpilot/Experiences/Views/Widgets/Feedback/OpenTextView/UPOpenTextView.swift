@@ -2,10 +2,9 @@
 //  UPOpenTextView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/01/2025.
+//  Created by Userpilot on 18/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom view containg UITextView as input view.
 //
 

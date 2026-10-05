@@ -1,11 +1,10 @@
 //
 //  View+UserpilotLabel.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed
+//  Created by Userpilot on 07/06/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  View+UserpilotLabel provides a SwiftUI modifier that attaches stable analytics metadata
 //  (custom text and a logical view type) to the underlying UIKit view tree for autocapture.
 //

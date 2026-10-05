@@ -2,10 +2,9 @@
 //  SurveyBottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 03/02/2025.
+//  Created by Userpilot on 03/02/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A specialized view controller that displays a survey bottom sheet experience,
 //  controlled by an `SurveyViewModel`. It allows dynamic content rendering,
 //  user actions (like closing or triggering deep links), and customizable themes.
@@ -29,13 +28,13 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions
-    internal let surveyViewModel: SurveyViewModel
+    internal let surveyViewModel: SurveyViewModeling
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     /// - Parameter experienceViewModel: The view model to bind with the dialog.
-    init(surveyViewModel: SurveyViewModel) {
+    init(surveyViewModel: SurveyViewModeling) {
         self.surveyViewModel = surveyViewModel
         super.init(nibName: nil, bundle: nil)
     }

@@ -2,10 +2,9 @@
 //  DatabaseStats.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 13/10/2025.
+//  Created by Userpilot on 13/10/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Holds storage statistics for monitoring event database state including count,
 //  size, limits, and utilization percentage.
 //
@@ -21,11 +20,11 @@ internal struct DatabaseStats {
     let isSizeLimitReached: Bool
 
     var totalSizeFormatted: String {
-        formatBytes(totalSizeBytes)
+        totalSizeBytes.formattedStorageBytes
     }
 
     var maxSizeFormatted: String {
-        formatBytes(maxSizeBytes)
+        maxSizeBytes.formattedStorageBytes
     }
 
     var utilizationPercent: Int {
@@ -33,20 +32,4 @@ internal struct DatabaseStats {
         return Int((Double(totalSizeBytes) / Double(maxSizeBytes)) * 100.0)
     }
 
-    private func formatBytes(_ bytes: Int64) -> String {
-        let bytesInKilobyte: Int64 = 1024
-        let bytesInMegabyte = bytesInKilobyte * 1024
-        let bytesInGigabyte = bytesInMegabyte * 1024
-
-        switch bytes {
-        case bytesInGigabyte...:
-            return String(format: "%.2f GB", Double(bytes) / Double(bytesInGigabyte))
-        case bytesInMegabyte...:
-            return String(format: "%.2f MB", Double(bytes) / Double(bytesInMegabyte))
-        case bytesInKilobyte...:
-            return String(format: "%.2f KB", Double(bytes) / Double(bytesInKilobyte))
-        default:
-            return "\(bytes) B"
-        }
-    }
 }

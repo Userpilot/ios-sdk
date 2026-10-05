@@ -1,9 +1,11 @@
 //
-//  TrackingUpdate.swift
+//  Event.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  Represents an analytics event and metadata used by publishing and offline storage.
 //
 
 import Foundation
@@ -212,5 +214,23 @@ extension Event {
         return User(userId: userId ?? "",
                     properties: properties ?? [:],
                     company: company ?? [:])
+    }
+
+    /// Converts accepted identify data without changing the publisher's identity or session state.
+    func identifyPayload() -> [String: Any] {
+        var payload: [String: Any] = [Constants.Analytics.metaDataProperty: properties ?? [:]]
+        if let company, !company.isEmpty {
+            payload[Constants.Analytics.identifyCompanyProperty] = company
+        }
+        return payload
+    }
+
+    /// Builds custom-event or autocapture fields after the publisher has checked screen eligibility.
+    func trackPayload() -> [String: Any] {
+        var payload: [String: Any] = [Constants.Analytics.metaDataProperty: properties ?? [:]]
+        payload[Constants.Analytics.eventNameProperty] = type == .autoCaptureEvent
+            ? interactionEventName : eventTitle
+        if let screen { payload[Constants.Analytics.screenProperty] = screen }
+        return payload
     }
 }

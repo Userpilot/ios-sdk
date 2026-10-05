@@ -2,7 +2,7 @@
 //  PushNotificationMonitor.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/02/2025.
+//  Created by Userpilot on 18/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  The `PushNotificationMonitor` is responsible for managing push notifications,
@@ -26,12 +26,6 @@ internal protocol PushNotificationMonitoring: AnyObject {
     ///
     /// - Parameter deviceToken: The device token received from APNs.
     func setPushToken(_ deviceToken: Data?)
-
-    /// Re-publishes the current device token even when its value has not changed.
-    ///
-    /// `setPushToken(_:)` is value-guarded and is therefore a no-op for a returning user whose
-    /// token is unchanged. This re-asserts the token ↔ user pairing on the backend.
-    func resyncPushToken()
 
     /// Refreshes the push authorization status and calls the completion handler with the updated status.
     ///
@@ -61,11 +55,11 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     private let socketManager: SocketManaging
     private let linkOpener: LinkOpening
 
-    // MARK: - Push Token Management
+    // MARK: - State
 
     private(set) var pushAuthorizationStatus: UNAuthorizationStatus = .notDetermined
 
-    // cached token when it comes from OS, and keep it cached so if user is switched, then send it to new user
+    // Retain the OS token across user changes; socket open retries it after user-scoped storage clears.
     // Production reads and writes run on main, alongside socket callbacks.
     private var cachedToken: Data?
 
@@ -74,8 +68,7 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         pushAuthorizationStatus == .authorized && storage.pushToken.isNotEmpty
     }
 
-    // Later, we could make this as configuration option,
-    // to request the permission many times till we get it.
+    // Permission lookup/request runs once for this monitor, unless disabled by configuration.
     private var didRequestPermissions = false
 
     /// Initializes the `PushNotificationMonitor` with dependencies from the dependency injection container.
@@ -101,49 +94,22 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
     ///
     /// - Parameter deviceToken: The device token received from APNs.
     func setPushToken(_ deviceToken: Data?) {
-        guard Thread.isMainThread else {
-            performOn(.main) { [weak self] in
-                self?.setPushToken(deviceToken)
+        performOnMain { [weak self] in
+            guard let self else { return }
+
+            // Keep the latest APNs value even while sending is unavailable.
+            self.cachedToken = deviceToken
+            guard
+                let newToken = deviceToken?.pushTokenString,
+                self.storage.pushToken != newToken
+            else {
+                return
             }
-            return
+
+            if self.analyticsPublisher.canRequestEvent {
+                self.publishTokenEvent(newToken)
+            }
         }
-
-        // Cache the token in all cases so in next identify in same session, we will sync it
-        cachedToken = deviceToken
-        guard
-            let newToken = deviceToken.map(hexString(from:)),
-            storage.pushToken != newToken
-        else {
-            return
-        }
-
-        if analyticsPublisher.canRequestEvent {
-            publishTokenEvent(newToken)
-        }
-    }
-
-    /// Re-publishes the current device token even when its value has not changed.
-    ///
-    /// `setPushToken(_:)` is value-guarded, so a returning user whose APNs token did not change
-    /// would otherwise never re-pair token ↔ user on the backend. Driven by `AnalyticsPublisher`
-    /// after it forwards an identify that carries no new user data.
-    func resyncPushToken() {
-        // Prefer the token the OS handed us this launch; fall back to the persisted one for a warm
-        // start where `didRegisterForRemoteNotificationsWithDeviceToken` has not fired yet.
-        guard
-            let token = cachedToken.map(hexString(from:)) ?? storage.pushToken,
-            token.isNotEmpty,
-            analyticsPublisher.canRequestEvent
-        else {
-            return
-        }
-
-        publishTokenEvent(token)
-    }
-
-    /// Hex representation of a raw APNs device token.
-    private func hexString(from deviceToken: Data) -> String {
-        deviceToken.map { String(format: "%02x", $0) }.joined()
     }
 
     /// Publishes the `user_token` event for the given hex token.
@@ -215,26 +181,28 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         _ newStatus: UNAuthorizationStatus,
         completion: ((UNAuthorizationStatus) -> Void)?
     ) {
-        let shouldPublish = self.pushAuthorizationStatus != newStatus
-        self.pushAuthorizationStatus = newStatus
+        let statusChanged = pushAuthorizationStatus != newStatus
+        pushAuthorizationStatus = newStatus
+        if statusChanged || newStatus == .notDetermined {
+            requestPushAuthorization()
+        }
+        // Report the observed settings without waiting for the system's permission prompt.
+        completion?(newStatus)
+    }
 
-        if shouldPublish || newStatus == .notDetermined {
-            let options: UNAuthorizationOptions = [.alert, .sound, .badge]
-            // Request permission for push notifications
-            UNUserNotificationCenter.current().requestAuthorization(options: options) { [weak self] (granted, _) in
-                if granted {
-                    self?.config.logger.info("Push notification permission granted.")
-                    // Register for remote notifications if permission is granted
-                    performOn(.main) {
-                        UIApplication.shared.registerForRemoteNotifications()
-                    }
-                } else {
-                    self?.config.logger.info("Permission denied or failed to request.")
+    /// Registers with APNs only after the system grants authorization.
+    private func requestPushAuthorization() {
+        let options: UNAuthorizationOptions = [.alert, .sound, .badge]
+        UNUserNotificationCenter.current().requestAuthorization(options: options) { [weak self] (granted, _) in
+            if granted {
+                self?.config.logger.info("Push notification permission granted.")
+                performOn(.main) {
+                    UIApplication.shared.registerForRemoteNotifications()
                 }
+            } else {
+                self?.config.logger.info("Permission denied or failed to request.")
             }
         }
-
-        completion?(newStatus)
     }
 
     // MARK: - Notification Handling
@@ -254,13 +222,8 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         return processNotification(response.notification.request.content.userInfo, completionHandler: completionHandler)
     }
 
-    /// Processes a notification and executes the appropriate response based on the notification's content.
-    ///
-    /// - Parameters:
-    ///   - userInfo: The user info dictionary containing the notification's payload.
-    ///   - completionHandler: An optional closure to be executed after processing.
-    ///
-    /// - Returns: A boolean indicating whether the notification was successfully handled.
+    /// Claims only notifications for this live instance and its current user.
+    /// Reporting happens at tap time, before navigation, even while the socket is unavailable.
     private func processNotification(
         _ userInfo: [AnyHashable: Any],
         completionHandler: (() -> Void)?
@@ -268,72 +231,31 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         config.logger.info("Push response received:\n%{private}@", userInfo.description)
 
         guard
-            let parsedNotification = UserpilotNotification(userInfo: userInfo),
-            parsedNotification.notificationType == "userpilot-notification"
-        else { return false } // Not a Userpilot push notification
+            let notification = UserpilotNotification(userInfo: userInfo),
+            userpilot != nil,
+            notification.matches(appToken: config.token, userId: storage.userId)
+        else { return false }
 
-        guard let userpilot = userpilot else {
-            return false  // Early exit if userpilot is nil
-        }
-
-        if let appToken = parsedNotification.appToken, !appToken.isEmpty, appToken != config.token {
-            return false
-        }
-
-        // If there’s an active session and a user Id mismatch, let another instance
-        // try to handle the response instead of swallowing it.
-        guard parsedNotification.userId == storage.userId else {
-            return false
-        }
-
-        // Neither step below needs an open socket: publishInternalSDKEvent caches the event while
-        // the socket is closed and persists it to the offline store while the network is down,
-        // and the deeplink is pure client-side navigation through LinkOpener. Reporting here also
-        // keeps `created_at` at tap time rather than reconnect time.
-        reportNotificationOpened(parsedNotification)
-
-        // Process the notification and respond accordingly
-        executeNotificationResponse(
-            userpilot: userpilot,
-            parsedNotification: parsedNotification,
-            completionHandler: completionHandler
-        )
-
+        reportNotificationOpened(notification)
+        executeNotificationResponse(notification, completionHandler: completionHandler)
         return true
     }
 
-    /// Executes the appropriate response to a received notification.
-    ///
-    /// - Parameters:
-    ///   - userpilot: The Userpilot instance managing the navigation.
-    ///   - parsedNotification: The parsed notification to be processed.
-    ///   - completionHandler: An optional closure to be executed after processing.
-    private func executeNotificationResponse(
-        userpilot: Userpilot,
-        parsedNotification: UserpilotNotification,
-        completionHandler: (() -> Void)? = nil
-    ) {
-        if let url = parsedNotification.deeplink {
-            linkOpener.handleURL(url)
-        }
-
-        completionHandler?()
+    /// Publishes the tap through analytics; its queue/offline store owns deferred delivery.
+    private func reportNotificationOpened(_ notification: UserpilotNotification) {
+        guard let payload = notification.openedEventPayload else { return }
+        analyticsPublisher.publishInternalSDKEvent(PushNotificationOpenedEvent(payload: payload))
     }
 
-    /// Publishes the `opened_push_notification` event for a tap.
-    ///
-    /// Called from `processNotification(_:completionHandler:)` the moment the tap arrives,
-    /// whatever the connection state — `publishInternalSDKEvent` caches it while the socket is
-    /// closed and persists it to the offline store while the network is down.
-    ///
-    /// - Parameter parsedNotification: The validated notification that was opened.
-    private func reportNotificationOpened(_ parsedNotification: UserpilotNotification) {
-        guard parsedNotification.isTest != "true" else { return }
-
-        let properties: [String: Any] = ["notification_id": Int(parsedNotification.notificationId) ?? 0]
-        analyticsPublisher.publishInternalSDKEvent(
-            PushNotificationOpenedEvent(payload: properties)
-        )
+    /// Opens the supplied destination and completes the claimed notification exactly once.
+    private func executeNotificationResponse(
+        _ notification: UserpilotNotification,
+        completionHandler: (() -> Void)?
+    ) {
+        if let url = notification.deeplink {
+            linkOpener.handleURL(url)
+        }
+        completionHandler?()
     }
 
 }

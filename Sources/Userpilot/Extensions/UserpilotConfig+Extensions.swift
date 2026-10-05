@@ -2,14 +2,12 @@
 //  UserpilotConfig+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/06/2026.
+//  Created by Userpilot on 29/06/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-// [Brief Description]
 //  Config helpers for wrapper SDKs that pass extra setup flags through
 //  `Userpilot.Config.additionalProperties`.
 //
-// 
 
 import Foundation
 
@@ -57,5 +55,12 @@ internal extension Userpilot.Config {
             WrapperSDKConstants.enableInteractionAutoCapture,
             expectedValue: true
         )
+    }
+
+    /// Manual screens supply context when interaction capture is on but that platform's screen capture is off.
+    func shouldSyncManualScreenForInteractionPayload() -> Bool {
+        isWrapperSDK
+            ? !isWrapperScreenAutoCaptureEnabled && isWrapperInteractionAutoCaptureEnabled
+            : !enableScreenAutoCapture && enableInteractionAutoCapture
     }
 }

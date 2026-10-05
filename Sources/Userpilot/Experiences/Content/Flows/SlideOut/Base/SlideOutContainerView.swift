@@ -2,10 +2,9 @@
 //  SlideOutContainerView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 20/10/2024.
+//  Created by Userpilot on 20/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  The `SlideOutContainerView` is a custom view component designed to provide a slide-out interface
 //  that contains a dismiss button at the top, scrollable content in the center, and an action button
 //  at the bottom. It allows for dynamic content binding through sections, and is highly customizable

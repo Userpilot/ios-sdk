@@ -1,11 +1,10 @@
 //
 //  UITextInput+AutoCapture.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 17/02/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UITextInput+AutoCapture provides automatic interaction tracking for UITextField
 //  and UITextView text editing events using NotificationCenter observers.
 //  Debounces per view: after typing pauses for `interactionDebounceInterval`, send once with latest state.

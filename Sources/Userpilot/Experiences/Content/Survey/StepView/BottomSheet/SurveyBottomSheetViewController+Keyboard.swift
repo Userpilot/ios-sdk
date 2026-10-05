@@ -1,8 +1,11 @@
 //
 //  SurveyBottomSheetViewController+Keyboard.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 12/02/2025.
+//  Created by Userpilot on 12/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Adjusts the survey bottom sheet layout in response to keyboard changes.
 //
 
 import UIKit

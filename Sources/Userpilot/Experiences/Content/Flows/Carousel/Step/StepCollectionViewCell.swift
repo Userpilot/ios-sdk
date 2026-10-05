@@ -1,11 +1,10 @@
 //
-//  CarouselExperienceViewController.swift
+//  StepCollectionViewCell.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 02/10/2024.
+//  Created by Userpilot on 02/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom UICollectionViewCell that represents a single step in a multi-step tutorial or guide.
 //  This cell is designed to display various types of content sections such as headings, paragraphs,
 //  images, and icon-text combinations in a scrollable view.

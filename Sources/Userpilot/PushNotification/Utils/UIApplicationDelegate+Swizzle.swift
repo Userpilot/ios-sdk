@@ -1,8 +1,8 @@
 //
-//  UIApplication+PushSwizzling.swift
+//  UIApplicationDelegate+Swizzle.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 17/02/2025.
+//  Created by Userpilot on 17/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  This extension of `UIApplication` handles method swizzling for

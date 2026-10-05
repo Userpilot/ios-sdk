@@ -1,11 +1,10 @@
 //
 //  UIView+ClickAnalytics.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 22/01/2026.
+//  Created by Userpilot on 22/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIView+ClickAnalytics provides extensions for enabling click analytics recognition
 //  on UIKit views that may not be automatically detected as clickable.
 //

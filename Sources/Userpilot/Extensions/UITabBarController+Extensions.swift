@@ -1,11 +1,10 @@
 //
 //  UITabBarController+Extensions.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 22/01/2026.
+//  Created by Userpilot on 22/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UITabBarController+Extensions provides automatic tab selection tracking
 //  through method swizzling for analytics capture.
 //

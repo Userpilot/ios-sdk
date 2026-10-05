@@ -2,15 +2,25 @@
 //  UPLogger.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-// [Brief Description]
-// `Logging` wrapper that prepends `[<token>]` to every SDK log line.
+//  `Logging` wrapper that prepends `[<token>]` to every SDK log line.
 //
 
 import Foundation
 import os.log
+
+/**
+ Logging protocol to log SDK logs
+ */
+internal protocol Logging {
+    func debug(_ message: StaticString, _ args: CVarArg...)
+    func info(_ message: StaticString, _ args: CVarArg...)
+    func log(_ message: StaticString, _ args: CVarArg...)
+    func error(_ message: StaticString, _ args: CVarArg...)
+    func fault(_ message: StaticString, _ args: CVarArg...)
+}
 
 /// `Logging` wrapper that prepends `[<token>]` to every SDK log line.
 ///

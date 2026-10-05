@@ -2,10 +2,9 @@
 //  SlideOutBottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/10/2024.
+//  Created by Userpilot on 21/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A specialized view controller that displays a slide-out bottom sheet experience,
 //  controlled by an `ExperienceViewModel`. It allows dynamic content rendering,
 //  user actions (like closing or triggering deep links), and customizable themes.
@@ -33,14 +32,14 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
     /// The view model responsible for managing the state and actions related to the carousel experience.
     /// It provides the data and behavior for the slide-out view, including user actions, theme data,
     /// and content to be displayed.
-    internal let experienceViewModel: ExperienceViewModel
+    internal let experienceViewModel: ExperienceViewModeling
 
     // MARK: - Initializers
 
     /// Initializes the `SlideOutBottomSheetViewController` with a given view model.
     ///
     /// - Parameter experienceViewModel: The view model that controls the experience data and behavior.
-    init(experienceViewModel: ExperienceViewModel) {
+    init(experienceViewModel: ExperienceViewModeling) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: nil, bundle: nil)
     }

@@ -2,7 +2,7 @@
 //  Environment.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/04/2025.
+//  Created by Userpilot on 21/04/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  A utility struct that handles environment-specific configuration settings for the Userpilot SDK.

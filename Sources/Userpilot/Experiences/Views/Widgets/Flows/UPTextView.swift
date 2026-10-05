@@ -2,9 +2,9 @@
 //  UPTextView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
+//  Created by Userpilot on 29/09/2024.
+//  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom UILabel subclass that supports attributed text with various styles
 //  and link handling. This label is designed to render dynamic content with
 //  configurable styles and responds to user interactions for link clicks.

@@ -2,10 +2,9 @@
 //  UPMultipleChoiceView+Views.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Extension of `UPMultipleChoiceView` for setting up the view hierarchy and layout constraints.
 //
 

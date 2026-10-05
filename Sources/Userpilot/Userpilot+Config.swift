@@ -1,12 +1,11 @@
 //
-//  Config.swift
+//  Userpilot+Config.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-// [Brief Description]
-// Config A configuration object that defines behavior and policies for Userpilot.
+//  Config A configuration object that defines behavior and policies for Userpilot.
 //
 
 import Foundation

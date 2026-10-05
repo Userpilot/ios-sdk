@@ -2,10 +2,9 @@
 //  ThemeContentEvent.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This structure defines a theme content event used to track the fetching of a specific theme by its ID.
 //
 

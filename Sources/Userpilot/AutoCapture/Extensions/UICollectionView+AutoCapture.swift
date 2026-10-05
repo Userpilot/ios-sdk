@@ -1,11 +1,10 @@
 //
 //  UICollectionView+AutoCapture.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 17/02/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UICollectionView+AutoCapture provides utilities for capturing UICollectionView item interactions.
 //  Item taps are captured via UIWindow.sendEvent when a UICollectionViewCell is touched.
 //

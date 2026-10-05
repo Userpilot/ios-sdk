@@ -2,10 +2,9 @@
 //  DIContainer.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  The `DIContainer` class provides a dependency injection container for managing component instances
 //  and their initializers. It supports lazy initialization and singleton resolution for components.
 //

@@ -136,7 +136,7 @@ jobs:
           # Ensure we have the latest changes
           git pull origin ${{ github.ref_name }}
           
-          file="./Sources/Userpilot/Version.swift"
+          file="./Sources/Userpilot/Configuration/Version.swift"
           major=$(grep 'private let versionMajor' "$file" | grep -oE '[0-9]+')
           minor=$(grep 'private let versionMinor' "$file" | grep -oE '[0-9]+')
           patch_line=$(grep 'private let versionPatch' "$file")

@@ -1,11 +1,10 @@
 //
-//  Bundle+Extension.swift
+//  Bundle+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  `Bundle+Extension` contains extensions with helper methods for the `Bundle` class.
 //  These methods provide convenient access to various pieces of information from the app's bundle,
 //  including identifiers, names, versions, and build numbers.

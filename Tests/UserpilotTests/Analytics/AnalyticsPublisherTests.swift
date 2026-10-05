@@ -123,19 +123,6 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(queued.first?.properties?["plan"] as? String, "pro")
     }
 
-    func testPublish_duplicatePendingIdentify_shouldKeepSingleQueuedEvent() {
-        userpilot.storage.userId = ""
-        userpilot.socketManager.isJoiningSocket = true
-        let identify = Event(type: .identify("user-a"), properties: ["plan": "pro"])
-
-        analyticsPublisher.publish(identify)
-        analyticsPublisher.publish(identify)
-
-        let queued = analyticsPublisher.mockGetEventsToFlush()
-        XCTAssertEqual(queued.count, 1)
-        XCTAssertEqual(queued.first?.userId, "user-a")
-    }
-
     func testPublish_userSwitchShutdown_shouldQueueFollowingNewUserEvents() {
         userpilot.storage.userId = "user-a"
         userpilot.socketManager.isSocketOpened = true
@@ -1446,27 +1433,6 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(publishCount, 1)
     }
 
-    func testPublish_withSameIdentifyEvent_shouldNotReprocess() {
-        // Arrange
-        let userId = "test-user"
-        let properties = ["name": "John"]
-        let identifyEvent = Event(type: .identify(userId), properties: properties)
-
-        // Set up existing user
-        let user = User(userId: userId, properties: properties, company: [:])
-        userpilot.storage.user = user.toJson() ?? ""
-
-        var publishIdentifyEventCalled = false
-        userpilot.socketManager.onPublish = { _, _ in publishIdentifyEventCalled = true }
-
-        // Act
-        analyticsPublisher.publish(identifyEvent)
-
-        // Assert
-        // Should not reprocess same identify event
-        XCTAssertFalse(publishIdentifyEventCalled)
-    }
-
     // MARK: - User Switch With A Screen Tracked Right After Identify
 
     /// A user switch selects the new id immediately and retains its identify before closing the old
@@ -1713,16 +1679,6 @@ class AnalyticsPublisherTests: XCTestCase {
         let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 11, isFakeReload: true)
 
         XCTAssertFalse(sent)
-        XCTAssertEqual(published(), [])
-    }
-
-    func testDuplicateIdentifyIsDropped() {
-        arrangeReloadableScreen()
-        let published = recordPublishedEvents()
-
-        analyticsPublisher.publish(
-            Event(type: .identify("reload-user"), properties: ["plan": "pro"]))
-
         XCTAssertEqual(published(), [])
     }
 

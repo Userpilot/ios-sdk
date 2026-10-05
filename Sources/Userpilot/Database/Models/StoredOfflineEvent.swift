@@ -2,6 +2,7 @@
 //  StoredOfflineEvent.swift
 //  Userpilot SDK
 //
+//  Created by Userpilot on 21/09/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
 //  Stable JSON payload stored inside the offline events database.
@@ -86,5 +87,49 @@ extension StoredOfflineEvent: Codable {
         } else {
             payload = nil
         }
+    }
+}
+
+// MARK: - Offline replay
+
+extension StoredOfflineEvent {
+
+    /// Builds one `batch_events` entry without changing the stored envelope or its schema.
+    func toBatchPayload(createdAt: TimeInterval) -> [String: Any]? {
+        guard isSupportedSchema else { return nil }
+        var data: [String: Any] = [
+            Constants.OfflineEvents.eventTypeProperty: eventType,
+            Constants.OfflineEvents.createdAtProperty: formatTimestampWithTimezone(createdAt)
+        ]
+        if isInternalEvent {
+            // Internal payloads stay flat, including their existing collision precedence.
+            for (key, value) in payload ?? [:] { data[key] = value }
+            return data
+        }
+        guard let event else { return nil }
+        data[Constants.OfflineEvents.eventTypeProperty] = event.eventName
+        data[Constants.Analytics.metaDataProperty] = event.properties ?? [:]
+        switch event.type {
+        case .identify:
+            if let company = event.company, !company.isEmpty {
+                data[Constants.Analytics.identifyCompanyProperty] = company
+            }
+        case .screen:
+            data[Constants.Analytics.screenTitleProperty] = event.screenTitle ?? ""
+            var metadata = event.properties ?? [:]
+            metadata[Constants.Analytics.fakeReload] = false
+            data[Constants.Analytics.metaDataProperty] = metadata
+        case .event, .autoCaptureEvent:
+            data[Constants.Analytics.eventNameProperty] = event.interactionEventName ?? event.eventTitle
+            if let screen = event.screen { data[Constants.Analytics.screenProperty] = screen }
+        }
+        return data
+    }
+
+    /// Keep the existing UTC ISO-8601 representation; each call owns its formatter.
+    private func formatTimestampWithTimezone(_ timestampMillis: TimeInterval) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date(timeIntervalSince1970: timestampMillis / 1_000.0))
     }
 }

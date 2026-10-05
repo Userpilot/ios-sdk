@@ -2,10 +2,9 @@
 //  UPMultipleChoiceView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom view for presenting multiple choice questions in a survey.
 //
 

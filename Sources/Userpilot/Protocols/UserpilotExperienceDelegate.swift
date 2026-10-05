@@ -2,7 +2,7 @@
 //  UserpilotExperienceDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/11/2024.
+//  Created by Userpilot on 18/11/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  This protocol allows the application to observe and respond to changes in the state

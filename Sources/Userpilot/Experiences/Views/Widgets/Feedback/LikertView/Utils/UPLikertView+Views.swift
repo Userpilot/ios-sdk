@@ -1,11 +1,10 @@
 //
-//  UPLikertView+ViewsExt.swift
+//  UPLikertView+Views.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This extension contains methods for setting up the view hierarchy, configuring the collection view,
 //  and binding the low/high score text labels in the Likert scale view. It also handles UI layout
 //  and setting of constraints using Auto Layout.

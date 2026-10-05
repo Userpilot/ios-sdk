@@ -1,8 +1,11 @@
 //
-//  LogicContent.swift
-//  Userpilot
+//  SurveyLogic.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 30/01/2025.
+//  Created by Userpilot on 30/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Defines survey branching rules, conditions and target steps received from the backend.
 //
 
 import Foundation

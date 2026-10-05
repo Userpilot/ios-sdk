@@ -1,14 +1,11 @@
 //
-//  UserpilotConstants.RemoteSource.swift
+//  UserpilotRemoteSource.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 17/09/2024.
+//  Created by Userpilot on 17/09/2024.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
-//  The `UserpilotRemoteSource` responsible for fetching SDK settings.
-//
-//  It allows events to be mutated or updated to add additional context or information as needed by conforming classes.
+//  Fetches cached SDK settings and preview content with the existing URLSession transport.
 //
 
 import Foundation
@@ -16,10 +13,10 @@ import Foundation
 // MARK: - Protocol
 
 internal protocol UserpilotRemoteSourcing: AnyObject {
-    /// Fetches SDK settings and invokes the provided callback with Result type.
+    /// Uses fresh cached settings immediately; network completions keep URLSession delivery.
     func fetchSettings(completion: @escaping (Result<Void, RemoteSourceError>) -> Void)
 
-    /// Fetches preview experience from the public content API using Result type.
+    /// Fetches preview content without caching or changing the callback queue.
     func fetchPreviewExperience(
         params: PreviewExperienceQueryParams,
         completion: @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void
@@ -75,49 +72,9 @@ internal class UserpilotRemoteSource {
         return elapsedTime < Constants.RemoteSource.configurationDuration
     }
 
-    // Returns appropriate error message based on HTTP status code.
-    // swiftlint:disable:next cyclomatic_complexity
-    private func getErrorMessage(statusCode: Int) -> String {
-        switch statusCode {
-        case 400:
-            return "Bad request: The content request is invalid"
-        case 401:
-            return "Unauthorized: Invalid or missing authentication"
-        case 403:
-            return "Forbidden: Access to this content is denied"
-        case 404:
-            return "Not found: The requested content could not be found"
-        case 408:
-            return "Request timeout: The server took too long to respond"
-        case 429:
-            return "Too many requests: Please try again later"
-        case 500:
-            return "Server error: The server encountered an internal error"
-        case 502:
-            return "Bad gateway: The server received an invalid response"
-        case 503:
-            return "Service unavailable: The server is temporarily unavailable"
-        case 504:
-            return "Gateway timeout: The server did not respond in time"
-        default:
-            return "Request failed with status code: \(statusCode)"
-        }
-    }
-
     /// Builds the remote settings URL using the SDK token.
     private func buildSettingsUrl() -> String {
         return Constants.RemoteSource.settingsBaseURL + config.token
-    }
-
-    /// Builds the URL for fetching preview experience content.
-    private func buildPreviewExperienceUrl(params: PreviewExperienceQueryParams) -> String {
-        var components = URLComponents(string: params.baseUrl)
-        components?.queryItems = [
-            URLQueryItem(name: "app_token", value: params.appToken),
-            URLQueryItem(name: "content_type", value: params.contentType),
-            URLQueryItem(name: "content_id", value: params.contentId)
-        ]
-        return components?.url?.absoluteString ?? params.baseUrl
     }
 
     /// Executes a network request and returns Result with success or failure.
@@ -137,37 +94,39 @@ internal class UserpilotRemoteSource {
                 return
             }
 
-            if let error {
-                self.logger.error("🌐 Network request failed: %{public}@", error.localizedDescription)
-                completion(.failure(.networkError(error.localizedDescription)))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("❌ Invalid response type")
-                completion(.failure(.invalidResponse))
-                return
-            }
-
-            guard httpResponse.isSuccessStatusCode else {
-                let errorMessage = self.getErrorMessage(statusCode: httpResponse.statusCode)
-                self.logger.error("❌ Request failed with code: %{public}@", String(httpResponse.statusCode))
-                completion(
-                    .failure(.httpError(statusCode: httpResponse.statusCode, message: errorMessage))
-                )
-                return
-            }
-
-            guard let data else {
-                self.logger.error("📭 Request failed: Empty response body")
-                completion(.failure(.emptyResponse))
-                return
-            }
-
-            self.logger.info("✅ Request successful: %{public}@", String(httpResponse.statusCode))
-            completion(.success(data))
+            completion(self.handleResponse(data: data, response: response, error: error))
         }
         task.resume()
+    }
+
+    /// Maps the transport response once, before endpoint-specific decoding and cache writes.
+    private func handleResponse(
+        data: Data?,
+        response: URLResponse?,
+        error: Error?
+    ) -> Result<Data, RemoteSourceError> {
+        if let error {
+            logger.error("🌐 Network request failed: %{public}@", error.localizedDescription)
+            return .failure(.networkError(error.localizedDescription))
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            logger.error("❌ Invalid response type")
+            return .failure(.invalidResponse)
+        }
+
+        guard httpResponse.isSuccessStatusCode else {
+            logger.error("❌ Request failed with code: %{public}@", String(httpResponse.statusCode))
+            return .failure(.fromStatusCode(httpResponse.statusCode))
+        }
+
+        guard let data else {
+            logger.error("📭 Request failed: Empty response body")
+            return .failure(.emptyResponse)
+        }
+
+        logger.info("✅ Request successful: %{public}@", String(httpResponse.statusCode))
+        return .success(data)
     }
 
     /// Parses SDK settings response and updates socket URL storage. Returns Result.
@@ -241,15 +200,11 @@ extension UserpilotRemoteSource: UserpilotRemoteSourcing {
                 return
             }
 
-            switch result {
-            case .success(let data):
-                let result = self.handleSettingsResponse(data)
-                completion(result)
-            case .failure(let error):
+            if case .failure(let error) = result {
                 self.logger.error(
                     "❌ Failed to fetch settings: %{public}@", error.localizedDescription)
-                completion(.failure(error))
             }
+            completion(result.flatMap(self.handleSettingsResponse))
         }
     }
 
@@ -267,22 +222,18 @@ extension UserpilotRemoteSource: UserpilotRemoteSourcing {
         params: PreviewExperienceQueryParams,
         completion: @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void
     ) {
-        let url = buildPreviewExperienceUrl(params: params)
+        let url = params.requestURL
         executeRequest(url: url) { [weak self] result in
             guard let self else {
                 completion(.failure(.networkError("Request cancelled")))
                 return
             }
 
-            switch result {
-            case .success(let data):
-                let result = self.handlePreviewExperienceResponse(data)
-                completion(result)
-            case .failure(let error):
+            if case .failure(let error) = result {
                 self.logger.error(
                     "❌ Failed to fetch preview experience: %{public}@", error.localizedDescription)
-                completion(.failure(error))
             }
+            completion(result.flatMap(self.handlePreviewExperienceResponse))
         }
     }
 }

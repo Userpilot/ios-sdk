@@ -2,10 +2,9 @@
 //  AtomicReference.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 23/11/2025.
+//  Created by Userpilot on 23/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A simple thread-safe atomic reference wrapper.
 //
 

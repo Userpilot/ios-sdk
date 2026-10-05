@@ -1,11 +1,10 @@
 //
-//  UPSingleInputView+View.swift
+//  UPSingleInputView+Views.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 20/01/2025.
+//  Created by Userpilot on 20/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A extension to handle setup views.
 //
 

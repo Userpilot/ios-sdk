@@ -1,13 +1,11 @@
 //
-//  QueueType.swift
+//  DispatchQueue+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 13/10/2024.
+//  Created by Userpilot on 13/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
-//  `QueueType` defines different queue types for dispatching tasks asynchronously.
-//  It provides queues for main, background, low, and high priority tasks.
+//  Provides shared queues and helpers for asynchronous dispatch and immediate main-thread work.
 //
 
 import Foundation
@@ -51,6 +49,17 @@ internal enum QueueType {
     }
 }
 
+/// Always enqueues, even on the destination queue; serial queues preserve submission order.
 internal func performOn(_ queueType: QueueType, closure: @escaping () -> Void) {
     queueType.queue.async(execute: closure)
+}
+
+/// Safe from any thread: runs inline on main, otherwise enqueues asynchronously on main.
+/// Use `performOn(.main)` when work must wait for a later queue turn, even when called on main.
+internal func performOnMain(_ closure: @escaping () -> Void) {
+    if Thread.isMainThread {
+        closure()
+    } else {
+        performOn(.main, closure: closure)
+    }
 }

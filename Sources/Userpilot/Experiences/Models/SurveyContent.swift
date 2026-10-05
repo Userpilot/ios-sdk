@@ -1,8 +1,11 @@
 //
 //  SurveyContent.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Decodes survey content, question steps and presentation settings received from the backend.
 //
 
 import Foundation
@@ -50,6 +53,16 @@ internal struct SurveyContent: Decodable {
         return TimeInterval(timeDelay)
     }
 
+}
+
+internal extension SurveyContent {
+    /// Uses the embedded position when supplied, otherwise the cached survey theme's dialog flag.
+    func isBottomSheet(using themes: ThemeHandling) -> Bool {
+        if let position = surveyTheme.themeData?.general?.position {
+            return position == .bottom
+        }
+        return themes.getThemeById(surveyTheme.id)?.isDialogSurvey == false
+    }
 }
 
 internal struct SurveyMobileTheme: Decodable {
@@ -184,5 +197,15 @@ internal extension String {
         } else {
             return nil
         }
+    }
+}
+
+internal extension SurveyContent {
+    /// Returns the final thank-you action's link; URL validation stays with the navigation caller.
+    var thankYouDeepLink: String? {
+        guard let module = modules.last,
+              module.type == .completed,
+              module.metadata?.buttonAction == .deepLink else { return nil }
+        return module.metadata?.iosDeepLink
     }
 }

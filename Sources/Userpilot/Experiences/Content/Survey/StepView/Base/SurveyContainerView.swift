@@ -1,8 +1,11 @@
 //
 //  SurveyContainerView.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 30/01/2025.
+//  Created by Userpilot on 30/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Builds survey question views and their navigation, submission and dismiss controls.
 //
 
 import Foundation

@@ -1,8 +1,11 @@
 //
 //  InteractionType.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 28/03/2026.
+//  Created by Userpilot on 28/03/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
+//
+//  Defines automatically captured interaction kinds and their payload names.
 //
 
 /// Defines the types of interactions that can be automatically captured.
@@ -71,6 +74,17 @@ internal enum InteractionEventType: String {
 }
 
 extension InteractionType {
+    /// Raw type is always present; an unresolved framework contributes no metadata field.
+    func buildInternalProperties(framework: Userpilot.AppFramework?) -> [String: Any] {
+        var result: [String: String] = [
+            Constants.AutoCapture.rawInteractionType: rawValue
+        ]
+        if let framework = framework?.rawValue {
+            result[Constants.AutoCapture.uiFramework] = framework
+        }
+        return result
+    }
+
     func toInteractionEventType() -> InteractionEventType {
         switch self {
         case .tap, .gesture:

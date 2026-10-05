@@ -2,10 +2,9 @@
 //  UPSingleInputView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A custom view that provides a single input field for the user, along with additional
 //  elements like country selection, date picker, and more.
 //

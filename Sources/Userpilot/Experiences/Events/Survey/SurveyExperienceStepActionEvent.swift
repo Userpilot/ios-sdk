@@ -1,8 +1,11 @@
 //
 //  SurveyExperienceStepActionEvent.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 02/02/2025.
+//  Created by Userpilot on 02/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Builds the shared payload for survey step action events.
 //
 
 import Foundation

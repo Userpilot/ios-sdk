@@ -2,10 +2,9 @@
 //  Userpilot.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  The `Userpilot` class is the primary interface for integrating Userpilot SDK into an application.
 //  It manages user tracking, event publishing, experience rendering, and various analytics functions,
 //  allowing you to deliver personalized, context-aware content based on user actions and data.
@@ -230,11 +229,7 @@ public class Userpilot: NSObject {
     private func releaseExperienceOverlayWindowOnMain() {
         guard let overlay = experienceOverlayWindowStorage else { return }
         experienceOverlayWindowStorage = nil
-        if Thread.isMainThread {
-            overlay.teardown()
-        } else {
-            performOn(.main) { overlay.teardown() }
-        }
+        performOnMain { overlay.teardown() }
     }
 
     // MARK: - Setup Methods
@@ -250,34 +245,32 @@ public class Userpilot: NSObject {
         container.owner = self
         container.register(Config.self, value: config)
         // Inject the process-wide registry as an abstraction so consumers
-        // (e.g. `AutoCaptureCoordinater`) resolve it instead of reaching for
+        // (e.g. `AutoCaptureCoordinator`) resolve it instead of reaching for
         // `Registry.shared` directly. The value is the shared singleton, so
         // every instance's container hands back the same registry.
         container.register(InstanceRegistering.self, value: Registry.shared)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
-        // V2 core classes under test. The V1 classes stay in the target; swap these three
-        // registrations back to SocketManager, AnalyticsPublisher and ExperiencesPublisher to roll back.
+        // One implementation per delivery contract.
         container.registerLazy(SocketManaging.self) { container in
-            SocketManagerV2(container: container)
+            SocketManager(container: container)
         }
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
-        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
+        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinator.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
-        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateMachine.init)
         container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
         container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateMachine.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
         container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
-        container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisherV2.init)
+        container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
-        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisherV2.init)
+        container.registerEager(ExperiencesPublishing.self, initializer: ExperiencesPublisher.init)
         container.registerEager(SessionMonitoring.self, initializer: SessionMonitor.init)
 
         // Only spin up the auto-detector when the host app didn't set the
@@ -334,13 +327,14 @@ extension Userpilot {
         properties: Payload = nil,
         company: Payload = nil
     ) {
-        guard userId.trim().isNotEmpty else {
+        let normalizedUserId = userId.trim()
+        guard normalizedUserId.isNotEmpty else {
             config.logger.error("Invalid user id - empty string")
             return
         }
         analyticsPublisher.publish(
             Event(
-                type: .identify(userId.trim()),
+                type: .identify(normalizedUserId),
                 properties: properties,
                 company: company
             )
@@ -380,18 +374,19 @@ extension Userpilot {
             config.logger.error("Invalid screen title - empty string")
             return
         }
-        // Interaction autocapture debounces text-field / text-view changes, so a change the user made
-        // right before navigating would otherwise be published after this screen event and attributed
-        // to the new screen. Screen autocapture never reaches here (guarded above), so this covers the
-        // interaction-autocapture-with-manual-screens setup.
-        if config.enableInteractionAutoCapture {
-            InteractionEventCache.flushPendingInteractions()
-        }
+        flushPendingInteractionCaptures()
         let event = Event(
             type: .screen(title),
             properties: [Constants.AutoCapture.source: Constants.AutoCapture.manualCaptureSourceValue]
         )
         analyticsPublisher.publish(event)
+    }
+
+    /// Flushes debounced interactions before the manual screen event changes their screen context.
+    /// Automatic screen capture flushes through the coordinator instead.
+    private func flushPendingInteractionCaptures() {
+        guard config.enableInteractionAutoCapture else { return }
+        InteractionEventCache.flushPendingInteractions()
     }
 
     /**
@@ -431,7 +426,6 @@ extension Userpilot {
     @objc
     public func logout() {
         storage.temporaryUser = nil
-        storage.user = ""
         analyticsPublisher.logout()
         clean()
     }
@@ -442,38 +436,7 @@ extension Userpilot {
      */
     @objc
     public func settings() -> [String: Any] {
-        var autoPropertiesDict: [String: Any]?
-        var appPropertiesDict: [String: Any]?
-        var user: [String: Any]?
-
-        // Convert the JSON strings to dictionaries
-        if let autoPropertiesData = autoPropertyDecorator.autoProperties.toJSONString()?.data(
-            using: .utf8) {
-            autoPropertiesDict =
-                (try? JSONSerialization.jsonObject(
-                    with: autoPropertiesData, options: [])) as? [String: Any]
-        }
-
-        if let appPropertiesData = autoPropertyDecorator.appProperties.toJSONString()?.data(
-            using: .utf8) {
-            appPropertiesDict =
-                (try? JSONSerialization.jsonObject(
-                    with: appPropertiesData, options: [])) as? [String: Any]
-        }
-
-        if let userData = storage.user.data(using: .utf8) {
-            user =
-                (try? JSONSerialization.jsonObject(with: userData, options: [])) as? [String: Any]
-        }
-
-        // Create the dictionary for settings
-        let settings: [String: Any] = [
-            "SDK version": version(),
-            "Token": config.token,
-            "User": user ?? [:],
-            "Auto properties": autoPropertiesDict ?? [:],
-            "App properties": appPropertiesDict ?? [:]
-        ]
+        let settings = makeSettings()
 
         if let jsonData = try? JSONSerialization.data(
             withJSONObject: settings, options: .withoutEscapingSlashes) {
@@ -483,6 +446,21 @@ extension Userpilot {
         }
 
         return settings
+    }
+
+    /// Preserves the diagnostic dictionary's JSON-normalized values and empty-object fallbacks.
+    private func makeSettings() -> [String: Any] {
+        let autoProperties = autoPropertyDecorator.autoProperties.toJSONString()?.toJSONDictionary()
+        let appProperties = autoPropertyDecorator.appProperties.toJSONString()?.toJSONDictionary()
+        let user = User(userId: storage.userId).toJson()?.toJSONDictionary()
+
+        return [
+            "SDK version": version(),
+            "Token": config.token,
+            "User": user ?? [:],
+            "Auto properties": autoProperties ?? [:],
+            "App properties": appProperties ?? [:]
+        ]
     }
 
     // MARK: - SDK APIs
@@ -497,7 +475,6 @@ extension Userpilot {
     internal func clean() {
         storage.pushToken = nil
         storage.userId = ""
-        storage.user = ""
     }
 }
 
@@ -584,7 +561,7 @@ extension Userpilot {
 
     /// The analytics publisher backing this instance, resolved from its container.
     ///
-    /// Used by a non-default instance's `AutoCaptureCoordinater` to forward an
+    /// Used by a non-default instance's `AutoCaptureCoordinator` to forward an
     /// autocapture event into this (default) instance's publisher when the default
     /// opted in via `Config.allowReceiveEventsFromExternalSource`. Publishing
     /// straight to the publisher (never back through routing) means it cannot

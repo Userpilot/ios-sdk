@@ -104,14 +104,14 @@ internal final class EventDebounce<Value> {
         }
         guard !pending.isEmpty else { return }
 
-        if deliversOnMainQueue, Thread.isMainThread {
-            pending.forEach { deliverIfPending(key: $0.key, identifier: $0.id) }
-            return
-        }
-
-        deliveryQueue.async { [weak self] in
+        let deliver = { [weak self] in
             guard let self else { return }
             pending.forEach { self.deliverIfPending(key: $0.key, identifier: $0.id) }
+        }
+        if deliversOnMainQueue {
+            performOnMain(deliver)
+        } else {
+            deliveryQueue.async(execute: deliver)
         }
     }
 

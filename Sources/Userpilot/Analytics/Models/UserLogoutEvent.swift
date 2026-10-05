@@ -2,10 +2,9 @@
 //  UserLogoutEvent.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 13/04/2025.
+//  Created by Userpilot on 13/04/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This struct is responsible for defining the event for clear the push notification device token.
 //
 

@@ -16,7 +16,7 @@ final class AutoCapturerTests: XCTestCase {
                 .appFramework(.SwiftUI)
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         let expectation = expectation(description: "SwiftUI screen event published")
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { event in
@@ -45,7 +45,7 @@ final class AutoCapturerTests: XCTestCase {
                 .appFramework(.UIKit)
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
         let payload = ScreenTrackingPayload(
@@ -68,7 +68,7 @@ final class AutoCapturerTests: XCTestCase {
             config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 
@@ -85,7 +85,7 @@ final class AutoCapturerTests: XCTestCase {
                 ])
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 
@@ -99,7 +99,7 @@ final class AutoCapturerTests: XCTestCase {
             config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 
@@ -116,7 +116,7 @@ final class AutoCapturerTests: XCTestCase {
                 ])
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 

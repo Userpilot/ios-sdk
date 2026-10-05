@@ -2,10 +2,9 @@
 //  UPLikertView+CollectionView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 19/01/2025.
+//  Created by Userpilot on 19/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This extension provides the implementation for UICollectionView's DataSource and Delegate methods.
 //  It is responsible for configuring and handling interactions with the collection view in the UPLikertView class,
 //  such as displaying the Likert scale items, selecting them, and handling layout customization.

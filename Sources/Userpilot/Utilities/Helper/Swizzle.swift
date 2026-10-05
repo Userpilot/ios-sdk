@@ -1,8 +1,8 @@
 //
-//  Swizzler.swift
+//  Swizzle.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 17/02/2025.
+//  Created by Userpilot on 17/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  This utility provides a method-swizzling mechanism used primarily for delegate method interception,

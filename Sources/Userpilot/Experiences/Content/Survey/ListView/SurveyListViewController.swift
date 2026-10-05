@@ -2,10 +2,9 @@
 //  SurveyListViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/01/2025.
+//  Created by Userpilot on 18/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This class is responsible for managing and displaying the survey experience.
 //  It contains UI components such as a dismiss button, action button, and questions.
 //  The class integrates with the `SurveyViewModel` to handle data binding and user interactions.
@@ -26,13 +25,13 @@ internal class SurveyListViewController: UIViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions.
-    internal let surveyViewModel: SurveyViewModel
+    internal let surveyViewModel: SurveyViewModeling
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
-    init(surveyViewModel: SurveyViewModel) {
+    init(surveyViewModel: SurveyViewModeling) {
         self.surveyViewModel = surveyViewModel
         super.init(nibName: "SurveyListViewController", bundle: Userpilot.resourceBundle)
     }

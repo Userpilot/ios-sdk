@@ -2,10 +2,9 @@
 //  Utils.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 10/10/2024.
+//  Created by Userpilot on 10/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A Utils class for utilities functions.
 //
 

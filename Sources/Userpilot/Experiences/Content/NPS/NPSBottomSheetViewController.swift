@@ -1,8 +1,11 @@
 //
 //  NPSBottomSheetViewController.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 09/02/2025.
+//  Created by Userpilot on 09/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Presents NPS content in a bottom sheet and connects user actions to the experience lifecycle.
 //
 
 import UIKit
@@ -21,13 +24,13 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions
-    internal let npsViewModel: NPSViewModel
+    internal let npsViewModel: NPSViewModeling
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     /// - Parameter experienceViewModel: The view model to bind with the dialog.
-    init(npsViewModel: NPSViewModel) {
+    init(npsViewModel: NPSViewModeling) {
         self.npsViewModel = npsViewModel
         super.init(nibName: nil, bundle: nil)
     }

@@ -1,10 +1,10 @@
 //
 //  UIApplication+AutoCapture.swift
-//  Userpilot
+//  Userpilot SDK
 //
+//  Created by Userpilot on 08/04/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIApplication+AutoCapture swizzles sendAction(_:to:from:for:) to capture actions
 //  that go through the responder chain: UIBarButtonItem, UIMenu, and UIControl (buttons,
 //  switches, etc.). This single point avoids duplicate events vs. swizzling UIControl alone.

@@ -1,11 +1,10 @@
 //
-//  Int+Extension.swift
+//  Int+Extensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 04/09/2024.
+//  Created by Userpilot on 04/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  `Int+Extension` contains an extension with helper methods for the `Int` class.
 //  This extension provides additional functionality to modify integer values easily.
 //

@@ -1,14 +1,19 @@
 //
-//  SurveyListViewController+ViewStateProtocol.swift//  Userpilot SDK
+//  SurveyListViewController+ViewStateProtocol.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/01/2025.
+//  Created by Userpilot on 21/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
+//  SurveyListViewController+ViewStateProtocol.swift//  Userpilot SDK
+//
+//
 //  This class confirm to ViewStateDelegate to listen for view updates.
 //
+//
+//  Extension for SurveyListViewController to conform to the ViewStateDelegate protocol.
+//
 
-// Extension for SurveyListViewController to conform to the ViewStateDelegate protocol.
 extension SurveyListViewController: ViewStateDelegate {
 
     /// Called when the view state changes.

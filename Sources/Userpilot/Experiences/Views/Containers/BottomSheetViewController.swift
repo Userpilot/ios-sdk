@@ -2,10 +2,9 @@
 //  BottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/10/2024.
+//  Created by Userpilot on 21/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A customizable bottom sheet view controller that provides a smooth, dimmed, draggable
 //  bottom sheet experience. It allows adding dynamic content, background customization,
 //  and integrates gesture recognition for dismissing the sheet via a drag or tap action.
