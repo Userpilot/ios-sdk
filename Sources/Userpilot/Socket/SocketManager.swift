@@ -285,9 +285,13 @@ internal final class SocketManager: SocketManaging {
 
     // MARK: - Phoenix callbacks
 
-    /// Log lifecycle metadata only; Phoenix wire logs contain user payloads.
+    /// Logs lifecycle and, like main, the Phoenix wire traffic (pushes and replies with their payloads)
+    /// while SDK logging is enabled.
     private func observe(_ socket: Socket, channel: Channel, id: UUID) {
         Self.assertOnMain()
+        socket.logger = { [weak self] message in
+            self?.logger.debug("✈️ SOCKET message: %{public}@", message)
+        }
         socket.onOpen { [weak self] in
             self?.receive(id) { manager, _ in manager.logger.info("✅ SOCKET opened") }
         }
@@ -310,15 +314,15 @@ internal final class SocketManager: SocketManaging {
                 manager.subscribers.invoke { $0.onNewMessage(message) }
             }
         }
-        channel.onError { [weak self] _ in
+        channel.onError { [weak self] message in
             self?.receive(id) { manager, connection in
-                manager.logger.error("❗ SOCKET Channel error")
+                manager.logger.error("❗ SOCKET Channel error: %{public}@", String(describing: message.payload))
                 manager.finishConnection(connection, failed: true)
             }
         }
-        channel.onClose { [weak self] _ in
+        channel.onClose { [weak self] message in
             self?.receive(id) { manager, connection in
-                manager.logger.debug("🛑 SOCKET Channel close")
+                manager.logger.debug("🛑 SOCKET Channel close: %{public}@", String(describing: message.payload))
                 manager.finishConnection(connection, failed: true)
             }
         }
@@ -330,9 +334,9 @@ internal final class SocketManager: SocketManaging {
         push.receive(Constants.Socket.successKey) { [weak self] _ in
             self?.receive(id) { $0.didJoin($1) }
         }
-        push.receive(Constants.Socket.errorKey) { [weak self] _ in
+        push.receive(Constants.Socket.errorKey) { [weak self] message in
             self?.receive(id) { manager, connection in
-                manager.logger.error("⚠️ SOCKET channel join failed")
+                manager.logger.error("⚠️ SOCKET channel join failed: %{public}@", String(describing: message.payload))
                 manager.finishConnection(connection, failed: true)
             }
         }
