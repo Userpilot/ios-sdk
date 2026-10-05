@@ -50,13 +50,13 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Notify that an experience view finished dismissing
     func experienceDidFinishDismissing()
 
-    /// Determine if can requst screen event
+    /// True when idle and outside the cooldown for a repeat host screen event.
     func canRequestScreenEvent() -> Bool
 
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL)
 
-    /// logout event
+    /// Invalidates callbacks and closes current content without requesting a screen refresh.
     func logout()
 
     /// Show thank you message
@@ -721,6 +721,7 @@ extension ExperiencesPublisher {
     func experienceDidFinishDismissing() { experienceDidFinishDismissing(rendererID: nil) }
 
     /// Accept dismissal only for the named presentation after UIKit has detached its controller.
+    /// A completed/dismissed analytics event alone cannot release the operation or request the next content.
     func experienceDidFinishDismissing(rendererID: UUID?) {
         guard let rendererID else { return }
         onMain { publisher in
@@ -813,7 +814,7 @@ extension ExperiencesPublisher {
         beginPreview(preview)
     }
 
-    /// Keeps legacy callers on the same screen-notification path for legacy callers.
+    /// Routes a named screen through the same navigation rules as a full screen event.
     func updateScreen(_ screenName: String) {
         updateScreen(Event(type: .screen(screenName)))
     }
@@ -846,6 +847,8 @@ extension ExperiencesPublisher {
             publisher.replacementPreview = nil
             publisher.npsShownOnCurrentScreen = false
             publisher.closeCurrent(manualClose: true, refresh: false)
+            // An idle overlay can outlive its operation; collapse it without constructing a new window.
+            publisher.onMain { $0.userpilot?.existingExperienceOverlayWindow?.hideIfIdle() }
         }
     }
 }
@@ -966,6 +969,11 @@ extension ExperiencesPublisher {
 
 #if DEBUG
 extension ExperiencesPublisher {
+    /// Test-thread barrier for work already submitted to the owner queue; never call from that queue.
+    func mockWaitForQueue() {
+        experienceQueue.sync {}
+    }
+
     /// Set before delivering events so tests control when display and thank-you delays fire.
     func mockSetDelayUtils(_ delayUtils: DelayUtils) {
         self.delayUtils = delayUtils

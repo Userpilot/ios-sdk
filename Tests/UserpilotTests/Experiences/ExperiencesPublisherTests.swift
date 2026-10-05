@@ -1,1597 +1,351 @@
 //
-//  ExperiencesPublisher.swift
+//  ExperiencesPublisherTests.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 15/07/2025.
+//  Created by Userpilot on 15/07/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Verifies admission, request ownership and renderer dismissal without live networking or animations.
 //
 
 import XCTest
 @testable import Userpilot
 
-// swiftlint:disable all
-
 final class ExperiencesPublisherTests: XCTestCase {
-
-    var experiencesPublisher: ExperiencesPublisher!
+    var publisher: ExperiencesPublisher!
     var userpilot: MockUserpilot!
-
+    var host: MockExperiencePresentationHost!
+    var displayDelay: MockExperienceDisplayDelay!
     var callbackRegistered = false
-    
-    override func setUpWithError() throws {
+    var publishedEvents: [SDKEvent] = []
+    var reloadCount = 0
+
+    override func setUp() {
         super.setUp()
-        callbackRegistered = false
-        let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
-       
-        userpilot.socketManager.onRegisterCallback = { _ in
-            self.callbackRegistered = true
+        userpilot = MockUserpilot(config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false))
+        // Resolve real renderer ViewModels against the real publisher, but keep the presentation host
+        // independent from the facade's UIKit overlay so no window or animation enters these tests.
+        userpilot.container.owner = nil
+        userpilot.socketManager.onRegisterCallback = { [weak self] _ in self?.callbackRegistered = true }
+        userpilot.themeHandler.onGetThemeById = { _ in ThemeData(carousel: nil, slideOut: nil, survey: nil) }
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { [weak self] in self?.publishedEvents.append($0) }
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { [weak self] _, _, _ in
+            self?.reloadCount += 1
+            return true
         }
-        
-        experiencesPublisher = ExperiencesPublisher(container: userpilot.container)
+        publisher = ExperiencesPublisher(container: userpilot.container)
+        userpilot.container.register(ExperiencesPublishing.self, value: publisher!)
+        host = MockExperiencePresentationHost()
+        publisher.topViewControllerProvider = { [weak self] in self?.host }
+        displayDelay = MockExperienceDisplayDelay()
+        publisher.mockSetDelayUtils(displayDelay)
+        publisher.updateScreen("Home")
+        publisher.mockWaitForQueue()
     }
 
     override func tearDown() {
-        experiencesPublisher = nil
+        publisher.logout()
+        settle()
+        publisher = nil
+        host = nil
+        displayDelay = nil
         userpilot = nil
+        publishedEvents.removeAll()
+        reloadCount = 0
         super.tearDown()
     }
 
-    // MARK: - Register Socket Callback Tests
-
-    func testStart_shouldRegisterSocketCallback() {
-        // Assert
+    func testInitializationRegistersSocketCallback() {
         XCTAssertTrue(callbackRegistered)
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertNil(publisher.activeRendererID)
+        XCTAssertNil(publisher.getActiveMobileContent())
     }
 
-    // MARK: - canRequestScreenEvent Tests
-
-    func testCanRequestScreenEvent_shouldReturnTrue_WhenNoActiveExperience() {
-        // Act
-        let result = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertTrue(result)
+    func testManualRequestOwnsAdmissionWhileFetchingContent() throws {
+        let request = try beginManual()
+        XCTAssertEqual((request.event as? ExperienceContentEvent)?.experienceId, "flow-a")
+        XCTAssertTrue(request.shouldSend())
+        XCTAssertFalse(publisher.canRequestScreenEvent())
     }
 
-    func testCanRequestScreenEvent_shouldReturnFalse_WhenPreviewIsPending() {
-        // Arrange
-        userpilot.experienceStateMachine.markPreviewMode()
-
-        // Act
-        let result = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertFalse(result)
+    func testBusyManualRequestIsDroppedAndNeverReplayed() throws {
+        let request = try beginManual()
+        publisher.triggerExperience("flow-b")
+        publisher.mockWaitForQueue()
+        XCTAssertEqual(userpilot.analyticsPublisher.requests.count, 1)
+        request.completion?(Message(), false)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertEqual(userpilot.analyticsPublisher.requests.count, 1)
     }
 
-    // MARK: - triggerExperience Tests
-
-    func testTriggerExperience_shouldPublishEvent_WhenNoActiveExperience() {
-        // Arrange
-        let experienceId = "test-experience-id"
-        var publishedEvent: SDKEvent?
-        let expectation = XCTestExpectation(description: "Event should be published")
-        
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            publishedEvent = event
-            expectation.fulfill()
-        }
-
-        // Act
-        experiencesPublisher.triggerExperience(experienceId)
-
-        // Assert
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertNotNil(publishedEvent)
-        XCTAssertTrue(publishedEvent is ExperienceContentEvent)
-        if let event = publishedEvent as? ExperienceContentEvent {
-            XCTAssertEqual(event.experienceId, experienceId)
-        }
+    func testEmptyManualResponseReleasesAdmission() throws {
+        try beginManual().completion?(Message(), true)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testTriggerExperience_shouldCacheManualTrigger_WhenActiveExperienceExists() {
-        // Arrange
-        let mockVC = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: mockVC)
-        var publishedEvent: SDKEvent?
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            publishedEvent = event
-        }
-
-        // Act
-        experiencesPublisher.triggerExperience("cached-experience-id")
-
-        // Assert
-        let expectation = XCTestExpectation(description: "manual trigger cached")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            XCTAssertNil(publishedEvent)
-            XCTAssertTrue(self.userpilot.experienceStateMachine.hasCachedExperience())
-            XCTAssertEqual(self.userpilot.experienceStateMachine.getCachedExperienceId(), "cached-experience-id")
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
+    func testFailedManualResponseReleasesAdmission() throws {
+        try beginManual().completion?(Message(), false)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testPublishInternalSDKEvent_shouldReplayCachedManualTrigger_WhenExperienceCloses() {
-        // Arrange
-        let cacheExpectation = XCTestExpectation(description: "manual trigger cached")
-        let replayExpectation = XCTestExpectation(description: "cached manual trigger replayed")
-        let mockVC = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: mockVC)
+    func testManualResponseSchedulesContentAndShowsItOnlyAfterDelay() throws {
+        try beginManual().completion?(Message(payload: MockContentFactory.makeFlowContentPayload()), true)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(displayDelay.hasAction)
+        XCTAssertNil(host.presentedExperience)
+        try presentScheduled()
+        XCTAssertTrue(host.presentedExperience is CarouselExperienceViewController)
+        XCTAssertEqual(publisher.getActiveMobileContent()?.experienceId(), 77)
+    }
 
-        var publishedExperienceIds: [String] = []
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            if let event = event as? ExperienceContentEvent {
-                publishedExperienceIds.append(event.experienceId)
-                replayExpectation.fulfill()
-            }
-        }
+    func testMissingThemeRequestsThemeBeforeDisplay() throws {
+        userpilot.themeHandler.onGetThemeById = { _ in nil }
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        let request = try XCTUnwrap(userpilot.analyticsPublisher.requests.last)
+        XCTAssertTrue(request.event is ThemeContentEvent)
+        XCTAssertFalse(displayDelay.hasAction)
+        var themeSaved = false
+        userpilot.themeHandler.onSaveTheme = { _ in themeSaved = true }
+        request.completion?(Message(payload: ["id": 1, "theme_data": [:]]), true)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(themeSaved)
+        XCTAssertTrue(displayDelay.hasAction)
+    }
 
-        experiencesPublisher.triggerExperience("cached-experience-id")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            cacheExpectation.fulfill()
-        }
-        wait(for: [cacheExpectation], timeout: 1.0)
+    func testFailedThemeResponseReleasesAdmission() throws {
+        userpilot.themeHandler.onGetThemeById = { _ in nil }
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        try XCTUnwrap(userpilot.analyticsPublisher.requests.last).completion?(Message(), false)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+    }
 
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 77]
+    func testWrongThemeResponseCannotPresentContent() throws {
+        userpilot.themeHandler.onGetThemeById = { _ in nil }
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        try XCTUnwrap(userpilot.analyticsPublisher.requests.last).completion?(
+            Message(payload: ["id": 999, "theme_data": [:]]), true
         )
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-        XCTAssertTrue(publishedExperienceIds.isEmpty, "B must wait until A has finished dismissing")
-        experiencesPublisher.experienceDidFinishDismissing()
-
-        // Assert
-        wait(for: [replayExpectation], timeout: 1.0)
-        XCTAssertEqual(publishedExperienceIds, ["cached-experience-id"])
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertFalse(displayDelay.hasAction)
     }
 
-    func testAutomaticExperience_keepsItsTriggerAndReplaysManualRequestAfterThemeAndDismissal() throws {
-        let displayScheduled = expectation(description: "automatic A reaches its display delay")
-        let automaticPresented = expectation(description: "automatic A is presented")
-        let displayDelay = MockExperienceDisplayDelay { displayScheduled.fulfill() }
-        let publisher = MockPresentingExperiencesPublisher(container: userpilot.container)
-        experiencesPublisher = publisher
-        publisher.mockSetDelayUtils(displayDelay)
-        publisher.presentationHost.onPresent = { automaticPresented.fulfill() }
-        defer { publisher.logout() }
-
-        let themeRequested = expectation(description: "automatic A waits for its theme")
-        let manualReplayed = expectation(description: "manual B requested after dismissal")
-        let requestedManualIds = AtomicReference<[String]>([])
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            if event is ThemeContentEvent {
-                themeRequested.fulfill()
-            } else if let event = event as? ExperienceContentEvent {
-                requestedManualIds.update { $0 + [event.experienceId] }
-                manualReplayed.fulfill()
-            }
-        }
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent, nil,
-            Message(payload: MockContentFactory.makeFlowContentPayload()), true
-        )
-        wait(for: [themeRequested], timeout: 5.0)
-
-        experiencesPublisher.triggerExperience("manual-B")
-        let cached = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
-            }, object: nil
-        )
-        wait(for: [cached], timeout: 5.0)
-        XCTAssertFalse(userpilot.experienceStateMachine.isManualTrigger())
-        XCTAssertTrue(requestedManualIds.value.isEmpty)
-
-        userpilot.themeHandler.onGetThemeById = { _ in
-            ThemeData(carousel: nil, slideOut: nil, survey: nil)
-        }
-        experiencesPublisher.onSocketEventSent(
-            SDKEventsName.fetchExperienceTheme.rawValue, ["theme_id": 1],
-            Message(payload: ["id": 1, "theme_data": [:]]), true
-        )
-        wait(for: [displayScheduled], timeout: 5.0)
-        guard case .waitingDelay(.automatic) = userpilot.experienceStateMachine.getCurrentState() else {
-            XCTFail("Automatic A must keep its trigger while waiting for the display delay")
-            return
-        }
-        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
-        XCTAssertTrue(requestedManualIds.value.isEmpty)
-
-        displayDelay.fire()
-        wait(for: [automaticPresented], timeout: 5.0)
-        XCTAssertEqual(userpilot.experienceStateMachine.getActiveTriggerType(), .automatic)
-        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
-        XCTAssertTrue(requestedManualIds.value.isEmpty)
-        // The real renderer consumes this entry through getActiveMobileContent().
-        XCTAssertEqual(experiencesPublisher.getActiveMobileContent()?.experienceId(), 77)
-
-        let close = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 77]
-        )
-        close.isCloseEvent = true
-        experiencesPublisher.publishInternalSDKEvent(close)
-        XCTAssertTrue(requestedManualIds.value.isEmpty, "The close signal precedes actual UI dismissal")
-        publisher.presentationHost.presentedExperience = nil
-        experiencesPublisher.experienceDidFinishDismissing()
-        wait(for: [manualReplayed], timeout: 5.0)
-
-        XCTAssertEqual(requestedManualIds.value, ["manual-B"])
-        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
-    }
-
-    func testLogout_discardsManualRequestCachedBehindThemeLoading() {
-        let themeRequested = expectation(description: "automatic A waits for its theme")
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            if event is ThemeContentEvent { themeRequested.fulfill() }
-        }
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent, nil,
-            Message(payload: MockContentFactory.makeFlowContentPayload()), true
-        )
-        wait(for: [themeRequested], timeout: 1.0)
-        experiencesPublisher.triggerExperience("manual-B")
-        let cached = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
-            }, object: nil
-        )
-        wait(for: [cached], timeout: 2.0)
-
-        experiencesPublisher.logout()
-
-        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
-        XCTAssertNil(userpilot.experienceStateMachine.getCachedExperienceId())
-    }
-
-    func testCachedManualRequest_doesNotBypassAutomaticScreenTargetingAfterThemeLoads() throws {
-        let displayScheduled = expectation(description: "automatic A reaches its display delay")
-        let displayDelay = MockExperienceDisplayDelay { displayScheduled.fulfill() }
-        let publisher = MockPresentingExperiencesPublisher(container: userpilot.container)
-        experiencesPublisher = publisher
-        publisher.mockSetDelayUtils(displayDelay)
-        publisher.presentationHost.onPresent = { XCTFail("Automatic A must respect its screen target") }
-        defer { publisher.logout() }
-
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        var payload = MockContentFactory.makeFlowContentPayload()
-        var flow = try XCTUnwrap(payload["mobile_contents"] as? [String: Any])
-        flow["screen_type"] = "selected"
-        flow["screens"] = ["OtherScreen"]
-        payload["mobile_contents"] = flow
-        let themeRequested = expectation(description: "automatic A waits for theme")
-        let manualReplayed = expectation(description: "manual B continues after A fails targeting")
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            if event is ThemeContentEvent {
-                themeRequested.fulfill()
-            } else if let event = event as? ExperienceContentEvent {
-                XCTAssertEqual(event.experienceId, "manual-B")
-                manualReplayed.fulfill()
-            }
-        }
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, Message(payload: payload), true)
-        wait(for: [themeRequested], timeout: 5.0)
-        experiencesPublisher.triggerExperience("manual-B")
-        let cached = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
-            }, object: nil
-        )
-        wait(for: [cached], timeout: 5.0)
-        userpilot.themeHandler.onGetThemeById = { _ in
-            ThemeData(carousel: nil, slideOut: nil, survey: nil)
-        }
-
-        experiencesPublisher.onSocketEventSent(
-            SDKEventsName.fetchExperienceTheme.rawValue, ["theme_id": 1],
-            Message(payload: ["id": 1, "theme_data": [:]]), true
-        )
-
-        wait(for: [displayScheduled], timeout: 5.0)
-        guard case .waitingDelay(.automatic) = userpilot.experienceStateMachine.getCurrentState() else {
-            XCTFail("Caching manual B must not change automatic A's trigger")
-            return
-        }
-        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceId(), "manual-B")
-
-        displayDelay.fire()
-        wait(for: [manualReplayed], timeout: 5.0)
-        XCTAssertNil(userpilot.experienceStateMachine.getActiveContent(), "Automatic A must respect its screen target")
-        XCTAssertNil(publisher.presentationHost.presentedExperience)
-        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
-        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
-    }
-
-    func testCachedManualRequest_continuesAfterEmptyManualContentResponse() {
-        assertCachedManualContinuesAfterEmptyResponse(eventSent: true)
-    }
-
-    func testCachedManualRequest_continuesAfterFailedManualContentResponse() {
-        assertCachedManualContinuesAfterEmptyResponse(eventSent: false)
-    }
-
-    func testManualRequest_continuesWhenPreviousContentCannotFetchItsTheme() {
+    func testMissingThemeWhileOfflineReleasesAdmission() {
+        userpilot.themeHandler.onGetThemeById = { _ in nil }
         userpilot.analyticsPublisher.canRequestEvent = false
-        let manualRequested = expectation(description: "manual B is not blocked by abandoned theme preparation")
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            guard let event = event as? ExperienceContentEvent else { return }
-            XCTAssertEqual(event.experienceId, "manual-B")
-            manualRequested.fulfill()
-        }
-
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent, nil,
-            Message(payload: MockContentFactory.makeFlowContentPayload()), true
-        )
-        experiencesPublisher.triggerExperience("manual-B")
-
-        wait(for: [manualRequested], timeout: 2.0)
-        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
-        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertTrue(userpilot.analyticsPublisher.requests.isEmpty)
     }
 
-    private func assertCachedManualContinuesAfterEmptyResponse(eventSent: Bool) {
-        let firstRequested = expectation(description: "manual A requested")
-        let nextRequested = expectation(description: "manual B requested after A resolves without content")
-        var requestedIds: [String] = []
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            guard let event = event as? ExperienceContentEvent else { return }
-            requestedIds.append(event.experienceId)
-            if event.experienceId == "manual-A" {
-                firstRequested.fulfill()
-            } else if event.experienceId == "manual-B" {
-                nextRequested.fulfill()
-            }
-        }
-        experiencesPublisher.triggerExperience("manual-A")
-        wait(for: [firstRequested], timeout: 1.0)
-        experiencesPublisher.triggerExperience("manual-B")
-        let cached = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
-            }, object: nil
-        )
-        wait(for: [cached], timeout: 2.0)
-
-        experiencesPublisher.onSocketEventSent(
-            SDKEventsName.fetchExperienceContent.rawValue, nil, Message(payload: [:]), eventSent
-        )
-
-        wait(for: [nextRequested], timeout: 2.0)
-        XCTAssertEqual(requestedIds, ["manual-A", "manual-B"])
-        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
+    func testSharedThemeNotificationsDoNotResolveAnotherOperationsRequest() {
+        userpilot.themeHandler.onGetThemeById = { _ in nil }
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        publisher.onSocketEventSent(SDKEventsName.fetchExperienceTheme.rawValue, nil,
+                                    Message(payload: ["id": 1, "theme_data": [:]]), true)
+        publisher.mockWaitForQueue()
+        XCTAssertFalse(displayDelay.hasAction)
+        XCTAssertFalse(publisher.canRequestScreenEvent())
     }
 
-    // MARK: - endExperience Tests
+}
 
-    func testEndExperience_shouldTriggerCloseOnTopViewController() {
-        // Arrange
-        let mockVC = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: mockVC)
-        let expectation = XCTestExpectation(description: "triggerClose was called")
-
-        mockVC.onTriggerClose = { manualClose in
-            XCTAssertTrue(manualClose)
-            expectation.fulfill()
-        }
-
-        // Act
-        experiencesPublisher.endExperience(manualClose: true)
-
-        // Assert
-        wait(for: [expectation], timeout: 1.0)
+extension ExperiencesPublisherTests {
+    func testScreenResponseForPreviousScreenIsDropped() {
+        publisher.updateScreen("Settings")
+        publisher.mockWaitForQueue()
+        receiveScreen(MockContentFactory.makeFlowContentPayload(), screen: "Home")
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    // MARK: - getActiveMobileContent Tests
-
-    func testGetActiveMobileContent_shouldReturnNil_WhenNoActiveContent() {
-        // Act
-        let result = experiencesPublisher.getActiveMobileContent()
-
-        // Assert
-        XCTAssertNil(result)
+    func testFailedScreenResponseIsDropped() {
+        publisher.onSocketEventSent(Constants.Event.screenEvent, nil,
+                                    Message(payload: MockContentFactory.makeFlowContentPayload()), false)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testGetActiveMobileContent_shouldReturnAndClearContent_WhenContentExists() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Content should be processed")
-        let mockPayload: [String: Any?] = MockContentFactory.makeFlowContentPayload()
-        let message = Message(payload: ["payload": mockPayload])
-
-        userpilot.analyticsPublisher.canRequestEvent = true
-
-        // Act
-        experiencesPublisher.onNewMessage(message)
-        experiencesPublisher.onNewMessage(message)
-        
-        // Wait for async processing to complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let result = self.experiencesPublisher.getActiveMobileContent()
-            XCTAssertNotNil(result)
-
-            // Wait longer for async clearing to happen
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                let secondResult = self.experiencesPublisher.getActiveMobileContent()
-                XCTAssertNil(secondResult)
-                expectation.fulfill()
-            }
-        }
-        
-        wait(for: [expectation], timeout: 3.0)
+    func testScreenResponseDoesNotChangeNavigationContext() {
+        receiveScreen(MockContentFactory.makeFlowContentPayload(), screen: "Other")
+        XCTAssertEqual(publisher.getCurrentScreen, "Home")
     }
 
-    // MARK: - triggerDeepLink Tests
-
-    func testTriggerDeepLink_shouldForwardURLToLinkOpener() {
-        // Arrange
-        let testURL = URL(string: "https://example.com")!
-
-        let expectation = XCTestExpectation(description: "Wait for deep link handling")
-        var handledURL: URL?
-        userpilot.linkOpener.onHandleURL = { url in
-            handledURL = url
-            expectation.fulfill()
-        }
-
-        // Act
-        experiencesPublisher.triggerDeepLink(url: testURL)
-
-        // Assert
-        wait(for: [expectation], timeout: 2.0)
-        XCTAssertEqual(handledURL, testURL)
-    }
-
-    // MARK: - Socket Event Tests
-
-    func testOnSocketEventSent_shouldUpdateCurrentScreen_ForScreenEvent() {
-        // Arrange
-        let screenTitle = "TestScreen"
-
-        // Act
-        experiencesPublisher.updateScreen(screenTitle)
-
-        // Assert
-        XCTAssertEqual(experiencesPublisher.mockGetCurrentScreen(), "TestScreen")
-    }
-
-    func testOnSocketEventSent_shouldSaveTheme_ForThemeEvent() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Theme should be saved")
-        let themeData: [String: Any] = [
-            "id": 123,
-            "theme_data": [
-                "carousel": [:],
-                "slideout": [:],
-                "survey": [:]
-            ]
-        ]
-        let message = Message(payload: themeData)
-
-        var savedTheme: ThemeContent?
-        userpilot.themeHandler.onSaveTheme = { theme in
-            savedTheme = theme
-            expectation.fulfill()
-        }
-
-        // Act
-        experiencesPublisher.onSocketEventSent(SDKEventsName.fetchExperienceTheme.rawValue, nil, message, true)
-
-        // Assert
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertNotNil(savedTheme)
-    }
-
-    func testOnSocketEventSent_shouldSetFlowContent_ForValidFlowResponse() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Flow content should be processed")
-        let message = Message(payload: MockContentFactory.makeFlowContentPayload())
-
-        // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
-
-        // Wait for async processing to complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let result = self.experiencesPublisher.getActiveMobileContent()
-            
-            // Assert
-            XCTAssertNotNil(result)
-            if case .flow(let content) = result {
-                XCTAssertEqual(content.id, 77)
-            } else {
-                XCTFail("Expected flow content")
-            }
-            expectation.fulfill()
-        }
-        
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    func testOnSocketEventSent_shouldSetSurveyContent_ForValidSurveyResponse() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Survey content should be processed")
-        let surveyData: [String: Any] = [
-            "surveys": [
-                "id": 1,
-                "token": "survey-123",
-                "type": "step",
-                "modules": [],
-                "theme_data": ["id": 1],
-                "screens": [],
-                "screen_type": "all",
-                "locale_code": "en",
-                "time_delay": 0
-            ]
-        ]
-        let message = Message(payload: surveyData)
-
-        // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
-
-        // Wait for async processing to complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let result = self.experiencesPublisher.getActiveMobileContent()
-            
-            // Assert
-            XCTAssertNotNil(result)
-            if case .survey(let content) = result {
-                XCTAssertEqual(content.id, 1)
-            } else {
-                XCTFail("Expected survey content")
-            }
-            expectation.fulfill()
-        }
-        
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    func testOnSocketEventSent_shouldSetNPSContent_ForValidNPSResponse() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "NPS content should be processed")
-        let message = Message(payload: MockContentFactory.makeNPSContentPayload())
-
-        // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
-
-        // Wait for async processing to complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let result = self.experiencesPublisher.getActiveMobileContent()
-            
-            // Assert
-            XCTAssertNotNil(result)
-            if case .nps(let content) = result {
-                XCTAssertEqual(content.localeCode, "en")
-                XCTAssertEqual(content.timeDelay, 0)
-                XCTAssertEqual(content.content.survey.question, "How likely are you to recommend us to a friend?")
-            } else {
-                XCTFail("Expected NPS content")
-            }
-            expectation.fulfill()
-        }
-        
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    /// Regression: an NPS refused because one already ran on this screen used to stay at the head of
-    /// the pending queue. `openExperienceFlow()` always reads that head, so every experience arriving
-    /// afterwards was decoded and queued but never rendered — content returned by a track event
-    /// stopped appearing for as long as the user stayed on the screen.
-    func testOnNewMessage_shouldShowContent_WhenARefusedNPSIsQueuedOnTheSameScreen() {
-        // Arrange — an NPS has already been shown on "Home", so a repeat one must be refused
-        let expectation = XCTestExpectation(description: "Track event content becomes the active content")
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
-
-        // Act — the repeat NPS arrives, then a track event returns flow content
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent,
-            nil,
-            Message(payload: MockContentFactory.makeNPSContentPayload()),
-            true
-        )
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.experiencesPublisher.onNewMessage(
-                Message(payload: ["payload": MockContentFactory.makeFlowContentPayload()])
-            )
-
-            // Assert — the refused NPS must not be holding the queue head
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                guard case .flow(let content) = self.experiencesPublisher.getActiveMobileContent() else {
-                    XCTFail("Expected the track event's flow content, not the refused NPS")
-                    expectation.fulfill()
-                    return
-                }
-                XCTAssertEqual(content.id, 77)
-                expectation.fulfill()
-            }
-        }
-
-        wait(for: [expectation], timeout: 2.0)
-    }
-
-    /// The queue drain must not weaken the dedup itself: a repeat NPS on the screen it already ran
-    /// on is still dropped rather than shown again.
-    func testOnSocketEventSent_shouldDropRepeatNPS_OnTheScreenItAlreadyRanOn() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Repeat NPS is dropped")
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
-
-        // Act — reporting the same screen must not make NPS eligible again
-        experiencesPublisher.updateScreen("Home")
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent,
-            nil,
-            Message(payload: MockContentFactory.makeNPSContentPayload()),
-            true
-        )
-
-        // Assert
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent())
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    func testUpdateScreen_shouldMakeNPSEligibleAgain_WhenReturningToThePreviousScreen() {
-        // Arrange — NPS already ran during the previous visit to Home
-        let expectation = XCTestExpectation(description: "NPS is eligible on the next screen visit")
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
-
-        // Act — leave Home and return, then receive NPS again
-        experiencesPublisher.updateScreen("Details")
-        experiencesPublisher.updateScreen("Home")
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent,
-            nil,
-            Message(payload: MockContentFactory.makeNPSContentPayload()),
-            true
-        )
-
-        // Assert — the NPS is accepted instead of being suppressed for the previous visit
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self else { return }
-            guard case .nps = self.experiencesPublisher.getActiveMobileContent() else {
-                XCTFail("Expected NPS to be eligible on the next visit to Home")
-                expectation.fulfill()
-                return
-            }
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    func testUpdateScreen_duringPreviewMakesNPSEligibleOnTheNewScreen() {
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
-        userpilot.experienceStateMachine.markPreviewMode()
-
-        experiencesPublisher.updateScreen("Details")
-        userpilot.experienceStateMachine.markIdle()
-        assertNPSIsEligible()
-    }
-
-    func testLogout_makesNPSEligibleForTheNextUser() {
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
-
-        experiencesPublisher.logout()
-
-        assertNPSIsEligible()
-    }
-
-    private func assertNPSIsEligible(file: StaticString = #filePath, line: UInt = #line) {
-        let processed = expectation(description: "NPS accepted after screen or identity change")
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent,
-            nil,
-            Message(payload: MockContentFactory.makeNPSContentPayload()),
-            true
-        )
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self else { return }
-            if case .nps = self.experiencesPublisher.getActiveMobileContent() {
-                processed.fulfill()
-            } else {
-                XCTFail("Expected NPS to be eligible", file: file, line: line)
-                processed.fulfill()
-            }
-        }
-        wait(for: [processed], timeout: 1.0)
-    }
-
-    func testOnSocketEventSent_shouldSelectSurvey_WhenHigherPriorityFlowWasSeen() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Unseen survey should be selected")
-        let message = Message(payload: makeFlowAndSurveyPayload())
-        userpilot.analyticsPublisher.onIsExperienceSeen = { experience in
-            if case .flow = experience { return true }
-            return false
-        }
-
-        // Act
-        experiencesPublisher.onSocketEventSent(EventType.screenEvent, nil, message, true)
-
-        // Assert
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            guard case .survey(let content) = self.experiencesPublisher.getActiveMobileContent() else {
-                XCTFail("Expected unseen survey content")
-                expectation.fulfill()
-                return
-            }
-            XCTAssertEqual(content.id, 20)
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    func testOnSocketEventSent_shouldNotCacheDuplicateActiveExperience() throws {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Duplicate response should be ignored")
-        let flow = try XCTUnwrap(
-            MockContentFactory.makeFlowContentPayload()
-                .toJSONString()?
-                .toFlowContent()?
-                .flowContent
-        )
-        userpilot.experienceStateMachine.markAutomaticTrigger(.flow(content: flow))
-        userpilot.experienceStateMachine.markActiveFromCurrentState(content: .flow(content: flow))
-
-        // Act
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent,
-            nil,
-            Message(payload: MockContentFactory.makeFlowContentPayload()),
-            true
-        )
-
-        // Assert
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            XCTAssertNil(self.userpilot.experienceStateMachine.getCachedExperienceContent())
-            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent())
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    func testPublishInternalSDKEvent_shouldIgnoreCachedAutomaticExperience_WhenSeenBeforeReplay() throws {
-        // Arrange
-        let flow = try XCTUnwrap(
-            MockContentFactory.makeFlowContentPayload()
-                .toJSONString()?
-                .toFlowContent()?
-                .flowContent
-        )
+    func testBackendSelectedFlowIsNotFilteredByLocalSeenHistory() {
         userpilot.analyticsPublisher.onIsExperienceSeen = { _ in true }
-        userpilot.experienceStateMachine.markCachedAutomatic(.flow(content: flow))
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": flow.id]
-        )
-        closeEvent.isCloseEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-
-        experiencesPublisher.experienceDidFinishDismissing()
-        let drained = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                !self.userpilot.experienceStateMachine.hasCachedExperience()
-            }, object: nil
-        )
-        wait(for: [drained], timeout: 2.0)
-
-        // Assert
-        XCTAssertNil(userpilot.experienceStateMachine.getCachedExperienceContent())
-        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
-        if case .idle = userpilot.experienceStateMachine.getCurrentState() {
-            // Expected state.
-        } else {
-            XCTFail("Expected idle state after ignoring cached seen content")
-        }
+        var response = MockContentFactory.makeFlowContentPayload()
+        response.merge(MockContentFactory.makeSurveyContentPayload()) { original, _ in original }
+        receiveScreen(response)
+        XCTAssertTrue(displayDelay.hasAction)
+        XCTAssertFalse(publisher.canRequestScreenEvent())
     }
 
-    // MARK: - onNewMessage Tests
-
-    func testOnNewMessage_shouldProcessFlowContent_WhenValidPayload() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Flow content should be processed")
-        let mockPayload: [String: Any?] = MockContentFactory.makeFlowContentPayload()
-        let message = Message(payload: ["payload": mockPayload])
-
-        // Act
-        experiencesPublisher.onNewMessage(message)
-
-        // Wait for async processing to complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let result = self.experiencesPublisher.getActiveMobileContent()
-            XCTAssertNotNil(result)
-            expectation.fulfill()
-        }
-        
-        wait(for: [expectation], timeout: 1.0)
+    func testTrackMessageWithNullRequestIDStartsContent() {
+        var response = MockContentFactory.makeFlowContentPayload()
+        response["request_id"] = NSNull()
+        publisher.onNewMessage(Message(payload: ["payload": response]))
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(displayDelay.hasAction)
     }
 
-    func testOnNewMessage_shouldNotProcessContent_WhenRequestIdExists() {
-        var rejected = MockContentFactory.makeFlowContentPayload()
-        rejected["request_id"] = 123
-        var accepted = MockContentFactory.makeFlowContentPayload()
-        var acceptedFlow = accepted["mobile_contents"] as! [String: Any]
-        acceptedFlow["id"] = 78
-        accepted["mobile_contents"] = acceptedFlow
-        XCTAssertNotNil(rejected.toJSONString()?.toFlowContent(), "The rejected response must otherwise be valid")
-        let processed = expectation(description: "accepted response reached theme lookup")
-        userpilot.themeHandler.onGetThemeById = { _ in
-            processed.fulfill()
-            return nil
-        }
-
-        experiencesPublisher.onNewMessage(Message(payload: ["payload": rejected]))
-        experiencesPublisher.onNewMessage(Message(payload: ["payload": accepted]))
-        wait(for: [processed], timeout: 1.0)
-
-        XCTAssertEqual(experiencesPublisher.getActiveMobileContent()?.experienceId(), 78)
+    func testTrackMessageWithNumericRequestIDIsIgnored() {
+        var response = MockContentFactory.makeFlowContentPayload()
+        response["request_id"] = 123
+        publisher.onNewMessage(Message(payload: ["payload": response]))
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testOnNewMessage_shouldNotProcessContent_WhenActiveExperienceExists() {
-        let renderer = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: renderer)
-        let cached = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getCachedExperienceContent()?.experienceId() == 77
-            },
-            object: nil
-        )
-
-        experiencesPublisher.onNewMessage(Message(payload: ["payload": MockContentFactory.makeFlowContentPayload()]))
-        wait(for: [cached], timeout: 2.0)
-
-        XCTAssertNil(experiencesPublisher.getActiveMobileContent())
-        XCTAssertEqual(userpilot.experienceStateMachine.getCachedExperienceContent()?.experienceId(), 77)
-        let closed = expectation(description: "original renderer remains active")
-        renderer.onTriggerClose = { manual in
-            XCTAssertTrue(manual)
-            closed.fulfill()
-        }
-        experiencesPublisher.endExperience(manualClose: true)
-        wait(for: [closed], timeout: 1.0)
+    func testTrackMessageWithoutRequestIDIsIgnored() {
+        var response = MockContentFactory.makeFlowContentPayload()
+        response.removeValue(forKey: "request_id")
+        publisher.onNewMessage(Message(payload: ["payload": response]))
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    // MARK: - publishInternalSDKEvent Tests
-
-    func testPublishInternalSDKEvent_shouldCallAnalyticsPublisher() {
-        // Arrange
-        let mockEvent = MockSDKEvent(eventName: "test-event", eventPayload: ["key": "value"])
-        var publishedEvent: SDKEvent?
-
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            publishedEvent = event
-        }
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(mockEvent)
-
-        // Assert
-        XCTAssertNotNil(publishedEvent)
-        XCTAssertEqual(publishedEvent?.eventName, "test-event")
+    func testBusyPublisherDropsScreenAndTrackContent() throws {
+        let request = try beginManual()
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        var response = MockContentFactory.makeFlowContentPayload()
+        response["request_id"] = NSNull()
+        publisher.onNewMessage(Message(payload: ["payload": response]))
+        publisher.mockWaitForQueue()
+        request.completion?(Message(), false)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertFalse(displayDelay.hasAction)
     }
 
-    func testPublishInternalSDKEvent_shouldSuppressAnalytics_WhenPreviewModeIsActive() {
-        // Arrange
-        var publishedEvent: SDKEvent?
-        userpilot.experienceStateMachine.markPreviewMode()
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            publishedEvent = event
-        }
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "test-event"))
-
-        // Assert
-        XCTAssertNil(publishedEvent)
+    func testSocketCloseAbandonsContentFetchAndCancelsItsRequest() throws {
+        let request = try beginManual()
+        publisher.onSocketClosed()
+        publisher.mockWaitForQueue()
+        XCTAssertFalse(request.shouldSend())
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testPublishInternalSDKEvent_shouldSuppressCompletedSurvey_WhenPreviewThankYouIsShowing() {
-        // Arrange
-        var publishedEvent: SDKEvent?
-        userpilot.experienceStateMachine.markPreviewMode()
-        userpilot.experienceStateMachine.markActiveFromCurrentState(
-            content: .survey(content: MockContentFactory.makeSurveyContent())
-        )
-        userpilot.experienceStateMachine.markShowingThankYou()
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            publishedEvent = event
-        }
-        let completedSurveyEvent = ExperienceSurveyCompletedEvent(
-            surveyId: 10,
-            submissionId: 20
-        )
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
-        // The preview is settled once the dismissal actually lands, not on the close event.
-        experiencesPublisher.experienceDidFinishDismissing()
-
-        // Assert
-        XCTAssertNil(publishedEvent)
-        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
+    func testSocketCloseAbandonsThemeFetch() {
+        userpilot.themeHandler.onGetThemeById = { _ in nil }
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        publisher.onSocketClosed()
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testPublishInternalSDKEvent_shouldPublishCompletedSurvey_WhenThankYouIsNotPreview() {
-        // Arrange
-        var publishedEvent: SDKEvent?
-        userpilot.experienceStateMachine.markShowingThankYou()
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            publishedEvent = event
-        }
-        let completedSurveyEvent = ExperienceSurveyCompletedEvent(
-            surveyId: 10,
-            submissionId: 20
-        )
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(completedSurveyEvent)
-
-        // Assert
-        XCTAssertEqual(
-            publishedEvent?.eventName,
-            SDKEventsName.surveyExperienceCompleted.rawValue
-        )
+    func testSocketClosePreservesAlreadyScheduledContent() {
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        publisher.onSocketClosed()
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(displayDelay.hasAction)
+        XCTAssertFalse(publisher.canRequestScreenEvent())
     }
 
-    func testPublishInternalSDKEvent_shouldResetPreviewMode_WhenPreviewExperienceCloses() {
-        // Arrange
-        userpilot.experienceStateMachine.markPreviewMode()
-        var publishedFakeReload = false
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
-            publishedFakeReload = true
-            return true
-        }
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 77]
-        )
-        closeEvent.isCloseEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-        // The preview is settled once the dismissal actually lands, not on the close event.
-        experiencesPublisher.experienceDidFinishDismissing()
-
-        // Assert
-        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
-        XCTAssertTrue(publishedFakeReload)
+    func testLateIdenticalManualResponseCannotReplaceNewOperation() throws {
+        let old = try beginManual()
+        publisher.endExperience(manualClose: true)
+        publisher.mockWaitForQueue()
+        let current = try beginManual()
+        old.completion?(Message(payload: MockContentFactory.makeFlowContentPayload()), true)
+        publisher.mockWaitForQueue()
+        XCTAssertFalse(old.shouldSend())
+        XCTAssertTrue(current.shouldSend())
+        XCTAssertFalse(displayDelay.hasAction)
+        current.completion?(Message(payload: MockContentFactory.makeFlowContentPayload()), true)
+        publisher.mockWaitForQueue()
+        XCTAssertTrue(displayDelay.hasAction)
     }
 
-    func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseNPSEvent() {
-        // Arrange
-        userpilot.socketManager.isSocketOpened = true
-        let mockEvent = MockSDKEvent(eventName: "dismiss_NPS")
-        mockEvent.isCloseNPSEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(mockEvent)
-        let canRequest = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertFalse(canRequest)
-    }
-
-    /// Closing an experience makes the host surface re-emit its screen event whether or not a
-    /// socket is there to carry the fake reload, so the suppression window has to be armed while
-    /// offline too — otherwise the repeat is persisted and later replayed to the backend as a
-    /// genuine screen view.
-    func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForCloseEventWhileOffline() {
-        // Arrange
-        userpilot.socketManager.isSocketOpened = false
-        let mockEvent = MockSDKEvent(eventName: "dismissed_mobile_content")
-        mockEvent.isCloseEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(mockEvent)
-        let canRequest = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertFalse(canRequest)
-    }
-
-    /// The preview close path re-emits the host screen event for the same reason, so it arms the
-    /// window while offline too.
-    func testPublishInternalSDKEvent_shouldUpdateFakeReloadDate_ForPreviewCloseWhileOffline() {
-        // Arrange
-        userpilot.socketManager.isSocketOpened = false
-        userpilot.experienceStateMachine.markPreviewMode()
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in return true }
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 77]
-        )
-        closeEvent.isCloseEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-        let canRequest = experiencesPublisher.canRequestScreenEvent()
-
-        // Assert
-        XCTAssertFalse(canRequest)
-    }
-
-    /// NPS is the last content shown, so closing a previewed NPS must not ask the backend for more
-    /// — matching the non-preview path here and Android's `handlePreviewCloseEvent`.
-    func testPublishInternalSDKEvent_shouldNotRequestReload_ForPreviewNPSClose() {
-        // Arrange
-        userpilot.experienceStateMachine.markPreviewMode()
-        var reloadCount = 0
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
-            reloadCount += 1
-            return true
-        }
-        let closeEvent = MockSDKEvent(eventName: SDKEventsName.npsExperienceSubmitted.rawValue)
-        closeEvent.isCloseNPSEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-
-        // Assert
+    func testLogoutCancelsPendingRequestAndIgnoresLateReply() throws {
+        let request = try beginManual()
+        publisher.logout()
+        XCTAssertFalse(request.shouldSend())
+        request.completion?(Message(payload: MockContentFactory.makeFlowContentPayload()), true)
+        settle()
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertFalse(displayDelay.hasAction)
         XCTAssertEqual(reloadCount, 0)
     }
 
-    /// The ordinary preview close still asks for the next content — that request is what lets the
-    /// next experience appear after a QR preview is dismissed.
-    func testPublishInternalSDKEvent_shouldRequestReload_ForPreviewFlowClose() {
-        // Arrange
-        userpilot.experienceStateMachine.markPreviewMode()
-        var reloadCount = 0
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
-            reloadCount += 1
-            return true
-        }
-        let closeEvent = MockSDKEvent(eventName: SDKEventsName.flowExperienceDismissed.rawValue)
-        closeEvent.isCloseEvent = true
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-
-        // Assert
-        XCTAssertEqual(reloadCount, 1)
-    }
-
-    func testPublishInternalSDKEvent_shouldHandleCloseEvent_WithDeepLink() {
-        userpilot.experienceStateMachine.markActiveFromCurrentState(
-            content: .survey(content: MockContentFactory.makeSurveyContent())
-        )
-        XCTAssertTrue(userpilot.experienceStateMachine.isActive())
-        var published: [String] = []
-        var reloadCount = 0
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { published.append($0.eventName) }
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
-            reloadCount += 1
-            return true
-        }
-        let event = MockSDKEvent(eventName: "dismissed_mobile_content", hasDeepLink: true)
-        event.isCloseEvent = true
-
-        experiencesPublisher.publishInternalSDKEvent(event)
-
-        XCTAssertEqual(published, ["dismissed_mobile_content"])
-        XCTAssertFalse(userpilot.experienceStateMachine.isActive())
+    func testScreenChangeCancelsPendingNormalContent() {
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        publisher.updateScreen("Next")
+        publisher.mockWaitForQueue()
+        XCTAssertEqual(publisher.getCurrentScreen, "Next")
+        XCTAssertFalse(displayDelay.hasAction)
+        XCTAssertTrue(publisher.canRequestScreenEvent())
         XCTAssertEqual(reloadCount, 0)
     }
 
-    func testPublishInternalSDKEvent_shouldHandleCloseEvent_withoutDeepLink() {
-        // Arrange
-        experiencesPublisher.mockSetCurrentScreen(title: "main_screen")
-        userpilot.analyticsPublisher.screenSessionStateMachine = ScreenSessionStateMachine(
-            event: Event(type: .screen("main_screen")),
-            seenExperiences: Set(),
-            seenSurveys: Set()
-        )
-        let mockEvent = MockSDKEvent(eventName: "dismissed_mobile_content", hasDeepLink: false)
-        mockEvent.isCloseEvent = true
-
-        // The closure you care about will eventually publish a fake reload,
-        // so watch for that as proof the debounced block ran.
-        let reloadExpectation = XCTestExpectation(description: "debounced fake‑reload published")
-        var publishFakeReloadEventCalled = false
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { _, _, _ in
-            publishFakeReloadEventCalled = true
-            reloadExpectation.fulfill()
-            return true
-        }
-
-        // Act
-        experiencesPublisher.publishInternalSDKEvent(mockEvent)
-
-        // Assert
-        wait(for: [reloadExpectation], timeout: 1.0)
-        XCTAssertTrue(publishFakeReloadEventCalled)
+    func testRepeatedOrGeneratedScreensDoNotCancelCurrentContent() {
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        publisher.updateScreen("Home")
+        publisher.updateScreen(Event(type: .screen("Other"), isFakeReload: true))
+        publisher.mockWaitForQueue()
+        XCTAssertEqual(publisher.getCurrentScreen, "Home")
+        XCTAssertTrue(displayDelay.hasAction)
     }
 
-    private func makeFlowAndSurveyPayload() -> [String: Any] {
-        var payload = MockContentFactory.makeFlowContentPayload()
-        payload["surveys"] = [
-            "id": 20,
-            "type": "list",
-            "modules": [],
-            "metadata": NSNull(),
-            "theme_data": ["id": 22, "theme_data": NSNull()],
-            "screens": ["Home"],
-            "screen_type": "selected",
-            "locale_code": "en",
-            "time_delay": 0
-        ]
-        return payload
+    func beginManual() throws -> MockAnalyticsPublisher.Request {
+        publisher.triggerExperience("flow-a")
+        publisher.mockWaitForQueue()
+        return try XCTUnwrap(userpilot.analyticsPublisher.requests.last)
     }
 
-    // MARK: - showThankYouMessage Tests
-
-    func testShowThankYouMessage_shouldTriggerThankYouView() {
-        // Arrange
-        let mockSurveyContent = MockContentFactory.makeSurveyContent()
-        let mockSurveyTheme = MockContentFactory.makeSurveyTheme()
-
-        let mockVC = MockUPExperience()
-        experiencesPublisher.topViewControllerProvider = { return mockVC }
-
-        // Act
-        experiencesPublisher.showThankYouMessage(mockSurveyContent, mockSurveyTheme, 0)
-
-        // Assert - `presentThankYouMessage` calls `markShowingThankYou()` synchronously
-        // before it hops to main, so the state is already set when the call returns. Waiting a
-        // second bought nothing and raced its own timeout; it also let the main-queue block's
-        // nil-host path reset the state back.
-        XCTAssertFalse(
-            experiencesPublisher.canRequestScreenEvent(),
-            "Showing the thank-you view must block further screen requests")
+    func receiveScreen(_ response: [String: Any], screen: String = "Home") {
+        publisher.onSocketEventSent(Constants.Event.screenEvent,
+                                    [Constants.Analytics.screenTitleProperty: screen],
+                                    Message(payload: response), true)
+        publisher.mockWaitForQueue()
     }
 
-    // MARK: - Preview Experience Tests
-
-    func testTriggerPreviewExperience_shouldFetchPreviewContentWithQueryType() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "preview fetch requested")
-        var capturedParams: PreviewExperienceQueryParams?
-        userpilot.remoteSource.onFetchPreviewExperience = { params, completion in
-            capturedParams = params
-            completion(.failure(.emptyResponse))
-            expectation.fulfill()
-        }
-
-        // Act
-        experiencesPublisher.triggerPreviewExperience(
-            "preview-123",
-            [URLQueryItem(name: "type", value: "survey")]
-        )
-
-        // Assert
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(capturedParams?.appToken, userpilot.config.token)
-        XCTAssertEqual(capturedParams?.contentType, "survey")
-        XCTAssertEqual(capturedParams?.contentId, "preview-123")
-        XCTAssertEqual(capturedParams?.baseUrl, Environment.getExperienceContentUrl())
+    func presentScheduled() throws {
+        let shown = expectation(description: "renderer handed to presentation host")
+        host.onPresent = { shown.fulfill() }
+        try displayDelay.fire()
+        wait(for: [shown], timeout: 2)
+        host.onPresent = nil
+        publisher.mockWaitForQueue()
     }
 
-    func testTriggerPreviewExperience_shouldEnterPreviewModeBeforeFetching() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "preview mode entered")
-        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
-            XCTAssertTrue(self.userpilot.experienceStateMachine.isPreviewMode())
-            completion(.failure(.emptyResponse))
-            expectation.fulfill()
-        }
-
-        // Act
-        experiencesPublisher.triggerPreviewExperience("preview-123", [])
-
-        // Assert
-        wait(for: [expectation], timeout: 1.0)
-    }
-
-    // MARK: - Thread Safety Tests
-
-    func testThreadSafety_multipleSimultaneousAccess() {
-        // Arrange
-        let expectation = XCTestExpectation(description: "Wait for concurrent operations")
-        expectation.expectedFulfillmentCount = 10
-
-        // Act
-        // Held locally: these closures can outlive `tearDown()`, and reading the IUO property
-        // after it is nilled traps the entire test host.
-        let publisher = experiencesPublisher!
-
-        for _ in 0..<10 {
-            DispatchQueue.global(qos: .userInitiated).async {
-                let mockPayload: [String: Any?] = MockContentFactory.makeFlowContentPayload()
-                let message = Message(payload: ["payload": mockPayload])
-                publisher.onNewMessage(message)
-                expectation.fulfill()
-            }
-        }
-
-        // Assert - the bounds below are failure bounds, not expected durations.
-        wait(for: [expectation], timeout: 10.0)
-
-        // Verify that we still have valid state after concurrent access
-        let resultExpectation = XCTestExpectation(description: "Wait for pending content check")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            let result = publisher.getActiveMobileContent()
-            // Should have some content (the last one to be processed)
-            XCTAssertNotNil(result)
-            resultExpectation.fulfill()
-        }
-        wait(for: [resultExpectation], timeout: 10.0)
-    }
-
-    // MARK: - Overlay Window Threading Tests
-
-    /// Regression: `logout()` runs on whatever queue the host app — or a wrapper such as
-    /// Capacitor, which calls in from its `bridge` queue — invokes it on. `resetState`
-    /// reaches the overlay through `hideExperienceOverlayIfIdle()`, which used to
-    /// *construct* the lazy `ExperienceOverlayWindow` on that background thread. A
-    /// `UIWindow` built off the main thread crashes UIKit with
-    /// "Call must be made on main thread" inside `_performAfterCATransactionCommits`.
-    func testLogout_offTheMainThread_doesNotCreateTheOverlayWindow() {
-        // Arrange — no experience has been presented, so no overlay exists yet
-        XCTAssertNil(userpilot.existingExperienceOverlayWindow)
-
-        // Act
-        let loggedOut = XCTestExpectation(description: "logout ran to completion off the main thread")
-        // Deliberately not `performOn(.background)`: that queue is pinned to QoS `.background`
-        // (DispatchQueue+Extensions.swift), which a loaded CI runner can starve for seconds. The
-        // regression under test is "arrives off the main thread", not "arrives on that queue".
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.experiencesPublisher.logout()
-            loggedOut.fulfill()
-        }
-        wait(for: [loggedOut], timeout: 10.0)
-
-        // Assert — collapsing an idle overlay must never build one
-        XCTAssertNil(
-            userpilot.existingExperienceOverlayWindow,
-            "Hiding an overlay that was never needed must not construct a UIWindow"
-        )
-    }
-
-    /// An overlay that *does* exist still has to be collapsed by a logout arriving
-    /// off the main thread — the fix marshals the UIKit work, it does not drop it.
-    func testLogout_offTheMainThread_hidesAnExistingOverlayOnTheMainThread() {
-        // Arrange — build and surface the overlay from the test's main thread
-        let overlay = userpilot.experienceOverlayWindow
-        overlay.prepareForPresentation()
-        XCTAssertFalse(overlay.isHidden)
-
-        // Act
-        let loggedOut = XCTestExpectation(description: "logout ran to completion off the main thread")
-        // Deliberately not `performOn(.background)`: that queue is pinned to QoS `.background`
-        // (DispatchQueue+Extensions.swift), which a loaded CI runner can starve for seconds. The
-        // regression under test is "arrives off the main thread", not "arrives on that queue".
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.experiencesPublisher.logout()
-            loggedOut.fulfill()
-        }
-        wait(for: [loggedOut], timeout: 10.0)
-
-        // The hide is enqueued on the main queue before `logout()` returns, so this
-        // barrier block runs strictly after it (main queue is FIFO).
-        let mainQueueDrained = XCTestExpectation(description: "main queue processed the marshalled hide")
-        performOn(.main) { mainQueueDrained.fulfill() }
-        wait(for: [mainQueueDrained], timeout: 2.0)
-
-        // Assert
-        XCTAssertTrue(overlay.isHidden, "A logout must collapse an overlay that was already surfaced")
-    }
-
-    // MARK: - Preview session tracking
-
-    func testUpdateScreen_shouldPreservePendingPreview() {
-        // Arrange
-        userpilot.experienceStateMachine.markPreviewMode()
-
-        // Act
-        experiencesPublisher.updateScreen("PreviewScreen")
-
-        // Assert — a screen change must not cancel a preview that is still being set up
-        XCTAssertTrue(userpilot.experienceStateMachine.isPreviewMode())
-    }
-
-    func testTriggerPreviewExperience_shouldIgnoreStaleResponse_WhenNewerPreviewStarts() throws {
-        // Arrange — hold both fetch completions so they can be resolved out of order
-        let fetchExpectation = XCTestExpectation(description: "both preview fetches requested")
-        fetchExpectation.expectedFulfillmentCount = 2
-        var completions: [
-            String: (Result<PreviewExperience, RemoteSourceError>) -> Void
-        ] = [:]
-        userpilot.remoteSource.onFetchPreviewExperience = { params, completion in
-            completions[params.contentId] = completion
-            fetchExpectation.fulfill()
-        }
-
-        let latestThemeSaved = XCTestExpectation(description: "latest preview theme saved")
-        var savedThemeIds: [Int] = []
-        userpilot.themeHandler.onSaveTheme = { theme in
-            if let id = theme.id {
-                savedThemeIds.append(id)
-                if id == 22 {
-                    latestThemeSaved.fulfill()
-                }
-            }
-        }
-
-        // Act — the second preview supersedes the first, then the stale one answers
-        experiencesPublisher.triggerPreviewExperience("first", [])
-        experiencesPublisher.triggerPreviewExperience("second", [])
-        wait(for: [fetchExpectation], timeout: 1.0)
-        completions["first"]?(.success(try makePreviewExperience(themeId: 11)))
-        completions["second"]?(.success(try makePreviewExperience(themeId: 22)))
-
-        // Assert — only the current preview renders; the abandoned one is dropped
-        wait(for: [latestThemeSaved], timeout: 1.0)
-        XCTAssertFalse(savedThemeIds.contains(11))
-    }
-
-    func testTriggerPreviewExperience_shouldSurviveTheCloseOfTheExperienceItReplaces() {
-        // Arrange — an experience on screen that reports its dismissal *before* the close
-        // completion runs, which is the order the real renderers use: `closeExperience` calls
-        // `onDismissStep()` and only then invokes the completion.
-        let onScreen = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: onScreen)
-
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 15]
-        )
-        closeEvent.isCloseEvent = true
-        onScreen.onTriggerClose = { [weak self] _ in
-            self?.experiencesPublisher.publishInternalSDKEvent(closeEvent)
-        }
-
-        let fetchExpectation = XCTestExpectation(description: "preview fetch requested")
-        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
-            completion(.failure(.emptyResponse))
-            fetchExpectation.fulfill()
-        }
-
-        // Act — a QR deep link starts a preview while that experience is still closing
-        experiencesPublisher.triggerPreviewExperience("19", [])
-
-        // Assert — the replaced experience's close must not tear down the incoming preview
-        wait(for: [fetchExpectation], timeout: 1.0)
-    }
-
-    func testTriggerPreviewExperience_shouldSurviveTheCloseOfThePreviewItReplaces() throws {
-        // Arrange — a first preview whose response landed, so it owns the live session
-        let firstFetch = XCTestExpectation(description: "first preview fetch requested")
-        var firstCompletion: ((Result<PreviewExperience, RemoteSourceError>) -> Void)?
-        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
-            firstCompletion = completion
-            firstFetch.fulfill()
-        }
-        let firstRendered = XCTestExpectation(description: "first preview reached render")
-        userpilot.themeHandler.onSaveTheme = { theme in
-            if theme.id == 11 { firstRendered.fulfill() }
-        }
-        experiencesPublisher.triggerPreviewExperience("first", [])
-        wait(for: [firstFetch], timeout: 1.0)
-        firstCompletion?(.success(try makePreviewExperience(themeId: 11)))
-        wait(for: [firstRendered], timeout: 1.0)
-
-        // ...and is now the experience on screen, closing the same way the real renderers do
-        let onScreen = MockUPExperience()
-        experiencesPublisher.mockActiveExperience(experience: onScreen)
-        let flow = try XCTUnwrap(
-            MockContentFactory.makeFlowContentPayload()
-                .toJSONString()?
-                .toFlowContent()?
-                .flowContent
-        )
-        userpilot.experienceStateMachine.markActive(.preview, .flow(content: flow))
-
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 10]
-        )
-        closeEvent.isCloseEvent = true
-        onScreen.onTriggerClose = { [weak self] _ in
-            self?.experiencesPublisher.publishInternalSDKEvent(closeEvent)
-        }
-
-        let secondFetch = XCTestExpectation(description: "second preview fetch requested")
-        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
-            completion(.failure(.emptyResponse))
-            secondFetch.fulfill()
-        }
-
-        // Act — a second QR scan arrives while that preview is still on screen
-        experiencesPublisher.triggerPreviewExperience("second", [])
-
-        // Assert — a scan always wins: the outgoing preview owns only its own session
-        wait(for: [secondFetch], timeout: 1.0)
-    }
-
-    func testPublishInternalSDKEvent_shouldEndPreviewSession_WhenTheRenderedPreviewCloses() throws {
-        // A real NPS was already shown and dismissed on this screen before the QR scan.
-        experiencesPublisher.mockSetCurrentScreen(title: "Home")
-        experiencesPublisher.mockSetNPSShownOnCurrentScreen(true)
-        // Arrange — a preview that reached the screen the way it does in production: that handoff
-        // is what records the session the close is then entitled to end.
-        let fetchExpectation = XCTestExpectation(description: "preview fetch requested")
-        var fetchCompletion: ((Result<PreviewExperience, RemoteSourceError>) -> Void)?
-        userpilot.remoteSource.onFetchPreviewExperience = { _, completion in
-            fetchCompletion = completion
-            fetchExpectation.fulfill()
-        }
-        let rendered = XCTestExpectation(description: "preview reached render")
-        userpilot.themeHandler.onSaveTheme = { theme in
-            if theme.id == 33 { rendered.fulfill() }
-        }
-        experiencesPublisher.triggerPreviewExperience("19", [])
-        wait(for: [fetchExpectation], timeout: 1.0)
-        fetchCompletion?(.success(try makePreviewExperience(themeId: 33)))
-        wait(for: [rendered], timeout: 1.0)
-        XCTAssertNotNil(experiencesPublisher.getActiveMobileContent(), "The preview renderer consumes its content")
-
-        let flow = try XCTUnwrap(
-            MockContentFactory.makeFlowContentPayload()
-                .toJSONString()?
-                .toFlowContent()?
-                .flowContent
-        )
-        userpilot.experienceStateMachine.markActive(.preview, .flow(content: flow))
-        XCTAssertTrue(userpilot.experienceStateMachine.isPreviewMode())
-
-        let closeEvent = MockSDKEvent(
-            eventName: SDKEventsName.flowExperienceDismissed.rawValue,
-            eventPayload: ["mobile_content_id": 19]
-        )
-        closeEvent.isCloseEvent = true
-
-        // Act — the close event, then the dismissal callback that every renderer reaches
-        experiencesPublisher.publishInternalSDKEvent(closeEvent)
-        experiencesPublisher.experienceDidFinishDismissing()
-
-        // Assert — the preview that was on screen does own its session, so closing it ends it
-        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
-
-        let repeatProcessed = expectation(description: "NPS stays suppressed after closing the preview")
-        experiencesPublisher.updateScreen("Home")
-        experiencesPublisher.onSocketEventSent(
-            EventType.screenEvent,
-            nil,
-            Message(payload: MockContentFactory.makeNPSContentPayload()),
-            true
-        )
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self else { return }
-            XCTAssertNil(self.experiencesPublisher.getActiveMobileContent(), "Preview must not start a new screen visit")
-            repeatProcessed.fulfill()
-        }
-        wait(for: [repeatProcessed], timeout: 1.0)
-    }
-
-    func testPreviewThankYouDismissal_releasesPreviewAndReplaysCachedManualRequest() throws {
-        let fetched = expectation(description: "preview requested")
-        let rendered = expectation(description: "preview session owns rendered content")
-        var completion: ((Result<PreviewExperience, RemoteSourceError>) -> Void)?
-        userpilot.remoteSource.onFetchPreviewExperience = { _, callback in
-            completion = callback
-            fetched.fulfill()
-        }
-        userpilot.themeHandler.onSaveTheme = { _ in rendered.fulfill() }
-        experiencesPublisher.triggerPreviewExperience("preview-A", [])
-        wait(for: [fetched], timeout: 1.0)
-        completion?(.success(try makePreviewExperience(themeId: 33)))
-        wait(for: [rendered], timeout: 1.0)
-        XCTAssertNotNil(experiencesPublisher.getActiveMobileContent())
-
-        let survey = MockContentFactory.makeSurveyContent()
-        userpilot.experienceStateMachine.markActive(.preview, .survey(content: survey))
-        experiencesPublisher.showThankYouMessage(survey, MockContentFactory.makeSurveyTheme(), 1)
-        let thankYouPresented = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceOverlayWindow.rootViewController?.presentedViewController
-                    is ThankYouBottomSheetViewController
-            }, object: nil
-        )
-        wait(for: [thankYouPresented], timeout: 3.0)
-        let thankYou = try XCTUnwrap(
-            userpilot.experienceOverlayWindow.rootViewController?.presentedViewController
-                as? ThankYouBottomSheetViewController
-        )
-        let manualRequested = expectation(description: "manual B starts after preview thank-you dismissal")
-        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
-            guard let event = event as? ExperienceContentEvent else { return }
-            XCTAssertEqual(event.experienceId, "manual-B")
-            manualRequested.fulfill()
-        }
-        experiencesPublisher.triggerExperience("manual-B")
-        let cached = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                self.userpilot.experienceStateMachine.getCachedExperienceId() == "manual-B"
-            }, object: nil
-        )
-        wait(for: [cached], timeout: 2.0)
-        XCTAssertTrue(userpilot.experienceStateMachine.isPreviewMode())
-
-        // Exercise the production completion closure without depending on UIKit animation timing.
-        thankYou.onDismissCompleted()
-
-        wait(for: [manualRequested], timeout: 2.0)
-        XCTAssertFalse(userpilot.experienceStateMachine.isPreviewMode())
-        XCTAssertFalse(userpilot.experienceStateMachine.hasCachedExperience())
-        thankYou.dismiss(animated: false)
-    }
-
-    private func makePreviewExperience(themeId: Int) throws -> PreviewExperience {
-        let flow = try XCTUnwrap(
-            MockContentFactory.makeFlowContentPayload()
-                .toJSONString()?
-                .toFlowContent()?
-                .flowContent
-        )
-        return PreviewExperience(
-            flow: flow,
-            survey: nil,
-            contentType: "flow",
-            theme: ThemeContent(
-                id: themeId,
-                themeData: ThemeData(carousel: nil, slideOut: nil, survey: nil)
-            )
-        )
+    /// Drain both ownership boundaries, without advancing the injected display delay or using sleeps.
+    func settle() {
+        publisher.mockWaitForQueue()
+        let drained = expectation(description: "main callbacks processed")
+        DispatchQueue.main.async { drained.fulfill() }
+        wait(for: [drained], timeout: 2)
+        publisher.mockWaitForQueue()
     }
 }
 
-/// Exercises the publisher's real presentation path without creating a UIKit window or animations.
-private final class MockPresentingExperiencesPublisher: ExperiencesPublisher {
-    let presentationHost = MockExperiencePresentationHost()
-
-    override func experiencePresentationHost() -> UIViewController? {
-        presentationHost
-    }
-}
-
-private final class MockExperiencePresentationHost: UIViewController {
+final class MockExperiencePresentationHost: UIViewController {
     var presentedExperience: UIViewController?
     var onPresent: (() -> Void)?
 
-    override func present(_ viewControllerToPresent: UIViewController, animated: Bool, completion: (() -> Void)? = nil) {
-        presentedExperience = viewControllerToPresent
+    override func present(_ controller: UIViewController, animated: Bool, completion: (() -> Void)? = nil) {
+        presentedExperience = controller
         onPresent?()
         completion?()
     }
 }
 
-/// Scheduling occurs on the experience queue; tests explicitly fire the captured action on main.
-private final class MockExperienceDisplayDelay: DelayUtils {
+final class MockExperienceDisplayDelay: DelayUtils {
     private let pendingAction = AtomicReference<(() -> Void)?>(nil)
-    private let onSchedule: () -> Void
-
-    init(onSchedule: @escaping () -> Void) {
-        self.onSchedule = onSchedule
-        super.init()
-    }
+    var hasAction: Bool { pendingAction.value != nil }
 
     override func delayAction(delayTime: TimeInterval, action: @escaping () -> Void) {
         pendingAction.value = action
-        onSchedule()
     }
 
     override func cancelDelay() {
         pendingAction.value = nil
     }
 
-    func fire(file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(Thread.isMainThread, file: file, line: line)
-        guard let action = pendingAction.getAndSet(nil) else {
-            XCTFail("Expected a scheduled display action", file: file, line: line)
-            return
-        }
-        action()
+    func fire() throws {
+        try XCTUnwrap(pendingAction.getAndSet(nil))()
     }
 }
-
-// swiftlint:disable all
