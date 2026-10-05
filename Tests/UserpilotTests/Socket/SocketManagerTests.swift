@@ -34,6 +34,7 @@ final class SocketManagerTests: XCTestCase {
 
     override func tearDown() {
         socketManager?.close()
+        drainMainQueue()
         socketManager = nil
         subscription = nil
         transports = nil
@@ -113,6 +114,7 @@ final class SocketManagerTests: XCTestCase {
         socketManager = makeSocketManager()
 
         socketManager.connect()
+        drainMainQueue()
         socketManager.connect()
         drainMainQueue()
 
@@ -145,6 +147,7 @@ final class SocketManagerTests: XCTestCase {
             event: "server_event",
             payload: ["request_type": "ignored"]
         )
+        drainMainQueue()
         XCTAssertTrue(subscription.messages.isEmpty)
 
         transport.receive(
@@ -152,6 +155,7 @@ final class SocketManagerTests: XCTestCase {
             event: "server_event",
             payload: ["request_type": "valid_message"]
         )
+        drainMainQueue()
 
         XCTAssertEqual(subscription.messages.count, 1)
         XCTAssertEqual(subscription.messages.last?.event, "server_event")
@@ -171,12 +175,38 @@ final class SocketManagerTests: XCTestCase {
             status: Constants.Socket.successKey,
             response: ["request_type": "resolved_track"]
         )
+        drainMainQueue()
 
         let sentEvent = try XCTUnwrap(subscription.sentEvents.last)
         XCTAssertEqual(sentEvent.event, "resolved_track")
         XCTAssertTrue(sentEvent.status)
         XCTAssertEqual(sentEvent.payload?["metadata"] as? [String: String], ["name": "Button clicked"])
         XCTAssertEqual(sentEvent.message.resolvedEvent, "resolved_track")
+    }
+
+    func testProtocolConveniencePublishPreservesItsCompletion() throws {
+        let transport = try openAndJoinSocket()
+        let service: SocketManaging = socketManager
+        var replies = 0
+        service.publish("track", payload: ["event_name": "Purchase"], shouldSend: { true }, completion: { _, success in
+            XCTAssertTrue(success)
+            replies += 1
+        })
+        drainMainQueue()
+        let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
+        transport.reply(to: push, status: Constants.Socket.successKey)
+        drainMainQueue()
+        XCTAssertEqual(replies, 1)
+    }
+
+    func testProtocolConveniencePublishPreservesCancellationPredicate() throws {
+        let transport = try openAndJoinSocket()
+        let service: SocketManaging = socketManager
+        service.publish("track", payload: nil, shouldSend: { false }, completion: { _, _ in
+            XCTFail("Cancelled submission must not deliver a response")
+        })
+        drainMainQueue()
+        XCTAssertNil(transport.lastSentPush(event: "track"))
     }
 
     func testPublishErrorNotifiesSubscribersWithOriginalEventName() throws {
@@ -188,6 +218,7 @@ final class SocketManagerTests: XCTestCase {
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         transport.reply(to: push, status: Constants.Socket.errorKey)
+        drainMainQueue()
 
         let sentEvent = try XCTUnwrap(subscription.sentEvents.last)
         XCTAssertEqual(sentEvent.event, "track")
@@ -203,6 +234,7 @@ final class SocketManagerTests: XCTestCase {
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         transport.reply(to: push, status: Constants.Socket.timeoutKey)
+        drainMainQueue()
 
         let sentEvent = try XCTUnwrap(subscription.sentEvents.last)
         XCTAssertEqual(sentEvent.event, "track")
@@ -249,6 +281,7 @@ final class SocketManagerTests: XCTestCase {
             status: Constants.Socket.successKey,
             response: ["request_type": "resolved_track"]
         )
+        drainMainQueue()
 
         XCTAssertTrue(subscription.sentEvents.isEmpty)
     }
@@ -262,11 +295,13 @@ final class SocketManagerTests: XCTestCase {
         let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
 
         socketManager.close()
+        drainMainQueue()
         transport.reply(
             to: push,
             status: Constants.Socket.successKey,
             response: ["request_type": "resolved_track"]
         )
+        drainMainQueue()
 
         XCTAssertTrue(subscription.sentEvents.isEmpty)
     }
@@ -278,11 +313,74 @@ final class SocketManagerTests: XCTestCase {
         subscription.onClose = { expectation.fulfill() }
 
         socketManager.close()
+        drainMainQueue()
 
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(subscription.closeCount, 1)
         XCTAssertEqual(transport.disconnectCallCount, 1)
         XCTAssertFalse(socketManager.isSocketOpened)
+    }
+
+    func testRepeatedConnectWhileJoinedKeepsOneTransport() throws {
+        _ = try openAndJoinSocket()
+        socketManager.connect()
+        socketManager.connect()
+        drainMainQueue()
+        XCTAssertEqual(transports.count, 1)
+        XCTAssertTrue(socketManager.isSocketOpened)
+    }
+
+    func testCloseCompletesEvenWhenNoConnectionExists() {
+        var completed = 0
+        socketManager.close { completed += 1 }
+        drainMainQueue()
+        XCTAssertEqual(completed, 1)
+        XCTAssertFalse(socketManager.isSocketOpened)
+    }
+
+    func testStaleSettingsResultCannotCreateTransportAfterUserSwitch() throws {
+        var callbacks: [(Result<Void, RemoteSourceError>) -> Void] = []
+        userpilot.remoteSource.onFetchSettings = { callbacks.append($0) }
+        socketManager.connect()
+        drainMainQueue()
+        socketManager.close()
+        drainMainQueue()
+        userpilot.storage.userId = "user-2"
+        socketManager.connect()
+        drainMainQueue()
+        XCTAssertEqual(callbacks.count, 2)
+        callbacks[0](.success(()))
+        drainMainQueue()
+        XCTAssertTrue(transports.isEmpty)
+        callbacks[1](.success(()))
+        drainMainQueue()
+        XCTAssertEqual(transports.count, 1)
+        XCTAssertEqual(socketParams.last??[Constants.Socket.userIdKey] as? String, "user-2")
+    }
+
+    func testOldConnectionReplyCannotCompleteNewConnectionRequest() throws {
+        let oldTransport = try openAndJoinSocket()
+        var oldReplyCount = 0
+        let service: SocketManaging = socketManager
+        service.publish("track", payload: nil, shouldSend: { true }, completion: { _, _ in oldReplyCount += 1 })
+        drainMainQueue()
+        let oldPush = try XCTUnwrap(oldTransport.lastSentPush(event: "track"))
+        socketManager.close()
+        drainMainQueue()
+        userpilot.storage.userId = "user-2"
+        let newTransport = try openAndJoinSocket()
+        var newReplyCount = 0
+        service.publish("track", payload: nil, shouldSend: { true }, completion: { _, _ in newReplyCount += 1 })
+        drainMainQueue()
+        oldTransport.reply(to: oldPush, status: Constants.Socket.successKey)
+        drainMainQueue()
+        XCTAssertEqual(oldReplyCount, 0)
+        XCTAssertEqual(newReplyCount, 0)
+        XCTAssertTrue(socketManager.isSocketOpened)
+        let newPush = try XCTUnwrap(newTransport.lastSentPush(event: "track"))
+        newTransport.reply(to: newPush, status: Constants.Socket.successKey)
+        drainMainQueue()
+        XCTAssertEqual(newReplyCount, 1)
     }
 
     private func makeSocketManager() -> SocketManager {
@@ -311,9 +409,12 @@ final class SocketManagerTests: XCTestCase {
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        let drained = expectation(description: "main queue drained")
-        DispatchQueue.main.async { drained.fulfill() }
-        wait(for: [drained], timeout: 1.0)
+        // Connect may synchronously fetch settings, whose result schedules a second owner turn.
+        for _ in 0..<2 {
+            let drained = expectation(description: "socket main queue drained")
+            DispatchQueue.main.async { drained.fulfill() }
+            wait(for: [drained], timeout: 1.0)
+        }
     }
 
     private func openAndJoinSocket(
@@ -324,6 +425,7 @@ final class SocketManagerTests: XCTestCase {
         drainMainQueue(file: file, line: line)
         let transport = try XCTUnwrap(transports.last, file: file, line: line)
         transport.open()
+        drainMainQueue()
         let joinPush = try XCTUnwrap(
             transport.lastSentPush(event: ChannelEvent.join),
             "Expected channel join push",
@@ -331,6 +433,7 @@ final class SocketManagerTests: XCTestCase {
             line: line
         )
         transport.reply(to: joinPush, status: Constants.Socket.successKey)
+        drainMainQueue()
         return transport
     }
 }

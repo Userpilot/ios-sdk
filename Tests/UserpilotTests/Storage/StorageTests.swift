@@ -48,7 +48,6 @@ final class StorageTests: XCTestCase {
         XCTAssertNil(storage.sessionDate)
         XCTAssertNil(storage.configurationDate)
         XCTAssertNil(storage.pushToken)
-        XCTAssertEqual(User.fromJson(storage.user).userId, "")
     }
 
     func testSocketURLStorage() {
@@ -61,9 +60,17 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(storage.userId, "user-00000")
     }
 
-    func testUserStorage() {
-        storage.user = "{\"userId\":\"user-00000\"}"
-        XCTAssertEqual(storage.user, "{\"userId\":\"user-00000\"}")
+    func testInitializationRemovesObsoleteProfileButKeepsIdentityAndPendingIdentify() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: Storage.suiteName(forToken: token)))
+        defaults.set("obsolete-profile", forKey: Storage.legacyUserKey)
+        storage.userId = "user-00000"
+        storage.temporaryUser = "pending-identify"
+
+        let reloaded = makeStorage(token: token)
+
+        XCTAssertNil(defaults.object(forKey: Storage.legacyUserKey))
+        XCTAssertEqual(reloaded.userId, "user-00000")
+        XCTAssertEqual(reloaded.temporaryUser, "pending-identify")
     }
 
     func testTemporaryUserStorage() {
@@ -108,7 +115,6 @@ final class StorageTests: XCTestCase {
         storage.socketURL = "wss://socket.example.com"
         storage.userId = "user-00000"
         storage.anonymousUserId = "anonymous-00000"
-        storage.user = "{\"userId\":\"user-00000\"}"
         storage.temporaryUser = "identify-payload"
         storage.configurationDate = Date(timeIntervalSince1970: 1_700_000_000)
         storage.pushToken = "push-token"
@@ -118,7 +124,6 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(reloadedStorage.socketURL, "wss://socket.example.com")
         XCTAssertEqual(reloadedStorage.userId, "user-00000")
         XCTAssertEqual(reloadedStorage.anonymousUserId, "anonymous-00000")
-        XCTAssertEqual(reloadedStorage.user, "{\"userId\":\"user-00000\"}")
         XCTAssertEqual(reloadedStorage.temporaryUser, "identify-payload")
         guard let configurationTime = reloadedStorage.configurationDate?.timeIntervalSince1970 else {
             return XCTFail("Expected configurationDate to persist")

@@ -218,7 +218,6 @@ class UserpilotTests: XCTestCase {
         XCTAssertTrue(logoutCalled)
         XCTAssertNil(userpilot.storage.pushToken)
         XCTAssertEqual(userpilot.storage.userId, "")
-        XCTAssertEqual(userpilot.storage.user, "")
     }
 
     // MARK: - Clean
@@ -235,16 +234,10 @@ class UserpilotTests: XCTestCase {
 
     // MARK: - Settings
 
-    /// Verifies that settings returns merged data from user, app, and auto-properties
-    func testSettings_returnsMergedUserAppAndAutoProperties() throws {
+    /// Settings expose the live identity and device/app diagnostics without restoring a merged profile.
+    func testSettings_returnsLiveIdentityAppAndAutoProperties() {
         // Arrange
-        let expectedUser: [String: Any] = [
-            "userId": "default-00000",
-            "properties": ["email": "test@mail.com"],
-            "company": ["id": "1"]
-        ]
-        let userData = try JSONSerialization.data(withJSONObject: expectedUser, options: [])
-        userpilot.storage.user = String(data: userData, encoding: .utf8) ?? ""
+        userpilot.storage.userId = "default-00000"
 
         // Act
         let settings = userpilot.settings()
@@ -255,8 +248,8 @@ class UserpilotTests: XCTestCase {
 
         let user = settings["User"] as? [String: Any]
         XCTAssertEqual(user?["userId"] as? String, "default-00000")
-        XCTAssertEqual((user?["properties"] as? [String: Any])?["email"] as? String, "test@mail.com")
-        XCTAssertEqual((user?["company"] as? [String: Any])?["id"] as? String, "1")
+        XCTAssertTrue((user?["properties"] as? [String: Any])?.isEmpty == true)
+        XCTAssertTrue((user?["company"] as? [String: Any])?.isEmpty == true)
 
         let autoProps = settings["Auto properties"] as? [String: Any]
         XCTAssertEqual(autoProps?[AutoPropertyDecorator.osKey] as? String, "iOS")
@@ -339,7 +332,7 @@ class UserpilotTests: XCTestCase {
         weak var weakAutoPropertyDecoration: AutoPropertyDecoratoring?
         weak var weakSocketManager: SocketManaging?
         weak var weakRemoteSource: UserpilotRemoteSourcing?
-        weak var weakExperienceStateMachine: ExperienceStateManaging?
+        weak var weakExperiencesPublisher: ExperiencesPublishing?
         weak var weakLinkOpener: LinkOpening?
         weak var weakThemeHandler: ThemeHandling?
         weak var weakImageLoader: ImageLoading?
@@ -359,7 +352,7 @@ class UserpilotTests: XCTestCase {
             weakAutoPropertyDecoration = userpilot.container.resolve(AutoPropertyDecoratoring.self)
             weakSocketManager = userpilot.container.resolve(SocketManaging.self)
             weakRemoteSource = userpilot.container.resolve(UserpilotRemoteSourcing.self)
-            weakExperienceStateMachine = userpilot.container.resolve(ExperienceStateManaging.self)
+            weakExperiencesPublisher = userpilot.container.resolve(ExperiencesPublishing.self)
             weakLinkOpener = userpilot.container.resolve(LinkOpening.self)
             weakThemeHandler = userpilot.container.resolve(ThemeHandling.self)
             weakImageLoader = userpilot.container.resolve(ImageLoading.self)
@@ -368,11 +361,12 @@ class UserpilotTests: XCTestCase {
             XCTAssertNotNil(weakUserpilot)
         }
 
-        let expectation = XCTestExpectation(description: "Async cleanup completed")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
+        let cleanup = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            weakUserpilot == nil && weakConfig == nil && weakAnalyticsPublishing == nil
+                && weakDataStoring == nil && weakSessionMonitoring == nil && weakSocketManager == nil
+                && weakExperiencesPublisher == nil && weakPushNotificationMonitor == nil
+        }, object: nil)
+        wait(for: [cleanup], timeout: 2)
 
         // Assert
         XCTAssertNil(weakUserpilot)
@@ -382,7 +376,7 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(weakAutoPropertyDecoration)
         XCTAssertNil(weakSocketManager)
         XCTAssertNil(weakRemoteSource)
-        XCTAssertNil(weakExperienceStateMachine)
+        XCTAssertNil(weakExperiencesPublisher)
         XCTAssertNil(weakLinkOpener)
         XCTAssertNil(weakThemeHandler)
         XCTAssertNil(weakImageLoader)

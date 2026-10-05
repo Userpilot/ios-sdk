@@ -33,47 +33,23 @@ final class UserTests: XCTestCase {
         XCTAssertTrue(decoded.company.isEmpty)
     }
 
-    func testUpdateUserMergesPropertiesForSameUser() {
-        var user = User(
-            userId: "user-1",
-            properties: ["name": "Old", "role": "admin"],
-            company: ["id": "company-1"]
-        )
-        let event = Event(
-            type: .identify("user-1"),
-            properties: ["name": "New", "email": "new@example.com"],
-            company: ["plan": "enterprise"]
-        )
+    func testPendingIdentifyRoundTripDoesNotMergePreviousProfile() throws {
+        let previous = User(userId: "user-1", properties: ["role": "admin"], company: ["id": "old"])
+        let incoming = User(userId: "user-1", properties: ["name": "New"], company: ["plan": "pro"])
 
-        let updated = user.updateUser(event: event)
+        let decoded = User.fromJson(try XCTUnwrap(incoming.toJson()))
 
-        XCTAssertEqual(updated.userId, "user-1")
-        XCTAssertEqual(updated.properties["name"] as? String, "New")
-        XCTAssertEqual(updated.properties["role"] as? String, "admin")
-        XCTAssertEqual(updated.properties["email"] as? String, "new@example.com")
-        XCTAssertEqual(updated.company["id"] as? String, "company-1")
-        XCTAssertEqual(updated.company["plan"] as? String, "enterprise")
+        XCTAssertEqual(decoded.userId, previous.userId)
+        XCTAssertNil(decoded.properties["role"])
+        XCTAssertEqual(decoded.properties["name"] as? String, "New")
+        XCTAssertNil(decoded.company["id"])
+        XCTAssertEqual(decoded.company["plan"] as? String, "pro")
     }
 
-    func testUpdateUserResetsWhenEventUserChanges() {
-        var user = User(
-            userId: "old-user",
-            properties: ["old": "value"],
-            company: ["oldCompany": "value"]
-        )
-        let event = Event(
-            type: .identify("new-user"),
-            properties: ["new": "value"],
-            company: ["company": "new"]
-        )
-
-        let updated = user.updateUser(event: event)
-
-        XCTAssertEqual(updated.userId, "new-user")
-        XCTAssertNil(updated.properties["old"])
-        XCTAssertEqual(updated.properties["new"] as? String, "value")
-        XCTAssertNil(updated.company["oldCompany"])
-        XCTAssertEqual(updated.company["company"] as? String, "new")
+    func testFromJsonRejectsIncompletePendingIdentify() {
+        let user = User.fromJson("{\"userId\":\"new-user\"}")
+        XCTAssertEqual(user.userId, "")
+        XCTAssertTrue(user.properties.isEmpty)
+        XCTAssertTrue(user.company.isEmpty)
     }
-
 }
