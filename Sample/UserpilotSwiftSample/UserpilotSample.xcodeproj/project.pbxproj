@@ -667,7 +667,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */,
+				AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../.." */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -1108,9 +1108,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */ = {
+		AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../ios-sdk copy";
+			relativePath = "../..";
 		};
 /* End XCLocalSwiftPackageReference section */
 
