@@ -23,6 +23,9 @@ final class OnlineQueueViewController: UIViewController {
     private let settleMs: TimeInterval = 0.4
     private let switchGapMs: TimeInterval = 0.7
     private let contentGapMs: TimeInterval = 0.6
+    private let burstEventCount = 50
+    private let burstInterval: TimeInterval = 0.05
+    private let userSwitchCallCount = 33
 
     // MARK: - UI
 
@@ -34,6 +37,8 @@ final class OnlineQueueViewController: UIViewController {
     private let userBField = UITextField()
 
     private var skipNextAutoScreen = false
+    private var burstWorkItem: DispatchWorkItem?
+    private weak var burstButton: UIButton?
 
     // MARK: - Lifecycle
 
@@ -54,6 +59,15 @@ final class OnlineQueueViewController: UIViewController {
         // if reportScreenSwitch.isOn {
         UserpilotManager.shared.screen(screenTitle)
         // }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        guard burstWorkItem != nil else { return }
+        burstWorkItem?.cancel()
+        burstWorkItem = nil
+        burstButton?.isEnabled = true
+        setStatus("Burst stopped. Already submitted calls remain in the SDK queue.")
     }
 
     // MARK: - Setup
@@ -164,7 +178,10 @@ final class OnlineQueueViewController: UIViewController {
                 ("S7 Identify + 3 screens (fake reload title)", #selector(runThreeScreens)),
                 ("S8 Identify with NO current screen", #selector(runNoScreen)),
                 ("S9 Failed ACK (manual network drop)", #selector(runFailedAck)),
-                ("S10 Teo multi-app content check", #selector(runTeo))
+                ("S10 Teo multi-app content check", #selector(runTeo)),
+                ("S11 Send 50 events: screen → track, 50 ms apart", #selector(runAlternatingBurst(_:))),
+                ("S12 Queue reset: 10 → new user → 10 → logout → identify → 10 (50 ms)",
+                 #selector(runUserSwitchBurst(_:)))
             ]),
             ("Manual APIs", [
                 ("screen(queue_s1_home)", #selector(manualS1)),
@@ -384,6 +401,95 @@ private extension OnlineQueueViewController {
             Switch token in Configurations, repeat on App2.
             Expected: no cross-app content bleed.
             """
+        )
+    }
+
+    @objc private func runAlternatingBurst(_ sender: UIButton) {
+        guard burstWorkItem == nil else { return }
+        sender.isEnabled = false
+        burstButton = sender
+        let batchId = String(UUID().uuidString.prefix(8)).lowercased()
+        sendBurstEvent(batchId: batchId, index: 1)
+    }
+
+    // Submit independently of ACKs so a slow socket can build up the normal analytics queue.
+    private func sendBurstEvent(batchId: String, index: Int) {
+        let kind = index % 2 == 1 ? "screen" : "track"
+        let name = "queue_\(kind)_\(batchId)_\(index)"
+        if kind == "screen" {
+            UserpilotManager.shared.screen(name)
+        } else {
+            UserpilotManager.shared.track(eventName: name, properties: [
+                "scenario": "alternating_burst", "batch_id": batchId, "index": index
+            ])
+        }
+        setStatus("Batch \(batchId): submitted \(index)/\(burstEventCount)\n\(name)")
+        if index == burstEventCount {
+            burstWorkItem = nil
+            burstButton?.isEnabled = true
+            setStatus(
+                """
+                Batch \(batchId): submitted 50 calls (25 screens + 25 tracks), 50 ms apart.
+                Submission finished; socket ACKs may still be pending. Check Logs + console for order 1…50.
+                """
+            )
+            return
+        }
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.sendBurstEvent(batchId: batchId, index: index + 1)
+        }
+        burstWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + burstInterval, execute: workItem)
+    }
+
+    @objc private func runUserSwitchBurst(_ sender: UIButton) {
+        guard burstWorkItem == nil else {
+            setStatus("Wait for the current burst to finish before running S12.")
+            return
+        }
+        sender.isEnabled = false
+        burstButton = sender
+        let batchId = String(UUID().uuidString.prefix(8)).lowercased()
+        sendUserSwitchStep(batchId: batchId, step: 1)
+    }
+
+    // The 33 calls are 10 tracks, identify, 10 tracks, logout, identify, then 10 tracks.
+    private func sendUserSwitchStep(batchId: String, step: Int) {
+        let properties: [String: Any] = ["scenario": "user_switch_burst", "batch_id": batchId]
+        switch step {
+        case 1...10: sendUserSwitchEvent(batchId: batchId, phase: "before_switch", index: step)
+        case 11: identify("queue_switch_\(batchId)", properties)
+        case 12...21: sendUserSwitchEvent(batchId: batchId, phase: "after_switch", index: step - 11)
+        case 22: UserpilotManager.shared.logout()
+        case 23: identify("queue_login_\(batchId)", properties)
+        default: sendUserSwitchEvent(batchId: batchId, phase: "after_logout", index: step - 23)
+        }
+        setStatus("S12 batch \(batchId): submitted call \(step)/\(userSwitchCallCount), 50 ms apart.")
+        if step == userSwitchCallCount {
+            burstWorkItem = nil
+            burstButton?.isEnabled = true
+            setStatus(
+                """
+                S12 batch \(batchId): submitted 30 track calls, 2 identifies, and logout, 50 ms apart.
+                Switched to queue_switch_\(batchId); final user is queue_login_\(batchId).
+                Expected: pending before_switch events clear on identify; pending after_switch events clear on logout.
+                after_logout events follow the final Identify ACK. Already sent events may still receive old ACKs.
+                Check Logs + console: old ACKs must not advance the final user's queue.
+                """
+            )
+            return
+        }
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.sendUserSwitchStep(batchId: batchId, step: step + 1)
+        }
+        burstWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + burstInterval, execute: workItem)
+    }
+
+    private func sendUserSwitchEvent(batchId: String, phase: String, index: Int) {
+        UserpilotManager.shared.track(
+            eventName: "queue_\(phase)_\(batchId)_\(index)",
+            properties: ["scenario": "user_switch_burst", "batch_id": batchId, "phase": phase, "index": index]
         )
     }
 
