@@ -19,15 +19,8 @@ internal class DIContainer {
 
     // MARK: - Properties
 
-    /// A queue used for concurrent reads and synchronized writes to the container's components.
-    private let componentQueue = DispatchQueue(
-        label: Constants.DispatchQueues.diContainerQueue,
-        qos: .userInitiated,
-        attributes: .concurrent
-    )
-
-    /// Prevents concurrent first resolutions from creating duplicate instances.
-    /// Recursive so a factory can resolve its dependencies on the same thread.
+    /// Owns factories, cached instances and construction as one synchronous operation. Recursion lets
+    /// a factory resolve dependencies on the same thread; no owner waits for a separate GCD worker.
     private let resolutionLock = NSRecursiveLock()
 
     /// A dictionary of initializers for lazy component creation.
@@ -51,10 +44,12 @@ internal class DIContainer {
         _ type: Component.Type,
         initializer: @escaping (DIContainer) -> Component
     ) {
-        initializers[String(describing: Component.self)] = initializer
+        resolutionLock.withLock {
+            initializers[String(describing: Component.self)] = initializer
+        }
     }
 
-    /// Register the compnenet and resolve it to excute init block
+    /// Register and immediately construct the component, preserving eager startup side effects.
     func registerEager<Component>(
         _ type: Component.Type,
         initializer: @escaping (DIContainer) -> Component
@@ -73,7 +68,7 @@ internal class DIContainer {
         _ type: Component.Type,
         initializer: @escaping () -> Component
     ) {
-        initializers[String(describing: Component.self)] = { _ in initializer() }
+        registerLazy(type) { _ in initializer() }
     }
 
     /**
@@ -86,11 +81,8 @@ internal class DIContainer {
         _ type: Component.Type,
         value: Component
     ) {
-        tryCatch {
-            // Use a barrier to ensure exclusive access during writes.
-            componentQueue.async(flags: .barrier) {
-                self.components[String(describing: Component.self)] = value
-            }
+        resolutionLock.withLock {
+            components[String(describing: Component.self)] = value
         }
     }
 
@@ -109,7 +101,7 @@ internal class DIContainer {
             let key = String(describing: Component.self)
 
             // Check if the component is already registered.
-            if let component = componentQueue.sync(execute: { components[key] as? Component }) {
+            if let component = components[key] as? Component {
                 return component
             }
 
@@ -117,10 +109,8 @@ internal class DIContainer {
             if let initializer = initializers[key] {
                 // swiftlint:disable:next force_cast
                 let component = initializer(self) as! Component
-                // Store the component in the container.
-                componentQueue.sync(flags: .barrier) {
-                    components[key] = component
-                }
+                // Publish the instance before releasing construction ownership to another caller.
+                components[key] = component
                 return component
             }
 

@@ -14,7 +14,6 @@ final class ConstantsTests: XCTestCase {
     func testDispatchQueueConstants() {
         XCTAssertEqual(Constants.DispatchQueues.eventQueue, "com.userpilot.event-queue")
         XCTAssertEqual(Constants.DispatchQueues.experienceQueue, "com.userpilot.experience-queue")
-        XCTAssertEqual(Constants.DispatchQueues.diContainerQueue, "com.userpilot.dicontainer-queue")
         XCTAssertEqual(Constants.DispatchQueues.throttleQueue, "com.userpilot.throttle-queue")
     }
 
