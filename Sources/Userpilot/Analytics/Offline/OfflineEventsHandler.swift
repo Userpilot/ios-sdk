@@ -168,11 +168,26 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
     /// Decode off the database queue; abandoned restores cannot submit a decoded batch.
     private func decode(_ localEvents: [EventStorage], for operation: RestoreOperation) {
         guard isCurrent(operation) else { return }
+        if !localEvents.isEmpty {
+            logger.info("🗃️ Restoring %{public}d events from local storage", localEvents.count)
+        }
         var events: [[String: Any]] = []
         for row in localEvents {
             guard isCurrent(operation) else { return }
-            guard !operation.userID.isEmpty, row.userId == operation.userID,
-                  let payload = row.toStoredEvent()?.toBatchPayload(createdAt: row.createdAt) else { continue }
+            guard !operation.userID.isEmpty, row.userId == operation.userID else {
+                logger.error("⚠️ Dropping offline event stored for another user: %{public}@", row.requestId.uuidString)
+                continue
+            }
+            guard let stored = row.toStoredEvent(), stored.isSupportedSchema else {
+                logger.error("⚠️ Failed to decode event from local storage")
+                continue
+            }
+            guard let payload = stored.toBatchPayload(createdAt: row.createdAt) else {
+                if !stored.isInternalEvent, stored.event == nil {
+                    logger.error("⚠️ Dropping unsupported offline event: %{public}@", stored.eventType)
+                }
+                continue
+            }
             events.append(payload)
         }
         submit(events, for: operation)
