@@ -17,23 +17,19 @@ import UserNotifications
 
 // This is a placeholder delegate implementation in case there's no UNUserNotificationCenter.delegate set in the app
 // swiftlint:disable:next type_name
-internal class UserpilotUNUserNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
-    static var shared = UserpilotUNUserNotificationCenterDelegate()
+internal final class UserpilotUNUserNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = UserpilotUNUserNotificationCenterDelegate()
 }
 
-extension UNUserNotificationCenter {
+internal extension UNUserNotificationCenter {
 
     static func swizzleNotificationCenterGetDelegate() {
-        // this will swap in a new getter for UNUserNotificationCenter.delegate - giving our code a chance to hook in
-        let originalScrollViewDelegateSelector = #selector(getter: self.delegate)
-        let swizzledScrollViewDelegateSelector = #selector(userpilot__getNotificationCenterDelegate)
-
-        guard let originalScrollViewMethod = class_getInstanceMethod(self, originalScrollViewDelegateSelector),
-              let swizzledScrollViewMethod = class_getInstanceMethod(self, swizzledScrollViewDelegateSelector) else {
-            return
-        }
-
-        method_exchangeImplementations(originalScrollViewMethod, swizzledScrollViewMethod)
+        // Also used temporarily around fallback assignment: this must remain an exchange, not a once gate.
+        Swizzler.swapInstanceMethods(
+            on: self,
+            original: #selector(getter: self.delegate),
+            swizzled: #selector(userpilot__getNotificationCenterDelegate)
+        )
     }
 
     // this is our custom getter logic for the UNUserNotificationCenter.delegate
@@ -54,6 +50,22 @@ extension UNUserNotificationCenter {
             shouldSetDelegate = true
         }
 
+        installNotificationHooks(on: delegate)
+
+        // If we need to set a non-nil implementation where there previously was not one,
+        // swap the swizzled getter back first, then assign, then restore the swizzled getter.
+        // This is done to avoid infinite recursion in some cases.
+        if shouldSetDelegate {
+            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
+            self.delegate = delegate
+            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
+        }
+
+        return delegate
+    }
+
+    /// Hook the actual host delegate class, or the fallback class when the host has no delegate.
+    private func installNotificationHooks(on delegate: UNUserNotificationCenterDelegate) {
         Swizzler.swizzle(
             targetInstance: delegate,
             targetSelector:
@@ -75,17 +87,6 @@ extension UNUserNotificationCenter {
             swizzleSelector:
                 #selector(userpilot__userNotificationCenterWillPresent)
         )
-
-        // If we need to set a non-nil implementation where there previously was not one,
-        // swap the swizzled getter back first, then assign, then restore the swizzled getter.
-        // This is done to avoid infinite recursion in some cases.
-        if shouldSetDelegate {
-            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
-            self.delegate = delegate
-            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
-        }
-
-        return delegate
     }
 
     @objc

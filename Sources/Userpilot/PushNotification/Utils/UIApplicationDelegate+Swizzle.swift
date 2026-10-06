@@ -13,7 +13,7 @@
 
 import UIKit
 
-extension UIApplication {
+internal extension UIApplication {
     static func swizzleDidRegisterForDeviceToken() {
         guard let appDelegateInstance = UIApplication.shared.delegate else { return }
 
