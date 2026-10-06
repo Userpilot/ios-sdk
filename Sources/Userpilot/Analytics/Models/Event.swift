@@ -90,29 +90,10 @@ extension Event: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(type, forKey: .type)
 
-        // Encode Payload ([String: Any]?) as JSON data
-        if let properties = properties {
-            let jsonData = try JSONSerialization.data(withJSONObject: properties, options: [])
-            if let jsonObject = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                try container.encode(jsonObject.mapValues { AnyCodable($0) }, forKey: .properties)
-            }
-        }
-
-        if let company = company {
-            let jsonData = try JSONSerialization.data(withJSONObject: company, options: [])
-            if let jsonObject = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                try container.encode(jsonObject.mapValues { AnyCodable($0) }, forKey: .company)
-            }
-        }
-
-        // Auto-capture events must survive the offline round-trip: their batch
-        // payload needs the screen context and the interaction event name.
-        if let screen = screen {
-            let jsonData = try JSONSerialization.data(withJSONObject: screen, options: [])
-            if let jsonObject = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                try container.encode(jsonObject.mapValues { AnyCodable($0) }, forKey: .screen)
-            }
-        }
+        try container.encodePayloadIfPresent(properties, forKey: .properties)
+        try container.encodePayloadIfPresent(company, forKey: .company)
+        // Preserve autocapture screen context and interaction name across the offline round-trip.
+        try container.encodePayloadIfPresent(screen, forKey: .screen)
 
         try container.encodeIfPresent(interactionEventName, forKey: .interactionEventName)
     }
@@ -121,29 +102,10 @@ extension Event: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         type = try container.decode(EventType.self, forKey: .type)
 
-        // Decode properties as [String: AnyCodable]? and convert to [String: Any]?
-        if let propertiesDict = try container.decodeIfPresent(
-            [String: AnyCodable].self, forKey: .properties) {
-            properties = propertiesDict.mapValues { $0.value }
-        } else {
-            properties = nil
-        }
-
-        // Decode company as [String: AnyCodable]? and convert to [String: Any]?
-        if let companyDict = try container.decodeIfPresent(
-            [String: AnyCodable].self, forKey: .company) {
-            company = companyDict.mapValues { $0.value }
-        } else {
-            company = nil
-        }
-
-        // Decode screen as [String: AnyCodable]? and convert to [String: Any]?
-        if let screenDict = try container.decodeIfPresent(
-            [String: AnyCodable].self, forKey: .screen) {
-            screen = screenDict.mapValues { $0.value }
-        } else {
-            screen = nil
-        }
+        properties = try container.decodeIfPresent(
+            [String: AnyCodable].self, forKey: .properties)?.mapValues { $0.value }
+        company = try container.decodeIfPresent([String: AnyCodable].self, forKey: .company)?.mapValues { $0.value }
+        screen = try container.decodeIfPresent([String: AnyCodable].self, forKey: .screen)?.mapValues { $0.value }
 
         interactionEventName = try container.decodeIfPresent(
             String.self, forKey: .interactionEventName)
@@ -232,5 +194,24 @@ extension Event {
             ? interactionEventName : eventTitle
         if let screen { payload[Constants.Analytics.screenProperty] = screen }
         return payload
+    }
+}
+
+private extension KeyedEncodingContainer {
+    /// Offline payloads must first pass Foundation's JSON validation and numeric bridging.
+    /// Encoding AnyCodable directly would silently turn unsupported values into null instead of rejecting the event.
+    mutating func encodePayloadIfPresent(_ payload: Payload, forKey key: Key) throws {
+        guard let payload else { return }
+        // Foundation raises an Objective-C exception for non-JSON objects/nonfinite numbers.
+        // Reject them as a Swift encoding error so the existing offline error handling can recover.
+        guard JSONSerialization.isValidJSONObject(payload) else {
+            throw EncodingError.invalidValue(payload, .init(
+                codingPath: codingPath + [key],
+                debugDescription: "Event payload must contain valid JSON values"
+            ))
+        }
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [])
+        guard let normalized = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        try encode(normalized.mapValues { AnyCodable($0) }, forKey: key)
     }
 }

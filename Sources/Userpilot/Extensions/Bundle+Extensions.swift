@@ -55,3 +55,12 @@ internal extension Userpilot {
         #endif
     }()
 }
+
+internal extension Bundle {
+    /// Decodes a bundled JSON resource; missing files and decoding failures retain the nil fallback.
+    func loadJSONFile<T: Decodable>(named fileName: String, as type: T.Type) -> T? {
+        guard let url = url(forResource: fileName, withExtension: "json"),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+}

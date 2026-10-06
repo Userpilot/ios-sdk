@@ -12,7 +12,9 @@
 
 import Foundation
 
-/// Helper struct to encode/decode Any values
+/// Offline JSON bridge for strings, native scalars, string-keyed dictionaries and arrays.
+/// Unsupported values encode as null; callers that must reject them validate with JSONSerialization first.
+/// Keep the scalar cast order: Foundation NSNumber values can bridge to more than one Swift scalar type.
 internal struct AnyCodable: Codable {
     let value: Any
 
