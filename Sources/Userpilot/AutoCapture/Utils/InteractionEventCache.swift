@@ -17,47 +17,13 @@ import UIKit
 
 internal enum InteractionEventCache {
 
-    /// Holds the payload, dedup metadata, and a weak reference to the source view so the
-    /// owning `Userpilot` instance can be re-resolved at delivery time. Keeping the view
-    /// reference weak prevents the cache from extending the source's lifetime.
-    private final class DebouncedInteractionEnvelope {
-        let payload: InteractionPayload
-        let textLengthForDedupe: Int?
-        let debounceKey: String
-        weak var source: UIView?
-
-        init(
-            payload: InteractionPayload,
-            textLengthForDedupe: Int?,
-            debounceKey: String,
-            source: UIView?
-        ) {
-            self.payload = payload
-            self.textLengthForDedupe = textLengthForDedupe
-            self.debounceKey = debounceKey
-            self.source = source
-        }
-    }
-
     private static let lastDeliveredLock = NSLock()
     private static var lastDeliveredTextLengthByDebounceKey: [String: Int] = [:]
 
-    private static let debouncer = EventDebounce<DebouncedInteractionEnvelope>(
+    private static let debouncer = EventDebounce<PendingInteraction>(
         delay: Constants.AutoCapture.interactionDebounceInterval,
         deliveryQueue: .main
-    ) { envelope in
-        guard Userpilot.isInitialized else { return }
-        // swiftlint:disable:next multiple_closures_with_trailing_closure superfluous_disable_command
-        if let length = envelope.textLengthForDedupe {
-            lastDeliveredLock.withLock {
-                lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
-            }
-        }
-        // Re-resolve the owning instance at delivery time so it always reflects the
-        // current Registry state. If the source view has been deallocated, fall back
-        // to the registered default.
-        InstanceResolver.shared.handleInteractionEvent(envelope.payload, source: envelope.source)
-    }
+    ) { deliver($0) }
 
     /// Schedules sending the interaction after `interactionDebounceInterval` of quiet time for this view.
     ///
@@ -76,7 +42,7 @@ internal enum InteractionEventCache {
             guard last != length else { return }
         }
 
-        let envelope = DebouncedInteractionEnvelope(
+        let envelope = PendingInteraction(
             payload: payload,
             textLengthForDedupe: textLengthForDedupe,
             debounceKey: key,
@@ -85,7 +51,8 @@ internal enum InteractionEventCache {
         debouncer.schedule(key: key, value: envelope)
     }
 
-    static func flushAll() {
+    /// Drops pending values and resets delivered-text deduplication. Nothing is published.
+    static func cancelAll() {
         debouncer.cancelAll()
         lastDeliveredLock.withLock { lastDeliveredTextLengthByDebounceKey.removeAll() }
     }
@@ -99,6 +66,20 @@ internal enum InteractionEventCache {
     /// time, they are simply published a little earlier than their debounce would have.
     static func flushPendingInteractions() {
         debouncer.flushPending()
+    }
+
+    /// Only delivered lengths participate in deduplication; scheduling alone must not mark a value seen.
+    private static func deliver(_ envelope: PendingInteraction) {
+        guard Userpilot.isInitialized else { return }
+        if let length = envelope.textLengthForDedupe {
+            lastDeliveredLock.withLock {
+                lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
+            }
+        }
+        // Re-resolve the owning instance at delivery time so it always reflects the
+        // current Registry state. If the source view has been deallocated, fall back
+        // to the registered default.
+        InstanceResolver.shared.handleInteractionEvent(envelope.payload, source: envelope.source)
     }
 
     private static func debounceKey(for view: UIView) -> String {
