@@ -273,7 +273,6 @@ extension AnalyticsPublisher {
             return false
         }
 
-        sessions.markUserSwitch()
         dropAllState()
         userpilot?.clean()
         storage.userId = id
@@ -641,6 +640,9 @@ extension AnalyticsPublisher {
     /// Logout and user switch: drop every unsent live, initial, SDK, and offline event (nothing is
     /// flushed) and invalidate restore, request, and experience callbacks from that user.
     private func dropAllState() {
+        // Logout also starts an identity boundary, even when the next identify uses the same ID.
+        // Preserve the first-screen override so retained screen context cannot turn it into navigation.
+        sessions.markUserSwitch()
         generation.value = UUID()
         cancelInFlight()
         pending.removeAll()

@@ -1538,6 +1538,50 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
     }
 
+    func testLogout_withSameUserAndQueuedScreen_shouldStartNewSession() {
+        assertLogoutStartsSession(nextUserId: "first-user")
+    }
+
+    func testLogout_withDifferentUserAndQueuedScreen_shouldStartNewSession() {
+        assertLogoutStartsSession(nextUserId: "next-user")
+    }
+
+    private func assertLogoutStartsSession(nextUserId: String) {
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.storage.userId = "first-user"
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
+
+        analyticsPublisher.logout()
+        userpilot.storage.userId = "" // The facade clears identity after synchronous logout.
+        analyticsPublisher.testPublish(Event(type: .identify(nextUserId)))
+        analyticsPublisher.testPublish(Event(type: .screen("Login home")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true))
+        analyticsPublisher.testSettle()
+        let refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        analyticsPublisher.testPublish(Event(type: .screen("Next screen")))
+        let navigationMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(navigationMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+    }
+
     // MARK: - Screen reloads and host identify
 
     /// Establishes an acknowledged screen session through the real FIFO before requesting a reload.
