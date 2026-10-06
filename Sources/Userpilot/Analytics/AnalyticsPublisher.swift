@@ -437,7 +437,8 @@ extension AnalyticsPublisher {
         if event.isScreenEvent { sessions.markNormal() }
         if sessions.isPostIdentificationContext(event.eventName), pending.isEmpty,
            experiences?.getCurrentScreen.isNotEmpty == true {
-            enqueueScreenRefresh(isFakeReload: sessions.getPostIdentificationFakeReloadConfig())
+            let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+            enqueueScreenRefresh(isFakeReload: screenConfig.isFakeReload)
         }
     }
 }
@@ -518,7 +519,8 @@ extension AnalyticsPublisher {
                 )
             }
         }
-        startSession = sessions.getPostIdentificationStartSessionConfig(currentStartSession: startSession)
+        let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+        startSession = screenConfig.startSession
         publishReadState()
         let metadata: [String: Any] = [
             Constants.Analytics.isSessionStartedProperty: startSession,
