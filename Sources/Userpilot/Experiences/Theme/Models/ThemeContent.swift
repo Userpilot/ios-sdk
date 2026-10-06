@@ -410,11 +410,8 @@ internal enum ColorType: String, Decodable {
 // MARK: - Extension to deserialize a String into a ThemeResponse object
 
 internal extension String {
-    func toMobileTheme() -> ThemeContent? {
-        if let themeContent: ThemeContent = self.toObject() {
-            return themeContent
-        } else {
-            return nil
-        }
+    /// Converts a JSON string into a `ThemeContent`; a failure is logged through `logger` and returns `nil`.
+    func toMobileTheme(logger: Logging? = nil) -> ThemeContent? {
+        toObject(logger: logger)
     }
 }

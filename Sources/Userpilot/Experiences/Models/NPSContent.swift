@@ -13,7 +13,8 @@ import UIKit
 
 // MARK: - NPSContentData
 internal struct NPSContentData: Decodable {
-    let npsContent: NPSContent
+    // A response can contain another content type; absence is not a decoding failure.
+    let npsContent: NPSContent?
 
     enum CodingKeys: String, CodingKey {
         case npsContent = "nps"
@@ -265,12 +266,9 @@ internal enum NPSStepType: String, Decodable {
 // MARK: - String Extension for JSON Deserialization
 
 internal extension String {
-    /// Converts a JSON string into a `NPSContentData` object using `JSONDecoder`.
-    func toNPSContent() -> NPSContentData? {
-        if let surveyContent: NPSContentData = self.toObject() {
-            return surveyContent
-        } else {
-            return nil
-        }
+    /// Converts a JSON string into an `NPSContentData`; a failure is logged through `logger` and returns `nil`.
+    func toNPSContent(logger: Logging? = nil) -> NPSContentData? {
+        let data: NPSContentData? = toObject(logger: logger)
+        return data?.npsContent == nil ? nil : data
     }
 }

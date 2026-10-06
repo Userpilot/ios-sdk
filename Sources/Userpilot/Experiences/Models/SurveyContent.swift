@@ -11,7 +11,8 @@
 import Foundation
 
 internal struct SurveyContentData: Decodable {
-    let surveyContent: SurveyContent
+    // A response can contain another content type; absence is not a decoding failure.
+    let surveyContent: SurveyContent?
 
     private enum CodingKeys: String, CodingKey {
         case surveyContent = "surveys"
@@ -190,13 +191,10 @@ internal enum ButtonActionType: String, Decodable {
 // MARK: - String Extension for JSON Deserialization
 
 internal extension String {
-    /// Converts a JSON string into a `SurveyContentData` object using `JSONDecoder`.
-    func toSurveyContent() -> SurveyContentData? {
-        if let surveyContent: SurveyContentData = self.toObject() {
-            return surveyContent
-        } else {
-            return nil
-        }
+    /// Converts a JSON string into a `SurveyContentData`; a failure is logged through `logger` and returns `nil`.
+    func toSurveyContent(logger: Logging? = nil) -> SurveyContentData? {
+        let data: SurveyContentData? = toObject(logger: logger)
+        return data?.surveyContent == nil ? nil : data
     }
 }
 

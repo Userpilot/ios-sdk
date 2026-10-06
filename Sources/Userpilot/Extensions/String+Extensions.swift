@@ -285,74 +285,48 @@ internal extension String {
     }
 
     /**
-    Converts a JSON string into an array of a specified type using `JSONDecoder`.
-         
-    - Returns: An optional array of the specified type if decoding is successful, or `nil` if decoding fails.
-    - Parameter type: The type to decode into, which must conform to `Decodable`.
+    Decodes model JSON strings using `JSONDecoder`, like `toObject` on Android.
+    An empty string is `nil`, and a failure is logged through `logger`
+    with its reason and coding path, then `nil`, so each caller keeps its own fallback.
+
+    - Parameter logger: Receives the decoding failure; pass the owning instance's logger.
+    - Returns: An optional instance of the specified type if decoding is successful, or `nil` if decoding fails.
     */
-    func toArray<T: Decodable>() -> [T]? {
-        let decoder = UserpilotDecoder.shared
+    func toObject<T: Decodable>(logger: Logging? = nil) -> T? {
+        guard !isEmpty else { return nil }
         do {
-            let decodedData = try decoder.decode([T].self, from: Data(self.utf8))
-            return decodedData
+            return try JSONDecoder().decode(T.self, from: Data(self.utf8))
         } catch {
-            // Use a switch statement to handle different types of DecodingError
-            if let decodingError = error as? DecodingError {
-                switch decodingError {
-                case .dataCorrupted(let context):
-                    print("Data corrupted: \(context.debugDescription)")
-                case .keyNotFound(let key, let context):
-                    print("Key '\(key)' not found: \(context.debugDescription)")
-                case .typeMismatch(let type, let context):
-                    print("Type '\(type)' mismatch:")
-                    print("  Expected type: \(type)")
-                    print("  Contextual info: \(context.debugDescription)")
-                    print("  Coding path: \(context.codingPath)")
-                case .valueNotFound(let value, let context):
-                    print("Value '\(value)' not found: \(context.debugDescription)")
-                @unknown default:
-                    print("Unknown decoding error: \(error)")
-                }
-            } else {
-                print("Failed to decode JSON: \(error.localizedDescription)")
-            }
+            logger?.error(
+                "‼️ Failed to decode %{public}@: %{public}@", String(describing: T.self), error.decodingDiagnostic
+            )
             return nil
         }
     }
+}
 
-    /**
-    Converts a JSON string into a specified type using `JSONDecoder`.
-
-    - Returns: An optional instance of the specified type if decoding is successful, or `nil` if decoding fails.
-    - Parameter type: The type to decode into, which must conform to `Decodable`.
-    */
-    func toObject<T: Decodable>() -> T? {
-        let decoder = JSONDecoder()
-        do {
-            let decodedData = try decoder.decode(T.self, from: Data(self.utf8))
-            return decodedData
-        } catch {
-            // Use a switch statement to handle different types of DecodingError
-            if let decodingError = error as? DecodingError {
-                switch decodingError {
-                case .dataCorrupted(let context):
-                    print("Data corrupted: \(context.debugDescription)")
-                case .keyNotFound(let key, let context):
-                    print("Key '\(key)' not found: \(context.debugDescription)")
-                case .typeMismatch(let type, let context):
-                    print("Type '\(type)' mismatch:")
-                    print("  Expected type: \(type)")
-                    print("  Contextual info: \(context.debugDescription)")
-                    print("  Coding path: \(context.codingPath)")
-                case .valueNotFound(let value, let context):
-                    print("Value '\(value)' not found: \(context.debugDescription)")
-                @unknown default:
-                    print("Unknown decoding error: \(error)")
-                }
-            } else {
-                print("Failed to decode JSON: \(error.localizedDescription)")
-            }
-            return nil
+private extension Error {
+    /// The failure's reason and coding path, e.g. `typeMismatch String at mobile_contents.steps.0.type: …`.
+    var decodingDiagnostic: String {
+        guard let decodingError = self as? DecodingError else { return localizedDescription }
+        switch decodingError {
+        case .dataCorrupted(let context):
+            return "dataCorrupted \(context.diagnostic)"
+        case .keyNotFound(let key, let context):
+            return "keyNotFound '\(key.stringValue)' \(context.diagnostic)"
+        case .typeMismatch(let type, let context):
+            return "typeMismatch \(type) \(context.diagnostic)"
+        case .valueNotFound(let type, let context):
+            return "valueNotFound \(type) \(context.diagnostic)"
+        @unknown default:
+            return String(describing: decodingError)
         }
+    }
+}
+
+private extension DecodingError.Context {
+    var diagnostic: String {
+        let path = codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }.joined(separator: ".")
+        return "at \(path.isEmpty ? "root" : path): \(debugDescription)"
     }
 }

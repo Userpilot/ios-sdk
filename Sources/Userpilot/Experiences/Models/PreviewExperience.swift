@@ -46,16 +46,3 @@ internal struct PreviewExperience: Decodable {
         case survey, theme
     }
 }
-
-// MARK: - String Extension for JSON Deserialization
-
-internal extension String {
-    /// Converts a JSON string into a `FlowContentData` object using `JSONDecoder`.
-    func toPreviewExperience() -> PreviewExperience? {
-        if let previewExperience: PreviewExperience = self.toObject() {
-            return previewExperience
-        } else {
-            return nil
-        }
-    }
-}

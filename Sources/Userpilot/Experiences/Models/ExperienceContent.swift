@@ -109,11 +109,11 @@ extension ExperienceContent {
 
 internal extension String {
     /// Decodes supported content in the existing flow → survey → NPS order; callers take the first.
-    func experienceCandidates() -> [ExperienceContent] {
+    func experienceCandidates(logger: Logging? = nil) -> [ExperienceContent] {
         var contents: [ExperienceContent] = []
-        if let flow = toFlowContent()?.flowContent { contents.append(.flow(content: flow)) }
-        if let survey = toSurveyContent()?.surveyContent { contents.append(.survey(content: survey)) }
-        if let nps = toNPSContent()?.npsContent { contents.append(.nps(content: nps)) }
+        if let flow = toFlowContent(logger: logger)?.flowContent { contents.append(.flow(content: flow)) }
+        if let survey = toSurveyContent(logger: logger)?.surveyContent { contents.append(.survey(content: survey)) }
+        if let nps = toNPSContent(logger: logger)?.npsContent { contents.append(.nps(content: nps)) }
         return contents
     }
 }
