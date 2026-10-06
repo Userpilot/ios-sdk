@@ -159,6 +159,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private var sdkEvents: [SDKSend] = []
     private var inFlight: InFlight?
     private var closing: CloseReason?
+    /// Screen-session flag retained across same-screen refreshes, independently of identify/ACK state.
     private var startSession = true
     private var screen: ScreenSessionStateMachine?
 
@@ -520,6 +521,7 @@ extension AnalyticsPublisher {
             }
         }
         let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+        // Retain a switch's override after its screen ACK; only later navigation/resume/reset changes it.
         startSession = screenConfig.startSession
         publishReadState()
         let metadata: [String: Any] = [

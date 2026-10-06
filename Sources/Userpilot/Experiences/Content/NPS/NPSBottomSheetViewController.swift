@@ -24,13 +24,13 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions
-    internal let npsViewModel: NPSViewModeling
+    internal let npsViewModel: NPSViewModel
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     /// - Parameter experienceViewModel: The view model to bind with the dialog.
-    init(npsViewModel: NPSViewModeling) {
+    init(npsViewModel: NPSViewModel) {
         self.npsViewModel = npsViewModel
         super.init(nibName: nil, bundle: nil)
     }

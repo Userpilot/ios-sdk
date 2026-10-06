@@ -17,9 +17,13 @@ import UIKit
 internal enum PushNotificationAutoConfig {
     // Monitor callbacks run outside this lock: handling a response may initialize another SDK instance.
     private static let lock = NSLock()
+    /// Instances own their monitors. Weak storage allows instance teardown, while registering the
+    /// same monitor again does not add another recipient for APNs token callbacks.
     private static let pushNotificationMonitors = NSHashTable<AnyObject>.weakObjects()
 
     /// Hybrid runtimes may initialize the SDK after a notification tap reaches the native delegate.
+    /// Keep the unclaimed tap until its monitor registers; looking up only existing instances here
+    /// would lose cold-start taps in Flutter, React Native and Capacitor hosts.
     private static var pendingResponse: UNNotificationResponse?
 
     /// Adds a weak, identity-deduplicated observer and offers it the unclaimed cold-start response.
@@ -32,6 +36,8 @@ internal enum PushNotificationAutoConfig {
     }
 
     /// A rejected response remains available for its owning instance to register later.
+    /// Monitors validate the account and user themselves. Clearing after any registration would let
+    /// an unrelated instance consume the tap before the matching instance has finished starting.
     /// Identity checking prevents a replay from clearing a newer response cached by a callback.
     private static func replay(_ response: UNNotificationResponse, to observer: PushNotificationMonitoring) {
         guard observer.didReceiveNotification(response: response, completionHandler: {}) else { return }
@@ -62,6 +68,7 @@ internal enum PushNotificationAutoConfig {
 
     /// Offers the response until one monitor claims it. Only that monitor invokes the OS completion.
     /// If none claims it, complete now and cache the tap; replay uses an empty completion.
+    /// Continuing after a claim, or reusing the OS completion during replay, would call it twice.
     static func didReceive(
         _ response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void

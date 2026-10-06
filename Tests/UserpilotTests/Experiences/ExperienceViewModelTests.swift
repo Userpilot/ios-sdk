@@ -133,6 +133,40 @@ final class ExperienceViewModelTests: XCTestCase {
         XCTAssertTrue(didFinishDismissing)
     }
 
+    func testStepChangeReportsOutgoingIDToDelegateAndBackend() {
+        let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 101), Self.makeStep(id: 102)])
+        let delegate = FlowStepDelegate()
+        var events: [SDKEvent] = []
+        userpilot.experienceDelegate = delegate
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
+        userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
+        viewModel.onStart()
+
+        viewModel.onStepChanged(1)
+
+        XCTAssertEqual(delegate.states, [.completed, .started])
+        XCTAssertEqual(delegate.stepIDs, [101, 102])
+        XCTAssertEqual(delegate.positions, [1, 2])
+        XCTAssertEqual(events.map { $0.eventPayload["step_id"] as? Int }, [101, 102])
+    }
+
+    func testBackNavigationUpdatesVisibleStepWithoutReplayingEngagement() {
+        let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 101), Self.makeStep(id: 102)])
+        var events: [SDKEvent] = []
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
+        userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
+        viewModel.onStart()
+        viewModel.onStepChanged(1)
+        events.removeAll()
+
+        viewModel.onStepChanged(0)
+        XCTAssertEqual(viewModel.currentStep, 0)
+        XCTAssertTrue(events.isEmpty)
+        viewModel.onDismissStep()
+
+        XCTAssertEqual(events.last?.eventPayload["step_id"] as? Int, 102)
+    }
+
     private static func makeFlowContent(
         type: ContentType = .carousel,
         localeCode: String = "en",
@@ -157,5 +191,31 @@ final class ExperienceViewModelTests: XCTestCase {
             buttonAction: ButtonAction(buttonAction: "next", deepLink: deepLink),
             mobileTheme: ExperienceTheme()
         )
+    }
+}
+
+private final class FlowStepDelegate: UserpilotExperienceDelegate {
+    var states: [UserpilotExperienceState] = []
+    var stepIDs: [Int] = []
+    var positions: [Int?] = []
+
+    func onExperienceStateChanged(
+        experienceType: UserpilotExperienceType,
+        experienceId: NSNumber?,
+        experienceState: UserpilotExperienceState
+    ) {}
+
+    // swiftlint:disable:next function_parameter_count
+    func onExperienceStepStateChanged(
+        experienceType: UserpilotExperienceType,
+        experienceId: NSNumber,
+        stepId: NSNumber,
+        stepState: UserpilotExperienceState,
+        step: NSNumber?,
+        totalSteps: NSNumber?
+    ) {
+        states.append(stepState)
+        stepIDs.append(stepId.intValue)
+        positions.append(step?.intValue)
     }
 }

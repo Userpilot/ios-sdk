@@ -22,7 +22,7 @@ same process**. The most common reason to need this is the "vendor SDK" pattern:
 | --- | --- |
 | Single instance (host app only) | `Userpilot(config:)` — `isDefault` defaults to `true`, so the host claims default automatically |
 | Vendor SDK that embeds Userpilot | `Userpilot(config:)` inside the vendor's facade with `.defaultInstance(false)` |
-| Re-initialise idempotently | `Userpilot(config:)` again — returns the existing instance for the same token |
+| Re-initialise idempotently | `Userpilot(config:)` again — shares the existing instance’s configuration, services and weak delegates for the same token |
 
 `Userpilot.Config.isDefault` defaults to **`true`**. The host application does not
 need to call `.defaultInstance(true)` — a plain `Userpilot.Config(token:)` already
@@ -33,8 +33,8 @@ The two SDK initialisation factories that used to exist on iOS
 (`Userpilot(config:)` and `Userpilot.create(config:)`) have been collapsed
 into a single `Userpilot(config:)`. Because `isDefault` defaults to `true`,
 an instance claims the default role on registration when the role is unclaimed.
-Subsequent calls with the same token return the existing instance instead of
-replacing it. A second instance with a **different** token that also leaves
+Subsequent calls with the same token create a facade that retains and shares the
+existing owner instead of replacing it. A second instance with a **different** token that also leaves
 `isDefault` at its default cannot displace an existing claimant — the SDK
 logs a warning and un-anchored events keep routing to whoever already holds
 the role.
@@ -100,7 +100,7 @@ No `.defaultInstance(true)` is required — `isDefault` already defaults to
 
 If you ship an SDK that uses Userpilot internally, initialise with
 `Userpilot(config:)` from inside your SDK. The factory is **idempotent**, so
-re-calls with the same token return the existing instance instead of replacing
+re-calls with the same token reuse the existing owner instead of replacing
 the host app's default.
 
 ```swift
@@ -322,8 +322,12 @@ default (or explicitly `.defaultInstance(true)`) to reclaim the role.
 
 ## Idempotent initialisation
 
-`Userpilot(config:)` is a "get-or-create" factory. Calling it twice for the
-same token returns the same instance. The `isDefault` flag on a repeat call
+`Userpilot(config:)` uses one service container per token. Swift initializers create
+distinct facade objects, so a repeat call retains the original owner and shares its
+configuration, services, presentation window and weak delegates. Assigning a delegate
+through either facade replaces that token’s delegate; neither facade retains the delegate.
+The original owner remains available until its last facade is released.
+Concurrent initializers start the services only once. The `isDefault` flag on a repeat call
 is ignored when the instance already exists — the original default claim (or
 lack thereof) is preserved:
 

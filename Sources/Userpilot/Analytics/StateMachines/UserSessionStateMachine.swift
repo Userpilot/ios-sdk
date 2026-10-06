@@ -10,12 +10,18 @@
 
 import Foundation
 
-/// Context retained until a screen ACK or a background refresh settles the session.
+/// Tracks why a screen is due. The publisher owns `startSession` separately: acknowledging
+/// the first screen settles this context without ending that screen's session-start status.
 internal enum UserSessionState {
+    /// No identification-driven screen is pending; same-screen refreshes retain the session-start flag.
     case normal
+    /// A different user was selected. Its identify and first screen must cross the identity boundary.
     case userSwitching
+    /// Initial or ordinary identification awaits a screen, generated only after earlier work drains.
     case awaitingInitialScreen
+    /// The new user's identify was prepared; its first screen must still start a real session.
     case userSwitchingAwaitingScreen
+    /// Background work was handed off. Returning to foreground requests a real current-screen refresh.
     case backgroundToInitialScreen
 }
 
@@ -33,7 +39,9 @@ internal protocol UserSessionStateManaging: AnyObject {
         -> UserSessionStateMachine.PostIdentificationScreenConfig
 }
 
-/// Owns session context, not the analytics queue or the current screen.
+/// Owns identification/background context, not the queue, current screen or `startSession` flag.
+/// Screen navigation, logout/reset and elapsed background time belong to the publisher;
+/// this state machine only overrides session-start while a user switch awaits its first screen.
 /// Atomic reads and transitions allow lifecycle and analytics work to share the state safely.
 /// The read-modify-write in `markAwaitingInitialScreen` must stay one atomic operation.
 internal final class UserSessionStateMachine: UserSessionStateManaging {
@@ -53,6 +61,7 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
     }
 
     /// A screen ACK, or consuming the pending background refresh, settles session context.
+    /// This does not clear the publisher's session-start flag; later navigation/resume decides that.
     func markNormal() {
         state.value = .normal
         logger.info("📝 User session state: Normal")
@@ -70,7 +79,9 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
         logger.info("📝 User session state: UserSwitching")
     }
 
-    /// Preparing identify preserves a pending switch; other states begin ordinary identification.
+    /// Preparing identify directly after `markUserSwitch` preserves the new-user first-screen rule.
+    /// Every other state starts ordinary identification, including another identify prepared while
+    /// already awaiting the switching user's screen. Keep this existing repeated-identify behavior.
     /// Logging stays outside the atomic update so logger callbacks cannot re-enter the state lock.
     func markAwaitingInitialScreen() {
         let newState = state.update { current in
@@ -91,6 +102,8 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
 
     /// Resolve both flags from one state snapshot. A user switch starts a real screen session;
     /// ordinary identification refreshes content and preserves the publisher's start-session flag.
+    /// The publisher retains the resolved flag when building a screen payload, so the following
+    /// same-screen refresh still carries it after the screen ACK moves this state to `normal`.
     func getPostIdentificationScreenConfig(currentStartSession: Bool) -> PostIdentificationScreenConfig {
         let isUserSwitch = state.value.isUserSwitching()
         return PostIdentificationScreenConfig(

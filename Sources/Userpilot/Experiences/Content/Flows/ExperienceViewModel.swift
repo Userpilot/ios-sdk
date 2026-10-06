@@ -7,36 +7,15 @@
 //
 //  This class is responsible for managing the state and interactions of the carousel experience.
 //  It integrates with various dependencies such as the experiences publisher, theme handler,
-//  and storage to handle the experience flow, including data retrieval, theme merging, and
+//  to handle the experience flow, including data retrieval, theme merging, and
 //  sending analytics events through socket requests.
 //
 
 import Foundation
 
-/// Flow state and lifecycle actions consumed by carousel and slide-out renderers.
-/// UIKit callbacks own these calls; only completed dismissal releases the publisher's renderer.
-protocol ExperienceViewModeling: AnyObject {
-    var imageLoader: ImageLoading { get }
-    var carouselTheme: [ExperienceTheme] { get }
-    var slideOutTheme: ExperienceTheme { get }
-    var flowContent: FlowContent? { get }
-    var slideOutContent: Step? { get }
-    var currentStep: Int { get }
-    var bindData: ((Bool) -> Void)? { get set }
-    var isRTL: Bool { get }
-    var carouselStepsCount: Int { get }
-
-    func onStart()
-    func onExperienceSeen()
-    func onExperienceCompleted()
-    func onStepChanged(_ step: Int)
-    func onDismissStep()
-    func onDeepLinkTriggered()
-    func onExperienceDismissalCompleted()
-}
-
 /// Prepares flow content and reports engagement in the renderer's existing callback order.
-internal class ExperienceViewModel: ExperienceViewModeling {
+/// UIKit callbacks own these calls; only completed dismissal releases the publisher's renderer.
+internal class ExperienceViewModel {
 
     // MARK: - Properties
 
@@ -45,7 +24,6 @@ internal class ExperienceViewModel: ExperienceViewModeling {
     private let experiencesPublisher: ExperiencesPublishing
     private let rendererID: UUID?
     private let themeHandler: ThemeHandling
-    private let storage: DataStoring
     private let logger: Logging
     let imageLoader: ImageLoading
 
@@ -64,9 +42,9 @@ internal class ExperienceViewModel: ExperienceViewModeling {
         flowContent?.steps.first
     }
 
-    /// Track current & last step user achieved - used in carousel content
+    /// Visible position may move backward; engagement advances only beyond the furthest step.
     private(set) var currentStep = 0
-    private var lastStep = 0
+    private var furthestStep = 0
 
     /// closure to observe the binding state of the content
     var bindData: ((Bool) -> Void)?
@@ -80,7 +58,6 @@ internal class ExperienceViewModel: ExperienceViewModeling {
         self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
         self.rendererID = experiencesPublisher.activeRendererID
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.storage = container.resolve(DataStoring.self)
         self.logger = container.resolve(Userpilot.Config.self).logger
         self.imageLoader = container.resolve(ImageLoading.self)
     }
@@ -195,8 +172,8 @@ internal class ExperienceViewModel: ExperienceViewModeling {
      */
     func onStepChanged(_ step: Int) {
         currentStep = step
-        guard step > lastStep else { return }
-        lastStep = step
+        guard step > furthestStep else { return }
+        furthestStep = step
 
         guard
             let flowContent,
@@ -204,8 +181,8 @@ internal class ExperienceViewModel: ExperienceViewModeling {
             let oldStep = flowContent.steps[safe: step - 1]
         else { return }
 
-        // Preserve the existing delegate/log ID; the completion event below uses the outgoing step.
-        notifyStepState(.completed, stepId: currentStep.id, step: step, content: flowContent)
+        // The completed callback and event both refer to the step the user just left.
+        notifyStepState(.completed, stepId: oldStep.id, step: step, content: flowContent)
 
         notifyStepState(.started, stepId: currentStep.id, step: step + 1, content: flowContent)
 
@@ -224,10 +201,10 @@ internal class ExperienceViewModel: ExperienceViewModeling {
     func onDismissStep() {
         guard
             let flowContent,
-            let step = flowContent.steps[safe: lastStep]
+            let step = flowContent.steps[safe: furthestStep]
         else { return }
 
-        notifyStepState(.dismissed, stepId: step.id, step: lastStep + 1, content: flowContent)
+        notifyStepState(.dismissed, stepId: step.id, step: furthestStep + 1, content: flowContent)
 
         notifyExperienceState(.dismissed, content: flowContent)
 

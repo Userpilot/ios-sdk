@@ -14,6 +14,8 @@
 import UIKit
 
 internal extension UIApplication {
+    /// Hooks the host's actual delegate class, including apps that omit the optional APNs callback.
+    /// `Swizzler` keeps repeated SDK-instance setup from exchanging the same callback twice.
     static func swizzleDidRegisterForDeviceToken() {
         guard let appDelegateInstance = UIApplication.shared.delegate else { return }
 
@@ -33,8 +35,7 @@ internal extension UIApplication {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        // this gives swizzling something to replace, if the existing delegate doesn't already
-        // implement this function.
+        // A host without this optional callback still needs a valid forwarding target after exchange.
     }
 
     @objc
@@ -44,7 +45,8 @@ internal extension UIApplication {
     ) {
         PushNotificationAutoConfig.didRegister(deviceToken: deviceToken)
 
-        // Also call the original implementation
+        // After exchange this selector points to the host's implementation (or the placeholder).
+        // It looks recursive, but preserves the host's APNs token callback after SDK delivery.
         userpilot__applicationDidRegisterForRemoteNotificationsWithDeviceToken(
             application,
             didRegisterForRemoteNotificationsWithDeviceToken: deviceToken

@@ -28,13 +28,13 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions
-    internal let surveyViewModel: SurveyViewModeling
+    internal let surveyViewModel: SurveyViewModel
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     /// - Parameter experienceViewModel: The view model to bind with the dialog.
-    init(surveyViewModel: SurveyViewModeling) {
+    init(surveyViewModel: SurveyViewModel) {
         self.surveyViewModel = surveyViewModel
         super.init(nibName: nil, bundle: nil)
     }

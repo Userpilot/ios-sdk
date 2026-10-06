@@ -185,7 +185,8 @@ internal class Storage: DataStoring {
             defaults.removeObject(forKey: key.rawValue)
         }
 
-        defaults.synchronize()
+        // UserDefaults makes writes visible immediately and manages disk persistence itself.
+        // Avoid blocking every analytics/session write with an unnecessary forced flush.
     }
 }
 

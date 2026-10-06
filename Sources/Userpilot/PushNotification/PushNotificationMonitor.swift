@@ -134,7 +134,8 @@ internal class PushNotificationMonitor: PushNotificationMonitoring, SocketSubscr
         _ message: Message,
         _ status: Bool
     ) {
-        if eventName == SDKEventsName.pushNotificationToken.rawValue {
+        // Failed delivery must leave the cached APNs token eligible for the next socket-open retry.
+        if status && eventName == SDKEventsName.pushNotificationToken.rawValue {
             storage.pushToken = payload?["token"] as? String
         }
     }

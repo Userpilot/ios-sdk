@@ -40,13 +40,13 @@ internal class CarouselExperienceViewController: UIViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions.
-    internal let experienceViewModel: ExperienceViewModeling
+    internal let experienceViewModel: ExperienceViewModel
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
-    init(experienceViewModel: ExperienceViewModeling) {
+    init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: "CarouselExperienceViewController", bundle: Userpilot.resourceBundle)
     }

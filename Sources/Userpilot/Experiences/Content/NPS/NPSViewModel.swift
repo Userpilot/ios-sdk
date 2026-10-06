@@ -11,24 +11,8 @@
 
 import Foundation
 
-/// Renderer-facing NPS state and actions. UIKit owns presentation and dismissal completion.
-protocol NPSViewModeling: AnyObject {
-    var npsTheme: NPSTheme? { get }
-    var npsContent: NPSContent? { get }
-    var imageLoader: ImageLoading { get }
-    var isRTL: Bool { get }
-    var bindData: ((Bool) -> Void)? { get set }
-
-    func onStart()
-    func onExperienceSeen()
-    func onExperienceDismissalCompleted()
-    func onNPSDismissed()
-    func onNPSSubmitted(_ userAnswer: Int, _ userFollowUpKey: String, _ userFollowUp: String)
-    func endNPS(_ completedData: CompletedData?)
-}
-
 /// Prepares NPS content and reports answers for one renderer using its existing main-thread callbacks.
-final class NPSViewModel: NPSViewModeling {
+final class NPSViewModel {
 
     // MARK: - Properties
 
@@ -123,11 +107,11 @@ final class NPSViewModel: NPSViewModeling {
 
     /// Opens the configured completion link; dismissal remains owned by the renderer.
     func endNPS(_ completedData: CompletedData?) {
-        if completedData?.button.buttonAction == .deepLink,
-           let deepLink = completedData?.button.iosDeepLink,
-           let url = URL(string: deepLink) {
-            experiencesPublisher.triggerDeepLink(url: url)
-        }
+        guard let button = completedData?.button,
+              button.buttonAction == .deepLink,
+              let deepLink = button.iosDeepLink,
+              let url = URL(string: deepLink) else { return }
+        experiencesPublisher.triggerDeepLink(url: url)
     }
 
     /// Notify the publisher after the NPS view has finished dismissing.
