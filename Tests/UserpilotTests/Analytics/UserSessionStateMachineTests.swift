@@ -60,13 +60,14 @@ final class UserSessionStateMachineTests: XCTestCase {
         XCTAssertEqual(sessions.getCurrentState(), .normal)
     }
 
-    func testRepeatedIdentifyRetainsExistingOrdinaryIdentificationBehavior() {
+    func testRepeatedIdentifyPreservesPendingSessionStart() {
         sessions.markUserSwitch()
         sessions.markAwaitingInitialScreen()
         sessions.markAwaitingInitialScreen()
 
-        XCTAssertEqual(sessions.getCurrentState(), .awaitingInitialScreen)
-        XCTAssertFalse(sessions.isUserSwitching())
+        XCTAssertEqual(sessions.getCurrentState(), .userSwitchingAwaitingScreen)
+        XCTAssertTrue(sessions.isUserSwitching())
+        XCTAssertTrue(sessions.getPostIdentificationScreenConfig(currentStartSession: false).startSession)
     }
 
     func testBackgroundRefreshIsSeparateFromInitialScreenContext() {
@@ -133,11 +134,16 @@ final class UserSessionStateMachineTests: XCTestCase {
         sessions.markAwaitingInitialScreen()
         sessions.markAwaitingInitialScreen()
 
+        sessions.markNormal()
+        sessions.markAwaitingInitialScreen()
+
         XCTAssertEqual(logger.loggedInfos, [
             "📝 User session state: Normal",
             "📝 User session state: BackgroundToInitialScreen",
             "📝 User session state: UserSwitching",
             "📝 User session state: UserSwitchingAwaitingScreen",
+            "📝 User session state: UserSwitchingAwaitingScreen",
+            "📝 User session state: Normal",
             "📝 User session state: AwaitingInitialScreen"
         ])
     }

@@ -79,13 +79,12 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
         logger.info("📝 User session state: UserSwitching")
     }
 
-    /// Preparing identify directly after `markUserSwitch` preserves the new-user first-screen rule.
-    /// Every other state starts ordinary identification, including another identify prepared while
-    /// already awaiting the switching user's screen. Keep this existing repeated-identify behavior.
+    /// Repeated identifies preserve a pending logout/user-switch boundary until its screen ACK.
+    /// Otherwise identify requests a screen refresh without changing the publisher's session-start flag.
     /// Logging stays outside the atomic update so logger callbacks cannot re-enter the state lock.
     func markAwaitingInitialScreen() {
         let newState = state.update { current in
-            current == .userSwitching ? .userSwitchingAwaitingScreen : .awaitingInitialScreen
+            current.isUserSwitching() ? .userSwitchingAwaitingScreen : .awaitingInitialScreen
         }
         logger.info("📝 User session state: %@", String(describing: newState))
     }
