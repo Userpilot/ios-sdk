@@ -42,20 +42,8 @@ internal extension UITableViewCell {
             payload.row = indexPath.row
         }
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.hierarchy = path
-        if let userpilotLabel = (touchedView ?? self).resolveUserpilotLabel() {
-            if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
-                payload.targetClass = labelViewType
-            }
-            payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
-        } else if effectiveView !== self {
-            payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = effectiveView.ignoreInnerHierarchyTextPlaceholder()
-        } else {
-            payload.elementText = userpilotResolvedCellText(touchedView: touchedView)
-            payload.accessibilityIdentifier = accessibilityIdentifier
-            payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
+        completeListInteractionPayload(&payload, touchedView: touchedView) {
+            userpilotResolvedCellText(touchedView: touchedView)
         }
 
         // Send to the owning instance's engine
@@ -92,14 +80,7 @@ internal extension UITableViewCell {
 
     /// Finds the parent UITableView
     private func findParentTableView() -> UITableView? {
-        var currentView: UIView? = superview
-        while let view = currentView {
-            if let tableView = view as? UITableView {
-                return tableView
-            }
-            currentView = view.superview
-        }
-        return nil
+        superview?.firstAncestor(of: UITableView.self)
     }
 
     /// The cell's own title, together with the view that owns it.

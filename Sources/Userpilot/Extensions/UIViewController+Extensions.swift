@@ -147,24 +147,9 @@ internal extension UIViewController {
 
     private func buildScreenTrackingPayload(config: Userpilot.Config) -> ScreenTrackingPayload {
 
-        if let alert = self as? UIAlertController {
-            let dialogText = alert.userpilotDialogText()
-            var payload = ScreenTrackingPayload(
-                currentScreen: resolvedScreenNameForCapture(),
-                screenClass: screenClassName,
-                screenType: screenType,
-                navigationTitle: config.enableScreenTitleCapture ? resolveNavigationTitle() : nil,
-                isUserpilotContainerClass: type(of: self).isUserpilotContainerClass,
-                vcAccessibilityIdentifier: view.accessibilityIdentifier,
-                vcAccessibilityLabel: view.accessibilityLabel,
-                isDialogPresentation: true,
-                alertTitle: dialogText.title,
-                alertMessage: dialogText.message
-            )
-            payload.appFramework = config.appFramework
-            return payload
-        }
-
+        // Read alert text first: its privacy checks precede the ordinary screen metadata reads.
+        let alert = self as? UIAlertController
+        let dialogText = alert?.userpilotDialogText()
         var payload = ScreenTrackingPayload(
             currentScreen: resolvedScreenNameForCapture(),
             screenClass: screenClassName,
@@ -172,7 +157,10 @@ internal extension UIViewController {
             navigationTitle: config.enableScreenTitleCapture ? resolveNavigationTitle() : nil,
             isUserpilotContainerClass: type(of: self).isUserpilotContainerClass,
             vcAccessibilityIdentifier: view.accessibilityIdentifier,
-            vcAccessibilityLabel: view.accessibilityLabel
+            vcAccessibilityLabel: view.accessibilityLabel,
+            isDialogPresentation: alert != nil,
+            alertTitle: dialogText?.title,
+            alertMessage: dialogText?.message
         )
         payload.appFramework = config.appFramework
         return payload

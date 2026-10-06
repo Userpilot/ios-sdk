@@ -8,6 +8,8 @@
 //  Defines automatically captured interaction kinds and their payload names.
 //
 
+import Foundation
+
 /// Defines the types of interactions that can be automatically captured.
 internal enum InteractionType: String {
     /// Touch/tap on any UIControl (buttons, switches, etc.)
@@ -110,5 +112,35 @@ extension InteractionType {
         case .viewPresented:
             return .viewPresented
         }
+    }
+}
+
+// MARK: - Tab properties
+
+extension InteractionType {
+    /// Builds the native tab fields and shallow hierarchy from the coordinator's captured screen.
+    /// A blank content-controller leaf omits hierarchy; the tracked screen alone is not substituted.
+    func buildTabProperties(
+        name tabName: String,
+        index tabIndex: Int,
+        screenClass: String,
+        screen: ScreenTrackingPayload?,
+        framework: Userpilot.AppFramework?
+    ) -> [String: Any] {
+        var properties: [String: Any] = [
+            Constants.AutoCapture.tabName: tabName,
+            Constants.AutoCapture.tabIndex: tabIndex
+        ]
+        let internalProps = buildInternalProperties(framework: framework)
+        properties.merge(internalProps) { (_, new) in new }
+
+        // Tabs keep their shallow content-controller leaf followed by the tracked screen.
+        let leaf = screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !leaf.isEmpty {
+            let escaped = leaf.replacingOccurrences(of: "\"", with: "\\\"")
+            let hierarchy = "\(escaped):attr__index=\"\(tabIndex)\""
+            properties[Constants.AutoCapture.hierarchy] = screen?.buildHierarchyPath(hierarchy) ?? hierarchy
+        }
+        return properties
     }
 }

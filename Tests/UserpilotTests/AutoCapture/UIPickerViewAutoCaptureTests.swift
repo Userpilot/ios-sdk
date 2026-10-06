@@ -36,4 +36,55 @@ final class UIPickerViewAutoCaptureTests: XCTestCase {
 
         XCTAssertEqual(UIPickerView.userpilotExtractPickerRowText(from: rowView), "Pineapple")
     }
+
+    func testSelectedTitlePrefersDelegateTitleWithoutReadingLaterFallbacks() {
+        let picker = UIPickerView()
+        let delegate = PickerTitleDelegate()
+        delegate.title = " Banana "
+        delegate.attributedTitle = "Orange"
+        picker.delegate = delegate
+
+        XCTAssertEqual(picker.userpilotResolvedSelectedTitle(forRow: 0, component: 0), "Banana")
+        XCTAssertEqual(delegate.reads, ["title"])
+    }
+
+    func testSelectedTitleFallsBackFromBlankTitleToAttributedTitle() {
+        let picker = UIPickerView()
+        let delegate = PickerTitleDelegate()
+        delegate.title = " \n "
+        delegate.attributedTitle = " Orange "
+        picker.delegate = delegate
+
+        XCTAssertEqual(picker.userpilotResolvedSelectedTitle(forRow: 0, component: 0), "Orange")
+        XCTAssertEqual(delegate.reads, ["title", "attributed"])
+    }
+
+    func testRowTextPrefersNativeTextBeforeAccessibilityAndDescendants() {
+        let row = UILabel()
+        row.text = "Native"
+        row.accessibilityLabel = "Accessibility"
+        let child = UILabel()
+        child.text = "Child"
+        row.addSubview(child)
+
+        XCTAssertEqual(UIPickerView.userpilotExtractPickerRowText(from: row), "Native")
+    }
+}
+
+private final class PickerTitleDelegate: NSObject, UIPickerViewDelegate {
+    var title: String?
+    var attributedTitle: String?
+    var reads: [String] = []
+
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        reads.append("title")
+        return title
+    }
+
+    func pickerView(
+        _ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int
+    ) -> NSAttributedString? {
+        reads.append("attributed")
+        return attributedTitle.map(NSAttributedString.init(string:))
+    }
 }

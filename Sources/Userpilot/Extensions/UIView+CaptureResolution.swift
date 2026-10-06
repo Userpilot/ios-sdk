@@ -266,3 +266,114 @@ internal extension UIView {
         return label
     }
 }
+
+internal extension UIView {
+    /// Shares list identity/label finalization; the fallback stays lazy so each cell reads text
+    /// only after the same label and ignored-inner-hierarchy checks as before.
+    func completeListInteractionPayload(
+        _ payload: inout InteractionPayload,
+        touchedView: UIView?,
+        resolveCellText: () -> String?
+    ) {
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        payload.hierarchy = path
+        if let userpilotLabel = (touchedView ?? self).resolveUserpilotLabel() {
+            if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
+                payload.targetClass = labelViewType
+            }
+            payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
+        } else if effectiveView !== self {
+            payload.targetClass = String(describing: type(of: effectiveView))
+            payload.elementText = effectiveView.ignoreInnerHierarchyTextPlaceholder()
+        } else {
+            payload.elementText = resolveCellText()
+            payload.accessibilityIdentifier = accessibilityIdentifier
+            payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
+        }
+    }
+}
+
+internal extension UIView {
+    /// Reads action metadata after the sender-specific capture gates, preserving privacy read order.
+    func buildActionInteractionPayload(action: Selector, target: Any?) -> InteractionPayload {
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        let useRedactedInner = (effectiveView !== self)
+
+        var payload = InteractionPayload(
+            interactionType: .tap,
+            elementType: String(describing: type(of: effectiveView))
+        )
+        payload.targetAction = NSStringFromSelector(action)
+        if let target = target {
+            payload.ownerTargetClass = String(describing: type(of: target))
+        }
+        payload.hierarchy = path
+
+        if useRedactedInner {
+            payload.elementText = ignoreInnerHierarchyTextPlaceholder()
+        } else {
+            payload.elementText = getTextContent()
+            payload.accessibilityIdentifier = accessibilityIdentifier
+            payload.accessibilityLabel = getAccessibilityLabelContent()
+            payload.targetViewName = resolveReferenceName()
+        }
+
+        return payload
+    }
+}
+
+internal extension UIView {
+    /// Builds regular-window-tap properties after touch routing has excluded controls and list rows.
+    func buildWindowInteractionProperties(at point: CGPoint, in window: UIWindow) -> [String: Any] {
+        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
+        let useRedactedInner = (effectiveView !== self)
+
+        var eventProperties: [String: Any] = [
+            Constants.AutoCapture.targetClass: String(describing: type(of: effectiveView)),
+            Constants.AutoCapture.hierarchy: path
+        ]
+
+        if let capture = resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
+            if let labelViewType = capture.viewType {
+                eventProperties[Constants.AutoCapture.targetClass] = labelViewType
+            }
+            if let resolvedLabel = capture.labeledView.resolvedInteractionText(capture.label) {
+                eventProperties[Constants.AutoCapture.targetText] = resolvedLabel
+            }
+        } else if useRedactedInner {
+            if let placeholder = ignoreInnerHierarchyTextPlaceholder() {
+                eventProperties[Constants.AutoCapture.targetText] = placeholder
+            }
+        } else {
+            if let accessibilityIdentifier = accessibilityIdentifier, !accessibilityIdentifier.isEmpty {
+                eventProperties[Constants.AutoCapture.accessibilityIdentifier] = accessibilityIdentifier
+            }
+            if let accessibilityLabel = getAccessibilityLabelContent() {
+                eventProperties[Constants.AutoCapture.accessibilityLabel] = accessibilityLabel
+            }
+            if let text = sectionContainerText() ?? getTextContent() {
+                eventProperties[Constants.AutoCapture.targetText] = text
+            }
+        }
+
+        return eventProperties
+    }
+
+    /// Text for a tap that landed inside a table section header/footer or a collection
+    /// supplementary view.
+    ///
+    /// These are single logical elements like rows are, so the container's own text is published
+    /// rather than whichever leaf the finger hit — the same rule
+    /// ``UITableViewCell/userpilotResolvedCellText(touchedView:)`` applies to cells. Returns `nil`
+    /// for taps outside such a container, leaving the regular leaf resolution in place.
+    private func sectionContainerText() -> String? {
+        if let headerFooter = findParentTableViewHeaderFooter() {
+            return headerFooter.userpilotResolvedHeaderFooterText(touchedView: self)
+        }
+        if let reusable = findParentCollectionReusableView() {
+            return reusable.userpilotResolvedSupplementaryText(touchedView: self)
+        }
+        return nil
+    }
+
+}

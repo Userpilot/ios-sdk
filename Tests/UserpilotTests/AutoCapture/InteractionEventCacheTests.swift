@@ -158,15 +158,13 @@ final class InteractionEventCacheTests: XCTestCase {
     }
 
     func testPendingInteractionDoesNotRetainItsSource() {
-        var view: UIView? = UIView()
-        weak var source = view
-        let pending = PendingInteraction(
-            payload: textPayload(length: 1), textLengthForDedupe: 1, debounceKey: "test", source: view
-        )
+        let pending = autoreleasepool {
+            let view = UIView()
+            return PendingInteraction(
+                payload: textPayload(length: 1), textLengthForDedupe: 1, debounceKey: "test", source: view
+            )
+        }
 
-        view = nil
-
-        XCTAssertNil(source)
         XCTAssertNil(pending.source)
     }
 }
