@@ -135,14 +135,14 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private let config: Userpilot.Config
     private let logger: Logging
     private let storage: DataStoring
-    private let socket: SocketManaging
-    private let offline: OfflineEventsHandling
-    private let network: NetworkMonitoring
-    private let sessions: UserSessionStateManaging
-    private let screenTracker: ScreenNameTracking
+    private let socketManager: SocketManaging
+    private let offlineEventsHandler: OfflineEventsHandling
+    private let networkMonitor: NetworkMonitoring
+    private let userSessionStateMachine: UserSessionStateManaging
+    private let screenNameTracker: ScreenNameTracking
 
     // Resolve circular dependencies only after initialization/registration has completed.
-    private var experiences: ExperiencesPublishing? { container?.resolve(ExperiencesPublishing.self) }
+    private var experiencesPublisher: ExperiencesPublishing? { container?.resolve(ExperiencesPublishing.self) }
     private var sessionMonitor: SessionMonitoring? { container?.resolve(SessionMonitoring.self) }
 
     // A dedicated serial instance; the existing event-queue label does not share queue ownership.
@@ -159,8 +159,6 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private var sdkEvents: [SDKSend] = []
     private var inFlight: InFlight?
     private var closing: CloseReason?
-    /// Session-start metadata, consumed by a successful screen ACK and reset at session boundaries.
-    private var startSession = true
     private var screen: ScreenSessionStateMachine?
 
     /// Restores a pending identify snapshot and subscribes once to this instance's socket and network monitor.
@@ -171,11 +169,11 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
         self.config = config
         self.logger = config.logger
         self.storage = container.resolve(DataStoring.self)
-        self.socket = container.resolve(SocketManaging.self)
-        self.offline = container.resolve(OfflineEventsHandling.self)
-        self.network = container.resolve(NetworkMonitoring.self)
-        self.sessions = container.resolve(UserSessionStateManaging.self)
-        self.screenTracker = container.resolve(ScreenNameTracking.self)
+        self.socketManager = container.resolve(SocketManaging.self)
+        self.offlineEventsHandler = container.resolve(OfflineEventsHandling.self)
+        self.networkMonitor = container.resolve(NetworkMonitoring.self)
+        self.userSessionStateMachine = container.resolve(UserSessionStateManaging.self)
+        self.screenNameTracker = container.resolve(ScreenNameTracking.self)
         queue.setSpecific(key: queueKey, value: true)
 
         if let saved = storage.temporaryUser {
@@ -184,8 +182,8 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
                 type: .identify(user.userId), properties: user.properties, company: user.company
             )))
         }
-        socket.registerCallback(self)
-        network.delegate = self
+        socketManager.registerCallback(self)
+        networkMonitor.delegate = self
     }
 
     // MARK: - Ownership and synchronous queries
@@ -211,10 +209,10 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
 
     /// Protects replacement of the screen reference. That object separately serializes its sets.
     private func publishReadState() {
-        reads.value = ReadState(startSession: startSession, screen: screen)
+        reads.value = ReadState(startSession: userSessionStateMachine.isStartSession, screen: screen)
     }
 
-    var canRequestEvent: Bool { socket.isSocketOpened } // SocketManaging exposes thread-safe readiness.
+    var canRequestEvent: Bool { socketManager.isSocketOpened } // SocketManaging exposes thread-safe readiness.
     var isStartSession: Bool { reads.value.startSession }
     var screenSessionStateMachine: ScreenSessionStateMachine? { reads.value.screen }
 
@@ -242,7 +240,7 @@ extension AnalyticsPublisher {
     /// Identify waits for admission so a following push-token call observes the newly selected user.
     func publish(_ event: Event) {
         // Navigation reaches experiences now; analytics screen state advances in FIFO order.
-        if event.isScreenEvent, event.isFakeReload == nil { experiences?.updateScreen(event) }
+        if event.isScreenEvent, event.isFakeReload == nil { experiencesPublisher?.updateScreen(event) }
         guard sessionMonitor?.isAppActive == true else { return }
         if event.isIdentifyEvent {
             withQueue { accept(event) }
@@ -253,13 +251,14 @@ extension AnalyticsPublisher {
 
     /// Select identity before routing; an identify during logout reuses the pending close.
     private func accept(_ event: Event) {
-        let switched = admitIdentity(event)
+        guard event.isIdentifyEvent || storage.userId.isNotEmpty else { return }
+        let switchedUser = admitIdentity(event)
         // A new login can arrive before the previous logout's transport finishes closing.
         // Retain its identify and let that existing close reconnect for the selected user.
         if event.isIdentifyEvent, event.userId?.isNotEmpty == true, closing == .logout {
             closing = .userSwitch
         }
-        route(event, switchedUser: switched)
+        route(event, switchedUser: switchedUser)
     }
 
     /// Identify deduplication belongs to the backend. A switch drops the previous user's work
@@ -268,7 +267,10 @@ extension AnalyticsPublisher {
         guard event.isIdentifyEvent else { return false }
         storage.temporaryUser = event.toUser().toJson()
         guard let id = event.userId, !id.isEmpty else { return false }
-        guard storage.userId.isNotEmpty, storage.userId != id else {
+        let previousUserId = storage.userId
+        if previousUserId.isEmpty || previousUserId == id {
+            // First identify starts a real screen session without old-user cleanup or socket teardown.
+            if previousUserId.isEmpty { userSessionStateMachine.beginSession() }
             storage.userId = id
             return false
         }
@@ -282,16 +284,18 @@ extension AnalyticsPublisher {
     /// Routing decides where an already-admitted event waits. Network recovery by itself never
     /// reconnects or replays; an accepted event, resume, or socket-open callback drives delivery.
     private func route(_ event: Event, switchedUser: Bool = false) {
-        if !network.isReady {
+        if !networkMonitor.isReady {
             initial.append(event)
             if switchedUser { close(.userSwitch) }
             return
         }
-        if offline.shouldSaveOffline {
-            if event.isScreenEvent, !setUpScreen(event), experiences?.canRequestScreenEvent() != true { return }
-            guard !rejectsAutocapture(event) else { return }
-            network.recheckIfOffline()
-            offline.saveEventToLocalStorage(event: event)
+        if offlineEventsHandler.shouldSaveOffline {
+            if event.isScreenEvent, !setUpScreen(event), experiencesPublisher?.canRequestScreenEvent() != true {
+                return
+            }
+            guard !rejectsAutoCaptureWithoutScreen(event) else { return }
+            networkMonitor.recheckIfOffline()
+            offlineEventsHandler.saveEventToLocalStorage(event: event)
             if switchedUser { close(.userSwitch) }
             return
         }
@@ -314,7 +318,9 @@ extension AnalyticsPublisher {
             // neither consume the throttle nor stand in for the required dismissal refresh.
             let precedingScreen = pending.last(where: { $0.event.isScreenEvent })?.event ?? screen?.event
             let changed = precedingScreen?.screenTitle != event.screenTitle
-            guard event.isFakeReload != nil || changed || experiences?.canRequestScreenEvent() == true else { return }
+            guard event.isFakeReload != nil || changed || experiencesPublisher?.canRequestScreenEvent() == true else {
+                return
+            }
             guard !throttle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") else { return }
         }
         if event.isTrackEvent {
@@ -324,7 +330,7 @@ extension AnalyticsPublisher {
     }
 
     /// Reject screenless autocapture in both live and offline routing.
-    private func rejectsAutocapture(_ event: Event) -> Bool {
+    private func rejectsAutoCaptureWithoutScreen(_ event: Event) -> Bool {
         guard event.type == .autoCaptureEvent, event.screen?.isEmpty ?? true else { return false }
         logger.error("❗ Event Error, Auto capture event must have screen")
         return true
@@ -340,10 +346,10 @@ extension AnalyticsPublisher {
     /// An empty queue simply returns: every producer runs on this queue and calls drain().
     private func drain() {
         while inFlight == nil, closing == nil, canRequestEvent {
-            if offline.hasCachedEvents {
+            if offlineEventsHandler.hasCachedEvents {
                 let restoreID = UUID()
                 inFlight = .restore(restoreID)
-                offline.restoreEventsFromLocalStorage { [weak self] in
+                offlineEventsHandler.restoreEventsFromLocalStorage { [weak self] in
                     self?.onQueue { publisher in
                         guard case .restore(let activeID) = publisher.inFlight, activeID == restoreID else { return }
                         publisher.inFlight = nil
@@ -355,8 +361,8 @@ extension AnalyticsPublisher {
 
             if pending.first?.event.isIdentifyEvent != true { drainSDKEvents() }
             guard let entry = pending.first else {
-                if sessions.getCurrentState() == .backgroundToInitialScreen {
-                    sessions.markNormal()
+                if userSessionStateMachine.getCurrentState() == .backgroundToInitialScreen {
+                    userSessionStateMachine.markNormal()
                     if admitReload(nil, nil, isFakeReload: false) { continue }
                 }
                 return
@@ -374,7 +380,7 @@ extension AnalyticsPublisher {
         let sent = Send(entry: entry, payload: payload)
         if awaitReply { inFlight = .analytics(sent) }
 
-        socket.publish(event.eventName, payload: payload, shouldSend: { !sent.isCancelled.value },
+        socketManager.publish(event.eventName, payload: payload, shouldSend: { !sent.isCancelled.value },
                        completion: { [weak self] _, success in
             if awaitReply { self?.didSend(sent, success: success) }
         })
@@ -382,29 +388,29 @@ extension AnalyticsPublisher {
             if event.isFakeReload == true {
                 suppressScreenAutocapture()
             } else {
-                broadcast(event, value: event.screenTitle ?? "", properties: nil)
+                broadcast(event, value: event.screenTitle ?? "", payload: nil)
             }
         } else if event.isTrackEvent {
-            broadcast(event, value: event.eventTitle, properties: payload)
+            broadcast(event, value: event.eventTitle, payload: payload)
         }
         return true
     }
 
     /// Builds an event's push payload, or nil when it must not be sent. Not pure: identify marks the
     /// session as awaiting its first screen; screens replace the analytics screen session,
-    /// drain SDK events, and settle `startSession`. Experience navigation was reported at admission.
+    /// drain SDK events, and ask the session state machine for flags. Navigation was reported at admission.
     private func preparePayload(for event: Event) -> [String: Any]? {
         switch event.type {
         case .identify:
             guard event.userId != nil else { return nil }
-            sessions.markAwaitingInitialScreen()
+            userSessionStateMachine.markAwaitingInitialScreen()
             return event.identifyPayload()
         case .screen:
             // Admission already reserved this screen's place. Do not reject it again during send.
             setUpScreen(event)
             return screenPayload(isFakeReload: event.isFakeReload ?? false)
         case .event, .autoCaptureEvent:
-            guard !rejectsAutocapture(event) else { return nil }
+            guard !rejectsAutoCaptureWithoutScreen(event) else { return nil }
             return event.trackPayload()
         }
     }
@@ -432,16 +438,15 @@ extension AnalyticsPublisher {
         let event = sent.entry.event
         if event.isIdentifyEvent, event.userId == storage.userId {
             storage.temporaryUser = nil
-            broadcast(event, value: event.userId ?? "", properties: sent.payload)
+            broadcast(event, value: event.userId ?? "", payload: sent.payload)
         }
         if event.isScreenEvent {
             // The backend accepted this session's screen. Later refreshes continue that session.
-            startSession = false
-            sessions.markNormal()
+            userSessionStateMachine.acknowledgeScreen()
         }
-        if sessions.isPostIdentificationContext(event.eventName), pending.isEmpty,
-           experiences?.getCurrentScreen.isNotEmpty == true {
-            let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+        if userSessionStateMachine.isPostIdentificationContext(event.eventName), pending.isEmpty,
+           experiencesPublisher?.getCurrentScreen.isNotEmpty == true {
+            let screenConfig = userSessionStateMachine.getPostIdentificationScreenConfig()
             enqueueScreenRefresh(isFakeReload: screenConfig.isFakeReload)
         }
     }
@@ -469,8 +474,8 @@ extension AnalyticsPublisher {
     /// Persist eligible SDK events offline; otherwise retain their completion until submission.
     private func acceptSDKEvent(_ send: SDKSend) {
         guard storage.userId.isNotEmpty, closing != .logout, send.shouldSend() else { return }
-        if offline.shouldSaveOffline, send.event.isOfflineEligible {
-            offline.saveSDKEventToLocalStorage(send.event)
+        if offlineEventsHandler.shouldSaveOffline, send.event.isOfflineEligible {
+            offlineEventsHandler.saveSDKEventToLocalStorage(send.event)
             return
         }
         sdkEvents.append(send)
@@ -485,7 +490,7 @@ extension AnalyticsPublisher {
     private func drainSDKEvents() {
         while canRequestEvent, !sdkEvents.isEmpty {
             let send = sdkEvents.removeFirst()
-            socket.publish(send.event.eventName, payload: send.event.eventPayload,
+            socketManager.publish(send.event.eventName, payload: send.event.eventPayload,
                            shouldSend: send.shouldSend, completion: send.completion)
         }
     }
@@ -500,7 +505,7 @@ extension AnalyticsPublisher {
     @discardableResult
     private func setUpScreen(_ event: Event) -> Bool {
         let changed = screen?.event.screenTitle != event.screenTitle
-        if screen != nil, canRequestEvent, changed { startSession = false }
+        if screen != nil, canRequestEvent, changed { userSessionStateMachine.markScreenChanged() }
         screen = ScreenSessionStateMachine(
             event: event,
             seenExperiences: changed ? [] : (screen?.seenExperiences ?? []),
@@ -518,18 +523,16 @@ extension AnalyticsPublisher {
         let event = screen.event
         if let title = event.screenTitle {
             if config.shouldSyncManualScreenForInteractionPayload() {
-                screenTracker.updateScreen(
+                screenNameTracker.updateScreen(
                     with: ScreenTrackingPayload(screenTitle: title, appFramework: config.appFramework)
                 )
             }
         }
-        let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
-        // Apply the identity boundary override until a successful screen ACK consumes it.
-        startSession = screenConfig.startSession
+        let screenConfig = userSessionStateMachine.prepareScreen(isFakeReload: isFakeReload)
         publishReadState()
         let metadata: [String: Any] = [
-            Constants.Analytics.isSessionStartedProperty: startSession,
-            Constants.Analytics.fakeReload: isFakeReload,
+            Constants.Analytics.isSessionStartedProperty: screenConfig.startSession,
+            Constants.Analytics.fakeReload: screenConfig.isFakeReload,
             Constants.Analytics.seenContents: Array(screen.seenExperiences),
             Constants.Analytics.seenSurveys: Array(screen.seenSurveys)
         ]
@@ -542,7 +545,7 @@ extension AnalyticsPublisher {
     /// A returning user can have a tracked screen even when no screen session exists yet.
     private func ensureScreen() {
         guard screen == nil, storage.userId.isNotEmpty,
-              let title = experiences?.getCurrentScreen, !title.isEmpty else { return }
+              let title = experiencesPublisher?.getCurrentScreen, !title.isEmpty else { return }
         screen = ScreenSessionStateMachine(event: Event(type: .screen(title)))
         publishReadState()
     }
@@ -596,7 +599,7 @@ extension AnalyticsPublisher {
             let queued = publisher.pending
             publisher.pending.removeAll()
             publisher.cancelInFlight()
-            let switching = publisher.sessions.isUserSwitching()
+            let switching = publisher.userSessionStateMachine.isUserSwitching()
             if switching, let identify = queued.last(where: { $0.event.isIdentifyEvent }) {
                 publisher.storage.temporaryUser = identify.event.toUser().toJson()
                 publisher.pending = [identify]
@@ -604,7 +607,7 @@ extension AnalyticsPublisher {
                 queued.forEach { _ = publisher.send($0, awaitReply: false) }
             }
             publisher.close(.background)
-            if !switching { publisher.sessions.markUserBackFromBackground() }
+            if !switching { publisher.userSessionStateMachine.markUserBackFromBackground() }
         }
     }
 
@@ -614,7 +617,7 @@ extension AnalyticsPublisher {
         withQueue {
             if canRequestEvent, let token = storage.pushToken {
                 let event = UserLogoutEvent(appToken: config.token, userId: storage.userId, token: token)
-                socket.publish(event.eventName, payload: event.eventPayload)
+                socketManager.publish(event.eventName, payload: event.eventPayload)
             }
             dropAllState()
             storage.temporaryUser = nil
@@ -627,7 +630,9 @@ extension AnalyticsPublisher {
         onQueue { publisher in
             if let date = publisher.storage.sessionDate {
                 publisher.storage.sessionDate = nil
-                publisher.startSession = Date().timeIntervalSince(date) > Constants.Analytics.sessionDuration
+                publisher.userSessionStateMachine.resumeSession(
+                    isExpired: Date().timeIntervalSince(date) > Constants.Analytics.sessionDuration
+                )
             }
             publisher.connect()
         }
@@ -636,7 +641,7 @@ extension AnalyticsPublisher {
     /// Reset session-start and throttle state without discarding queued events.
     func reset() {
         onQueue { publisher in
-            publisher.startSession = true
+            publisher.userSessionStateMachine.resetSessionStart()
             publisher.throttle.clear()
         }
     }
@@ -646,24 +651,23 @@ extension AnalyticsPublisher {
     private func dropAllState() {
         // Logout also starts an identity boundary, even when the next identify uses the same ID.
         // Preserve the first-screen override so retained screen context cannot turn it into navigation.
-        sessions.markUserSwitch()
+        userSessionStateMachine.beginSession()
         generation.value = UUID()
         cancelInFlight()
         pending.removeAll()
         initial.removeAll()
         sdkEvents.removeAll()
-        offline.clearLocalEvents()
+        offlineEventsHandler.clearLocalEvents()
         throttle.clear()
-        startSession = true
         screen?.resetState()
-        experiences?.logout()
+        experiencesPublisher?.logout()
     }
 
     /// SocketManager performs its own connection gating. Calling it on main keeps its Phoenix
     /// lifecycle reads on the same thread as transport creation and teardown.
     private func connect() {
         guard closing == nil, storage.userId.isNotEmpty else { return }
-        performOn(.main) { [weak self] in self?.socket.connect() }
+        performOn(.main) { [weak self] in self?.socketManager.connect() }
     }
 
     /// Submit one teardown; later calls update its reason and share the same completion.
@@ -671,7 +675,7 @@ extension AnalyticsPublisher {
         let alreadyClosing = closing != nil
         closing = reason
         guard !alreadyClosing else { return }
-        socket.close { [weak self] in
+        socketManager.close { [weak self] in
             self?.onQueue { $0.didClose(fromError: false) }
         }
     }
@@ -679,7 +683,7 @@ extension AnalyticsPublisher {
     /// Invalidate a send attempt without removing its retained analytics entry.
     private func cancelInFlight() {
         if case .analytics(let sent) = inFlight { sent.isCancelled.value = true }
-        offline.cancelRestore()
+        offlineEventsHandler.cancelRestore()
         inFlight = nil
     }
 
@@ -695,7 +699,7 @@ extension AnalyticsPublisher {
     func onSocketClosed() {
         performOnMain { [weak self] in
             guard let self else { return }
-            let fromError = self.socket.didCloseFromError
+            let fromError = self.socketManager.didCloseFromError
             self.onQueue { publisher in
                 // Explicit close settles through its completion, even if no transport existed.
                 guard publisher.closing == nil else { return }
@@ -734,10 +738,10 @@ extension AnalyticsPublisher {
 extension AnalyticsPublisher {
 
     /// Deliver host analytics callbacks on main, outside the publisher's owner queue.
-    private func broadcast(_ event: Event, value: String, properties: [String: Any]?) {
+    private func broadcast(_ event: Event, value: String, payload: [String: Any]?) {
         performOn(.main) { [weak self] in
             self?.userpilot?.analyticsDelegate?.didTrack(
-                analytic: event.userpilotAnalytic, value: value, properties: properties
+                analytic: event.userpilotAnalytic, value: value, properties: payload
             )
         }
     }
