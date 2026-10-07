@@ -5,13 +5,12 @@
 //  Created by Userpilot on 23/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  Tracks identification, user-switch and background context for analytics screen payloads.
+//  Owns session-start and identification/background context for analytics screen payloads.
 //
 
 import Foundation
 
-/// Tracks why a screen is due. The publisher owns `startSession` separately: acknowledging
-/// a screen settles this context and consumes that flag in the publisher.
+/// Tracks why a screen is due. A successful screen ACK settles this context and session-start together.
 internal enum UserSessionState {
     /// No identification-driven screen is pending; same-screen refreshes retain the session-start flag.
     case normal
@@ -27,72 +26,107 @@ internal enum UserSessionState {
 
 /// Session transitions and screen decisions used by `AnalyticsPublisher`.
 internal protocol UserSessionStateManaging: AnyObject {
+    var isStartSession: Bool { get }
     func getCurrentState() -> UserSessionState
     func isUserSwitching() -> Bool
     func markNormal()
     func markUserBackFromBackground()
-    func markUserSwitch()
+    func beginSession()
     func markAwaitingInitialScreen()
+    func acknowledgeScreen()
+    func markScreenChanged()
+    func resumeSession(isExpired: Bool)
+    func resetSessionStart()
     func isPostIdentificationContext(_ eventName: String) -> Bool
     func shouldRequestInitialScreenEvent(_ eventsQueueEmpty: Bool, _ hasCurrentScreen: Bool) -> Bool
-    func getPostIdentificationScreenConfig(currentStartSession: Bool)
-        -> UserSessionStateMachine.PostIdentificationScreenConfig
+    func getPostIdentificationScreenConfig() -> UserSessionStateMachine.ScreenConfig
+    func prepareScreen(isFakeReload: Bool) -> UserSessionStateMachine.ScreenConfig
 }
 
-/// Owns identification/background context, not the queue, current screen or `startSession` flag.
-/// Screen ACKs, navigation, logout/reset and elapsed background time belong to the publisher;
-/// this state machine only overrides session-start while a user switch awaits its first screen.
-/// Atomic reads and transitions allow lifecycle and analytics work to share the state safely.
-/// The read-modify-write in `markAwaitingInitialScreen` must stay one atomic operation.
+/// Owns session-start and identification/background context. The publisher reports transitions
+/// and owns delivery, current-screen metadata and each queued screen's reload intent.
+/// One lock protects the related state so payload reads cannot observe half an ACK or session reset.
+/// Logging stays outside the lock; publisher queue ordering remains responsible for event delivery.
 internal final class UserSessionStateMachine: UserSessionStateManaging {
     private let logger: Logging
-    private let state = AtomicReference<UserSessionState>(.awaitingInitialScreen)
+    private let lock = NSLock()
+    private var state: UserSessionState = .awaitingInitialScreen
+    private var startSession = true
 
     init(container: DIContainer) {
         logger = container.resolve(Userpilot.Config.self).logger
     }
 
+    var isStartSession: Bool {
+        lock.withLock { startSession }
+    }
+
     func getCurrentState() -> UserSessionState {
-        state.value
+        lock.withLock { state }
     }
 
     func isUserSwitching() -> Bool {
-        state.value.isUserSwitching()
+        lock.withLock { state.isUserSwitching() }
     }
 
-    /// A screen ACK, or consuming the pending background refresh, settles session context.
-    /// The publisher separately consumes session-start on a successful screen ACK. Merely requesting
-    /// a background refresh must not consume it before that screen reaches the backend.
+    /// Consumes pending background-refresh context without consuming session-start before delivery.
     func markNormal() {
-        state.value = .normal
+        lock.withLock { state = .normal }
         logger.info("📝 User session state: Normal")
     }
 
     /// The publisher requests the returning user's current screen after queued work drains.
     func markUserBackFromBackground() {
-        state.value = .backgroundToInitialScreen
+        lock.withLock { state = .backgroundToInitialScreen }
         logger.info("📝 User session state: BackgroundToInitialScreen")
     }
 
-    /// Preserve the identity boundary until the new user's identify and initial screen are sent.
-    func markUserSwitch() {
-        state.value = .userSwitching
+    /// First identify, logout and a different user establish an initial screen until its successful ACK.
+    func beginSession() {
+        lock.withLock {
+            state = .userSwitching
+            startSession = true
+        }
         logger.info("📝 User session state: UserSwitching")
     }
 
     /// Repeated identifies preserve a pending logout/user-switch boundary until its screen ACK.
-    /// Otherwise identify requests a screen refresh without changing the publisher's session-start flag.
-    /// Logging stays outside the atomic update so logger callbacks cannot re-enter the state lock.
+    /// Otherwise identify requests a screen refresh without changing session-start.
     func markAwaitingInitialScreen() {
-        let newState = state.update { current in
-            current.isUserSwitching() ? .userSwitchingAwaitingScreen : .awaitingInitialScreen
+        let newState = lock.withLock {
+            state = state.isUserSwitching() ? .userSwitchingAwaitingScreen : .awaitingInitialScreen
+            return state
         }
         logger.info("📝 User session state: %@", String(describing: newState))
     }
 
+    /// Only the publisher's matched successful screen ACK consumes session-start and identity context.
+    func acknowledgeScreen() {
+        lock.withLock {
+            state = .normal
+            startSession = false
+        }
+        logger.info("📝 User session state: Normal")
+    }
+
+    /// Existing-screen navigation ends session-start; a pending identity boundary still wins at send.
+    func markScreenChanged() {
+        lock.withLock { startSession = false }
+    }
+
+    /// The publisher supplies the inactivity result; storage and clocks stay outside session policy.
+    func resumeSession(isExpired: Bool) {
+        lock.withLock { startSession = isExpired }
+    }
+
+    /// Explicit reset starts a session without introducing an identification or background transition.
+    func resetSessionStart() {
+        lock.withLock { startSession = true }
+    }
+
     /// Identify ACKs qualify even after normal tracking; other ACKs only qualify while a screen is due.
     func isPostIdentificationContext(_ eventName: String) -> Bool {
-        eventName == Constants.Event.identifyEvent || state.value.needsInitialScreen()
+        lock.withLock { eventName == Constants.Event.identifyEvent || state.needsInitialScreen() }
     }
 
     /// A generated initial screen must not overtake queued analytics or invent an unknown screen.
@@ -100,22 +134,30 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
         eventsQueueEmpty && hasCurrentScreen
     }
 
-    /// Resolve both flags from one state snapshot. A user switch starts a real screen session;
-    /// ordinary identification refreshes content and preserves the publisher's start-session flag.
-    /// The publisher consumes the resolved flag on a successful screen ACK, so a subsequent
-    /// same-screen refresh or same-user identify continues the session.
-    func getPostIdentificationScreenConfig(currentStartSession: Bool) -> PostIdentificationScreenConfig {
-        let isUserSwitch = state.value.isUserSwitching()
-        return PostIdentificationScreenConfig(
-            startSession: isUserSwitch || currentStartSession,
-            isFakeReload: !isUserSwitch
-        )
+    /// Choose a generated screen's reload intent at enqueue time without changing session-start.
+    func getPostIdentificationScreenConfig() -> ScreenConfig {
+        lock.withLock { screenConfig(isFakeReload: !state.isUserSwitching()) }
+    }
+
+    /// Resolve session-start at send time while preserving the queued event's explicit reload intent.
+    /// A pending first-user boundary overrides navigation/resume until its successful screen ACK.
+    func prepareScreen(isFakeReload: Bool) -> ScreenConfig {
+        lock.withLock {
+            let config = screenConfig(isFakeReload: isFakeReload)
+            startSession = config.startSession
+            return config
+        }
+    }
+
+    /// Called only under the state lock; both reads use the same session snapshot.
+    private func screenConfig(isFakeReload: Bool) -> ScreenConfig {
+        ScreenConfig(startSession: state.isUserSwitching() || startSession, isFakeReload: isFakeReload)
     }
 }
 
 extension UserSessionStateMachine {
-    /// Payload decisions for the current identification context; reading them does not consume state.
-    struct PostIdentificationScreenConfig {
+    /// Flags for one screen request; reload intent remains on that event while it waits in the queue.
+    struct ScreenConfig {
         let startSession: Bool
         let isFakeReload: Bool
     }

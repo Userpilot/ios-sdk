@@ -41,13 +41,14 @@ final class UserSessionStateMachineTests: XCTestCase {
         sessions.markAwaitingInitialScreen()
         XCTAssertEqual(sessions.getCurrentState(), .awaitingInitialScreen)
 
-        sessions.markNormal()
+        sessions.acknowledgeScreen()
+        XCTAssertFalse(sessions.isStartSession)
         XCTAssertEqual(sessions.getCurrentState(), .normal)
         XCTAssertFalse(sessions.isPostIdentificationContext(Constants.Event.trackEvent))
     }
 
     func testSwitchContextSurvivesIdentifyUntilScreenAcknowledgement() {
-        sessions.markUserSwitch()
+        sessions.beginSession()
         XCTAssertEqual(sessions.getCurrentState(), .userSwitching)
         XCTAssertTrue(sessions.isUserSwitching())
 
@@ -55,19 +56,20 @@ final class UserSessionStateMachineTests: XCTestCase {
         XCTAssertEqual(sessions.getCurrentState(), .userSwitchingAwaitingScreen)
         XCTAssertTrue(sessions.isUserSwitching())
 
-        sessions.markNormal()
+        sessions.acknowledgeScreen()
+        XCTAssertFalse(sessions.isStartSession)
         XCTAssertFalse(sessions.isUserSwitching())
         XCTAssertEqual(sessions.getCurrentState(), .normal)
     }
 
     func testRepeatedIdentifyPreservesPendingSessionStart() {
-        sessions.markUserSwitch()
+        sessions.beginSession()
         sessions.markAwaitingInitialScreen()
         sessions.markAwaitingInitialScreen()
 
         XCTAssertEqual(sessions.getCurrentState(), .userSwitchingAwaitingScreen)
         XCTAssertTrue(sessions.isUserSwitching())
-        XCTAssertTrue(sessions.getPostIdentificationScreenConfig(currentStartSession: false).startSession)
+        XCTAssertTrue(sessions.getPostIdentificationScreenConfig().startSession)
     }
 
     func testBackgroundRefreshIsSeparateFromInitialScreenContext() {
@@ -119,22 +121,119 @@ final class UserSessionStateMachineTests: XCTestCase {
             moveToState(state)
             let switching = state == .userSwitching || state == .userSwitchingAwaitingScreen
             for startSession in [false, true] {
-                let config = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+                sessions.resumeSession(isExpired: startSession)
+                let config = sessions.getPostIdentificationScreenConfig()
                 XCTAssertEqual(config.startSession, switching || startSession, "\(state)")
                 XCTAssertEqual(config.isFakeReload, !switching, "\(state)")
                 XCTAssertEqual(sessions.getCurrentState(), state, "Configuration reads must not consume state")
+                XCTAssertEqual(sessions.isStartSession, startSession, "Configuration reads must not change the flag")
             }
         }
+    }
+
+    func testBeginSessionRestoresStartAfterPreviousScreenAcknowledgement() {
+        sessions.acknowledgeScreen()
+        XCTAssertFalse(sessions.isStartSession)
+
+        sessions.beginSession()
+
+        XCTAssertTrue(sessions.isStartSession)
+        let config = sessions.getPostIdentificationScreenConfig()
+        XCTAssertTrue(config.startSession)
+        XCTAssertFalse(config.isFakeReload)
+    }
+
+    func testRepeatedSameUserIdentifyPreservesBothStartSessionValues() {
+        for startSession in [false, true] {
+            sessions.markNormal()
+            sessions.resumeSession(isExpired: startSession)
+
+            sessions.markAwaitingInitialScreen()
+            sessions.markAwaitingInitialScreen()
+
+            XCTAssertEqual(sessions.isStartSession, startSession)
+            let config = sessions.getPostIdentificationScreenConfig()
+            XCTAssertEqual(config.startSession, startSession)
+            XCTAssertTrue(config.isFakeReload)
+        }
+    }
+
+    func testBackgroundRefreshAdmissionPreservesStartUntilScreenAcknowledgement() {
+        for expired in [false, true] {
+            sessions.markUserBackFromBackground()
+            sessions.resumeSession(isExpired: expired)
+            sessions.markNormal()
+
+            let config = sessions.prepareScreen(isFakeReload: false)
+            XCTAssertEqual(config.startSession, expired)
+            XCTAssertFalse(config.isFakeReload)
+            XCTAssertEqual(sessions.isStartSession, expired)
+
+            sessions.acknowledgeScreen()
+            XCTAssertFalse(sessions.isStartSession)
+            XCTAssertEqual(sessions.getCurrentState(), .normal)
+        }
+    }
+
+    func testNavigationEndsSessionStartWithoutPendingIdentityBoundary() {
+        sessions.markNormal()
+        sessions.markScreenChanged()
+
+        XCTAssertFalse(sessions.prepareScreen(isFakeReload: false).startSession)
+        XCTAssertFalse(sessions.isStartSession)
+    }
+
+    func testPendingIdentityBoundarySurvivesNavigationUntilScreenPreparation() {
+        sessions.beginSession()
+        sessions.markAwaitingInitialScreen()
+        sessions.markScreenChanged()
+        XCTAssertFalse(sessions.isStartSession)
+
+        let config = sessions.prepareScreen(isFakeReload: false)
+
+        XCTAssertTrue(config.startSession)
+        XCTAssertTrue(sessions.isStartSession)
+        XCTAssertEqual(sessions.getCurrentState(), .userSwitchingAwaitingScreen)
+    }
+
+    func testPrepareScreenPreservesQueuedReloadIntentAndStoresResolvedStart() {
+        for state in allStates {
+            moveToState(state)
+            let switching = state.isUserSwitching()
+            for startSession in [false, true] {
+                for isFakeReload in [false, true] {
+                    sessions.resumeSession(isExpired: startSession)
+
+                    let config = sessions.prepareScreen(isFakeReload: isFakeReload)
+
+                    XCTAssertEqual(config.startSession, switching || startSession, "\(state)")
+                    XCTAssertEqual(config.isFakeReload, isFakeReload, "Queued screen intent must be retained")
+                    XCTAssertEqual(sessions.isStartSession, config.startSession)
+                    XCTAssertEqual(sessions.getCurrentState(), state, "Preparation must not consume session context")
+                }
+            }
+        }
+    }
+
+    func testResetSessionStartPreservesBackgroundContext() {
+        sessions.acknowledgeScreen()
+        sessions.markUserBackFromBackground()
+
+        sessions.resetSessionStart()
+
+        XCTAssertTrue(sessions.isStartSession)
+        XCTAssertEqual(sessions.getCurrentState(), .backgroundToInitialScreen)
+        XCTAssertTrue(sessions.getPostIdentificationScreenConfig().isFakeReload)
     }
 
     func testTransitionDiagnosticNamesRemainUnchanged() {
         sessions.markNormal()
         sessions.markUserBackFromBackground()
-        sessions.markUserSwitch()
+        sessions.beginSession()
         sessions.markAwaitingInitialScreen()
         sessions.markAwaitingInitialScreen()
 
-        sessions.markNormal()
+        sessions.acknowledgeScreen()
         sessions.markAwaitingInitialScreen()
 
         XCTAssertEqual(logger.loggedInfos, [
@@ -158,11 +257,11 @@ final class UserSessionStateMachineTests: XCTestCase {
         case .normal:
             break
         case .userSwitching:
-            sessions.markUserSwitch()
+            sessions.beginSession()
         case .awaitingInitialScreen:
             sessions.markAwaitingInitialScreen()
         case .userSwitchingAwaitingScreen:
-            sessions.markUserSwitch()
+            sessions.beginSession()
             sessions.markAwaitingInitialScreen()
         case .backgroundToInitialScreen:
             sessions.markUserBackFromBackground()
