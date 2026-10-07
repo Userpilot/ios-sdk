@@ -12,7 +12,7 @@ import UIKit
 
 final class OfflineEventsViewController: UIViewController {
 
-    private enum BurstKind { case track, screen, auto, mixed }
+    private enum BurstKind { case track, screen, auto, mixed, paced }
 
     private final class BurstState {
         let kind: BurstKind
@@ -52,6 +52,9 @@ final class OfflineEventsViewController: UIViewController {
     private var sessionTrack = 0
     private var sessionScreen = 0
     private var sessionAuto = 0
+    private var scenarioUserId: String?
+    private var scenarioButtons: [UIButton] = []
+    private var pendingBurstWork: DispatchWorkItem?
 
     private let fireTrackButton = UIButton(type: .system)
     private let fireScreenButton = UIButton(type: .system)
@@ -136,8 +139,17 @@ final class OfflineEventsViewController: UIViewController {
         stackView.addArrangedSubview(statusContainer)
 
         stackView.addArrangedSubview(makeLabel(
-            "Offline buffer: 5,000 events or 3 MB. Identify → Airplane Mode → fire burst → go online → verify Events log."
+            "Setup: enable SDK logs, disable screen auto-capture, and use a screen without targeted content. " +
+            "Start with O1 online and wait for the screen ACK. Enable Airplane Mode, disable Wi-Fi, " +
+            "and wait for the SDK offline log before running an offline case. " +
+            "For auto-capture bursts, enable interaction auto-capture."
         ))
+        stackView.addArrangedSubview(makeLabel(
+            "Offline checks cover persistence, replay order, and user cleanup. Batch flags are outside these checks. " +
+            "Inspect live screen requests after reconnect for session flags. Counters show API calls, not ACKs. " +
+            "The buffer holds up to 5,000 events or 3 MB; excess events can be dropped."
+        ))
+        setupIdentityScenarios()
 
         stackView.addArrangedSubview(makeSection("Burst size"))
         let countRow = UIStackView()
@@ -180,11 +192,25 @@ final class OfflineEventsViewController: UIViewController {
         stackView.addArrangedSubview(makeSection("Manual events"))
         configureActionButton(fireTrackButton, title: "Fire track events", action: #selector(fireTrackTapped), filled: true)
         configureActionButton(fireScreenButton, title: "Fire screen events", action: #selector(fireScreenTapped), filled: false)
+        stackView.addArrangedSubview(makeLabel(
+            "O8 · Stored tracks\nScenario: while offline after O1, submit the selected count of unique tracks. " +
+            "Expected: admitted rows replay on reconnect; padding exercises the byte limit. Use O7 to drive replay."
+        ))
         stackView.addArrangedSubview(fireTrackButton)
+        stackView.addArrangedSubview(makeLabel(
+            "O9 · Stored screens\nScenario: while offline, submit unique screen titles. " +
+            "Expected: admitted screens replay with their titles and stored order. " +
+            "Check live flags separately after reconnect with O7."
+        ))
         stackView.addArrangedSubview(fireScreenButton)
 
         stackView.addArrangedSubview(makeSection("Auto-capture events"))
         configureActionButton(fireAutoButton, title: "Fire auto-capture clicks", action: #selector(fireAutoTapped), filled: false)
+        stackView.addArrangedSubview(makeLabel(
+            "O10 · Stored interactions\nScenario: with interaction auto-capture enabled, generate clicks offline. " +
+            "Expected: eligible captured interactions replay after reconnect. Submitted clicks are not a delivery count; " +
+            "native instrumentation and capture throttles still apply."
+        ))
         stackView.addArrangedSubview(fireAutoButton)
 
         let chipsContainer = UIStackView()
@@ -201,7 +227,60 @@ final class OfflineEventsViewController: UIViewController {
 
         stackView.addArrangedSubview(makeSection("Mixed burst"))
         configureActionButton(fireMixedButton, title: "Fire mixed (track + screen + auto)", action: #selector(fireMixedTapped), filled: true)
+        stackView.addArrangedSubview(makeLabel(
+            "O11 · Mixed replay\nScenario: cycle tracks, screens, and captured clicks while offline. " +
+            "Expected: admitted rows replay in stored order within buffer limits; check event names and indices. " +
+            "Native capture may add or throttle interactions."
+        ))
         stackView.addArrangedSubview(fireMixedButton)
+        stackView.addArrangedSubview(makeLabel(
+            "Stop cancels future submissions only. Events log shows SDK callbacks; use socket JSON logs for " +
+            "batch payloads and ACKs. Opening logs or leaving this screen stops a running burst. " +
+            "Returning to this screen also reports the normal offline events screen."
+        ))
+    }
+
+    private func setupIdentityScenarios() {
+        stackView.addArrangedSubview(makeSection("Identity and replay checks"))
+        addScenario("O1 · Establish user A online", scenario:
+            "While online, logout, identify a fresh user A, then report a baseline screen.", expected:
+            "The first live screen is true/false (is_session_start/fake_reload). Wait for its ACK before going offline.",
+            action: #selector(establishUserTapped))
+        addScenario("O2 · Identify the same user offline", scenario:
+            "After O1, go offline, add tracks, then identify the same user again.", expected:
+            "Existing rows remain and replay for the same user. Reidentify preserves session-start; " +
+            "reconnect and use O7 to drive replay and inspect the live screen.", action: #selector(reidentifyTapped))
+        addScenario("O3 · Switch user offline", scenario:
+            "After storing events offline, identify a different user and report a new screen.", expected:
+            "Old-user rows clear. Only the new user replays. Its first live screen after reconnect is true/false.",
+            action: #selector(switchUserTapped))
+        addScenario("O4 · Logout and identify the same user", scenario:
+            "While offline with stored events, logout, identify the same user, then report a screen.", expected:
+            "Pre-logout rows clear. The next identity starts a new session; its first live screen is true/false.",
+            action: #selector(logoutAndIdentifyTapped))
+        addScenario("O5 · Events without an identity", scenario:
+            "While offline, logout, submit a screen and track before identify, then identify a fresh user and report a new screen.", expected:
+            "The pre-identify requests must not replay. The identify and screen submitted afterward can replay. " +
+            "The rejected screen may still update navigation context before the new screen replaces it.", action: #selector(unidentifiedTapped))
+        addScenario("O6 · 50 alternating calls, 50 ms apart", scenario:
+            "While offline with an identity, submit screen/track pairs: 50 calls with 50 ms between calls.", expected:
+            "After reconnect, admitted rows replay in order. " +
+            "The delay paces submission; it does not wait for ACKs.", action: #selector(pacedBurstTapped))
+        addScenario("O7 · Reconnect and request a live screen", scenario:
+            "Restore network and wait for its SDK log, then tap this button to drive replay and a new live screen.", expected:
+            "Offline replay resolves before the live screen. The live request uses fake_reload=false. " +
+            "Session-start is true only if the identity still awaits its initial live screen; after that screen ACK, " +
+            "another tap gives false/false. Same-user and dismissal fake_reload=true checks are in Online queue.",
+            action: #selector(liveScreenTapped))
+    }
+
+    private func addScenario(_ title: String, scenario: String, expected: String, action: Selector) {
+        stackView.addArrangedSubview(makeLabel("Scenario: \(scenario)\nExpected: \(expected)"))
+        let button = makeButton(title, action: action)
+        button.titleLabel?.numberOfLines = 0
+        scenarioButtons.append(button)
+        stackView.addArrangedSubview(button)
+        stackView.setCustomSpacing(18, after: button)
     }
 
     private func setupAutoTargets() {
@@ -273,6 +352,71 @@ final class OfflineEventsViewController: UIViewController {
     @objc private func fireScreenTapped() { startBurst(.screen) }
     @objc private func fireAutoTapped() { startBurst(.auto) }
     @objc private func fireMixedTapped() { startBurst(.mixed) }
+    @objc private func pacedBurstTapped() { startBurst(.paced) }
+
+    @objc private func establishUserTapped() {
+        UserpilotManager.shared.logout()
+        identifyScenarioUser("offline_user_a_\(batchIdentifier())")
+        reportScenarioScreen("baseline")
+        renderStatus("O1 submitted. Wait for the baseline screen ACK before going offline.")
+    }
+
+    @objc private func reidentifyTapped() {
+        guard let scenarioUserId else {
+            renderStatus("Run O1 first so the scenario knows which user to reidentify.")
+            return
+        }
+        identifyScenarioUser(scenarioUserId)
+        renderStatus("O2 submitted for \(scenarioUserId). Restore network, then use O7 to drive replay.")
+    }
+
+    @objc private func switchUserTapped() {
+        guard scenarioUserId != nil else {
+            renderStatus("Run O1 first, go offline, then add events before switching users.")
+            return
+        }
+        identifyScenarioUser("offline_user_b_\(batchIdentifier())")
+        reportScenarioScreen("switched")
+        renderStatus("O3 submitted. Prior-user rows must be absent from the next replay.")
+    }
+
+    @objc private func logoutAndIdentifyTapped() {
+        guard let scenarioUserId else {
+            renderStatus("Run O1 first, go offline, then add events before logout.")
+            return
+        }
+        UserpilotManager.shared.logout()
+        identifyScenarioUser(scenarioUserId)
+        reportScenarioScreen("after_logout")
+        renderStatus("O4 submitted. Pre-logout rows must be absent from the next replay.")
+    }
+
+    @objc private func unidentifiedTapped() {
+        UserpilotManager.shared.logout()
+        reportScenarioScreen("unidentified")
+        UserpilotManager.shared.track(eventName: "offline_unidentified_track_\(batchIdentifier())")
+        identifyScenarioUser("offline_user_a_\(batchIdentifier())")
+        reportScenarioScreen("after_identify")
+        renderStatus("O5 submitted. Pre-identify requests must be absent from replay; later requests may replay.")
+    }
+
+    @objc private func liveScreenTapped() {
+        reportScenarioScreen("live_probe")
+        renderStatus("O7 submitted. Inspect batch_events resolution, then the live screen JSON and its ACK.")
+    }
+
+    private func identifyScenarioUser(_ userId: String) {
+        scenarioUserId = userId
+        UserpilotManager.shared.identify(userId: userId, properties: ["source": "offline_queue_setup"])
+    }
+
+    private func reportScenarioScreen(_ phase: String) {
+        UserpilotManager.shared.screen("offline_\(phase)_\(batchIdentifier())")
+    }
+
+    private func batchIdentifier() -> String {
+        String(Int(Date().timeIntervalSince1970 * 1000), radix: 36)
+    }
 
     @objc private func stopTapped() {
         stopBurst(cancelled: true)
@@ -284,12 +428,18 @@ final class OfflineEventsViewController: UIViewController {
 
     private func startBurst(_ kind: BurstKind) {
         guard burst == nil else { return }
-        guard let count = parseCount() else { return }
-        let batchId = String(Int(Date().timeIntervalSince1970 * 1000), radix: 36)
+        guard let count = kind == .paced ? 50 : parseCount() else { return }
+        let batchId = batchIdentifier()
         paddingPayload = String(repeating: "x", count: selectedPaddingBytes)
         burst = BurstState(kind: kind, total: count, batchId: batchId)
         setControlsEnabled(false)
-        DispatchQueue.main.async { [weak self] in self?.runBurstSlice() }
+        scheduleBurstSlice(after: 0)
+    }
+
+    private func scheduleBurstSlice(after delay: TimeInterval) {
+        let work = DispatchWorkItem { [weak self] in self?.runBurstSlice() }
+        pendingBurstWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func runBurstSlice() {
@@ -303,10 +453,12 @@ final class OfflineEventsViewController: UIViewController {
         case .screen: fireScreenSlice(state)
         case .auto: fireAutoSlice(state)
         case .mixed: fireMixedSlice(state)
+        case .paced:
+            if state.nextIndex.isMultiple(of: 2) { fireScreen(state) } else { fireTrack(state) }
         }
         renderStatus(runningMessage(state))
         if burst != nil, state.nextIndex < state.total {
-            DispatchQueue.main.async { [weak self] in self?.runBurstSlice() }
+            scheduleBurstSlice(after: state.kind == .paced ? 0.05 : 0)
         } else if burst != nil {
             finishBurst()
         }
@@ -404,6 +556,8 @@ final class OfflineEventsViewController: UIViewController {
     }
 
     private func stopBurst(cancelled: Bool = false) {
+        pendingBurstWork?.cancel()
+        pendingBurstWork = nil
         let state = burst
         burst = nil
         setControlsEnabled(true)
@@ -426,6 +580,7 @@ final class OfflineEventsViewController: UIViewController {
         fireScreenButton.isEnabled = enabled
         fireAutoButton.isEnabled = enabled
         fireMixedButton.isEnabled = enabled
+        scenarioButtons.forEach { $0.isEnabled = enabled }
         countField.isEnabled = enabled
         countButtons.forEach { $0.isEnabled = enabled }
         paddingButtons.forEach { $0.isEnabled = enabled }
