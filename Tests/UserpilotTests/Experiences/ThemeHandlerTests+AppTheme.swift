@@ -87,6 +87,19 @@ extension ThemeHandlerTests {
         XCTAssertEqual(themeHandler.requiredThemeKey(for: try flow()), .id(1))
     }
 
+    func testClearAppTheme_restoresContentThemes_andForgetsFetchedThemes() throws {
+        themeHandler.setAppTheme(name: "Dark")
+        _ = themeHandler.saveAppTheme(try appThemeReply(title: "Dark"), title: "Dark")
+
+        themeHandler.clearAppTheme()
+
+        XCTAssertNil(themeHandler.appTheme)
+        XCTAssertEqual(themeHandler.requiredThemeKey(for: try flow()), .id(1))
+        themeHandler.setAppTheme(name: "Dark")
+        XCTAssertNil(themeHandler.appTheme)
+        XCTAssertEqual(themeHandler.requiredThemeKey(for: try flow()), .title("Dark"))
+    }
+
     func testFlowThemes_replaceContentAndStepStyling_whenAppThemeIsResolved() throws {
         let content = try flowContent()
         themeHandler.setAppTheme(name: "Dark")

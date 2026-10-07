@@ -119,6 +119,11 @@ class MockThemeHandler: ThemeHandling {
         unavailableAppThemes.append(title)
     }
 
+    var clearAppThemeCount = 0
+    func clearAppTheme() {
+        clearAppThemeCount += 1
+    }
+
     var resetAppThemesCount = 0
     func resetAppThemes() {
         resetAppThemesCount += 1

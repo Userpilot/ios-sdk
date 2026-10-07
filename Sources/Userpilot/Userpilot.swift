@@ -547,13 +547,25 @@ extension Userpilot {
      their own themes.
 
      - Parameters:
-       - name: the mobile theme's title as defined in Userpilot, or nil to restore each experience's
-        own theme.
+       - name: the mobile theme's title as defined in Userpilot. Use `clearTheme()` to restore each
+        experience's own theme.
      */
     @objc
-    public func setTheme(name: String?) {
-        let title = name.flatMap { $0.trim().isNotEmpty ? $0 : nil }
-        themeHandler.setAppTheme(name: title)
+    public func theme(_ name: String) {
+        guard name.trim().isNotEmpty else {
+            config.logger.error("Invalid theme name - empty string")
+            return
+        }
+        themeHandler.setAppTheme(name: name)
+    }
+
+    /**
+     Stops applying the theme selected with `theme(_:)` and forgets every fetched app theme, so flows and
+     surveys use their own themes again from the next experience.
+     */
+    @objc
+    public func clearTheme() {
+        themeHandler.clearAppTheme()
     }
 }
 

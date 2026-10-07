@@ -48,6 +48,9 @@ internal protocol ThemeHandling: AnyObject {
     /// Forgets fetched app themes and unavailable titles so the next experience fetches them again.
     func resetAppThemes()
 
+    /// Drops the selected title, the resolved theme and every cached app theme; experiences use their own themes.
+    func clearAppTheme()
+
     /// Merges Experience themes into a unified theme.
     func mergeExperienceThemes(
         _ baseTheme: ThemeData?,
@@ -276,6 +279,15 @@ internal class ThemeHandler: ThemeHandling {
     /// The resolved theme stays in use until its refetch replies, so rendering never loses it.
     func resetAppThemes() {
         cacheLock.withLock {
+            appThemes.removeAll()
+            unavailableAppThemes.removeAll()
+        }
+    }
+
+    func clearAppTheme() {
+        cacheLock.withLock {
+            appThemeName = nil
+            resolvedAppTheme = nil
             appThemes.removeAll()
             unavailableAppThemes.removeAll()
         }
