@@ -159,7 +159,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private var sdkEvents: [SDKSend] = []
     private var inFlight: InFlight?
     private var closing: CloseReason?
-    /// Screen-session flag retained across same-screen refreshes, independently of identify/ACK state.
+    /// Session-start metadata, consumed by a successful screen ACK and reset at session boundaries.
     private var startSession = true
     private var screen: ScreenSessionStateMachine?
 
@@ -434,7 +434,11 @@ extension AnalyticsPublisher {
             storage.temporaryUser = nil
             broadcast(event, value: event.userId ?? "", properties: sent.payload)
         }
-        if event.isScreenEvent { sessions.markNormal() }
+        if event.isScreenEvent {
+            // The backend accepted this session's screen. Later refreshes continue that session.
+            startSession = false
+            sessions.markNormal()
+        }
         if sessions.isPostIdentificationContext(event.eventName), pending.isEmpty,
            experiences?.getCurrentScreen.isNotEmpty == true {
             let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
@@ -520,7 +524,7 @@ extension AnalyticsPublisher {
             }
         }
         let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
-        // Retain a switch's override after its screen ACK; only later navigation/resume/reset changes it.
+        // Apply the identity boundary override until a successful screen ACK consumes it.
         startSession = screenConfig.startSession
         publishReadState()
         let metadata: [String: Any] = [
