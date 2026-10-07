@@ -11,7 +11,7 @@
 import Foundation
 
 /// Tracks why a screen is due. The publisher owns `startSession` separately: acknowledging
-/// the first screen settles this context without ending that screen's session-start status.
+/// a screen settles this context and consumes that flag in the publisher.
 internal enum UserSessionState {
     /// No identification-driven screen is pending; same-screen refreshes retain the session-start flag.
     case normal
@@ -40,7 +40,7 @@ internal protocol UserSessionStateManaging: AnyObject {
 }
 
 /// Owns identification/background context, not the queue, current screen or `startSession` flag.
-/// Screen navigation, logout/reset and elapsed background time belong to the publisher;
+/// Screen ACKs, navigation, logout/reset and elapsed background time belong to the publisher;
 /// this state machine only overrides session-start while a user switch awaits its first screen.
 /// Atomic reads and transitions allow lifecycle and analytics work to share the state safely.
 /// The read-modify-write in `markAwaitingInitialScreen` must stay one atomic operation.
@@ -61,7 +61,8 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
     }
 
     /// A screen ACK, or consuming the pending background refresh, settles session context.
-    /// This does not clear the publisher's session-start flag; later navigation/resume decides that.
+    /// The publisher separately consumes session-start on a successful screen ACK. Merely requesting
+    /// a background refresh must not consume it before that screen reaches the backend.
     func markNormal() {
         state.value = .normal
         logger.info("📝 User session state: Normal")
@@ -101,8 +102,8 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
 
     /// Resolve both flags from one state snapshot. A user switch starts a real screen session;
     /// ordinary identification refreshes content and preserves the publisher's start-session flag.
-    /// The publisher retains the resolved flag when building a screen payload, so the following
-    /// same-screen refresh still carries it after the screen ACK moves this state to `normal`.
+    /// The publisher consumes the resolved flag on a successful screen ACK, so a subsequent
+    /// same-screen refresh or same-user identify continues the session.
     func getPostIdentificationScreenConfig(currentStartSession: Bool) -> PostIdentificationScreenConfig {
         let isUserSwitch = state.value.isUserSwitching()
         return PostIdentificationScreenConfig(
