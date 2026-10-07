@@ -187,6 +187,22 @@ Triggers a specific experience programmatically using its unique ID. This API al
 userpilot.triggerExperience("<EXPERIENCE_ID>")
 ```
 
+#### Dynamic Theme
+
+Applies one mobile theme, chosen by your app (for example a light or a dark theme), to every flow and survey instead of each experience's own theme. Pass the exact title of a mobile theme defined in Userpilot; it takes effect from the next experience.
+
+```swift
+userpilot.theme("Dark Theme")
+```
+
+Clears the selected theme so experiences use their own themes again:
+
+```swift
+userpilot.clearTheme()
+```
+
+See [App Theme](Sources/Userpilot/Userpilot.docc/AppTheme.md) for following light and dark mode and the full behavior.
+
 ### **Configurations (Optional)**
 
 If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
