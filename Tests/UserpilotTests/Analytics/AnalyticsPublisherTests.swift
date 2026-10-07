@@ -1514,6 +1514,53 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(navigationMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
     }
 
+    func testRepeatedSameUserIdentify_duringUserSwitch_shouldPreservePendingSessionStart() {
+        assertRepeatedIdentifyPreservesPendingSessionStart(afterLogout: false)
+    }
+
+    func testRepeatedSameUserIdentify_afterLogout_shouldPreservePendingSessionStart() {
+        assertRepeatedIdentifyPreservesPendingSessionStart(afterLogout: true)
+    }
+
+    private func assertRepeatedIdentifyPreservesPendingSessionStart(afterLogout: Bool) {
+        userpilot.storage.userId = "previous-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        if afterLogout {
+            analyticsPublisher.logout()
+            userpilot.storage.userId = ""
+        }
+        let userId = afterLogout ? "previous-user" : "next-user"
+        analyticsPublisher.testPublish(Event(type: .identify(userId)))
+        analyticsPublisher.testPublish(Event(type: .identify(userId)))
+        analyticsPublisher.testPublish(Event(type: .screen("Login home")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+
+        // The pending boundary ends at the screen ACK; later identifies must keep it consumed.
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .identify(userId)))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let refresh = userpilot.socketManager.requests.last
+        XCTAssertEqual(refresh?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(refresh?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
+        let refreshMetadata = refresh?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
+    }
+
     func testSameUserIdentify_afterLogoutAndScreenACK_shouldContinueSession() {
         assertSameUserIdentifyAfterScreenACK(afterLogout: true)
     }
