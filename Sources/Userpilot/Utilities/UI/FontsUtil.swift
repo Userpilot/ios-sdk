@@ -14,15 +14,9 @@ import UIKit
 @available(iOS 13.0, *)
 internal extension UIFont {
 
-    /// Returns a UIFont that matches the specified name, weight, and size, with support for Dynamic Type.
-    /// If the custom font is not available, it falls back to the system font.
-    ///
-    /// - Parameters:
-    ///   - fontName: The name of the custom font. If nil, the system font is used.
-    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's traits (e.g., bold, italic).
-    ///   - fontSize: The base size of the font.
-    ///   - textStyle: The text style for Dynamic Type scaling. Default is `.body`.
-    /// - Returns: A UIFont object matching the specified criteria, scaled for Dynamic Type.
+    /// Resolves a system design, registered bundle font, then a system fallback, in that order.
+    /// A nil name returns an unscaled system font; named paths use the existing size-based metrics.
+    /// `textStyle` remains accepted for call-site compatibility; scaling is selected by `fontSize`.
     static func matching(
         fontName: String?,
         fontWeight: [UIFontDescriptor.SymbolicTraits],
@@ -30,18 +24,10 @@ internal extension UIFont {
         textStyle: UIFont.TextStyle = .body
     ) -> UIFont {
         guard let fontName else { return systemFont(for: fontWeight, size: fontSize) }
-        // Determine the base font
-        let font: UIFont = {
-            return getDefaultSystemFont(fontName: fontName,
-                                        fontWeight: fontWeight,
-                                        size: fontSize) ??
-                    loadCustomFont(fontName: fontName,
-                                  fontWeight: fontWeight,
-                                  fontSize: fontSize) ??
-                    systemFont(for: fontWeight, size: fontSize)
-        }()
+        let font = getDefaultSystemFont(fontName: fontName, fontWeight: fontWeight, size: fontSize)
+            ?? loadCustomFont(fontName: fontName, fontWeight: fontWeight, fontSize: fontSize)
+            ?? systemFont(for: fontWeight, size: fontSize)
 
-        // Apply Dynamic Type scaling
         return UIFontMetrics.metricFor(size: fontSize).scaledFont(for: font)
     }
 
@@ -51,11 +37,7 @@ internal extension UIFont {
         size: CGFloat
     ) -> UIFont {
         let systemFont = UIFont.systemFont(ofSize: size)
-        let symbolicTraits = UIFontDescriptor.SymbolicTraits(fontWeight)
-        if let descriptor = systemFont.fontDescriptor.withSymbolicTraits(symbolicTraits) {
-            return UIFont(descriptor: descriptor, size: size)
-        }
-        return systemFont
+        return systemFont.fontDescriptor.font(withTraits: fontWeight, size: size) ?? systemFont
     }
 
     /// Returns the system font with a specific design and traits.
@@ -71,45 +53,25 @@ internal extension UIFont {
         var descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body)
         descriptor = descriptor.withDesign(design) ?? descriptor
 
-        let symbolicTraits = UIFontDescriptor.SymbolicTraits(fontWeight)
-        if let finalDescriptor = descriptor.withSymbolicTraits(symbolicTraits) {
-            return UIFont(descriptor: finalDescriptor, size: size)
-        }
-
-        return UIFont(descriptor: descriptor, size: size)
+        return descriptor.font(withTraits: fontWeight, size: size) ?? UIFont(descriptor: descriptor, size: size)
     }
 
-    /// Loads a custom font from the main bundle if it is not already registered.
-    ///
-    /// - Parameters:
-    ///   - fontName: The name of the custom font to load.
-    ///   - fontWeight: An array of UIFontDescriptor.SymbolicTraits representing the font's traits.
-    ///   - fontSize: The size of the font.
-    /// - Returns: A UIFont object if the font was successfully loaded; otherwise, nil.
+    /// Custom fonts require both a matching bundle file and prior registration by the host app.
+    /// Lookup does not register fonts or try an unsuffixed family name.
     private static func loadCustomFont(
         fontName: String,
         fontWeight: [UIFontDescriptor.SymbolicTraits],
         fontSize: CGFloat
     ) -> UIFont? {
-        // Determine the appropriate font weight suffix based on traits
-        var suffix = "-Regular"
-        if fontWeight.contains(.traitBold) && fontWeight.contains(.traitItalic) {
-            suffix = "-BoldItalic"
-        } else if fontWeight.contains(.traitBold) {
-            suffix = "-Bold"
-        } else if fontWeight.contains(.traitItalic) {
-            suffix = "-Italic"
-        }
+        let fullFontName = fontName + fontWeight.customFontSuffix
 
-        let fullFontName = fontName + suffix
-
-        // Check if the font is already registered
+        // Preserve the bundle-file requirement even if UIKit already knows this font name.
         guard (Bundle.main.url(forResource: fullFontName, withExtension: "ttf") ??
                Bundle.main.url(forResource: fullFontName, withExtension: "otf")) != nil else {
             return nil
         }
 
-        if UIFont.familyNames.flatMap({ UIFont.fontNames(forFamilyName: $0) }).contains(fullFontName) {
+        if isFontRegistered(fontName: fullFontName) {
             return UIFont(name: fullFontName, size: fontSize)
         }
         return nil
@@ -122,6 +84,7 @@ internal extension UIFont {
         }
     }
 
+    /// Legacy registration helper. `matching` intentionally only reads host-registered fonts.
     private static func isCustomFontAvailable(_ fontName: String) -> Bool {
         guard let fontURL = Bundle.main.url(forResource: fontName, withExtension: "ttf") ??
                 Bundle.main.url(forResource: fontName, withExtension: "otf") else {
@@ -144,6 +107,23 @@ internal extension UIFont {
         } else {
             return false
         }
+    }
+}
+
+private extension UIFontDescriptor {
+    /// UIKit may reject a trait combination; callers retain their existing fallback descriptor.
+    func font(withTraits traits: [UIFontDescriptor.SymbolicTraits], size: CGFloat) -> UIFont? {
+        withSymbolicTraits(UIFontDescriptor.SymbolicTraits(traits)).map { UIFont(descriptor: $0, size: size) }
+    }
+}
+
+private extension Array where Element == UIFontDescriptor.SymbolicTraits {
+    /// Keep separate bold/italic entries significant, matching the existing theme-to-traits mapping.
+    var customFontSuffix: String {
+        if contains(.traitBold) && contains(.traitItalic) { return "-BoldItalic" }
+        if contains(.traitBold) { return "-Bold" }
+        if contains(.traitItalic) { return "-Italic" }
+        return "-Regular"
     }
 }
 
@@ -186,10 +166,9 @@ internal extension UIFontDescriptor.SystemDesign {
     }
 }
 
-extension UIFontMetrics {
+internal extension UIFontMetrics {
+    /// Match the existing design-size bands: caption through 15pt, title from 20pt, body between them.
     static func metricFor(size: CGFloat) -> UIFontMetrics {
-        // using a simple mapping here to try to provide reasonable font scaling
-        // behavior based on the original text size in the design
         if size <= 15 {
             return UIFontMetrics(forTextStyle: .caption1)
         } else if size >= 20 {

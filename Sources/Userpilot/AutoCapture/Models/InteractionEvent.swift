@@ -181,3 +181,23 @@ extension InteractionPayload {
     }
 
 }
+
+// MARK: - Published properties
+
+extension InteractionPayload {
+    /// Preserves target → internal → source precedence, then enriches the supplied screen's hierarchy.
+    func buildEventProperties(
+        screen: ScreenTrackingPayload?, framework: Userpilot.AppFramework?
+    ) -> [String: Any] {
+        var properties: [String: Any] = [:]
+        properties.merge(toDictionary()) { _, new in new }
+        var internalProps = interactionType.buildInternalProperties(framework: framework)
+        internalProps.merge(toSourceDictionary()) { _, new in new }
+        properties.merge(internalProps) { _, new in new }
+        if let hierarchy = properties[Constants.AutoCapture.hierarchy] as? String, let screen {
+            let resolvedHierarchy = screen.replaceUnknownScreenPlaceholder(in: hierarchy)
+            properties[Constants.AutoCapture.hierarchy] = screen.buildHierarchyPath(resolvedHierarchy)
+        }
+        return properties
+    }
+}

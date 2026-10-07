@@ -15,28 +15,25 @@
 import UIKit
 import UserNotifications
 
-// This is a placeholder delegate implementation in case there's no UNUserNotificationCenter.delegate set in the app
+// The notification center holds its delegate weakly. Keep the fallback alive when the host has none.
 // swiftlint:disable:next type_name
-internal class UserpilotUNUserNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
-    static var shared = UserpilotUNUserNotificationCenterDelegate()
+internal final class UserpilotUNUserNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = UserpilotUNUserNotificationCenterDelegate()
 }
 
-extension UNUserNotificationCenter {
+internal extension UNUserNotificationCenter {
 
     static func swizzleNotificationCenterGetDelegate() {
-        // this will swap in a new getter for UNUserNotificationCenter.delegate - giving our code a chance to hook in
-        let originalScrollViewDelegateSelector = #selector(getter: self.delegate)
-        let swizzledScrollViewDelegateSelector = #selector(userpilot__getNotificationCenterDelegate)
-
-        guard let originalScrollViewMethod = class_getInstanceMethod(self, originalScrollViewDelegateSelector),
-              let swizzledScrollViewMethod = class_getInstanceMethod(self, swizzledScrollViewDelegateSelector) else {
-            return
-        }
-
-        method_exchangeImplementations(originalScrollViewMethod, swizzledScrollViewMethod)
+        // Also used temporarily around fallback assignment: this must remain an exchange, not a once gate.
+        Swizzler.swapInstanceMethods(
+            on: self,
+            original: #selector(getter: self.delegate),
+            swizzled: #selector(userpilot__getNotificationCenterDelegate)
+        )
     }
 
-    // this is our custom getter logic for the UNUserNotificationCenter.delegate
+    /// Reads the current host delegate and installs callbacks on its concrete class. Hooking the
+    /// getter lets a replacement host delegate receive hooks when it is subsequently read too.
     @objc
     private func userpilot__getNotificationCenterDelegate() -> UNUserNotificationCenterDelegate? {
         let delegate: UNUserNotificationCenterDelegate
@@ -54,6 +51,23 @@ extension UNUserNotificationCenter {
             shouldSetDelegate = true
         }
 
+        installNotificationHooks(on: delegate)
+
+        // If we need to set a non-nil implementation where there previously was not one,
+        // swap the swizzled getter back first, then assign, then restore the swizzled getter.
+        // Assignment can re-enter the getter and recursively assign the fallback while our hook is
+        // installed. Preserve both exchanges and their order around the setter to prevent that loop.
+        if shouldSetDelegate {
+            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
+            self.delegate = delegate
+            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
+        }
+
+        return delegate
+    }
+
+    /// Hook the actual host delegate class, or the fallback class when the host has no delegate.
+    private func installNotificationHooks(on delegate: UNUserNotificationCenterDelegate) {
         Swizzler.swizzle(
             targetInstance: delegate,
             targetSelector:
@@ -75,17 +89,6 @@ extension UNUserNotificationCenter {
             swizzleSelector:
                 #selector(userpilot__userNotificationCenterWillPresent)
         )
-
-        // If we need to set a non-nil implementation where there previously was not one,
-        // swap the swizzled getter back first, then assign, then restore the swizzled getter.
-        // This is done to avoid infinite recursion in some cases.
-        if shouldSetDelegate {
-            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
-            self.delegate = delegate
-            UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
-        }
-
-        return delegate
     }
 
     @objc
@@ -94,8 +97,7 @@ extension UNUserNotificationCenter {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        // this gives swizzling something to replace, if the existing delegate doesn't already
-        // implement this function.
+        // Forwarding must still finish the OS callback when the host omitted this optional method.
         completionHandler()
     }
 
@@ -105,8 +107,7 @@ extension UNUserNotificationCenter {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // this gives swizzling something to replace, if the existing delegate doesn't already
-        // implement this function.
+        // An absent host callback opts out of presentation and still completes the OS request.
         completionHandler([])
     }
 
@@ -121,7 +122,8 @@ extension UNUserNotificationCenter {
                 response,
                 withCompletionHandler: completionHandler)
         } else {
-            // Not an Userpilot push, so pass to the original implementation
+            // After exchange this selector invokes the original host method or the placeholder.
+            // Forward its completion unchanged; the SDK must not complete this branch as well.
             userpilot__userNotificationCenterDidReceive(
                 center,
                 didReceive: response,
@@ -140,7 +142,8 @@ extension UNUserNotificationCenter {
                 parsedNotification,
                 withCompletionHandler: completionHandler)
         } else {
-            // Not an Userpilot push, so pass to the original implementation
+            // The host keeps its presentation decision for notifications outside Userpilot.
+            // This selector forwards to the original method after exchange.
             userpilot__userNotificationCenterWillPresent(
                 center,
                 willPresent: notification,

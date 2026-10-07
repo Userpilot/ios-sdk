@@ -51,30 +51,97 @@ final class StringExtensionsTests: XCTestCase {
         XCTAssertFalse("abc".isNumeric())
     }
 
-    func testJSONStringDecodesArrayAndObject() throws {
+    func testJSONStringDecodesObject() throws {
         struct Item: Decodable, Equatable {
             let id: Int
             let name: String
         }
 
-        let items: [Item]? = """
-        [
-          { "id": 1, "name": "First" },
-          { "id": 2, "name": "Second" }
-        ]
-        """.toArray()
-
         let item: Item? = "{ \"id\": 3, \"name\": \"Third\" }".toObject()
 
-        XCTAssertEqual(items, [Item(id: 1, name: "First"), Item(id: 2, name: "Second")])
         XCTAssertEqual(item, Item(id: 3, name: "Third"))
     }
 
     func testInvalidJSONDecodeReturnsNil() {
-        let items: [String]? = "not-json".toArray()
         let object: [String: String]? = "not-json".toObject()
 
-        XCTAssertNil(items)
         XCTAssertNil(object)
+    }
+
+    func testToObject_decodesValidJSON_withoutLogging() {
+        let logger = MockLogger()
+
+        let theme = "{\"id\":2,\"theme_data\":null}".toMobileTheme(logger: logger)
+
+        XCTAssertEqual(theme?.id, 2)
+        XCTAssertTrue(logger.loggedErrors.isEmpty)
+    }
+
+    func testToObject_logsFailure_andReturnsNil() {
+        let logger = MockLogger()
+
+        let theme = "{\"id\":\"not-a-number\"}".toMobileTheme(logger: logger)
+
+        XCTAssertNil(theme)
+        XCTAssertEqual(logger.loggedErrors.count, 1)
+        XCTAssertTrue(logger.loggedErrors.first?.contains("Failed to decode") == true)
+    }
+
+    func testToObject_returnsNil_withoutLogging_forEmptyString() {
+        let logger = MockLogger()
+
+        XCTAssertNil("".toMobileTheme(logger: logger))
+        XCTAssertTrue(logger.loggedErrors.isEmpty)
+    }
+
+    func testUnknownEnumValue_dropsContent_andLogsIt() throws {
+        let logger = MockLogger()
+        var payload = MockContentFactory.makeFlowContentPayload()
+        XCTAssertNotNil(payload.toJSONString()?.toFlowContent(logger: logger)?.flowContent)
+
+        var flow = try XCTUnwrap(payload["mobile_contents"] as? [String: Any])
+        flow["type"] = "video"
+        payload["mobile_contents"] = flow
+
+        XCTAssertNil(try XCTUnwrap(payload.toJSONString()).toFlowContent(logger: logger))
+        XCTAssertEqual(logger.loggedErrors.count, 1)
+    }
+
+    func testExperienceCandidates_ignoreAbsentContentTypesWithoutLogging() throws {
+        let payloads = [
+            MockContentFactory.makeFlowContentPayload(),
+            MockContentFactory.makeSurveyContentPayload(),
+            MockContentFactory.makeNPSContentPayload()
+        ]
+        for payload in payloads {
+            let logger = MockLogger()
+            let contents = try XCTUnwrap(payload.toJSONString()).experienceCandidates(logger: logger)
+            XCTAssertEqual(contents.count, 1)
+            XCTAssertTrue(logger.loggedErrors.isEmpty)
+        }
+        let logger = MockLogger()
+        XCTAssertTrue("{}".experienceCandidates(logger: logger).isEmpty)
+        XCTAssertTrue("{\"mobile_contents\":null,\"surveys\":null,\"nps\":null}"
+            .experienceCandidates(logger: logger).isEmpty)
+        XCTAssertTrue(logger.loggedErrors.isEmpty)
+    }
+
+    func testExperienceCandidates_preservePriorityAndContinueAfterMalformedContent() throws {
+        var payload = MockContentFactory.makeFlowContentPayload()
+        payload.merge(MockContentFactory.makeSurveyContentPayload()) { _, new in new }
+        payload.merge(MockContentFactory.makeNPSContentPayload()) { _, new in new }
+        let logger = MockLogger()
+        let contents = try XCTUnwrap(payload.toJSONString()).experienceCandidates(logger: logger)
+        XCTAssertEqual(contents.count, 3)
+        XCTAssertNotNil(contents.first?.asFlowContent())
+        XCTAssertNotNil(contents.dropFirst().first?.asSurveyContent())
+        XCTAssertNotNil(contents.last?.asNPSContent())
+        XCTAssertTrue(logger.loggedErrors.isEmpty)
+
+        payload["mobile_contents"] = ["id": "invalid"]
+        let remaining = try XCTUnwrap(payload.toJSONString()).experienceCandidates(logger: logger)
+        XCTAssertEqual(remaining.count, 2)
+        XCTAssertNotNil(remaining.first?.asSurveyContent())
+        XCTAssertEqual(logger.loggedErrors.count, 1)
     }
 }

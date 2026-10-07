@@ -172,90 +172,56 @@ internal extension UIView {
 
     // MARK: - UIView navigation bar check (used to skip SwiftUI tap when preferring UIKit for nav bar)
     var isInsideNavigationBar: Bool {
+        firstAncestor(of: UINavigationBar.self) != nil
+    }
+
+    /// Returns the nearest match, including the receiver. Start at `superview` to exclude self.
+    func firstAncestor<T: UIView>(of type: T.Type) -> T? {
         var current: UIView? = self
         while let view = current {
-            if view is UINavigationBar { return true }
+            if let match = view as? T { return match }
             current = view.superview
         }
-        return false
+        return nil
     }
 
     // MARK: Auto capture parent tableview/collection view
 
     /// Finds a parent UITableViewCell in the view hierarchy
     func findParentTableViewCell() -> UITableViewCell? {
-        var currentView: UIView? = self
-        while let current = currentView {
-            if let cell = current as? UITableViewCell {
-                return cell
-            }
-            currentView = current.superview
-        }
-        return nil
+        firstAncestor(of: UITableViewCell.self)
     }
 
     /// Finds a parent UICollectionViewCell in the view hierarchy
     func findParentCollectionViewCell() -> UICollectionViewCell? {
-        var currentView: UIView? = self
-        while let current = currentView {
-            if let cell = current as? UICollectionViewCell {
-                return cell
-            }
-            currentView = current.superview
-        }
-        return nil
+        firstAncestor(of: UICollectionViewCell.self)
     }
 
     /// Nearest enclosing `UITableView`, if any.
     func findAncestorUITableView() -> UITableView? {
-        var current: UIView? = self
-        while let view = current {
-            if let table = view as? UITableView { return table }
-            current = view.superview
-        }
-        return nil
+        firstAncestor(of: UITableView.self)
     }
 
     /// Nearest enclosing `UICollectionView`, if any.
     func findAncestorUICollectionView() -> UICollectionView? {
-        var current: UIView? = self
-        while let view = current {
-            if let collection = view as? UICollectionView { return collection }
-            current = view.superview
-        }
-        return nil
+        firstAncestor(of: UICollectionView.self)
     }
 
     /// Nearest enclosing `UIPickerView`, if any. Used to detect SwiftUI's wheel-picker
     /// internals (`UIKitPickerView → UIPickerView → UIPickerTableView`) so we can suppress
     /// the duplicate `table_view_cell_selected` event that the inner table produces.
     func findAncestorUIPickerView() -> UIPickerView? {
-        var current: UIView? = self
-        while let view = current {
-            if let picker = view as? UIPickerView { return picker }
-            current = view.superview
-        }
-        return nil
+        firstAncestor(of: UIPickerView.self)
     }
 
     /// Section / table header-footer views (not row cells).
     func findParentTableViewHeaderFooter() -> UITableViewHeaderFooterView? {
-        var current: UIView? = self
-        while let view = current {
-            if let headerFooter = view as? UITableViewHeaderFooterView { return headerFooter }
-            current = view.superview
-        }
-        return nil
+        firstAncestor(of: UITableViewHeaderFooterView.self)
     }
 
     /// Collection supplementary views (headers, footers) and decoration-reusable types.
     func findParentCollectionReusableView() -> UICollectionReusableView? {
-        var current: UIView? = self
-        while let view = current {
-            if let reusable = view as? UICollectionReusableView { return reusable }
-            current = view.superview
-        }
-        return nil
+        firstAncestor(of: UICollectionReusableView.self)
     }
 
     // MARK: Distance Helpers
@@ -275,14 +241,7 @@ internal extension UIView {
 
     /// Finds a parent UIControl in the view hierarchy
     func findParentControl() -> UIControl? {
-        var currentView: UIView? = self.superview
-        while let parent = currentView {
-            if let control = parent as? UIControl {
-                return control
-            }
-            currentView = parent.superview
-        }
-        return nil
+        superview?.firstAncestor(of: UIControl.self)
     }
 
     /// Calculates distance from view top edge to screen top

@@ -13,7 +13,7 @@ final class InteractionEventCacheTests: XCTestCase {
     override func setUp() {
         super.setUp()
         Userpilot.Registry.shared.resetForTesting()
-        InteractionEventCache.flushAll()
+        InteractionEventCache.cancelAll()
         userpilot = MockUserpilot(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)")
                 .enableInteractionAutoCapture()
@@ -22,7 +22,7 @@ final class InteractionEventCacheTests: XCTestCase {
     }
 
     override func tearDown() {
-        InteractionEventCache.flushAll()
+        InteractionEventCache.cancelAll()
         userpilot = nil
         Userpilot.Registry.shared.resetForTesting()
         super.tearDown()
@@ -93,7 +93,7 @@ final class InteractionEventCacheTests: XCTestCase {
 
         wait(for: [duplicateDelivery], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.2)
 
-        InteractionEventCache.flushAll()
+        InteractionEventCache.cancelAll()
 
         let afterFlushDelivery = XCTestExpectation(description: "same text length publishes after cache flush")
         userpilot.analyticsPublisher.onPublish = { event in
@@ -125,7 +125,7 @@ final class InteractionEventCacheTests: XCTestCase {
             for: view,
             textLengthForDedupe: 4
         )
-        InteractionEventCache.flushAll()
+        InteractionEventCache.cancelAll()
 
         wait(for: [expectation], timeout: Constants.AutoCapture.interactionDebounceInterval + 0.2)
     }
@@ -134,5 +134,37 @@ final class InteractionEventCacheTests: XCTestCase {
         var payload = InteractionPayload(interactionType: .textFieldChanged, elementType: targetClass)
         payload.sourceProperties = [Constants.AutoCapture.textLength: length]
         return payload
+    }
+
+    func testFlushPendingPublishesInlineAndRetainsDeliveredDeduplication() {
+        let view = UIView()
+        var lengths: [Int] = []
+        userpilot.analyticsPublisher.onPublish = { event in
+            if let length = event.properties?[Constants.AutoCapture.textLength] as? Int { lengths.append(length) }
+        }
+
+        InteractionEventCache.sendDebouncedInteraction(textPayload(length: 3), for: view, textLengthForDedupe: 3)
+        InteractionEventCache.flushPendingInteractions()
+        XCTAssertEqual(lengths, [3])
+
+        InteractionEventCache.sendDebouncedInteraction(textPayload(length: 3), for: view, textLengthForDedupe: 3)
+        InteractionEventCache.flushPendingInteractions()
+        XCTAssertEqual(lengths, [3])
+
+        InteractionEventCache.cancelAll()
+        InteractionEventCache.sendDebouncedInteraction(textPayload(length: 3), for: view, textLengthForDedupe: 3)
+        InteractionEventCache.flushPendingInteractions()
+        XCTAssertEqual(lengths, [3, 3])
+    }
+
+    func testPendingInteractionDoesNotRetainItsSource() {
+        let pending = autoreleasepool {
+            let view = UIView()
+            return PendingInteraction(
+                payload: textPayload(length: 1), textLengthForDedupe: 1, debounceKey: "test", source: view
+            )
+        }
+
+        XCTAssertNil(pending.source)
     }
 }

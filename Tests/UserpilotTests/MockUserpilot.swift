@@ -47,8 +47,6 @@ class MockUserpilot: Userpilot {
         container.register(ThemeHandling.self, value: themeHandler)
         container.register(ImageLoading.self, value: imageLoader)
         container.register(LinkOpening.self, value: linkOpener)
-        experienceStateMachine = ExperienceStateMachine(container: container)
-        container.register(ExperienceStateManaging.self, value: experienceStateMachine)
         // Real screen tracker + autocapture coordinator (lazy: only built when a test
         // resolves `autoCaptureCoordinator`). `ScreenNameTracker.init` ignores its
         // container, and `AutoCaptureCoordinator.init` resolves the mocks registered
@@ -71,7 +69,6 @@ class MockUserpilot: Userpilot {
     var themeHandler = MockThemeHandler()
     var imageLoader = MockImageLoader()
     var linkOpener = MockLinkOpening()
-    var experienceStateMachine: ExperienceStateManaging!
     var mockLogger = MockLogger()
 }
 

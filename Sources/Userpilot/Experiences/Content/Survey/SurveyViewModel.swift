@@ -13,31 +13,9 @@
 
 import Foundation
 
-/// Renderer-facing survey state and actions. UIKit owns presentation and dismissal completion.
-protocol SurveyViewModeling: AnyObject {
-    var surveyTheme: SurveyTheme? { get }
-    var surveyContent: SurveyContent? { get }
-    var currentStep: Int { get }
-    var isRTL: Bool { get }
-    var bindData: ((Bool) -> Void)? { get set }
-    var closeSurvey: (() -> Void)? { get set }
-    var bindNextSurveyStep: (() -> Void)? { get set }
-
-    func onStart()
-    func onExperienceSeen()
-    func onExperienceDismissalCompleted()
-    @discardableResult
-    func showThankYouMessage() -> Bool
-    func isAnyQuestionRequired() -> Bool
-    func onSurveyCompleted()
-    func onSurveyDismissed()
-    func onSurveyListSubmitted(answersPayload: [Payload])
-    func moveToNextSurveyStep(_ answer: Any?, _ answerPayload: Payload)
-}
-
 /// Prepares survey content, advances questions and reports answers for one renderer.
 /// Renderer callbacks retain their existing main-thread delivery and dismissal ownership.
-final class SurveyViewModel: SurveyViewModeling {
+final class SurveyViewModel {
 
     // MARK: - Properties
 
@@ -90,21 +68,27 @@ final class SurveyViewModel: SurveyViewModeling {
             return
         }
 
-        // Setup content
-        self.surveyContent = surveyContent
-        if let lastModule = surveyContent.modules.last,
-           lastModule.type == .completed,
-           lastModule.metadata?.enabled == false {
-            let listWithoutCompleteMessage = Array(surveyContent.modules.dropLast())
-            self.surveyContent?.modules = listWithoutCompleteMessage
-        }
-
-        // Setup theme
-        surveyTheme = themeHandler.surveyTheme(for: surveyContent)
+        prepareContent(surveyContent)
+        prepareTheme(for: surveyContent)
 
         // Keep the original content check: removing a disabled thank-you module does not
         // change whether the backend supplied an empty survey.
         bindData?(!surveyContent.modules.isEmpty && surveyTheme != nil)
+    }
+
+    /// Only the terminal thank-you module can be omitted; questions retain their original order.
+    private func prepareContent(_ content: SurveyContent) {
+        surveyContent = content
+        if let lastModule = content.modules.last,
+           lastModule.type == .completed,
+           lastModule.metadata?.enabled == false {
+            surveyContent?.modules = Array(content.modules.dropLast())
+        }
+    }
+
+    /// A resolved app theme wins; otherwise the survey override falls back to the cached base theme.
+    private func prepareTheme(for content: SurveyContent) {
+        surveyTheme = themeHandler.surveyTheme(for: content)
     }
 
     var isRTL: Bool {
@@ -211,7 +195,7 @@ final class SurveyViewModel: SurveyViewModeling {
         notifyStepState(.started, surveyContent: surveyContent, surveyStep: surveyStep)
 
         let eventStepSeen = ExperienceSurveyStepSeenEvent(
-            surveyId: surveyStep.id,
+            surveyId: surveyContent.id,
             submissionId: submissionId,
             moduleId: surveyStep.id,
             type: surveyStep.type.rawValue
@@ -269,8 +253,7 @@ final class SurveyViewModel: SurveyViewModeling {
 
     // Return current survey step content
     private func getCurrentStepSurveyContent() -> SurveyStep? {
-        guard let surveyContent else { return nil }
-        return surveyContent.modules[currentStep]
+        surveyContent?.modules[currentStep]
     }
 
     func moveToNextSurveyStep(

@@ -32,15 +32,11 @@ internal protocol Logging {
 /// two distinct tag prefixes for free.
 ///
 /// Implementation notes:
-/// * Forwards into the underlying `OSLog` through a fixed `[%{public}@] %{public}@`
-///   format string, with the token + the pre-formatted user message as the
-///   two args. This is the only way to inject a runtime prefix while keeping
-///   `os_log`'s `StaticString` contract.
-/// * Pre-formats the caller's `message`/`args` into a runtime `String` using
-///   `String(format:arguments:)`. OSLog privacy modifiers (`%{public}@`,
-///   `%{private}@`) are stripped to their plain counterparts because
-///   `String(format:)` doesn't understand them; the SDK logs only emit
-///   `%{public}` markers so no production privacy guarantee is lost.
+/// * Keeps the fixed token prefix and existing formatting for ordinary messages.
+/// * A message containing an explicit private argument is forwarded as a private
+///   message. Pre-formatting combines its arguments into one String, so protecting
+///   that whole String keeps private values out of the public log without parsing
+///   or rewriting printf arguments.
 internal final class UPLogger: Logging {
 
     private let underlyingLog: OSLog
@@ -48,7 +44,9 @@ internal final class UPLogger: Logging {
 
     /// Fixed format string used when forwarding to `os_log` so the per-message
     /// token prefix is always present without callers having to construct it.
-    private static let prefixedFormat: StaticString = "[%{public}@] %{public}@"
+    static func prefixedFormat(for message: StaticString) -> StaticString {
+        "\(message)".contains("%{private}") ? "[%{public}@] %{private}@" : "[%{public}@] %{public}@"
+    }
 
     init(category: String, token: String) {
         self.underlyingLog = OSLog(userpilotCategory: category)
@@ -82,14 +80,14 @@ internal final class UPLogger: Logging {
     ) {
         tryCatch {
             let formatted = Self.formattedMessage(message, args: args)
-            os_log(Self.prefixedFormat, log: underlyingLog, type: type, token, formatted)
+            os_log(Self.prefixedFormat(for: message), log: underlyingLog, type: type, token, formatted)
         }
     }
 
     /// Renders `message` + `args` to a `String`, stripping OSLog privacy
     /// annotations (`{public}` / `{private}`) so `String(format:)` understands
     /// the format specifiers.
-    private static func formattedMessage(_ message: StaticString, args: [CVarArg]) -> String {
+    static func formattedMessage(_ message: StaticString, args: [CVarArg]) -> String {
         let raw = "\(message)"
         if args.isEmpty {
             return raw

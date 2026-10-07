@@ -182,18 +182,7 @@ internal func loadJSONFile<T: Decodable>(
     named fileName: String,
     as type: T.Type
 ) -> T? {
-    guard let url = Userpilot.resourceBundle.url(forResource: fileName, withExtension: "json") else {
-        return nil
-    }
-
-    do {
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        let decodedObject = try decoder.decode(T.self, from: data)
-        return decodedObject
-    } catch {
-        return nil
-    }
+    return Userpilot.resourceBundle.loadJSONFile(named: fileName, as: type)
 }
 
 /// Retrieves the current key `UIWindow` in the app that is part of an active foreground scene.
@@ -225,7 +214,7 @@ internal func print(
 ///   - logger: An object conforming to the `Logging` protocol for emitting warnings about unsupported types.
 ///
 /// - Returns: A sanitized `[String: Any]` dictionary:
-///   - Includes only values of supported types: `String`, `Bool`, `Int`, `Int64`, `Double`, `Float`.
+///   - Keeps scalar strings, booleans and numbers; dictionaries, arrays and nulls are dropped.
 ///   - Returns `nil` if the sanitized result is empty.
 internal func sanitizePayload(
     _ payload: Payload,

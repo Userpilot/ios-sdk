@@ -32,14 +32,14 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
     /// The view model responsible for managing the state and actions related to the carousel experience.
     /// It provides the data and behavior for the slide-out view, including user actions, theme data,
     /// and content to be displayed.
-    internal let experienceViewModel: ExperienceViewModeling
+    internal let experienceViewModel: ExperienceViewModel
 
     // MARK: - Initializers
 
     /// Initializes the `SlideOutBottomSheetViewController` with a given view model.
     ///
     /// - Parameter experienceViewModel: The view model that controls the experience data and behavior.
-    init(experienceViewModel: ExperienceViewModeling) {
+    init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: nil, bundle: nil)
     }

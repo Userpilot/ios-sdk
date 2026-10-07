@@ -366,7 +366,7 @@ extension ExperiencesPublisher {
                   let payload = message.payload["payload"] as? [String: Any],
                   payload.keys.contains("request_id"), payload["request_id"] as? Int == nil,
                   let response = payload.toJSONString(),
-                  let content = response.experienceCandidates().first else { return }
+                  let content = response.experienceCandidates(logger: publisher.logger).first else { return }
             publisher.accept(content)
         }
     }
@@ -385,7 +385,7 @@ extension ExperiencesPublisher {
     private func receiveScreen(_ payload: Payload, _ message: Message, success: Bool) {
         assertOnQueue()
         guard success, let response = message.payload.toJSONString(),
-              let content = response.experienceCandidates().first else { return }
+              let content = response.experienceCandidates(logger: logger).first else { return }
         if let sentScreen = payload?[Constants.Analytics.screenTitleProperty] as? String,
            sentScreen != getCurrentScreen {
             logger.info("Screen response ignored - the screen has changed")
@@ -400,7 +400,7 @@ extension ExperiencesPublisher {
         assertOnQueue()
         guard operation.trigger == .manual, case .content = operation.phase else { return }
         guard success, let response = message.payload.toJSONString(),
-              let content = response.experienceCandidates().first else {
+              let content = response.experienceCandidates(logger: logger).first else {
             logger.info("Manual experience request returned no content")
             finish(operation)
             return
@@ -418,7 +418,7 @@ extension ExperiencesPublisher {
         let response = message.payload.toJSONString()
         logger.debug("🎨 Theme response for %{public}@ (success: %{public}@): %{public}@",
                      String(describing: key), String(success), response ?? "nil")
-        let theme = success ? response?.toMobileTheme() : nil
+        let theme = success ? response?.toMobileTheme(logger: logger) : nil
         switch key {
         case .id(let themeID):
             guard let theme, theme.id == themeID else {

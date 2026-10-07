@@ -27,7 +27,7 @@ extension UIApplication {
         )
     }
 
-    /// Swizzled sendAction: captures the action then forwards to the original implementation.
+    /// Swizzled sendAction: forwards the original action, then captures its result.
     @objc
     func userpilot__sendAction(
         _ action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?
@@ -240,27 +240,7 @@ extension UIApplication {
     ) {
         guard !view.shouldIgnoreInteractions() else { return }
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
-        let useRedactedInner = (effectiveView !== view)
-
-        var payload = InteractionPayload(
-            interactionType: .tap,
-            elementType: String(describing: type(of: effectiveView))
-        )
-        payload.targetAction = NSStringFromSelector(action)
-        if let target = target {
-            payload.ownerTargetClass = String(describing: type(of: target))
-        }
-        payload.hierarchy = path
-
-        if useRedactedInner {
-            payload.elementText = view.ignoreInnerHierarchyTextPlaceholder()
-        } else {
-            payload.elementText = view.getTextContent()
-            payload.accessibilityIdentifier = view.accessibilityIdentifier
-            payload.accessibilityLabel = view.getAccessibilityLabelContent()
-            payload.targetViewName = view.resolveReferenceName()
-        }
+        let payload = view.buildActionInteractionPayload(action: action, target: target)
 
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
@@ -306,27 +286,7 @@ extension UIApplication {
         guard let view = gestureRecognizer.view else { return }
         guard !view.shouldIgnoreInteractions() else { return }
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: view)
-        let useRedactedInner = (effectiveView !== view)
-
-        var payload = InteractionPayload(
-            interactionType: .tap,
-            elementType: String(describing: type(of: effectiveView))
-        )
-        payload.targetAction = NSStringFromSelector(action)
-        if let target = target {
-            payload.ownerTargetClass = String(describing: type(of: target))
-        }
-        payload.hierarchy = path
-
-        if useRedactedInner {
-            payload.elementText = view.ignoreInnerHierarchyTextPlaceholder()
-        } else {
-            payload.elementText = view.getTextContent()
-            payload.accessibilityIdentifier = view.accessibilityIdentifier
-            payload.accessibilityLabel = view.getAccessibilityLabelContent()
-            payload.targetViewName = view.resolveReferenceName()
-        }
+        let payload = view.buildActionInteractionPayload(action: action, target: target)
 
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }

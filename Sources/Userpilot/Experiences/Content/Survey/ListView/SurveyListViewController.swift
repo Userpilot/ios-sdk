@@ -25,13 +25,13 @@ internal class SurveyListViewController: UIViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions.
-    internal let surveyViewModel: SurveyViewModeling
+    internal let surveyViewModel: SurveyViewModel
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
-    init(surveyViewModel: SurveyViewModeling) {
+    init(surveyViewModel: SurveyViewModel) {
         self.surveyViewModel = surveyViewModel
         super.init(nibName: "SurveyListViewController", bundle: Userpilot.resourceBundle)
     }

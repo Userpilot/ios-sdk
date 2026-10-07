@@ -13,11 +13,9 @@
 import Foundation
 import UIKit
 
-// swiftlint:disable all
-
 // MARK: - RatingItem
 
-/// A struct representing an individual item in the Likert scale (a survey item with a title, image, and selection state).
+/// One Likert scale item with its title, image and selection state.
 internal struct RatingItem {
     var type: LikertViewType
     var title: String
@@ -40,7 +38,7 @@ internal struct RatingItem {
             )
         }
     }
-    
+
     static func fillList(_ answer: Int) -> [RatingItem] {
         let range = ThemeHandler.DefaultValues.npsDefaultLikertViewCount
         return (0..<range).map { index in
@@ -48,7 +46,7 @@ internal struct RatingItem {
                 type: .numbers,
                 title: "\(index)",
                 image: nil,
-                isSelected: index < answer ? true : false
+                isSelected: index < answer
             )
         }
     }
@@ -75,17 +73,7 @@ internal struct RatingItem {
         case .hearts:
             return UIImage.userpilotImage(named: "userpilot_icon_heart")
         default:
-            // Return icons based on the range of items (3, 5, 7, etc.).
-            switch metadata?.range {
-            case 3:
-                return getSmileIcon(for: index, availableRange: 3)
-            case 5:
-                return getSmileIcon(for: index, availableRange: 5)
-            case 7:
-                return getSmileIcon(for: index, availableRange: 7)
-            default:
-                return getSmileIcon(for: index, availableRange: 10)
-            }
+            return getSmileIcon(for: index, availableRange: metadata?.range ?? 10)
         }
     }
 
@@ -97,50 +85,31 @@ internal struct RatingItem {
         for index: Int,
         availableRange: Int
     ) -> UIImage? {
+        // Preserve the native asset mapping, including the legacy ten-point scale ordering.
+        let names: [String]
         switch availableRange {
         case 3:
-            switch index {
-            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
-            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_five")
-            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_nine")
-            default: return UIImage()
-            }
+            names = ["userpilot_icon_smile_three", "userpilot_icon_smile_five", "userpilot_icon_smile_nine"]
         case 5:
-            switch index {
-            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
-            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_five")
-            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_six")
-            case 3: return UIImage.userpilotImage(named: "userpilot_icon_smile_nine")
-            case 4: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
-            default: return UIImage()
-            }
+            names = [
+                "userpilot_icon_smile_three", "userpilot_icon_smile_five", "userpilot_icon_smile_six",
+                "userpilot_icon_smile_nine", "userpilot_icon_smile_ten"
+            ]
         case 7:
-            switch index {
-            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_one")
-            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
-            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_five")
-            case 3: return UIImage.userpilotImage(named: "userpilot_icon_smile_six")
-            case 4: return UIImage.userpilotImage(named: "userpilot_icon_smile_seven")
-            case 5: return UIImage.userpilotImage(named: "userpilot_icon_smile_nine")
-            case 6: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
-            default: return UIImage()
-            }
+            names = [
+                "userpilot_icon_smile_one", "userpilot_icon_smile_three", "userpilot_icon_smile_five",
+                "userpilot_icon_smile_six", "userpilot_icon_smile_seven", "userpilot_icon_smile_nine",
+                "userpilot_icon_smile_ten"
+            ]
         default:
-            switch index {
-            case 0: return UIImage.userpilotImage(named: "userpilot_icon_smile_one")
-            case 1: return UIImage.userpilotImage(named: "userpilot_icon_smile_two")
-            case 2: return UIImage.userpilotImage(named: "userpilot_icon_smile_three")
-            case 3: return UIImage.userpilotImage(named: "userpilot_icon_smile_four")
-            case 4: return UIImage.userpilotImage(named: "icon_smile_five")
-            case 5: return UIImage.userpilotImage(named: "userpilot_icon_smile_six")
-            case 6: return UIImage.userpilotImage(named: "userpilot_icon_smile_seven")
-            case 7: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
-            case 8: return UIImage.userpilotImage(named: "userpilot_icon_smile_eight")
-            case 9: return UIImage.userpilotImage(named: "userpilot_icon_smile_ten")
-            default: return UIImage()
-            }
+            names = [
+                "userpilot_icon_smile_one", "userpilot_icon_smile_two", "userpilot_icon_smile_three",
+                "userpilot_icon_smile_four", "icon_smile_five", "userpilot_icon_smile_six",
+                "userpilot_icon_smile_seven", "userpilot_icon_smile_ten", "userpilot_icon_smile_eight",
+                "userpilot_icon_smile_ten"
+            ]
         }
+        guard let name = names[safe: index] else { return UIImage() }
+        return UIImage.userpilotImage(named: name)
     }
 }
-
-// swiftlint:enable all

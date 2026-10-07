@@ -26,13 +26,13 @@ internal class SlideOutDialogViewController: DialogViewController {
     // MARK: - Properties
 
     /// View model managing the carousel experience state and actions
-    internal let experienceViewModel: ExperienceViewModeling
+    internal let experienceViewModel: ExperienceViewModel
 
     // MARK: - Initializers
 
     /// Initializes the view controller with the given view model.
     /// - Parameter experienceViewModel: The view model to bind with the dialog.
-    init(experienceViewModel: ExperienceViewModeling) {
+    init(experienceViewModel: ExperienceViewModel) {
         self.experienceViewModel = experienceViewModel
         super.init(nibName: nil, bundle: nil)
     }

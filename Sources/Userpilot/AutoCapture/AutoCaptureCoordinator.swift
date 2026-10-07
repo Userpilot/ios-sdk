@@ -165,20 +165,13 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
 
         let screen = screenNameTracker.getCurrentPayload()
         let interactionType = InteractionType.tabSelected
-        var properties: [String: Any] = [
-            Constants.AutoCapture.tabName: tabName,
-            Constants.AutoCapture.tabIndex: tabIndex
-        ]
-        let internalProps = interactionType.buildInternalProperties(framework: config.appFramework)
-        properties.merge(internalProps) { (_, new) in new }
-
-        // Tabs keep their shallow content-controller leaf followed by the tracked screen.
-        let leaf = screenClass.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !leaf.isEmpty {
-            let escaped = leaf.replacingOccurrences(of: "\"", with: "\\\"")
-            let hierarchy = "\(escaped):attr__index=\"\(tabIndex)\""
-            properties[Constants.AutoCapture.hierarchy] = screen?.buildHierarchyPath(hierarchy) ?? hierarchy
-        }
+        let properties = interactionType.buildTabProperties(
+            name: tabName,
+            index: tabIndex,
+            screenClass: screenClass,
+            screen: screen,
+            framework: config.appFramework
+        )
 
         let event = makeEvent(
             type: EventType.autoCaptureEvent,
@@ -301,7 +294,7 @@ private extension AutoCaptureCoordinator {
     /// `handleInteractionEvent` applies the interaction guard; dialog capture uses its own gate.
     private func publishAutoCaptureEvent(_ interaction: InteractionPayload) {
         let screen = screenNameTracker.getCurrentPayload()
-        let properties = buildEventProperties(interaction, screen: screen)
+        let properties = interaction.buildEventProperties(screen: screen, framework: config.appFramework)
 
         let event = makeEvent(
             type: EventType.autoCaptureEvent,
@@ -310,22 +303,6 @@ private extension AutoCaptureCoordinator {
             interactionEventName: interaction.interactionType.toInteractionEventType().rawValue
         )
         publishWithForwarding(event)
-    }
-
-    /// Preserves target → internal → source precedence, then enriches the supplied screen's hierarchy.
-    private func buildEventProperties(
-        _ interaction: InteractionPayload, screen: ScreenTrackingPayload?
-    ) -> [String: Any] {
-        var properties: [String: Any] = [:]
-        properties.merge(interaction.toDictionary()) { _, new in new }
-        var internalProps = interaction.interactionType.buildInternalProperties(framework: config.appFramework)
-        internalProps.merge(interaction.toSourceDictionary()) { _, new in new }
-        properties.merge(internalProps) { _, new in new }
-        if let hierarchy = properties[Constants.AutoCapture.hierarchy] as? String, let screen {
-            let resolvedHierarchy = screen.replaceUnknownScreenPlaceholder(in: hierarchy)
-            properties[Constants.AutoCapture.hierarchy] = screen.buildHierarchyPath(resolvedHierarchy)
-        }
-        return properties
     }
 
     /// Publishes locally first, then forwards directly to an opted-in default instance without re-routing.

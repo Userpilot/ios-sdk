@@ -73,4 +73,24 @@ final class LoggingTests: XCTestCase {
         XCTAssertTrue(logger.loggedLogs.isEmpty)
         XCTAssertTrue(logger.loggedFaults.isEmpty)
     }
+
+    func testPrivatePayload_usesPrivateOSLogFormat() {
+        XCTAssertEqual(
+            "\(UPLogger.prefixedFormat(for: "Push response received:\n%{private}@"))",
+            "[%{public}@] %{private}@"
+        )
+        XCTAssertEqual(
+            "\(UPLogger.prefixedFormat(for: "Public %{public}@; private %{private}@"))",
+            "[%{public}@] %{private}@"
+        )
+    }
+
+    func testPublicMessages_preservePrefixAndFormatting() {
+        XCTAssertEqual("\(UPLogger.prefixedFormat(for: "Event %{public}@"))", "[%{public}@] %{public}@")
+        XCTAssertEqual(
+            UPLogger.formattedMessage("Event %{public}@ count %d", args: ["screen", 2]),
+            "Event screen count 2"
+        )
+        XCTAssertEqual(UPLogger.formattedMessage("Ready", args: []), "Ready")
+    }
 }

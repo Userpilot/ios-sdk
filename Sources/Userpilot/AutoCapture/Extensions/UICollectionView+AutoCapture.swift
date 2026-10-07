@@ -42,20 +42,8 @@ internal extension UICollectionViewCell {
             payload.row = indexPath.item
         }
 
-        let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
-        payload.hierarchy = path
-        if let userpilotLabel = (touchedView ?? self).resolveUserpilotLabel() {
-            if let labelViewType = (touchedView ?? self).resolveUserpilotLabelViewType() {
-                payload.targetClass = labelViewType
-            }
-            payload.elementText = (touchedView ?? self).resolvedInteractionText(userpilotLabel)
-        } else if effectiveView !== self {
-            payload.targetClass = String(describing: type(of: effectiveView))
-            payload.elementText = effectiveView.ignoreInnerHierarchyTextPlaceholder()
-        } else {
-            payload.elementText = userpilotResolvedCellText(touchedView: touchedView)
-            payload.accessibilityIdentifier = accessibilityIdentifier
-            payload.accessibilityLabel = touchedView?.getAccessibilityLabelContent()
+        completeListInteractionPayload(&payload, touchedView: touchedView) {
+            userpilotResolvedCellText(touchedView: touchedView)
         }
 
         // Send to the owning instance's engine
@@ -92,14 +80,7 @@ internal extension UICollectionViewCell {
 
     /// Finds the parent UICollectionView
     private func findParentCollectionView() -> UICollectionView? {
-        var currentView: UIView? = superview
-        while let view = currentView {
-            if let collectionView = view as? UICollectionView {
-                return collectionView
-            }
-            currentView = view.superview
-        }
-        return nil
+        superview?.firstAncestor(of: UICollectionView.self)
     }
 
     /// The item's own title: the iOS 14+ content configuration's text (list cells).

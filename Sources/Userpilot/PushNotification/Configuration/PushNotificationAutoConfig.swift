@@ -13,146 +13,83 @@
 
 import UIKit
 
+/// Process-wide APNs hooks and weak monitor registration. Instance routing stays in each monitor.
 internal enum PushNotificationAutoConfig {
-    /// All registered push notification observers. Held weakly via the table so
-    /// observers can be deallocated by their owning `Userpilot` instance without
-    /// leaking. `NSHashTable` already de-duplicates by object identity, so
-    /// re-registering the same monitor (e.g. on configuration refresh) is a no-op.
+    // Monitor callbacks run outside this lock: handling a response may initialize another SDK instance.
+    private static let lock = NSLock()
+    /// Instances own their monitors. Weak storage allows instance teardown, while registering the
+    /// same monitor again does not add another recipient for APNs token callbacks.
     private static let pushNotificationMonitors = NSHashTable<AnyObject>.weakObjects()
 
-    /// Lock guarding `pushNotificationMonitors` and `response`.
-    private static let lock = NSLock()
+    /// Hybrid runtimes may initialize the SDK after a notification tap reaches the native delegate.
+    /// Keep the unclaimed tap until its monitor registers; looking up only existing instances here
+    /// would lose cold-start taps in Flutter, React Native and Capacitor hosts.
+    private static var pendingResponse: UNNotificationResponse?
 
-    // In some case like in plugins(ReactNative and FLutter), didReceive called
-    // while pushNotificationMonitor is not set.
-    private static var response: UNNotificationResponse?
-
-    /// Registers a `PushNotificationMonitoring` observer to handle push notifications.
-    ///
-    /// Multi-instance: each `Userpilot` instance's monitor registers on init, so the
-    /// process-wide observer list contains one entry per live instance. `setPushToken`
-    /// fans out to every registered monitor; tokenized notification responses route
-    /// directly to the matching `Userpilot` instance.
-    ///
-    /// Re-registering the same monitor object is a no-op thanks to the underlying
-    /// `NSHashTable` identity-based deduplication.
-    ///
-    /// - Parameter observer: The `PushNotificationMonitoring` instance that will handle push notifications.
+    /// Adds a weak, identity-deduplicated observer and offers it the unclaimed cold-start response.
     static func register(observer: PushNotificationMonitoring) {
-        let pendingResponse = lock.withLock {
-            // `NSHashTable.weakObjects()` is keyed by `ObjectIdentifier`-equivalent
-            // pointer identity, so adding the same observer twice does not duplicate.
+        let response = lock.withLock {
             pushNotificationMonitors.add(observer as AnyObject)
-            return response
+            return pendingResponse
         }
+        if let response { replay(response, to: observer) }
+    }
 
-        // Process any cached response that arrived before this monitor existed.
-        guard let pendingResponse = pendingResponse else { return }
-
-        let didHandle = observer.didReceiveNotification(
-            response: pendingResponse,
-            completionHandler: {}
-        )
-
-        // Consume it only if this observer actually claimed it. A monitor
-        // declines a response belonging to another token or another user, and
-        // clearing the cache regardless would let the first monitor to register
-        // swallow a response meant for an instance still coming up.
-        guard didHandle else { return }
-
+    /// A rejected response remains available for its owning instance to register later.
+    /// Monitors validate the account and user themselves. Clearing after any registration would let
+    /// an unrelated instance consume the tap before the matching instance has finished starting.
+    /// Identity checking prevents a replay from clearing a newer response cached by a callback.
+    private static func replay(_ response: UNNotificationResponse, to observer: PushNotificationMonitoring) {
+        guard observer.didReceiveNotification(response: response, completionHandler: {}) else { return }
         lock.withLock {
-            if self.response === pendingResponse {
-                self.response = nil
-            }
+            if pendingResponse === response { pendingResponse = nil }
         }
     }
 
-    /// Returns a snapshot of all currently registered monitors.
+    /// Retains live monitors only for the duration of this callback pass.
     private static func currentMonitors() -> [PushNotificationMonitoring] {
         lock.withLock {
-            pushNotificationMonitors.allObjects.compactMap {
-                $0 as? PushNotificationMonitoring
-            }
+            pushNotificationMonitors.allObjects.compactMap { $0 as? PushNotificationMonitoring }
         }
     }
 
-    /// Configures the app to automatically handle push notifications by swizzling necessary methods.
-    /// This method registers the app for remote notifications and modifies the notification center delegate.
+    /// Installs the existing delegate hooks and asks APNs for a device token.
+    /// Permission prompting remains the monitor's responsibility.
     static func configureAutomatically() {
         UIApplication.swizzleDidRegisterForDeviceToken()
         UIApplication.shared.registerForRemoteNotifications()
         UNUserNotificationCenter.swizzleNotificationCenterGetDelegate()
     }
 
-    /// Called when the device successfully registers for push notifications and receives the device token.
-    /// This method passes the device token to every registered `PushNotificationMonitoring` observer
-    /// so each `Userpilot` instance can forward the token to its own backend.
-    ///
-    /// - Parameter deviceToken: The device token received from APNs (Apple Push Notification Service).
+    /// Every live instance receives the same OS token and owns its own backend publication.
     static func didRegister(deviceToken: Data) {
-        for monitor in currentMonitors() {
-            monitor.setPushToken(deviceToken)
-        }
+        for monitor in currentMonitors() { monitor.setPushToken(deviceToken) }
     }
 
-    /// Called when a push notification is received and handled by the app.
-    /// Registered monitors are tried until one handles the response. A response
-    /// nobody can handle is cached and replayed to the next monitor to register,
-    /// so a tap that arrives before the SDK is configured is not lost.
-    ///
-    /// Responses are not routed by app token here: every monitor already compares
-    /// the payload's token against its own instance before claiming a response, so
-    /// looking the instance up first only duplicated that check — and when the
-    /// instance for that token did not exist yet, it dropped the response instead
-    /// of caching it. That is the normal cold-start ordering for the Flutter,
-    /// React Native and Capacitor wrappers, which configure the SDK from their own
-    /// runtime, well after the notification is delivered.
-    ///
-    /// - Parameters:
-    ///   - response: The response to the notification containing the user's interaction with the notification.
-    ///   - completionHandler: A closure to be executed when the notification has been handled.
+    /// Offers the response until one monitor claims it. Only that monitor invokes the OS completion.
+    /// If none claims it, complete now and cache the tap; replay uses an empty completion.
+    /// Continuing after a claim, or reusing the OS completion during replay, would call it twice.
     static func didReceive(
         _ response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        // Stop at the first monitor that claims the response. Only one monitor
-        // executes the completion handler so we don't trigger UIKit's "called
-        // completionHandler more than once" assertion.
         for monitor in currentMonitors() {
-            let didHandle = monitor.didReceiveNotification(
-                response: response,
-                completionHandler: completionHandler
-            )
+            let didHandle = monitor.didReceiveNotification(response: response, completionHandler: completionHandler)
             if didHandle {
-                // A newer response was handled, so an older cached one is stale.
-                lock.withLock {
-                    self.response = nil
-                }
+                // A handled live response supersedes the older cached tap, as in the existing routing policy.
+                lock.withLock { pendingResponse = nil }
                 return
             }
         }
-
-        // Nobody could take it — usually because the instance it belongs to has not
-        // been configured yet. Hold it for the next monitor to register, which
-        // replays it from `register(observer:)`.
-        lock.withLock {
-            self.response = response
-        }
-
+        lock.withLock { pendingResponse = response }
         completionHandler()
     }
 
-    /// Called when a push notification is about to be presented to the user.
-    /// This method configures the presentation options for Userpilot notifications.
-    ///
-    /// - Parameters:
-    ///   - parsedNotification: The parsed notification to be displayed.
-    ///   - completionHandler: A closure to be executed with the chosen presentation options.
+    /// Preserves the platform-specific presentation options for recognized Userpilot notifications.
     static func willPresent(
         _ parsedNotification: UserpilotNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Behavior for all Userpilot notification
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .list])
         } else {

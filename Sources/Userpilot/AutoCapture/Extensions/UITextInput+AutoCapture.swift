@@ -37,22 +37,7 @@ internal extension UITextField {
         payload.sourceProperties[Constants.AutoCapture.textLength] = text?.count ?? 0
         payload.placeholder = placeholder
 
-        let effectiveView = userpilotEffectiveViewForCapture()
-        // SwiftUI sibling text fields otherwise resolve to identical hierarchy strings; override the
-        // leaf index with a stable on-screen ordinal so they become distinct. Only when not capturing
-        // through an ignore-inner-hierarchy ancestor (effectiveView === self), and only for SwiftUI —
-        // UIKit sibling indices already differ, so its behavior is unchanged.
-        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
-            ? UIKitViewResolver.siblingOrdinal(for: self)
-            : nil
-        payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)
-        if effectiveView !== self {
-            payload.targetClass = String(describing: type(of: effectiveView))
-        } else {
-            payload.accessibilityIdentifier = accessibilityIdentifier
-            payload.accessibilityLabel = getAccessibilityLabelContent()
-            payload.targetViewName = resolveReferenceName()
-        }
+        completeTextInteractionPayload(&payload, config: config)
 
         InteractionEventCache.sendDebouncedInteraction(
             payload,
@@ -84,11 +69,24 @@ internal extension UITextView {
         payload.sourceProperties[Constants.AutoCapture.hasText] = !text.isEmpty
         payload.sourceProperties[Constants.AutoCapture.textLength] = text.count
 
+        completeTextInteractionPayload(&payload, config: config)
+
+        InteractionEventCache.sendDebouncedInteraction(
+            payload,
+            for: self,
+            textLengthForDedupe: payload.sourceProperties[Constants.AutoCapture.textLength] as? Int
+        )
+    }
+}
+
+// MARK: - Shared text metadata
+
+private extension UIView {
+    /// Finalizes identity after each editor has read its own text/placeholder semantics.
+    func completeTextInteractionPayload(_ payload: inout InteractionPayload, config: Userpilot.Config) {
         let effectiveView = userpilotEffectiveViewForCapture()
-        // SwiftUI sibling text views otherwise resolve to identical hierarchy strings; override the
-        // leaf index with a stable on-screen ordinal so they become distinct. Only when not capturing
-        // through an ignore-inner-hierarchy ancestor (effectiveView === self), and only for SwiftUI —
-        // UIKit sibling indices already differ, so its behavior is unchanged.
+        // SwiftUI siblings need their stable on-screen ordinal. An ignored inner hierarchy uses
+        // its effective ancestor; UIKit retains its existing sibling indices.
         let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
             ? UIKitViewResolver.siblingOrdinal(for: self)
             : nil
@@ -100,11 +98,5 @@ internal extension UITextView {
             payload.accessibilityLabel = getAccessibilityLabelContent()
             payload.targetViewName = resolveReferenceName()
         }
-
-        InteractionEventCache.sendDebouncedInteraction(
-            payload,
-            for: self,
-            textLengthForDedupe: payload.sourceProperties[Constants.AutoCapture.textLength] as? Int
-        )
     }
 }

@@ -41,16 +41,7 @@ internal extension UITextField {
     /// - `.numberPad`, `.decimalPad`: Validates that the text contains numeric input.
     /// - Default: Validates that the text is not empty.
     func isValidAnswer() -> Bool {
-        switch self.keyboardType {
-        case .emailAddress:
-            return self.text?.isValidEmail() ?? false
-        case .phonePad:
-            return self.text?.isEmpty == false && (self.text?.count ?? 0) > 3
-        case .numberPad, .decimalPad:
-            return self.text?.isNumeric() ?? false
-        default:
-            return self.text?.isNotEmpty ?? false
-        }
+        return text?.isValidAnswer(keyboardType: keyboardType) ?? false
     }
 
     /// Sets the placeholder text and its color.

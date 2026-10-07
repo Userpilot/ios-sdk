@@ -63,7 +63,15 @@ public class Userpilot: NSObject {
     /// instance's container when `Userpilot(config:)` is called twice with the same token.
     var container = DIContainer()
 
-    let config: Config
+    private(set) var config: Config
+
+    /// Duplicate Swift initializers cannot return another object, so their facades retain the canonical owner.
+    /// Services keep weak owner references; retaining only the container would leave those references empty.
+    private var adoptedInstance: Userpilot?
+
+    /// Keeps lookup, registration and startup together, matching Android's synchronized factory.
+    /// Startup only schedules UI work; it must never synchronously wait for main while holding this lock.
+    private static let initializationLock = NSRecursiveLock()
 
     // Resolved lazily, never in `init`: the idempotent initializer may swap `container` for an
     // already-registered instance's, and these must bind to that one.
@@ -80,7 +88,7 @@ public class Userpilot: NSObject {
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
     ///
-    /// Each `Userpilot` instance owns one. The window is created on first
+    /// Each canonical instance owns one; same-token facades reuse it. The window is created on first
     /// access (i.e. only when this instance actually presents an experience),
     /// uses passthrough hit-testing so non-experience touches fall through, and
     /// sits at a deterministic `UIWindow.Level` derived from the instance's
@@ -93,6 +101,7 @@ public class Userpilot: NSObject {
     /// paths (which already run on the main queue) may touch this. Teardown paths
     /// use `existingExperienceOverlayWindow` instead.
     internal var experienceOverlayWindow: ExperienceOverlayWindow {
+        if let adoptedInstance { return adoptedInstance.experienceOverlayWindow }
         if let existing = experienceOverlayWindowStorage { return existing }
         let overlay = ExperienceOverlayWindow(owningInstance: self)
         experienceOverlayWindowStorage = overlay
@@ -107,7 +116,7 @@ public class Userpilot: NSObject {
     /// `ExperienceOverlayWindow.init`, momentarily surface — a whole window just to
     /// hide it, off the main thread whenever the caller isn't on it.
     internal var existingExperienceOverlayWindow: ExperienceOverlayWindow? {
-        experienceOverlayWindowStorage
+        adoptedInstance?.existingExperienceOverlayWindow ?? experienceOverlayWindowStorage
     }
 
     /// Backing store for `experienceOverlayWindow`. `nil` until this instance
@@ -116,21 +125,34 @@ public class Userpilot: NSObject {
 
     // MARK: - Delegates
 
-    /// The delegate object that handles application screen navigation during experience presentation.
+    // Weak storage stays with the canonical owner, including assignments made through duplicate facades.
+    private weak var navigationDelegateStorage: UserpilotNavigationDelegate?
+    private weak var analyticsDelegateStorage: UserpilotAnalyticsDelegate?
+    private weak var experienceDelegateStorage: UserpilotExperienceDelegate?
+
+    /// The weak delegate that handles screen navigation. Same-token facades share its latest assignment.
     @objc public weak var navigationDelegate: UserpilotNavigationDelegate? {
-        didSet {
-            // A cold-start push deep link may be held waiting on exactly this assignment: the
-            // notification is replayed from inside `init`, before a host could set a delegate.
-            guard navigationDelegate != nil else { return }
-            linkOpener.processPendingDeepLink()
+        get { (adoptedInstance ?? self).navigationDelegateStorage }
+        set {
+            let owner = adoptedInstance ?? self
+            owner.navigationDelegateStorage = newValue
+            // Cold-start push routing may be waiting for the first delegate assignment after init.
+            guard newValue != nil else { return }
+            owner.linkOpener.processPendingDeepLink()
         }
     }
 
-    /// The delegate object that broadcast analytics events.
-    @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
+    /// The weak analytics delegate. Same-token facades share its latest assignment.
+    @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate? {
+        get { (adoptedInstance ?? self).analyticsDelegateStorage }
+        set { (adoptedInstance ?? self).analyticsDelegateStorage = newValue }
+    }
 
-    /// The delegate object that manages and observes experience presentations.
-    @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
+    /// The weak experience delegate. Same-token facades share its latest assignment.
+    @objc public weak var experienceDelegate: UserpilotExperienceDelegate? {
+        get { (adoptedInstance ?? self).experienceDelegateStorage }
+        set { (adoptedInstance ?? self).experienceDelegateStorage = newValue }
+    }
 
     // MARK: - Initialization
 
@@ -139,7 +161,8 @@ public class Userpilot: NSObject {
 
      Idempotent ("get-or-create"): if a `Userpilot` for `config.token` is already
      registered, this initializer adopts that instance's services by pointing the
-     new wrapper at the existing dependency container. The supplied `config` is
+     new wrapper at the existing dependency container and retaining its canonical owner.
+     Configuration, weak delegates and presentation ownership are shared. The supplied `config` is
      discarded in that case — the first call wins. This prevents accidental
      socket / observer churn from duplicate `Userpilot(config:)` calls.
 
@@ -160,6 +183,11 @@ public class Userpilot: NSObject {
         // ensures only one tenant ever absorbs the legacy v1 suite.
         StorageMigrator.runIfNeeded(forToken: config.token)
 
+        Self.initializationLock.withLock { initializeInstance() }
+    }
+
+    /// Called under initializationLock; only the fresh owner starts services and registers native observers.
+    private func initializeInstance() {
         // Idempotent: if a Userpilot for this token already exists, adopt its
         // container and return. The new wrapper still resolves the same
         // services (analytics, socket, storage, etc.) as the original — the
@@ -167,8 +195,11 @@ public class Userpilot: NSObject {
         // underlying machinery. Callers that hold the original reference and
         // the one returned here both observe the same state.
         if let existing = Registry.shared.instance(forToken: config.token) {
-            self.container = existing.container
-            config.logger.error(
+            let suppliedConfig = config
+            adoptedInstance = existing
+            container = existing.container
+            config = existing.config
+            suppliedConfig.logger.error(
                 // swiftlint:disable:next line_length
                 "⚠️ Userpilot already initialized for token %{public}@; returning the existing instance. The supplied config was discarded.",
                 config.token

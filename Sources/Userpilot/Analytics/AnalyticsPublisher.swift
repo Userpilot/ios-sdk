@@ -159,6 +159,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private var sdkEvents: [SDKSend] = []
     private var inFlight: InFlight?
     private var closing: CloseReason?
+    /// Screen-session flag retained across same-screen refreshes, independently of identify/ACK state.
     private var startSession = true
     private var screen: ScreenSessionStateMachine?
 
@@ -272,7 +273,6 @@ extension AnalyticsPublisher {
             return false
         }
 
-        sessions.markUserSwitch()
         dropAllState()
         userpilot?.clean()
         storage.userId = id
@@ -437,7 +437,8 @@ extension AnalyticsPublisher {
         if event.isScreenEvent { sessions.markNormal() }
         if sessions.isPostIdentificationContext(event.eventName), pending.isEmpty,
            experiences?.getCurrentScreen.isNotEmpty == true {
-            enqueueScreenRefresh(isFakeReload: sessions.getPostIdentificationFakeReloadConfig())
+            let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+            enqueueScreenRefresh(isFakeReload: screenConfig.isFakeReload)
         }
     }
 }
@@ -518,7 +519,9 @@ extension AnalyticsPublisher {
                 )
             }
         }
-        startSession = sessions.getPostIdentificationStartSessionConfig(currentStartSession: startSession)
+        let screenConfig = sessions.getPostIdentificationScreenConfig(currentStartSession: startSession)
+        // Retain a switch's override after its screen ACK; only later navigation/resume/reset changes it.
+        startSession = screenConfig.startSession
         publishReadState()
         let metadata: [String: Any] = [
             Constants.Analytics.isSessionStartedProperty: startSession,
@@ -637,6 +640,9 @@ extension AnalyticsPublisher {
     /// Logout and user switch: drop every unsent live, initial, SDK, and offline event (nothing is
     /// flushed) and invalidate restore, request, and experience callbacks from that user.
     private func dropAllState() {
+        // Logout also starts an identity boundary, even when the next identify uses the same ID.
+        // Preserve the first-screen override so retained screen context cannot turn it into navigation.
+        sessions.markUserSwitch()
         generation.value = UUID()
         cancelInFlight()
         pending.removeAll()

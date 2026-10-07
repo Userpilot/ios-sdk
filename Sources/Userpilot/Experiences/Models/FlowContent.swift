@@ -26,7 +26,8 @@ import UIKit
 // MARK: - CarouselData
 
 internal struct FlowContentData: Decodable {
-    let flowContent: FlowContent
+    // A response can contain another content type; absence is not a decoding failure.
+    let flowContent: FlowContent?
 
     private enum CodingKeys: String, CodingKey {
         case flowContent = "mobile_contents"
@@ -296,21 +297,9 @@ internal enum TextAlignmentType: String, Decodable {
 // MARK: - String Extension for JSON Deserialization
 
 internal extension String {
-    /// Converts a JSON string into a `FlowContentData` object using `JSONDecoder`.
-    func toFlowContent() -> FlowContentData? {
-        if let mobileContent: FlowContentData = self.toObject() {
-            return mobileContent
-        } else {
-            return nil
-        }
-    }
-
-    /// Converts a JSON string into an array of `FlowContentData` objects using `JSONDecoder`.
-    func toCarouselList() -> [FlowContentData]? {
-        if let carouselDataList: [FlowContentData] = self.toArray() {
-            return carouselDataList
-        } else {
-            return nil
-        }
+    /// Converts a JSON string into a `FlowContentData`; a failure is logged through `logger` and returns `nil`.
+    func toFlowContent(logger: Logging? = nil) -> FlowContentData? {
+        let data: FlowContentData? = toObject(logger: logger)
+        return data?.flowContent == nil ? nil : data
     }
 }

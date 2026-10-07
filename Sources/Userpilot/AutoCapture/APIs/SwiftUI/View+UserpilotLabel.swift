@@ -97,9 +97,10 @@ private struct UserpilotLabelInjector: UIViewRepresentable {
 }
 
 /// Hidden view that assigns `userpilotLabel` / `userpilotLabelViewType` to a resolved UIKit target.
-private final class LabelCarrierView: UIView {
+final class LabelCarrierView: UIView {
 
-    private var appliedToView: UIView?
+    private weak var appliedToView: UIView?
+    private let attachmentID = UUID()
     private var label: String?
     private var viewType: String?
 
@@ -126,26 +127,39 @@ private final class LabelCarrierView: UIView {
 
     override func removeFromSuperview() {
         super.removeFromSuperview()
-        appliedToView?.userpilotLabel = nil
-        appliedToView?.userpilotLabelViewType = nil
-        appliedToView = nil
+        clearAppliedLabel()
     }
 
     // MARK: - Apply label
 
     private func applyLabelIfPossible() {
-        guard let label, let viewType else { return }
-
-        if appliedToView?.userpilotLabel == label,
-           appliedToView?.userpilotLabelViewType == viewType {
+        guard let label, let viewType, let target = findBestTargetView() else {
+            clearAppliedLabel()
             return
         }
 
-        guard let target = findBestTargetView() else { return }
+        // Resolve first: a carrier can move to another host without its label changing.
+        if appliedToView !== target { clearAppliedLabel() }
+        if target.userpilotLabelAttachmentID == attachmentID,
+           target.userpilotLabel == label,
+           target.userpilotLabelViewType == viewType {
+            return
+        }
 
         target.userpilotLabel = label
         target.userpilotLabelViewType = viewType
+        target.userpilotLabelAttachmentID = attachmentID
         appliedToView = target
+    }
+
+    /// A replaced carrier must not clear metadata now owned by its replacement.
+    private func clearAppliedLabel() {
+        if let target = appliedToView, target.userpilotLabelAttachmentID == attachmentID {
+            target.userpilotLabel = nil
+            target.userpilotLabelViewType = nil
+            target.userpilotLabelAttachmentID = nil
+        }
+        appliedToView = nil
     }
 
     // MARK: - Target resolution
@@ -185,7 +199,15 @@ private enum UserpilotSwiftUIViewTypeResolver {
 
 // MARK: - Taggable detection (SwiftUI file–local)
 
+private var labelAttachmentKey: UInt8 = 0
+
 private extension UIView {
+
+    /// Tracks the writer without retaining the carrier or creating a view-hierarchy cycle.
+    var userpilotLabelAttachmentID: UUID? {
+        get { objc_getAssociatedObject(self, &labelAttachmentKey) as? UUID }
+        set { objc_setAssociatedObject(self, &labelAttachmentKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
 
     /// Deepest descendant (including self) considered a good host for SwiftUI-driven tagging.
     var deepestTaggableView: UIView? {
