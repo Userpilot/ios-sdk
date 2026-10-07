@@ -180,6 +180,25 @@ Both platforms' Online queue and Offline events debug screens show the scenario 
 
 A submitted call or elapsed delay is not proof of a successful ACK. Guided cases require the stated backend, network, lifecycle, and visible-content conditions. Sample counters report submissions, not guaranteed delivery. Passing unit tests and compiling these samples provide regression evidence; they do not replace device/backend QA of those conditions.
 
+## Socket lifecycle stress coverage
+
+The dedicated automated classes are iOS `SocketManagerStressTests` and Android `SocketManagerStressTest`. They call the real socket manager with controlled settings and transport replies; no live backend connection is opened.
+
+| Case | Scenario | Expected result |
+| --- | --- | --- |
+| SOC-001 | Repeat connect → close → connect → close → close → close → connect for 25 cycles | Each cycle can join; the previous transport is detached before a replacement is created. |
+| SOC-002 | Four background producers repeatedly connect while settings are pending | One settings attempt is admitted. Closing it prevents its delayed result from affecting the replacement. |
+| SOC-003 | Four producers each submit 25 closes on one joined connection | All 100 close completions run exactly once; the transport disconnects and subscribers receive close only once. |
+| SOC-004 | Four producers each submit 25 connect → close → close → connect sequences | No overlapping transports or lost close completions. After a final ordered close/connect, the surviving connection can send and acknowledge a push. |
+| SOC-005 | Replace connections repeatedly, then deliver old lifecycle/join/reply callbacks | Old callbacks cannot open, fail, close, or resolve work on the replacement. |
+| SOC-006 | Request reconnect inside close completion for 25 cycles | Completion observes local teardown; reconnect succeeds without reentrant transport ownership. |
+| SOC-007 | Submit 100 pushes from four background producers; return mixed success/error replies in reverse order, with duplicate replies | Every request resolves once with its own payload/completion. An error followed by a late success cannot resolve twice. |
+| SOC-008 | Repeat terminal failure signals and reconnect for 25 cycles | One teardown per failed connection; a replacement clears failed state and can deliver another push. |
+
+Concurrent producers have no guaranteed global submission order. Tests wait for all producers, then establish an explicit final boundary before asserting the final connection state. They use queue barriers, coroutine scheduling and completion signals rather than sleeps. iOS Phoenix remains on main; Android uses its coroutine mailbox with a controlled test dispatcher and real background callers. These checks exercise SDK ownership and response handling, not real network reliability.
+
+For manual QA, Online S14 reproduces the restored repeated-identify regression after logout: logout → identify A → identify A → first screen, expecting `true / false`. Publisher regression tests also cover repeating the newly selected user after a direct user switch. Online S11/S12 stress public API delivery and identity cleanup with 50 ms spacing; direct socket connect/close coverage belongs to the automated classes above.
+
 ## Adding future business cases
 
 Add a feature section with stable case IDs and the following information:
