@@ -12,7 +12,8 @@ final class DebugViewController: BaseViewController {
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private let items: [DebugContent] = [
         .onlineQueue,
-        .offlineEvents
+        .offlineEvents,
+        .theme
     ]
 
     override func viewDidLoad() {
@@ -66,6 +67,8 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
             FlowRoutingManager.shared.openViewController(OnlineQueueViewController())
         case .offlineEvents:
             FlowRoutingManager.shared.openViewController(OfflineEventsViewController())
+        case .theme:
+            FlowRoutingManager.shared.openViewController(ThemeViewController())
         }
     }
 }
@@ -73,6 +76,7 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
 enum DebugContent {
     case onlineQueue
     case offlineEvents
+    case theme
 
     var title: String {
         switch self {
@@ -80,6 +84,8 @@ enum DebugContent {
             return "Online queue"
         case .offlineEvents:
             return "Offline events"
+        case .theme:
+            return "Theme"
         }
     }
 }
