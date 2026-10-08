@@ -269,8 +269,8 @@ final class OfflineEventsViewController: UIViewController {
         addScenario("O7 · Reconnect and request a live screen", scenario:
             "Restore network and wait for its SDK log, then tap this button to drive replay and a new live screen.", expected:
             "Offline replay resolves before the live screen. The live request uses fake_reload=false. " +
-            "Session-start is true only if the identity still awaits its initial live screen; after that screen ACK, " +
-            "another tap gives false/false. Same-user and dismissal fake_reload=true checks are in Online queue.",
+            "A pending initial identity sends true/false; otherwise this changed live screen sends false/false. " +
+            "Navigation changes session-start; ACKs preserve it. Check same-screen refreshes in Online queue.",
             action: #selector(liveScreenTapped))
     }
 

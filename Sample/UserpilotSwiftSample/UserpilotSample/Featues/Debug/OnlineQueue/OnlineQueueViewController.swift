@@ -190,8 +190,8 @@ private extension OnlineQueueViewController {
             "Report current screen",
             """
             Scenario: After identify, report online queue and wait for its successful screen ACK.
-            Expected: A pending initial session sends (true, false); a normal session sends (false, false). Its ACK \
-            consumes session-start.
+            Expected: The first screen sends (true, false); live navigation sends (false, false). An unchanged title \
+            and its ACK preserve session-start.
             """,
             action: #selector(setupScreen)
         )
@@ -242,8 +242,8 @@ private extension OnlineQueueViewController {
             """
             Scenario: A is already identified. First observe a successful screen ACK and an empty queue, then \
             identify(A) again.
-            Expected: Generated screen: (false, true). Same-user identify preserves session-start; this action does \
-            not report another real screen.
+            Expected: Generated refresh: (true, true) on the first screen, (false, true) after navigation. Same-user \
+            identify and screen ACKs preserve session-start; this action does not report another real screen.
             """,
             action: #selector(runIdentifyOnly)
         )
@@ -331,8 +331,8 @@ private extension OnlineQueueViewController {
             """
             Scenario: From a pending initial session, send a screen and interrupt its ACK using a controlled \
             network/proxy. Inspect the failed request before continuing.
-            Expected: A failed screen ACK does not consume session-start. Successful matching screen ACKs do; \
-            navigating to a different screen has its own rule.
+            Expected: Both failed and successful screen replies preserve session-start. Only live navigation ends \
+            it during an uninterrupted session.
             """,
             action: #selector(runFailedAck)
         )
@@ -342,10 +342,9 @@ private extension OnlineQueueViewController {
         addScenario(
             "S19 Preserved true / true — guided",
             """
-            Scenario: Let the same-user session expire in background. Prevent any resumed screen from receiving a \
-            successful ACK; then re-identify the same user with a known screen and no queued screen.
-            Expected: Only while session-start is still true and no initial identity boundary is pending, the \
-            generated refresh is (true, true). A resumed screen ACK can make it (false, true) first.
+            Scenario: Let the same-user session expire in background. Wait for the resumed screen ACK, then identify \
+            the same user again without navigating. Ensure no screen is queued.
+            Expected: The generated refresh is (true, true). The resumed screen ACK preserves session-start.
             """,
             action: #selector(runPreservedStartHint)
         )
@@ -366,8 +365,8 @@ private extension OnlineQueueViewController {
             """
             Scenario: Display real backend content and let its screen ACK complete. Ensure no screen remains queued, \
             then close/complete the actual content. This button shows the checklist.
-            Expected: After UI removal, enqueue one refresh: current session-start, fake_reload=true. Existing \
-            tracks stay ahead of it. The screen throttle blocks duplicate host resume reports.
+            Expected: After UI removal, enqueue one refresh: (true, true) on the first screen, (false, true) after \
+            navigation. Repeat dismissal: its ACK preserves the flag. Tracks stay ahead; throttle blocks host repeats.
             """,
             action: #selector(runDismissalHint)
         )
@@ -413,8 +412,8 @@ private extension OnlineQueueViewController {
             "Report home",
             """
             Scenario: Submit queue_s1_home. Repeat after the throttle window to check an unchanged title.
-            Expected: A real screen uses fake_reload=false. Same title alone preserves session-start; a successful \
-            ACK consumes it.
+            Expected: A real screen uses fake_reload=false. The same title and its successful ACK preserve \
+            session-start.
             """,
             action: #selector(manualS1)
         )
@@ -514,7 +513,7 @@ private extension OnlineQueueViewController {
 
     @objc private func runIdentifyOnly() {
         identify(userA(), ["scenario": "identify_only"])
-        setStatus("S1: identify(A) submitted. With a prior successful screen ACK: (false, true).")
+        setStatus("S1: identify(A) submitted. Preserve session-start: true on first screen, false after navigation; fake_reload=true.")
     }
 
     @objc private func runNewUser() {
@@ -625,8 +624,8 @@ private extension OnlineQueueViewController {
 
     @objc private func runPreservedStartHint() {
         setStatus(
-            "S19 guided: expired same-user session, no successful resumed screen ACK, known title, no queued screen. " +
-            "Repeat identify: (true, true) only while session-start remains true. No SDK call was submitted."
+            "S19 guided: expired same-user session, resumed screen acknowledged, no navigation or queued screen. " +
+            "Repeat identify: (true, true). Screen ACKs preserve session-start. No SDK call was submitted."
         )
     }
 

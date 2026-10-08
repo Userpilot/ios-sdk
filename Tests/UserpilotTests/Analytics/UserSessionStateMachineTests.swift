@@ -42,7 +42,7 @@ final class UserSessionStateMachineTests: XCTestCase {
         XCTAssertEqual(sessions.getCurrentState(), .awaitingInitialScreen)
 
         sessions.acknowledgeScreen()
-        XCTAssertFalse(sessions.isStartSession)
+        XCTAssertTrue(sessions.isStartSession)
         XCTAssertEqual(sessions.getCurrentState(), .normal)
         XCTAssertFalse(sessions.isPostIdentificationContext(Constants.Event.trackEvent))
     }
@@ -57,7 +57,7 @@ final class UserSessionStateMachineTests: XCTestCase {
         XCTAssertTrue(sessions.isUserSwitching())
 
         sessions.acknowledgeScreen()
-        XCTAssertFalse(sessions.isStartSession)
+        XCTAssertTrue(sessions.isStartSession)
         XCTAssertFalse(sessions.isUserSwitching())
         XCTAssertEqual(sessions.getCurrentState(), .normal)
     }
@@ -131,8 +131,9 @@ final class UserSessionStateMachineTests: XCTestCase {
         }
     }
 
-    func testBeginSessionRestoresStartAfterPreviousScreenAcknowledgement() {
+    func testBeginSessionRestoresStartAfterNavigation() {
         sessions.acknowledgeScreen()
+        sessions.markScreenChanged()
         XCTAssertFalse(sessions.isStartSession)
 
         sessions.beginSession()
@@ -158,7 +159,7 @@ final class UserSessionStateMachineTests: XCTestCase {
         }
     }
 
-    func testBackgroundRefreshAdmissionPreservesStartUntilScreenAcknowledgement() {
+    func testBackgroundRefreshAdmissionPreservesStartThroughScreenAcknowledgement() {
         for expired in [false, true] {
             sessions.markUserBackFromBackground()
             sessions.resumeSession(isExpired: expired)
@@ -170,7 +171,7 @@ final class UserSessionStateMachineTests: XCTestCase {
             XCTAssertEqual(sessions.isStartSession, expired)
 
             sessions.acknowledgeScreen()
-            XCTAssertFalse(sessions.isStartSession)
+            XCTAssertEqual(sessions.isStartSession, expired)
             XCTAssertEqual(sessions.getCurrentState(), .normal)
         }
     }
@@ -217,6 +218,8 @@ final class UserSessionStateMachineTests: XCTestCase {
 
     func testResetSessionStartPreservesBackgroundContext() {
         sessions.acknowledgeScreen()
+        sessions.markScreenChanged()
+        XCTAssertFalse(sessions.isStartSession)
         sessions.markUserBackFromBackground()
 
         sessions.resetSessionStart()
