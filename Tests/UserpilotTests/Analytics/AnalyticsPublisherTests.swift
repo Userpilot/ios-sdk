@@ -110,7 +110,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.testPublish(Event(type: .identify("first-user")))
         acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
         let refresh = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(refresh?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refresh?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(refresh?[Constants.Analytics.fakeReload] as? Bool, true)
     }
 
@@ -1538,7 +1538,7 @@ final class AnalyticsPublisherTests: XCTestCase {
     /// A user switch selects the new id immediately and retains its identify before closing the old
     /// socket. Any event queued behind that identify — a screen tracked right after `identify` —
     /// must survive teardown, otherwise the post-identify screen uses the previous title.
-    func testUserSwitch_withQueuedScreen_shouldConsumeSessionStartOnScreenACK() {
+    func testUserSwitch_withQueuedScreen_shouldPreserveSessionStartUntilNavigation() {
         // Arrange: user N is identified and sitting on the "online queue" screen
         userpilot.storage.userId = "userN"
         userpilot.socketManager.isSocketOpened = true
@@ -1578,18 +1578,18 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
-        // A screen ACK consumes session-start; same-screen refresh and identify continue the session.
+        // Screen ACKs and same-user identifies preserve session-start until navigation.
         XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true))
         analyticsPublisher.testSettle()
         var refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         analyticsPublisher.testPublish(Event(type: .identify("userA")))
         acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
         refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
@@ -1634,7 +1634,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
 
-        // The pending boundary ends at the screen ACK; later identifies must keep it consumed.
+        // The ACK settles the identity boundary; later identifies preserve session-start on this screen.
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         analyticsPublisher.testPublish(Event(type: .identify(userId)))
         acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
@@ -1642,7 +1642,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(refresh?.event, Constants.Event.screenEvent)
         XCTAssertEqual(refresh?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
         let refreshMetadata = refresh?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
     }
 
@@ -1666,7 +1666,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
         XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
-        XCTAssertFalse(analyticsPublisher.isStartSession)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
     }
 
     private func assertSameUserIdentifyAfterScreenACK(afterLogout: Bool) {
@@ -1700,7 +1700,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(refresh?.payload?[Constants.Analytics.screenTitleProperty] as? String, "online queue")
         let refreshMetadata = refresh?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
         XCTAssertEqual(refreshMetadata?["screen_source"] as? String, "manual")
-        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
     }
 
@@ -1764,7 +1764,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true))
         analyticsPublisher.testSettle()
         let refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         analyticsPublisher.testPublish(Event(type: .screen("Next screen")))
@@ -1817,16 +1817,42 @@ final class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.isSocketOpened = true
         analyticsPublisher.testPublish(Event(type: .screen("Home")))
         acknowledge(Constants.Event.screenEvent, nil, Message(), screenAcknowledged)
-        let currentStartSession = !screenAcknowledged
-        XCTAssertEqual(analyticsPublisher.isStartSession, currentStartSession)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
+
+        // Consecutive content dismissals on the first screen retain true, including after each ACK.
+        for experienceId in [10, 11] {
+            XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, experienceId, isFakeReload: true))
+            analyticsPublisher.testSettle()
+
+            let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+            XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+            XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, true)
+            XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
+            acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+            XCTAssertTrue(analyticsPublisher.isStartSession)
+        }
+    }
+
+    func testExperienceReload_preservesFalseAfterNavigation() {
+        userpilot.storage.userId = "reload-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
 
         XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
+        analyticsPublisher.testSettle()
 
-        let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, currentStartSession)
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Checkout")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
         XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, true)
-        XCTAssertEqual(analyticsPublisher.isStartSession, currentStartSession)
-        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
     }
 
     func testExperienceReload_isDroppedWhenScreenIsInFlight() {

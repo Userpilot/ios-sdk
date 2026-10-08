@@ -10,7 +10,7 @@
 
 import Foundation
 
-/// Tracks why a screen is due. A successful screen ACK settles this context and session-start together.
+/// Tracks why a screen is due. A successful screen ACK settles this context without changing session-start.
 internal enum UserSessionState {
     /// No identification-driven screen is pending; same-screen refreshes retain the session-start flag.
     case normal
@@ -100,12 +100,9 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
         logger.info("📝 User session state: %@", String(describing: newState))
     }
 
-    /// Only the publisher's matched successful screen ACK consumes session-start and identity context.
+    /// A matched screen ACK settles identity context. Same-screen reloads retain session-start until navigation.
     func acknowledgeScreen() {
-        lock.withLock {
-            state = .normal
-            startSession = false
-        }
+        lock.withLock { state = .normal }
         logger.info("📝 User session state: Normal")
     }
 

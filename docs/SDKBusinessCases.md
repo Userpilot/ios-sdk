@@ -13,7 +13,7 @@ The first section records the identity and screen-session rules agreed on 7 Octo
 - **User switch:** selecting a different user while another ID is selected.
 - **Initial screen:** the first screen request for a new identity session. It can be a host screen event or a generated request for a known current screen.
 - **Generated refresh:** the SDK requests content again for a known screen. Its flags depend on whether the initial screen is still pending or the session is already established.
-- **Successful screen ACK:** the backend successfully acknowledges the current screen request. Identify ACKs, unrelated SDK replies, stale replies, errors, and timeouts do not complete that screen's session-start phase.
+- **Successful screen ACK:** the backend successfully acknowledges the current screen request. It settles pending identification context and releases that request's queue slot, without changing `is_session_start`.
 
 `is_session_start` and `fake_reload` are screen payload fields. Logout and identify establish the context for a following screen; they do not themselves carry these two screen flags.
 
@@ -29,9 +29,9 @@ The table describes the screen that follows the stated actions. A generated scre
 | ID-002 | Logout, identify the same or a different user, then the first screen | `true` | `false` |
 | ID-003 | Identify a different user without logout, then that user's first screen | `true` | `false` |
 | ID-004 | Several identifies for that same selected user before its initial screen is sent | Preserve the initial session: `true` | The initial screen remains `false` |
-| ID-005 | Same-user identify after the initial screen's successful ACK, followed by a generated refresh | Preserve the current value; `false` after that ACK unless another lifecycle transition starts a session | `true` |
+| ID-005 | Same-user identify after the initial screen's successful ACK, followed by a generated refresh | Preserve the current value: `true` on the first screen, `false` after live navigation | `true` |
 
-Same-user identify never resets or consumes session-start. A successful screen ACK consumes it. First identification, logout, and a different user establish an initial-screen session.
+Same-user identify and screen ACKs never change session-start. During an uninterrupted live session, only a change to the current screen ends session-start. First identification, logout, and a different user start a new identity session; background/foreground expiry keeps its separate lifecycle rule.
 
 ### Reproduction sequences
 
@@ -84,22 +84,22 @@ first screen -> is_session_start=true, fake_reload=false
 successful screen ACK
 identify(A)
 identify ACK
-generated refresh -> is_session_start=false, fake_reload=true
+generated refresh -> is_session_start=true, fake_reload=true
 ```
 
-Repeating identify any number of times, including with different properties, must not reset the established session. This sequence assumes no intervening logout, different user, or lifecycle session reset.
+Repeating identify any number of times, including with different properties, preserves the flag. This sequence stays on the first screen without an intervening logout, different user, or lifecycle transition. After live navigation sets session-start to `false`, repeating identify preserves `false` instead; its generated refresh still has `fake_reload=true`.
 
 ### ACK ownership and ordering
 
-- A successful current screen ACK changes session-start to `false` for later screen requests. It does not rewrite the payload already sent.
-- An error or timeout does not consume session-start. This does not imply automatic retry; normal queue failure handling still applies.
+- A successful current screen ACK settles pending identification context without changing session-start. It does not rewrite the payload already sent.
+- Success, error, and timeout all preserve session-start. Errors/timeouts do not settle pending identification context or imply automatic retry; normal queue failure handling still applies.
 - An identify queued while a screen is in flight waits for that screen to resolve. If the screen succeeds, the later identify observes the completed initial-screen phase.
-- Elapsed milliseconds do not decide these identity rules. The order of identity changes, screen delivery, and successful ACKs does.
+- Elapsed milliseconds do not decide these identity rules. Identity changes and screen navigation control session-start; matching ACKs control delivery and pending identification context.
 - Generated screens are normal queue entries and retain their own request flags and ACK ownership. They must not overtake earlier analytics or release another request's queue position.
 
 ### Boundaries of this section
 
-Screen navigation and experience-dismissal refreshes are covered below. Background/foreground session expiry, offline replay, and screen eligibility have their own rules. This identity table does not make every screen after identify a fake reload, or prevent a lifecycle transition from starting another session.
+Screen navigation and experience-dismissal refreshes are covered below. On a real background/foreground return, the existing expiry rule sets session-start to the expiry result: `true` after the session timeout, otherwise `false`; a pending new identity still takes precedence when preparing its first screen. This is separate from content dismissal or host view/activity callbacks. Offline replay and screen eligibility have their own rules. This identity table does not make every screen after identify a fake reload, or prevent a lifecycle transition from starting another session.
 
 Both platforms enforce the same identity outcomes while retaining native queue/threading behavior. Their sources for a known screen differ: iOS can use the experience publisher's current title; Android uses the current analytics screen session or its screen tracker. Include the relevant known-screen precondition when comparing generated-screen tests.
 
@@ -115,7 +115,7 @@ These pointers describe current responsibilities. A future internal refactor may
 
 ## Screen navigation and session-start
 
-Changing the current screen can end session-start independently of a successful screen ACK. Both platforms apply this existing rule when an analytics screen already exists, its title changes, and the socket channel is joined and ready.
+During an uninterrupted live session, changing the current screen ends session-start. A screen ACK, same-user identify, or experience dismissal/completion does not change it. Both platforms apply this existing rule when an analytics screen already exists, its title changes, and the socket channel is joined and ready.
 
 | Case | Scenario | `is_session_start` on the screen request | `fake_reload` |
 | --- | --- | --- | --- |
@@ -143,9 +143,21 @@ After an experience is dismissed or completed and its UI dismissal has finished,
 3. If any screen event is already queued, skip the generated refresh. Other queued event types do not prevent it; they retain their FIFO order.
 4. Otherwise, append the refresh with `fake_reload=true`. The refresh itself must not reset or consume `is_session_start`; its payload uses the current session value.
 5. Record the current screen in the screen throttle so a matching host callback from `onResume` or `viewWillAppear` does not create a duplicate screen within the throttle window. An existing throttle window must not reject this generated fake reload.
-6. Deliver the refresh through the normal analytics queue and resolve it through its own ACK/error/timeout. The normal successful screen-ACK rule still applies.
+6. Deliver the refresh through the normal analytics queue and resolve it through its own ACK/error/timeout. Its ACK settles pending identification context and releases its queue slot while preserving session-start.
 
-For example, if the current session value is `false`, dismissing an experience produces `is_session_start=false, fake_reload=true`. It must not start a new session. "Preserve" refers to the current session value, not to copying the flags from the older screen request that originally returned the experience.
+If content appeared on the first screen and that screen has not changed, dismissal/completion produces `is_session_start=true, fake_reload=true`, even after the first screen ACK and any subsequent refresh ACKs. After live navigation sets the current value to `false`, dismissal/completion produces `is_session_start=false, fake_reload=true`. "Preserve" refers to the current session value, not to copying the flags from the older screen request that originally returned the experience.
+
+### EXP-001: dismissal on the first screen, then after navigation
+
+1. Identify A and send `Home`: `is_session_start=true, fake_reload=false`.
+2. Receive the successful screen ACK and display its content. Stay on `Home` with no screen queued.
+3. Dismiss or complete the content and wait for actual UI removal.
+4. The queued `Home` refresh sends `is_session_start=true, fake_reload=true`.
+5. Acknowledge the refresh and repeat with the next content: the flags remain `true / true`.
+6. Navigate to `Checkout`: its ordinary live screen sends `false / false`.
+7. Dismiss content there with no screen queued: the refresh sends `false / true`.
+
+Screen and refresh ACKs preserve the flag throughout. `AnalyticsPublisherTests` / `AnalyticsPublisherTest` exercise repeated content-refresh requests after successful and failed replies, and the separate navigation case. EXP-002 still skips a refresh whenever a screen is queued, including the in-flight screen.
 
 ## Offline replay and live-screen flag checks
 
@@ -171,7 +183,7 @@ Both platforms' Online queue and Offline events debug screens show the scenario 
 | Repeat identify before the initial screen | Online S14 |
 | Repeat identify after a successful screen ACK | Online S1 |
 | Real-screen queueing and changed-screen behavior | Online S3, S4, S6, S7 and manual screen controls |
-| Dismissal refresh with no queued screen / an existing queued screen | Online S17 / S18 |
+| Dismissal refresh on the first screen and after navigation / an existing queued screen | Online S17 / S18 |
 | Failed screen ACK and preserved session-start | Online S9, guided |
 | Same-user refresh while session-start remains true after expiry | Online S19, conditional guided case |
 | Queue stress with 50 ms submission spacing | Online S11 and S12; Offline O6 |
