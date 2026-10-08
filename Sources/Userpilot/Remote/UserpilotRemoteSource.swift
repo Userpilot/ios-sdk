@@ -136,10 +136,9 @@ internal class UserpilotRemoteSource {
         }
 
         do {
+            let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
             guard
-                let json = try JSONSerialization.jsonObject(with: data, options: [])
-                    as? [String: Any],
-                let endpoint = json["endpoint"] as? String,
+                let endpoint = json?["endpoint"] as? String,
                 let baseUrl = endpoint.baseURL()
             else {
                 logger.error("🔍 Failed to extract endpoint from response")

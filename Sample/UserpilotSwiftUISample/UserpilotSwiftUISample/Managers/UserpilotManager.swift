@@ -37,6 +37,7 @@ class UserpilotManager {
                 .enableUseInAppBrowser()
                 .enableScreenAutoCapture()
                 .enableInteractionAutoCapture()
+                .enableSwiftUIButtonAutoCapture()
                 .enableInteractionValueCapture()
         )
         userpilot?.navigationDelegate = self

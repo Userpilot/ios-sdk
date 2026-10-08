@@ -50,6 +50,9 @@ internal enum AutoCaptureSwizzler {
     /// Flag to track if UIPickerView delegate swizzling has been performed
     private static let didSwizzlePickerViewDelegate = AtomicReference(false)
 
+    /// Flag to track if the SwiftUI title-scan `viewDidAppear` swizzle has been performed
+    private static let didSwizzleSwiftUIScanScheduling = AtomicReference(false)
+
     // MARK: - Screen Tracking Methods
 
     /// Swizzles UIViewController.viewWillAppear to enable UIKit screen tracking
@@ -115,6 +118,19 @@ internal enum AutoCaptureSwizzler {
     static func swizzlePickerViewDelegate() {
         guard !didSwizzlePickerViewDelegate.getAndSet(true) else { return }
         UIPickerView.swizzleSetDelegate()
+    }
+
+    /// Swizzles `UIViewController.viewDidAppear(_:)` to schedule a SwiftUI title-capture
+    /// rescan when a screen appears. `viewDidAppear` (not `viewWillAppear`) is required:
+    /// the views must already be in the window for the reflection/display-list scan.
+    /// Installed only when SwiftUI title capture is enabled (see the coordinator).
+    static func swizzleSwiftUIScanScheduling() {
+        guard !didSwizzleSwiftUIScanScheduling.getAndSet(true) else { return }
+        Swizzler.swapInstanceMethods(
+            on: UIViewController.self,
+            original: #selector(UIViewController.viewDidAppear(_:)),
+            swizzled: #selector(UIViewController.userpilot__viewDidAppear_swiftUIScan(_:))
+        )
     }
 
     /// Registers notification for UITextField text changes (debounced per field via `InteractionEventCache`).

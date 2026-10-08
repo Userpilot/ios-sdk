@@ -87,6 +87,12 @@ extension Userpilot {
         /// and autocapture libraries will be instructed not to capture them.
         var enableInteractionTextCapture: Bool = true
 
+        /// Whether or not to enable SwiftUI button autocapture. Defaults to false.
+        /// If set to true (with interaction autocapture), SwiftUI apps capture a click once per real
+        /// tap at touch end, and pure SwiftUI taps get their `target_text` from the rendered title.
+        /// Applies on iOS 26 and later only; when false or below iOS 26 the SDK behaves as before.
+        var enableSwiftUIButtonAutoCapture: Bool = false
+
         // Whether or not to enable user interface accessibility label capture. Defaults to true.
         // If false, the core SDK will prevent user interface accessibility labels from being
         // stored or uploaded and autocapture libraries will be instructed not to capture them.
@@ -296,6 +302,22 @@ extension Userpilot {
         @objc
         public func enableInteractionTextCapture(_ enabled: Bool = true) -> Self {
             enableInteractionTextCapture = enabled
+            return self
+        }
+
+        /// Enables or disables SwiftUI button autocapture (iOS 26 and later).
+        ///
+        /// Requires `enableInteractionAutoCapture(_:)`. When enabled, a SwiftUI app captures a click
+        /// once per real tap at touch end (a scroll that starts on a button is not a click), and a
+        /// pure SwiftUI tap gets its `target_text` from the title SwiftUI rendered under the finger
+        /// (also requires `enableInteractionTextCapture(_:)`). When disabled, below iOS 26, or in
+        /// wrapper SDK hosts, interaction capture behaves exactly as it does without this option.
+        /// - Parameter enabled: A boolean indicating whether SwiftUI button autocapture is enabled.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableSwiftUIButtonAutoCapture(_ enabled: Bool = true) -> Self {
+            enableSwiftUIButtonAutoCapture = enabled
             return self
         }
 

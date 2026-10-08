@@ -22,11 +22,19 @@ let package = Package(
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
+        // Objective-C exception-guard shims (public API only). SPM forbids mixed-language targets,
+        // so these live in their own target; the Swift target depends on it and imports it internally.
+        .target(
+            name: "UserpilotObjC",
+            path: "Sources/UserpilotObjC",
+            publicHeadersPath: "include"
+        ),
         .target(
             name: "Userpilot",
-            dependencies: [],
+            dependencies: ["UserpilotObjC"],
             path: "Sources/Userpilot",
             resources: [
+                .copy("PrivacyInfo.xcprivacy"),
                 .process("Resources/countries.json"),
                 .process("Assets.xcassets"),
                 .process("Experiences/Content/Flows/Carousel/CarouselExperienceViewController.xib"),

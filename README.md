@@ -193,6 +193,8 @@ If you have additional configuration needs, you can pass a custom configuration 
 
 Interaction value capture is disabled by default. Call `.enableInteractionValueCapture(true)` on the configuration to capture control values when interaction autocapture is enabled.
 
+SwiftUI button autocapture (iOS 26 and later) is disabled by default. Call `.enableSwiftUIButtonAutoCapture(true)` with interaction autocapture to capture one click per SwiftUI tap together with the button's title. See [SwiftUI button autocapture](Sources/Userpilot/Userpilot.docc/Autocapture.md#swiftui-button-autocapture).
+
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")

@@ -26,6 +26,12 @@ public extension UIWindow {
     }
 }
 
+/// Touch starts for tap-end click capture (see `SwiftUITitleCapturePolicy.capturesClicksOnTapEnd`).
+/// `sendEvent` runs on main, so the shared tracker is main-confined.
+private enum WindowTapCapture {
+    static let tracker = WindowTapTracker()
+}
+
 // MARK: - Internal
 
 /// Extension providing automatic click tracking for UIWindow
@@ -54,19 +60,43 @@ extension UIWindow {
         // No global stop check here: this is touch bookkeeping shared by all
         // instances. Per-instance pausing is enforced downstream when the captured
         // touch is published through the owning instance's coordinator.
-        guard Userpilot.isInitialized else { return }
-
-        guard let touches = event.allTouches else { return }
-        for touch in touches where touch.phase == .began {
-            let locationInWindow = touch.location(in: self)
-            // SwiftUI often leaves touch.view nil; fall back to hit-testing the window.
-            let touchedView = touch.view ?? self.hitTest(locationInWindow, with: event)
-            guard let view = touchedView else { continue }
-
-            let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
-
-            handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
+        guard Userpilot.isInitialized, let touches = event.allTouches else { return }
+        var scanLogger: Logging?
+        for touch in touches {
+            let point = touch.location(in: self)
+            let source = touch.view ?? hitTest(point, with: event) ?? self
+            guard let target = InstanceResolver.shared.target(forSource: source) else { continue }
+            let config = target.config
+            // The touched view's owner controls timing, just as it controls text/privacy flags.
+            if WindowTapCapture.tracker.shouldCapture(
+                touch,
+                phase: touch.phase,
+                at: point,
+                timestamp: touch.timestamp,
+                touchCount: touches.count,
+                capturesOnTapEnd: SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config)
+            ) {
+                captureTouch(touch, event: event)
+            }
+            if scanLogger == nil, touch.phase == .ended || touch.phase == .cancelled,
+               SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: true) {
+                scanLogger = config.logger
+            }
         }
+        // Touch settle refreshes lazy content revealed by scrolling, once per native event.
+        if let scanLogger {
+            SwiftUIScanCache.shared.scheduleRescan(reason: .touchEnded, logger: scanLogger)
+        }
+    }
+
+    private func captureTouch(_ touch: UITouch, event: UIEvent) {
+        let locationInWindow = touch.location(in: self)
+        // SwiftUI often leaves touch.view nil; fall back to hit-testing the window.
+        let touchedView = touch.view ?? self.hitTest(locationInWindow, with: event)
+        guard let view = touchedView else { return }
+
+        let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
+        handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
     }
 
     // MARK: Touch Routing
@@ -180,7 +210,7 @@ extension UIWindow {
         }
 
         // 4. Handle regular view tap (UILabel, UIImageView, UITextView, plain UIView, etc.)
-        handleRegularViewTap(on: view, config: config, window: window, point: point, event: event)
+        handleRegularViewTap(on: view, target: target, window: window, point: point)
     }
 
     // MARK: View Tap Handling
@@ -188,14 +218,25 @@ extension UIWindow {
     /// Handles tap on regular views (not controls, table cells, or collection cells)
     private func handleRegularViewTap(
         on view: UIView,
-        config: Userpilot.Config,
+        target: Userpilot,
         window: UIWindow,
-        point: CGPoint,
-        event: UIEvent
+        point: CGPoint
     ) {
         guard !view.shouldIgnoreInteractions() else { return }
+        let config = target.config
 
-        let eventProperties = view.buildWindowInteractionProperties(at: point, in: window)
+        // SwiftUI button autocapture (opt-in, iOS 26+) only changes taps inside SwiftUI content.
+        let isSwiftUIButtonTap = SwiftUITitleCapturePolicy.isFeatureEnabled(config) && view.up_isInsideHostingView
+        var eventProperties = view.buildWindowInteractionProperties(
+            at: point,
+            in: window,
+            limitsTextToTapPoint: isSwiftUIButtonTap
+        )
+        if isSwiftUIButtonTap {
+            view.addSwiftUITitle(
+                to: &eventProperties, at: point, in: window, config: config
+            )
+        }
 
         InstanceResolver.shared.handleClickTracked(eventProperties, source: view)
     }

@@ -183,8 +183,11 @@ internal extension UIView {
     /// Returns the text content of this view, applying text-capture policy.
     /// Falls back to searching subviews for a UILabel when the view itself
     /// is a private/unknown type (e.g., _UIAlertControllerActionView).
+    /// - Parameter windowPoint: When set, the subview search only enters subviews containing
+    ///   this point (window coordinates). Used inside SwiftUI hosting views, whose container
+    ///   views hold unrelated UIKit controls (e.g. a Picker's segments) as subviews.
     /// - Returns: The text content, redaction placeholder, or `nil` when omitted
-    func getTextContent() -> String? {
+    func getTextContent(containing windowPoint: CGPoint? = nil) -> String? {
         if isInteractionTextCaptureDisabled() {
             return nil
         }
@@ -199,7 +202,7 @@ internal extension UIView {
             return direct.userpilotBoundedText()
         }
 
-        if let nested = findLabelText(in: self) {
+        if let nested = findLabelText(in: self, containing: windowPoint) {
             return nested.userpilotBoundedText()
         }
 
@@ -208,12 +211,15 @@ internal extension UIView {
 
     /// Recursively searches subviews for the first UILabel with non-empty text.
     /// Hidden and `userpilotRedactText` subtrees are skipped so their content is never published.
-    private func findLabelText(in view: UIView) -> String? {
+    private func findLabelText(in view: UIView, containing windowPoint: CGPoint?) -> String? {
         for subview in view.subviews where subview.isUserpilotTextReadable {
+            if let windowPoint, !subview.bounds.contains(subview.convert(windowPoint, from: nil)) {
+                continue
+            }
             if let label = subview as? UILabel, let text = label.text, !text.isEmpty {
                 return text
             }
-            if let found = findLabelText(in: subview) {
+            if let found = findLabelText(in: subview, containing: windowPoint) {
                 return found
             }
         }
@@ -324,7 +330,13 @@ internal extension UIView {
 
 internal extension UIView {
     /// Builds regular-window-tap properties after touch routing has excluded controls and list rows.
-    func buildWindowInteractionProperties(at point: CGPoint, in window: UIWindow) -> [String: Any] {
+    /// - Parameter limitsTextToTapPoint: Only a label under the tap may supply `target_text` (SwiftUI
+    ///   button autocapture: a SwiftUI container's UIKit subviews can be unrelated controls).
+    func buildWindowInteractionProperties(
+        at point: CGPoint,
+        in window: UIWindow,
+        limitsTextToTapPoint: Bool = false
+    ) -> [String: Any] {
         let (effectiveView, path) = UIKitViewResolver.resolvePathForCapture(view: self)
         let useRedactedInner = (effectiveView !== self)
 
@@ -351,7 +363,7 @@ internal extension UIView {
             if let accessibilityLabel = getAccessibilityLabelContent() {
                 eventProperties[Constants.AutoCapture.accessibilityLabel] = accessibilityLabel
             }
-            if let text = sectionContainerText() ?? getTextContent() {
+            if let text = sectionContainerText() ?? getTextContent(containing: limitsTextToTapPoint ? point : nil) {
                 eventProperties[Constants.AutoCapture.targetText] = text
             }
         }
