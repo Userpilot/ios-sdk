@@ -116,10 +116,12 @@ extension SDKSettingsDetector: SDKSettingsDetectoring {
             if let data, let responseBody = String(data: data, encoding: .utf8) {
                 self.logger.info("SDK Settings response: %{public}@", responseBody)
                 do {
-                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                       let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
-                        self.storage.configurationDate = Date()
-                        self.storage.socketURL = url + GeneralConstants.PATH_NAME
+                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                        SwiftUICaptureRemoteGate.apply(settings: json, token: self.config.token)
+                        if let endpoint = json["endpoint"] as? String, let url = endpoint.baseURL() {
+                            self.storage.configurationDate = Date()
+                            self.storage.socketURL = url + GeneralConstants.PATH_NAME
+                        }
                     }
                 } catch {
                     self.logger.error("Failed to parse JSON: %{public}@", error.localizedDescription)

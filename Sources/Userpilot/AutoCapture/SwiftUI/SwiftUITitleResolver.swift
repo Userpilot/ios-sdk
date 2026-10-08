@@ -16,8 +16,9 @@
 //  Resolution order (Stages 0–1 — `.userpilotLabel` and UIKit text extraction —
 //  run in the SDK BEFORE this resolver):
 //    Stage A — public accessibility-tree walk on the hosting ancestors.
-//              Exact when the OS materialised the tree; empty otherwise. Gated
-//              by `enableInteractionAccessibilityLabelCapture` and skipped on
+//              Runs only while VoiceOver / Switch Control is active (the OS has
+//              already materialised the tree). Gated by
+//              `enableInteractionAccessibilityLabelCapture` and skipped on
 //              `userpilotSkipAccessibilityScan` screens.
 //    Stage B — display-list text map, optionally cross-checked with interactive
 //              reflection inventory. Exact when paint-order layer pairing holds.
@@ -29,8 +30,17 @@
 
 import UIKit
 
+// An internal import keeps the ObjC shim module out of Userpilot's
+// .swiftinterface: the XCFramework ships only the Userpilot module, so a public
+// import breaks every binary consumer ("no such module 'UserpilotObjC'").
 #if canImport(UserpilotObjC)
-    import UserpilotObjC
+    #if compiler(>=6.0)
+        internal import UserpilotObjC
+    #else
+        // Only one branch compiles; SwiftLint does not evaluate `#if compiler`.
+        // swiftlint:disable:next duplicate_imports
+        @_implementationOnly import UserpilotObjC
+    #endif
 #endif
 
 internal final class SwiftUITitleResolver {
@@ -80,7 +90,15 @@ internal final class SwiftUITitleResolver {
 
     // MARK: - Gating
 
+    /// Stage A runs only while an assistive technology is active. Without one,
+    /// SwiftUI does not materialize its accessibility tree, so the walk finds
+    /// nothing — and forcing the tree can livelock nested lazy stacks
+    /// (FB21851974). With VoiceOver / Switch Control running the system has
+    /// already built the tree, and reading it is both exact and cheap.
     private var accessibilityReadEnabled: Bool {
+        guard UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning else {
+            return false
+        }
         guard Userpilot.isInitialized, let userpilot = Userpilot.shared else { return false }
         return userpilot.config.enableInteractionAccessibilityLabelCapture
     }

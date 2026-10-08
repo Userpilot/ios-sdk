@@ -23,9 +23,12 @@
 // swiftlint:disable:previous blanket_disable_command
 //  scrolling never stales the geometry.
 //
-//  Resilience: everything is structural Mirror reading with hard budgets. On an
-//  OS where the internal layout shifted, extraction returns an empty map and
-//  callers fall back — degrade, never crash.
+//  Resilience: everything is structural Mirror reading with hard budgets. The
+//  display list is located by a guided descent keyed on hop TYPES (the hops
+//  differ between iOS 18 and 26), never by an open-ended search of SwiftUI's
+//  internals. On an OS where the layout shifted, `scanHost` reports
+//  `locatedDisplayList == false` (or unpaired text items), the scan cache's
+//  circuit breaker turns capture off for the session — degrade, never crash.
 //
 
 import UIKit
@@ -44,17 +47,31 @@ internal enum DisplayListTextMap {
         /// The layer this text was painted into; used at tap time to map window
         /// coordinates into content space.
         weak var layer: CALayer?
+        /// The hosting view whose display list produced this entry; lets a
+        /// single-host refresh replace only that host's entries.
+        weak var host: UIView?
 
         /// Returns true when the live layer geometry maps a window tap into this
         /// entry's owning hit frame.
         func containsWindowPoint(_ pointInWindow: CGPoint, in window: UIWindow) -> Bool {
-            guard let layer, layer.superlayer != nil else { return false }
+            guard let layer, layer.superlayer != nil, !Self.isHiddenOnScreen(layer) else { return false }
             let pointInLayer = layer.convert(pointInWindow, from: window.layer)
             let pointInContent = CGPoint(
                 x: pointInLayer.x + textFrame.minX,
                 y: pointInLayer.y + textFrame.minY
             )
             return hitFrame.contains(pointInContent)
+        }
+
+        /// A recycled lazy row keeps its drawing layer but hides it; its
+        /// position then overlaps visible rows, so it must never be hit.
+        private static func isHiddenOnScreen(_ layer: CALayer) -> Bool {
+            var current: CALayer? = layer
+            while let candidate = current {
+                if candidate.isHidden || candidate.opacity <= 0 { return true }
+                current = candidate.superlayer
+            }
+            return false
         }
 
         /// True when the text appears to sit inside a control/card background,
@@ -100,16 +117,36 @@ internal enum DisplayListTextMap {
         return result
     }
 
-    /// The text map for one hosting view. Empty when the display list can't be
-    /// located or pairing fails — callers must treat that as "no information",
-    /// not "no buttons".
+    /// Result of scanning one hosting view.
+    struct HostScan {
+        let entries: [Entry]
+        /// False when the host's display list could not be located — the render
+        /// path moved (a new iOS release), as opposed to "no text on screen".
+        let locatedDisplayList: Bool
+        /// Text items found in the display list before layer pairing. Items
+        /// with no paired entries mean the layer bridge moved.
+        let textItemCount: Int
+        /// The walk hit its node/time budget before finishing the list.
+        let truncated: Bool
+
+        static let notLocated = HostScan(entries: [], locatedDisplayList: false,
+                                         textItemCount: 0, truncated: false)
+    }
+
+    /// Scans one hosting view. Empty entries mean "no information", not "no
+    /// buttons"; `locatedDisplayList` / `textItemCount` tell the two apart.
     ///
     /// - Parameter deadline: optional wall-clock cap on the structural walk.
-    ///   Defaults to `now + 50 ms` (today's per-host budget).
-    static func textMap(for host: UIView,
-                        deadline: Date? = nil,
-                        maxVisited: Int = 1_500) -> [Entry] {
-        guard let list = displayList(of: host) else { return [] }
+    ///   Defaults to `now + 50 ms`.
+    static func scanHost(_ host: UIView,
+                         deadline: Date? = nil,
+                         maxVisited: Int = 1_500) -> HostScan {
+        guard let list = displayList(of: host) else {
+            #if DEBUG
+            SwiftUIScanLog.log("DisplayListTextMap: no display list on \(type(of: host)) — render path moved?")
+            #endif
+            return .notLocated
+        }
 
         var items: [RawItem] = []
         var budget = Budget(maxVisited: maxVisited,
@@ -122,56 +159,110 @@ internal enum DisplayListTextMap {
             SwiftUIScanLog.log("DisplayListTextMap truncated visited=\(budget.visited)/\(budget.maxVisited) rawItems=\(items.count)")
         }
         #endif
-        guard !items.isEmpty else { return [] }
+        let textItemCount = items.reduce(0) { $0 + ($1.title == nil ? 0 : 1) }
+        guard !items.isEmpty else {
+            return HostScan(entries: [], locatedDisplayList: true, textItemCount: 0,
+                            truncated: budget.isExhausted)
+        }
 
         let layers = drawingLayers(under: host)
-        return pair(items: items, with: layers)
+        let entries = pair(items: items, with: layers, host: host)
+        #if DEBUG
+        if textItemCount > 0, entries.isEmpty {
+            SwiftUIScanLog.log("DisplayListTextMap: \(textItemCount) text items but 0 paired "
+                + "(drawing layers=\(layers.count)) on \(type(of: host)) — layer bridge moved?")
+        }
+        #endif
+        return HostScan(entries: entries, locatedDisplayList: true, textItemCount: textItemCount,
+                        truncated: budget.isExhausted)
     }
 
     // MARK: - Locate the live DisplayList
 
-    /// Known stored-property path (current iOS):
-    /// `_base.viewGraph.renderer.renderer.some.lastList`. Falls back to a
-    /// budgeted BFS over the hosting view's stored properties so a renamed hop
-    /// degrades gracefully instead of failing hard.
+    /// Type-name fragments of the objects between a hosting view and its
+    /// `lastList`. The hops differ per iOS release:
+    ///   iOS 26: UIHostingViewBase → ViewGraphHost → ViewRenderer → ViewUpdater
+    ///   iOS 18: UIHostingViewBase → ViewRenderer → ViewUpdater
+    /// so instead of a fixed label path, the descent enters any child whose
+    /// TYPE plays one of these roles. A hop being added, removed or renamed is
+    /// tolerated, and nothing outside the render path is ever reflected.
+    private static let renderPathTypeFragments = ["HostingViewBase", "ViewGraphHost", "Renderer", "Updater"]
+    /// Back-references to the hosting view / controller and delegate hops.
+    private static let renderPathExcludedTypeFragments = ["RendererHost", "Delegate"]
+    private static let renderPathExcludedLabels: Set<String> = [
+        "_rootView", "rootView", "host", "delegate", "viewController", "uiView"
+    ]
+    private static let renderPathMaxDepth = 6
+    private static let renderPathMaxNodes = 48
+
     private static func displayList(of host: UIView) -> Any? {
-        if let base = storedChild(of: host, named: "_base"),
-           let graph = storedChild(of: base, named: "viewGraph"),
-           let renderer = storedChild(of: graph, named: "renderer"),
-           let inner = storedChild(of: renderer, named: "renderer"),
-           let list = storedChild(of: unwrapOptional(inner), named: "lastList"),
-           String(describing: type(of: list)) == "DisplayList" {
-            return list
+        locateDisplayList(of: host).list
+    }
+
+    /// Guided depth-first descent from the hosting view to `lastList`. A
+    /// matching child is entered immediately, so the search stops at the first
+    /// working path and reads only the few fields before it at each hop —
+    /// enumerating every field of a hosting view makes the runtime instantiate
+    /// metadata for ~60 field types on first use (~100 ms measured). Bounded by
+    /// depth and node count; class instances are visited once, so a
+    /// back-reference to the hosting view ends that branch.
+    private static func locateDisplayList(of host: UIView) -> (list: Any?, hops: [String]) {
+        var visited = Set<ObjectIdentifier>()
+        var nodes = 0
+        var hops: [String] = []
+
+        func descend(_ value: Any, depth: Int) -> Any? {
+            guard depth <= renderPathMaxDepth, nodes < renderPathMaxNodes else { return nil }
+            nodes += 1
+            let value = unwrapOptional(value)
+            let mirror = Mirror(reflecting: value)
+            if mirror.displayStyle == .class,
+               !visited.insert(ObjectIdentifier(value as AnyObject)).inserted {
+                return nil
+            }
+
+            var current: Mirror? = mirror
+            while let m = current {
+                for child in m.children {
+                    let label = child.label ?? "_"
+                    if renderPathExcludedLabels.contains(label) { continue }
+                    switch renderHopKind(type(of: child.value)) {
+                    case .displayList where label == "lastList":
+                        hops.append("lastList")
+                        return child.value
+                    case .hop:
+                        #if DEBUG
+                        hops.append("\(label): \(type(of: child.value))")
+                        #else
+                        hops.append(label)
+                        #endif
+                        if let list = descend(child.value, depth: depth + 1) { return list }
+                        hops.removeLast()
+                    default:
+                        break
+                    }
+                }
+                current = m.superclassMirror
+            }
+            return nil
         }
 
-        var queue: [(Any, Int)] = [(host, 0)]
-        var head = 0
-        var visitedObjects = Set<ObjectIdentifier>()
-        var visited = 0
-        // Index cursor instead of `removeFirst()` (which is O(n) per dequeue →
-        // O(n²) over the walk). FIFO order — and therefore BFS semantics — is
-        // unchanged; we just advance `head` rather than shifting the array.
-        while head < queue.count, visited < 8_000 {
-            let (value, depth) = queue[head]
-            head += 1
-            visited += 1
-            if depth > 8 { continue }
-            let mirror = Mirror(reflecting: value)
-            if mirror.displayStyle == .class {
-                let oid = ObjectIdentifier(value as AnyObject)
-                if visitedObjects.contains(oid) { continue }
-                visitedObjects.insert(oid)
-            }
-            for c in mirror.children {
-                if c.label == "lastList",
-                   String(describing: type(of: c.value)) == "DisplayList" {
-                    return c.value
-                }
-                queue.append((c.value, depth + 1))
-            }
-        }
-        return nil
+        let list = descend(host, depth: 0)
+        return (list, hops)
     }
+
+    private enum RenderHopKind { case displayList, hop, other }
+
+    private static let renderHopKind = TypeNameMemo { typeName -> RenderHopKind in
+        if typeName == "DisplayList" { return .displayList }
+        let isHop = renderPathTypeFragments.contains { typeName.contains($0) }
+            && !renderPathExcludedTypeFragments.contains { typeName.contains($0) }
+        return isHop ? .hop : .other
+    }
+
+    private static let isDisplayListType = TypeNameMemo { $0 == "DisplayList" }
+    private static let isSkippedType = TypeNameMemo(.swift, shouldSkip)
+    private static let isDrawingLayerType = TypeNameMemo(.runtimeClass) { $0.contains("CGDrawingLayer") }
 
     private static func unwrapOptional(_ value: Any) -> Any {
         let mirror = Mirror(reflecting: value)
@@ -343,6 +434,63 @@ internal enum DisplayListTextMap {
     }
 
     #if DEBUG
+    /// Describes the render path of `host`: the hops the guided descent took to
+    /// `lastList` (or the children of `_base` when it failed), the first
+    /// display-list items' case labels, and a histogram of layer classes. This
+    /// is the tool for a new iOS release: it shows which hop or layer type moved.
+    /// Enable in a DEBUG build with the `UP_SUI_STRUCTURE=1` environment variable.
+    internal static func debugDescribeRenderPath(of host: UIView) -> String {
+        var lines: [String] = ["render path for \(type(of: host)):"]
+
+        func childSummary(_ value: Any) -> String {
+            var parts: [String] = []
+            var mirror: Mirror? = Mirror(reflecting: value)
+            while let m = mirror, parts.count < 40 {
+                for c in m.children.prefix(40) {
+                    parts.append("\(c.label ?? "_"): \(String(describing: type(of: c.value)).prefix(80))")
+                }
+                mirror = m.superclassMirror
+            }
+            return parts.joined(separator: " | ")
+        }
+
+        let located = locateDisplayList(of: host)
+        if located.list != nil {
+            lines.append("  ✓ " + located.hops.joined(separator: " → "))
+        } else {
+            lines.append("  ✗ lastList not found. host children: \(childSummary(host))")
+            if let base = storedChild(of: host, named: "_base") {
+                lines.append("  _base children: \(childSummary(unwrapOptional(base)))")
+            }
+        }
+
+        if let list = located.list,
+           let items = storedChild(of: list, named: "items") {
+            for (index, item) in Mirror(reflecting: items).children.prefix(4).enumerated() {
+                let value = storedChild(of: item.value, named: "value")
+                let valueCase = value.flatMap { Mirror(reflecting: $0).children.first }
+                var line = "  item[\(index)] fields: \(childSummary(item.value)) case=\(valueCase?.label ?? "nil")"
+                if valueCase?.label == "content",
+                   let inner = storedChild(of: valueCase!.value, named: "value"),
+                   let contentCase = Mirror(reflecting: inner).children.first {
+                    line += " content=\(contentCase.label ?? "nil")"
+                }
+                lines.append(line)
+            }
+        }
+
+        var histogram: [String: Int] = [:]
+        func walk(_ layer: CALayer, depth: Int) {
+            guard depth < 40 else { return }
+            histogram[String(describing: type(of: layer)), default: 0] += 1
+            layer.sublayers?.forEach { walk($0, depth: depth + 1) }
+        }
+        walk(host.layer, depth: 0)
+        let layerSummary = histogram.sorted { $0.value > $1.value }.map { "\($0.key)×\($0.value)" }
+        lines.append("  layers: \(layerSummary.joined(separator: ", "))")
+        return lines.joined(separator: "\n")
+    }
+
     internal static func _testHitFrame(forText text: CGRect,
                                        parentFrame: CGRect?,
                                        prevSibling: CGRect?,
@@ -356,12 +504,12 @@ internal enum DisplayListTextMap {
     /// crossing into graph/runtime objects.
     private static func findNestedLists(in value: Any, depth: Int, _ found: (Any) -> Void) {
         guard depth <= 3 else { return }
-        let typeName = String(describing: type(of: value))
-        if typeName == "DisplayList" {
+        let valueType = type(of: value)
+        if isDisplayListType(valueType) {
             found(value)
             return
         }
-        if shouldSkip(typeName) { return }
+        if isSkippedType(valueType) { return }
         for c in Mirror(reflecting: value).children {
             findNestedLists(in: c.value, depth: depth + 1, found)
         }
@@ -386,7 +534,7 @@ internal enum DisplayListTextMap {
             let t = attr.string.trimmingCharacters(in: .whitespacesAndNewlines)
             return t.isEmpty ? nil : t
         }
-        if shouldSkip(String(describing: type(of: value))) { return nil }
+        if isSkippedType(type(of: value)) { return nil }
         for c in Mirror(reflecting: value).children {
             if let found = firstString(under: c.value, depth: depth + 1, maxDepth: maxDepth) {
                 return found
@@ -409,10 +557,14 @@ internal enum DisplayListTextMap {
                SwiftUIDetection.isHostingView(delegateView) {
                 return
             }
-            if layer.isHidden { return }
-            if String(describing: type(of: layer)).contains("CGDrawingLayer") {
+            // Recycled lazy rows HIDE their drawing layer while the display
+            // list still holds the row's items (measured iOS 26: 26 items,
+            // 26 drawing layers, 5 hidden). Keeping hidden drawing layers in
+            // the sequence keeps pairing aligned; tap-time hit tests skip them.
+            if isDrawingLayerType(type(of: layer)) {
                 result.append(layer)
             }
+            if layer.isHidden { return }
             for sub in layer.sublayers ?? [] {
                 walk(sub, depth: depth + 1)
             }
@@ -424,31 +576,54 @@ internal enum DisplayListTextMap {
     /// Items and drawing layers are both in paint order with matching sizes;
     /// pair them with a forgiving two-pointer pass. Items that find no layer are
     /// dropped (no coordinate bridge → unusable).
-    private static func pair(items: [RawItem], with layers: [CALayer]) -> [Entry] {
-        var entries: [Entry] = []
-        let tolerance: CGFloat = 2.0
+    private static func pair(items: [RawItem], with layers: [CALayer], host: UIView) -> [Entry] {
+        var matches: [CALayer?] = Array(repeating: nil, count: items.count)
         var layerIndex = 0
-        for item in items {
-            var matched: CALayer?
+        for (index, item) in items.enumerated() {
             var probe = layerIndex
             while probe < layers.count {
-                let bounds = layers[probe].bounds
-                if abs(bounds.width - item.textFrame.width) <= tolerance,
-                   abs(bounds.height - item.textFrame.height) <= tolerance {
-                    matched = layers[probe]
+                if sameSize(item.textFrame.size, layers[probe].bounds.size) {
+                    matches[index] = layers[probe]
                     layerIndex = probe + 1
                     break
                 }
                 probe += 1
             }
-            guard let matched, item.title != nil else { continue }
+        }
+
+        var entries: [Entry] = []
+        for (index, item) in items.enumerated() {
+            guard let title = item.title, let matched = matches[index],
+                  isPairingUnambiguous(index, items: items, matches: matches, layers: layers) else { continue }
             entries.append(Entry(
-                title: item.title,
+                title: title,
                 textFrame: item.textFrame,
                 hitFrame: item.hitFrame,
-                layer: matched
+                layer: matched,
+                host: host
             ))
         }
         return entries
+    }
+
+    private static func sameSize(_ lhs: CGSize, _ rhs: CGSize) -> Bool {
+        let tolerance: CGFloat = 2.0
+        return abs(lhs.width - rhs.width) <= tolerance && abs(lhs.height - rhs.height) <= tolerance
+    }
+
+    /// Same-size texts are told apart only by paint order. When an item's size
+    /// group holds DIFFERENT titles and its items and layers don't line up one
+    /// to one, the greedy pass may have handed this text another text's layer —
+    /// a wrong title on tap. Such entries are dropped: no title beats a wrong one.
+    private static func isPairingUnambiguous(_ index: Int,
+                                             items: [RawItem],
+                                             matches: [CALayer?],
+                                             layers: [CALayer]) -> Bool {
+        let size = items[index].textFrame.size
+        let peers = items.indices.filter { sameSize(items[$0].textFrame.size, size) }
+        let distinctTitles = Set(peers.map { items[$0].title ?? "" })
+        guard distinctTitles.count > 1 else { return true }
+        let peerLayers = layers.reduce(0) { $0 + (sameSize($1.bounds.size, size) ? 1 : 0) }
+        return peers.count == peerLayers && peers.allSatisfy { matches[$0] != nil }
     }
 }

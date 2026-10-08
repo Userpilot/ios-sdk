@@ -16,7 +16,7 @@ import UIKit
 
 /// `UIKitViewResolver` provides utilities for UIKit view element identification and tracking.
 ///
-/// Text for published events uses ``UIView/getTextContent()`` and ``UIView/getAccessibilityLabelContent()``
+/// Text for published events uses ``UIView/getTextContent(containing:)`` and ``UIView/getAccessibilityLabelContent()``
 /// (see extension below), which apply Config flags and `userpilotRedact*` on the responder chain.
 internal enum UIKitViewResolver {
 
@@ -388,8 +388,12 @@ internal extension UIView {
     /// Returns the text content of this view, redacted if necessary.
     /// Falls back to searching subviews for a UILabel when the view itself
     /// is a private/unknown type (e.g., _UIAlertControllerActionView).
+    /// - Parameter windowPoint: when set, the subview search only enters
+    ///   subviews containing this point (window coordinates). Used inside
+    ///   SwiftUI hosting views, whose container views hold unrelated UIKit
+    ///   controls (e.g. a Picker's segments) as subviews.
     /// - Returns: The text content or redacted placeholder
-    func getTextContent() -> String? {
+    func getTextContent(containing windowPoint: CGPoint? = nil) -> String? {
         if shouldRedactText() {
             return AutoCaptureConstants.reductText
         }
@@ -401,7 +405,7 @@ internal extension UIView {
             return direct
         }
 
-        if let nested = findLabelText(in: self) {
+        if let nested = findLabelText(in: self, containing: windowPoint) {
             return nested
         }
 
@@ -409,12 +413,15 @@ internal extension UIView {
     }
 
     /// Recursively searches subviews for the first UILabel with non-empty text
-    private func findLabelText(in view: UIView) -> String? {
+    private func findLabelText(in view: UIView, containing windowPoint: CGPoint?) -> String? {
         for subview in view.subviews {
+            if let windowPoint, !subview.bounds.contains(subview.convert(windowPoint, from: nil)) {
+                continue
+            }
             if let label = subview as? UILabel, let text = label.text, !text.isEmpty {
                 return text
             }
-            if let found = findLabelText(in: subview) {
+            if let found = findLabelText(in: subview, containing: windowPoint) {
                 return found
             }
         }

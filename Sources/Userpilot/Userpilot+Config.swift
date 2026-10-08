@@ -73,14 +73,8 @@ extension Userpilot {
         /// Whether SwiftUI-specific interaction title enrichment is enabled.
         /// This controls the SwiftUI title-capture pipeline that enriches pure
         /// SwiftUI taps whose UIKit hit-test view has no text.
+        /// Applies on iOS 26 and later only; below iOS 26 the pipeline never runs.
         var enableSwiftUIInteractionTitleCapture: Bool = true
-
-        // swiftlint:disable identifier_name
-        /// Whether SwiftUI-specific title enrichment should run below iOS 26.
-        /// Disabled by default because older SwiftUI runtime layouts are less
-        /// consistent across navigation/presentation styles.
-        var enableSwiftUIInteractionTitleCaptureBelowIOS26: Bool = false
-        // swiftlint:enable identifier_name
 
         // Whether or not to enable user interface accessibility label capture. Defaults to true.
         // If false, the core SDK will prevent user interface accessibility labels from being
@@ -283,26 +277,13 @@ extension Userpilot {
         /// and `enableInteractionTextCapture(_:)`. When disabled, pure SwiftUI
         /// taps are still captured, but the SDK will not run the SwiftUI
         /// accessibility/display-list title resolver to fill `target_text`.
+        /// Only applies on iOS 26 and later; below iOS 26 it has no effect.
         /// - Parameter enabled: A boolean indicating whether SwiftUI title enrichment is enabled.
         /// - Returns: The `Configuration` object, allowing for method chaining.
         @discardableResult
         @objc
         public func enableSwiftUIInteractionTitleCapture(_ enabled: Bool = true) -> Self {
             enableSwiftUIInteractionTitleCapture = enabled
-            return self
-        }
-
-        /// Enables SwiftUI-specific interaction title enrichment below iOS 26.
-        ///
-        /// SwiftUI title enrichment is enabled by default on iOS 26 and later.
-        /// Use this opt-in to validate or ship the same behavior on older iOS
-        /// versions.
-        /// - Parameter enabled: A boolean indicating whether SwiftUI title enrichment is enabled below iOS 26.
-        /// - Returns: The `Configuration` object, allowing for method chaining.
-        @discardableResult
-        @objc
-        public func enableSwiftUIInteractionTitleCaptureBelowIOS26(_ enabled: Bool = true) -> Self {
-            enableSwiftUIInteractionTitleCaptureBelowIOS26 = enabled
             return self
         }
 

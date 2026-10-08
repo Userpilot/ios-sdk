@@ -19,8 +19,7 @@
 //    • PRIMITIVE view (Body == Never: Text, Image, VStack, Button, …): never
 //      call `body` (it traps on `Never`); Mirror-recurse the stored children
 //
-// swiftlint:disable:next line_length
-// swiftlint:disable cyclomatic_complexity file_length function_body_length function_parameter_count identifier_name type_body_length
+// swiftlint:disable cyclomatic_complexity file_length function_body_length identifier_name
 // swiftlint:disable:previous blanket_disable_command
 //      instead — which is where a Button's `label` (the Text storing the
 //      string) actually lives.
@@ -28,17 +27,13 @@
 //  raise from `.body`.
 //
 //  TRAP GUARD: evaluating `body` re-runs view construction outside SwiftUI's
-//  update graph, where graph-injected property wrappers are absent — accessing
-//  one is a Swift trap (fatalError), not catchable. We never evaluate the body
-//  of a view whose stored properties include a known graph-dependent wrapper
-//  (`graphDependentWrapperTypes`, currently `@EnvironmentObject`); the walk
-//  degrades to Mirror-recursing its stored children instead.
-//
-//  WARNING-POLICY GUARD: common state wrappers (`@State`, `@Binding`, etc.) do
-//  not belong in the fatal-trap set because skipping them loses automatic
-//  titles. Callers can still ask the walk to avoid evaluating those bodies when
-//  a live render-tree source already exists, while allowing them as a last
-//  resort on OS versions where live sources are empty.
+//  update graph, where graph-installed property wrappers are absent. Reading
+//  some of them is a Swift trap (fatalError) that nothing can catch —
+//  `@EnvironmentObject`, `@Environment(Model.self)`, and custom wrappers that
+//  hold either. So `body` is evaluated ONLY for app-defined views that store no
+//  `DynamicProperty` at all, and never for Apple framework views (their bodies
+//  are private implementation that changes per iOS release). Everything else
+//  degrades to Mirror-recursing stored children — no body, no trap.
 //
 //  NOTE (vs. the sample original): the SwiftUI-side ignore/redact policy
 //  detection was intentionally NOT ported. Redaction and ignore-interactions
@@ -87,12 +82,6 @@ internal enum SwiftUIReflection {
         }
     }
 
-    enum BodyEvaluationPolicy: Equatable {
-        case normal
-        case avoidWarningProneState
-        case allowWarningProneAsLastResort
-    }
-
     /// Find the deepest visible `UIHostingController` reachable from this
     /// window. Kept for callers that want a single best guess.
     static func topmostHostingController(in window: UIWindow) -> UIViewController? {
@@ -139,8 +128,7 @@ internal enum SwiftUIReflection {
     ///   the main thread.
     static func extractInventory(
         from hostingController: UIViewController,
-        deadline: Date? = nil,
-        bodyEvaluationPolicy: BodyEvaluationPolicy = .normal
+        deadline: Date? = nil
     ) -> [ViewRecord] {
         guard let rootView = rootView(of: hostingController) else {
             return []
@@ -149,8 +137,16 @@ internal enum SwiftUIReflection {
         var records: [ViewRecord] = []
         var order = 0
         var budget = Budget(deadline: deadline ?? .distantFuture)
-        walk(rootView, depth: 0, order: &order, budget: &budget,
-             bodyEvaluationPolicy: bodyEvaluationPolicy, into: &records)
+        #if DEBUG
+        let start = CFAbsoluteTimeGetCurrent()
+        #endif
+        walk(rootView, depth: 0, order: &order, budget: &budget, into: &records)
+        #if DEBUG
+        SwiftUIScanLog.log(String(format: "reflection %@ nodes=%d records=%d %.1fms%@",
+                                  String(describing: type(of: hostingController)).prefix(60).description,
+                                  budget.nodes, records.count, (CFAbsoluteTimeGetCurrent() - start) * 1000,
+                                  budget.exhausted ? " EXHAUSTED" : ""))
+        #endif
         return records
     }
 
@@ -234,14 +230,13 @@ internal enum SwiftUIReflection {
         depth: Int,
         order: inout Int,
         budget: inout Budget,
-        bodyEvaluationPolicy: BodyEvaluationPolicy,
         into records: inout [ViewRecord]
     ) {
         if budget.exhausted || depth > budget.maxDepth { return }
         budget.nodes += 1
         order += 1
 
-        let typeName = stripGenericName(String(describing: type(of: value)))
+        let typeName = baseTypeName(type(of: value))
 
         // Opaque leaves: paint/shape/symbol values whose internals can never
         // contain user views. Pruning them keeps the node budget for actual
@@ -268,7 +263,7 @@ internal enum SwiftUIReflection {
             // with off-screen titles and burns the budget.
             if let labelSource {
                 walk(labelSource, depth: depth + 1, order: &order,
-                     budget: &budget, bodyEvaluationPolicy: bodyEvaluationPolicy,
+                     budget: &budget,
                      into: &records)
                 return
             }
@@ -296,12 +291,12 @@ internal enum SwiftUIReflection {
         if typeName == "List" || typeName == "GroupBox" {
             if let label = anyStoredChild(of: value, named: ["label", "_label"]) {
                 walk(label, depth: depth + 1, order: &order,
-                     budget: &budget, bodyEvaluationPolicy: bodyEvaluationPolicy,
+                     budget: &budget,
                      into: &records)
             }
             if let content = anyStoredChild(of: value, named: ["content", "_content"]) {
                 walk(content, depth: depth + 1, order: &order,
-                     budget: &budget, bodyEvaluationPolicy: bodyEvaluationPolicy,
+                     budget: &budget,
                      into: &records)
             }
             return
@@ -315,9 +310,9 @@ internal enum SwiftUIReflection {
         // Composite view (Body != Never): evaluate body and walk ONLY that.
         // Primitive view (Body == Never) or non-View value: Mirror into stored
         // children (where a Button's label/Text actually lives).
-        if let body = Self.evaluatedBody(of: value, bodyEvaluationPolicy: bodyEvaluationPolicy) {
+        if let body = Self.evaluatedBody(of: value) {
             walk(body, depth: depth + 1, order: &order, budget: &budget,
-                 bodyEvaluationPolicy: bodyEvaluationPolicy, into: &records)
+                 into: &records)
         } else {
             for child in Mirror(reflecting: value).children {
                 // Presentation MODIFIERS (`navigationDestination`, sheets,
@@ -325,13 +320,14 @@ internal enum SwiftUIReflection {
                 // NOT on screen — never walk those. The check is restricted to
                 // modifier types because NavigationStack's own internals store
                 // the VISIBLE column under a `destination`-named child too.
-                if child.label == "destination",
-                   String(describing: type(of: value)).contains("Modifier") {
+                if child.label == "destination", isModifierType(type(of: value)) {
                     continue
                 }
+                // Dynamic properties hold state, not view content; their
+                // storage points into SwiftUI's graph internals.
+                if child.value is DynamicProperty { continue }
                 walk(child.value, depth: depth + 1, order: &order,
-                     budget: &budget, bodyEvaluationPolicy: bodyEvaluationPolicy,
-                     into: &records)
+                     budget: &budget, into: &records)
                 if budget.exhausted { return }
             }
         }
@@ -339,77 +335,39 @@ internal enum SwiftUIReflection {
 
     // MARK: - body evaluation (the load-bearing trick)
 
-    /// Returns the result of `value.body` IF `value` is a composite SwiftUI
+    /// Returns the result of `value.body` IF `value` is an app-defined composite
     /// `View` (i.e. `Body != Never`) whose body is SAFE to evaluate outside the
-    /// graph. Returns nil for primitives, non-Views and environment-dependent
-    /// views — callers then Mirror-recurse.
-    private static func evaluatedBody(
-        of value: Any,
-        bodyEvaluationPolicy: BodyEvaluationPolicy
-    ) -> Any? {
+    /// graph. Returns nil for primitives, non-Views, Apple framework views and
+    /// views with dynamic properties — callers then Mirror-recurse.
+    private static func evaluatedBody(of value: Any) -> Any? {
         guard let view = value as? any View else { return nil }
-        guard !hasGraphDependentWrapper(view) else { return nil }
-        guard shouldEvaluateWarningProneBody(view, bodyEvaluationPolicy: bodyEvaluationPolicy) else {
-            return nil
-        }
+        guard !isFrameworkType(type(of: view)), !hasDynamicProperty(view) else { return nil }
         return Self.bodyIfComposite(view)
     }
 
-    /// Property-wrapper type names whose value is only valid inside SwiftUI's
-    /// update graph. Evaluating a `body` that reads one outside the graph is a
-    /// fatalError-level Swift trap that cannot be caught, so we refuse to
-    /// evaluate the body of any view that stores one and degrade to Mirror.
-    ///
-    /// Seeded with `EnvironmentObject` only — the single wrapper proven to trap.
-    /// `StateObject` / `State` are deliberately NOT denylisted: they default-
-    /// initialize and extract titles fine. Add a wrapper here ONLY after
-    /// validating its crash out-of-process (a denylisted wrapper silently loses
-    /// that screen's titles, so the bar is "proven to trap", not "might").
-    private static let graphDependentWrapperTypes: Set<String> = ["EnvironmentObject"]
-
-    /// True when `view` stores any property wrapper from
-    /// `graphDependentWrapperTypes` — i.e. evaluating its body is unsafe.
-    private static func hasGraphDependentWrapper(_ view: Any) -> Bool {
-        for child in Mirror(reflecting: view).children {
-            let wrapper = stripGenericName(String(describing: type(of: child.value)))
-            if graphDependentWrapperTypes.contains(wrapper) { return true }
-        }
-        return false
+    /// Any `DynamicProperty` — `@State`, `@Binding`, `@Environment`,
+    /// `@EnvironmentObject`, `@StateObject`, `@Query`, `@FetchRequest`, or a
+    /// custom wrapper (DI containers) — is only valid once SwiftUI installs it
+    /// in the graph. Outside the graph some trap (`@EnvironmentObject`,
+    /// `@Environment(Model.self)`), some re-create state on every read
+    /// (`@StateObject` runs the app's initializer), and custom wrappers can hide
+    /// either. Checking the protocol, not a list of type names, covers them all.
+    private static func hasDynamicProperty(_ view: Any) -> Bool {
+        Mirror(reflecting: view).children.contains { $0.value is DynamicProperty }
     }
 
-    /// Wrappers that can log SwiftUI runtime warnings when read outside an
-    /// installed view graph. These are not fatal-trap wrappers; the scan may
-    /// still evaluate them when reflection is the only title source left.
-    private static let warningProneWrapperTypes: Set<String> = [
-        "State",
-        "Binding",
-        "StateObject",
-        "ObservedObject",
-        "Environment",
-        "FocusState",
-        "GestureState",
-        "AppStorage",
-        "SceneStorage"
+    /// Modules whose views are never body-evaluated: their bodies are private
+    /// implementation that can change in any iOS release. Underscore-prefixed
+    /// modules (`_MapKit_SwiftUI`, …) are Apple overlays too.
+    private static let frameworkModules: Set<String> = [
+        "SwiftUI", "SwiftUICore", "MapKit", "Charts", "PhotosUI", "AVKit", "StoreKit",
+        "WidgetKit", "SafariServices", "QuickLook", "AuthenticationServices", "TipKit",
+        "WebKit", "HealthKitUI", "MusicKit", "RealityKit", "SceneKit", "SpriteKit"
     ]
 
-    private static func shouldEvaluateWarningProneBody(
-        _ view: Any,
-        bodyEvaluationPolicy: BodyEvaluationPolicy
-    ) -> Bool {
-        switch bodyEvaluationPolicy {
-        case .normal, .allowWarningProneAsLastResort:
-            return true
-        case .avoidWarningProneState:
-            return !hasWarningProneWrapper(view)
-        }
-    }
-
-    private static func hasWarningProneWrapper(_ view: Any) -> Bool {
-        for child in Mirror(reflecting: view).children {
-            let wrapper = stripGenericName(String(describing: type(of: child.value)))
-            if warningProneWrapperTypes.contains(wrapper) { return true }
-        }
-        return false
+    private static let isFrameworkType = TypeNameMemo(.qualified) { qualifiedName -> Bool in
+        let module = qualifiedName.prefix { $0 != "." }
+        return module.hasPrefix("_") || frameworkModules.contains(String(module))
     }
 
     /// Generic shim. Swift auto-opens the `any View` existential into `V`,
@@ -429,7 +387,7 @@ internal enum SwiftUIReflection {
         // An Image's first stored string is its asset/symbol NAME
         // ("chevron.right") — never user-facing text. Skip the whole subtree
         // so an icon placed before a control's text can't hijack the title.
-        if stripGenericName(String(describing: type(of: value))) == "Image" {
+        if baseTypeName(type(of: value)) == "Image" {
             return nil
         }
 
@@ -485,10 +443,14 @@ internal enum SwiftUIReflection {
         return nil
     }
 
-    private static func stripGenericName(_ type: String) -> String {
-        if let idx = type.firstIndex(of: "<") {
-            return String(type[..<idx])
+    /// Type name with generic arguments stripped ("ModifiedContent<…>" →
+    /// "ModifiedContent"), memoized per type.
+    private static let baseTypeName = TypeNameMemo { name -> String in
+        if let idx = name.firstIndex(of: "<") {
+            return String(name[..<idx])
         }
-        return type
+        return name
     }
+
+    private static let isModifierType = TypeNameMemo { $0.contains("Modifier") }
 }

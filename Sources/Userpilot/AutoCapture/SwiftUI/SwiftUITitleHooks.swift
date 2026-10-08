@@ -68,7 +68,7 @@ internal extension UIViewController {
         let config = userpilot.config
         guard SwiftUITitleCapturePolicy.shouldRun(
             config: config,
-            isSwiftUIHost: isSwiftUIHostingController
+            isSwiftUIHost: SwiftUIDetection.isHostingController(self)
         ) else { return }
         #if DEBUG
         SwiftUIScanLog.log("viewDidAppear vc=\(type(of: self))")
@@ -78,9 +78,5 @@ internal extension UIViewController {
         // fires triggers a synchronous prepare scan instead of resolving stale.
         SwiftUIScanCache.shared.markScreenChanged()
         SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared)
-    }
-
-    private var isSwiftUIHostingController: Bool {
-        String(describing: type(of: self)).contains("HostingController")
     }
 }

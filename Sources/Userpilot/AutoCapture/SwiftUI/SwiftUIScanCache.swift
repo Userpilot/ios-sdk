@@ -8,17 +8,20 @@
 //    - the display-list text map (exact frames + the painting CALayer)
 //    - the click-time accessors the resolver reads (never re-evaluates `body`)
 //
-//  Scans are event-driven (screen appear + scroll settle), idle-gated, and
+//  Scans are event-driven (screen appear + touch settle), idle-gated, and
 //  debounced — there is no periodic timer. Rescans are scheduled by the SDK's
-//  existing swizzler (Phase 2 wiring); this type does not swizzle anything.
+//  existing swizzler; this type does not swizzle anything.
 //
-//  Per scan, two phases run (the sample's Phase-1 UIKit dump is NOT ported —
-//  the SDK's existing UIKit extraction owns that):
-//    Phase A — `SwiftUIReflection.extractInventory` evaluates the SwiftUI view
-//              graph for button/text titles. This is the ONLY place `body` is
+//  Per scan, two phases run:
+//    Phase B (primary) — `DisplayListTextMap.scanHost` reads exact text
+//              geometry from the render tree of every hosting view.
+//    Phase A (secondary) — `SwiftUIReflection.extractInventory` marks which
+//              titles are interactive. This is the ONLY place `body` is
 //              evaluated; the touch path just reads the cached result.
-//    Phase B — `DisplayListTextMap.textMap` reads exact text geometry from the
-//              render tree.
+//
+//  Every full scan feeds `SwiftUICaptureHealth`; when the render structure is
+//  not recognized (new iOS release) the breaker turns capture off for the
+//  session after a few scans.
 //
 
 // swiftlint:disable closure_parameter_position file_length function_body_length identifier_name line_length type_body_length
@@ -41,7 +44,7 @@ internal final class SwiftUIScanCache {
     private weak var inventoryHost: UIViewController?
     private let snapshotLock = NSLock()
 
-    // Screen-identity generation counter (F1). `markScreenChanged()` bumps
+    // Screen-identity generation counter. `markScreenChanged()` bumps
     // `currentScreenGen` on every screen appearance; each scan stamps the
     // snapshot it produces with `cacheGen`. Readers treat a snapshot whose
     // `cacheGen` differs from `currentScreenGen` as stale (return empty) so a
@@ -58,6 +61,13 @@ internal final class SwiftUIScanCache {
     private var becomeActiveObserver: NSObjectProtocol?
     private var memoryWarningObserver: NSObjectProtocol?
     private static let backgroundScanDebounceDelay: TimeInterval = 0.5
+
+    // A background scan cut short by its budget re-arms itself so a cold first
+    // scan (one-time Swift runtime warm-up) finishes in a few short passes
+    // before the user taps, instead of one long main-thread stall. Capped per
+    // screen so a screen too large for the budget cannot loop. Main thread only.
+    private var truncatedFollowUps = 0
+    private static let maxTruncatedFollowUps = 3
 
     private init() {
         debouncer = ScanDebouncer(delay: Self.backgroundScanDebounceDelay) { [weak self] in
@@ -90,7 +100,7 @@ internal final class SwiftUIScanCache {
     /// attributed correctly and selects the background budget.
     ///
     /// Contract: this queues background work only. `.manual` is reserved for the
-    /// synchronous first-tap path in `prepareForTapResolutionIfNeeded()`; if a
+    /// synchronous tap path in `prepareForTapResolution(at:in:tappedView:)`; if a
     /// caller passes it here it is stored as `.debounced` so a queued scan can
     /// never claim the tight tap-path budget.
     ///
@@ -101,16 +111,21 @@ internal final class SwiftUIScanCache {
             DispatchQueue.main.async { [weak self] in self?.scheduleRescan(reason: reason) }
             return
         }
+        guard !SwiftUICaptureHealth.isTripped else { return }
 
         #if DEBUG
         assert(reason != .manual,
-               "scheduleRescan(reason:) is background-only; call performScan(reason: .manual) directly for tap-path scans.")
+               "scheduleRescan(reason:) is background-only; the tap path scans synchronously.")
         #endif
 
         let backgroundReason: RescanReason = (reason == .manual) ? .debounced : reason
 
         snapshotLock.lock()
-        pendingBackgroundReason = backgroundReason
+        // A pending screen-appeared scan must keep its reason (it refreshes the
+        // reflection inventory); a later touch-end only re-arms the debounce.
+        if !(pendingBackgroundReason == .screenAppeared && backgroundReason == .touchEnded) {
+            pendingBackgroundReason = backgroundReason
+        }
         snapshotLock.unlock()
         debouncer.schedule()
         #if DEBUG
@@ -133,72 +148,53 @@ internal final class SwiftUIScanCache {
         let gen = currentScreenGen
         let stampedGen = cacheGen
         snapshotLock.unlock()
+        truncatedFollowUps = 0
         #if DEBUG
         SwiftUIScanLog.log("markScreenChanged → currentGen=\(gen) (cacheGen=\(stampedGen) now STALE)")
         #endif
     }
 
-    /// Ensures the tap resolver has a usable SwiftUI title snapshot. Screen
-    /// appearance scans are debounced; a fast first tap after navigation can
-    /// arrive before that debounce fires. Scrolling can also materialize new
-    /// SwiftUI render-tree text without changing the screen generation, so the
-    /// check is point-aware: if the current text map cannot cover this tap,
-    /// refresh synchronously before resolving the event.
-    func prepareForTapResolutionIfNeeded(at pointInWindow: CGPoint? = nil, in window: UIWindow? = nil) {
-        guard Thread.isMainThread else {
-            DispatchQueue.main.async { [weak self] in
-                self?.prepareForTapResolutionIfNeeded(at: pointInWindow, in: window)
-            }
+    /// Makes sure the cached text map can answer a tap at `pointInWindow`.
+    /// Called from the click-enrichment path only — after the SDK has decided
+    /// the tap needs a SwiftUI title — so other taps never pay for a scan.
+    ///
+    ///   - Screen generation changed (the debounced screen-appear scan has not
+    ///     run yet): synchronous full scan of the TAPPED window, tap budget.
+    ///   - Otherwise, if no cached entry resolves at the point (a scroll revealed
+    ///     rows, or a NavigationStack push swapped content inside the same
+    ///     hosting controller): refresh only the hosting view under the tap,
+    ///     text map only.
+    ///   - Otherwise: use the cache as-is.
+    ///
+    /// A tap that legitimately has no title (icon, empty space) costs one
+    /// single-host refresh, never a full scan.
+    func prepareForTapResolution(at pointInWindow: CGPoint, in window: UIWindow, tappedView: UIView) {
+        guard Thread.isMainThread else { return }
+
+        snapshotLock.lock()
+        let isStale = cacheGen != currentScreenGen
+        let textMap = latestTextMap
+        let interactive = latestInteractiveRecords
+        snapshotLock.unlock()
+
+        if isStale {
+            #if DEBUG
+            SwiftUIScanLog.log("prepareForTap: stale snapshot → synchronous performScan(.manual)")
+            #endif
+            debouncer.cancel()
+            performScan(reason: .manual, in: window)
             return
         }
 
-        // Rescan when EITHER the screen generation changed (real UIViewController
-        // navigation — modals, separate hosting controllers), the cache holds
-        // no display-list text yet, OR a same-screen scroll has made the cached
-        // text map miss the tapped point.
-        //
-        // The empty-text-map trigger matters for SwiftUI `NavigationStack`:
-        // pushing a destination swaps content inside the SAME hosting controller
-        // with NO `viewDidAppear`, so the generation never bumps. We key off the
-        // text map (the reliable on-screen source), NOT the reflection inventory
-        // — reflection is always empty on a NavigationStack root, so keying off
-        // it would force a synchronous scan on every single tap. Once the text
-        // map is populated (by this scan or the debounced touch-end rescan), taps
-        // read the cache directly.
-        let stampedGen: Int
-        let gen: Int
-        let textMap: [DisplayListTextMap.Entry]
-        let interactive: [(title: String, viewType: String)]
-        snapshotLock.lock()
-        stampedGen = cacheGen
-        gen = currentScreenGen
-        textMap = latestTextMap
-        interactive = latestInteractiveRecords
-        snapshotLock.unlock()
-
-        let missesTapPoint: Bool
-        if stampedGen == gen,
-           !textMap.isEmpty,
-           let pointInWindow,
-           let window {
-            missesTapPoint = !textMap.contains {
-                Self.canResolveTitle(from: $0, interactive: interactive,
-                                     at: pointInWindow, in: window)
-            }
-        } else {
-            missesTapPoint = false
+        let coversTap = textMap.contains {
+            Self.canResolveTitle(from: $0, interactive: interactive, at: pointInWindow, in: window)
         }
-        let needsScan = (stampedGen != gen) || textMap.isEmpty || missesTapPoint
+        guard !coversTap else { return }
 
         #if DEBUG
-        SwiftUIScanLog.log("prepareForTap: cacheGen=\(stampedGen) currentGen=\(gen) needsScan=\(needsScan)"
-            + (missesTapPoint ? " tapPointMiss=true" : "")
-            + (needsScan ? " → cancel debounce + synchronous performScan(.manual)" : " → use cache as-is"))
+        SwiftUIScanLog.log("prepareForTap: cache misses tap point → refresh tapped host only")
         #endif
-
-        guard needsScan else { return }
-        debouncer.cancel()
-        performScan(reason: .manual)
+        refreshHost(containing: tappedView)
     }
 
     private static func canResolveTitle(from entry: DisplayListTextMap.Entry,
@@ -210,13 +206,40 @@ internal final class SwiftUIScanCache {
         return interactive.contains(where: { $0.title == title }) || entry.isStyledControlTitleCandidate
     }
 
+    /// Re-reads the display list of the innermost hosting view containing
+    /// `view` and replaces that host's cached entries.
+    private func refreshHost(containing view: UIView) {
+        var current: UIView? = view
+        while let candidate = current, !SwiftUIDetection.isHostingView(candidate) {
+            current = candidate.superview
+        }
+        guard let host = current else { return }
+
+        let budget = SwiftUIScanBudget.tapPath
+        let scan = DisplayListTextMap.scanHost(
+            host,
+            deadline: Date().addingTimeInterval(budget.displayListHostSeconds),
+            maxVisited: budget.displayListMaxVisited
+        )
+
+        snapshotLock.lock()
+        latestTextMap.removeAll { $0.host == nil || $0.host === host }
+        latestTextMap.append(contentsOf: scan.entries)
+        snapshotLock.unlock()
+        #if DEBUG
+        SwiftUIScanLog.log("refreshHost \(type(of: host)) → \(scan.entries.count) entries")
+        #endif
+    }
+
     // MARK: - Scan
 
-    private func performScan(reason: RescanReason) {
+    /// Full scan of `window` (the key visible window when nil).
+    private func performScan(reason: RescanReason, in window: UIWindow? = nil) {
         guard Thread.isMainThread else {
-            DispatchQueue.main.async { [weak self] in self?.performScan(reason: reason) }
+            DispatchQueue.main.async { [weak self] in self?.performScan(reason: reason, in: window) }
             return
         }
+        guard !SwiftUICaptureHealth.isTripped else { return }
         // During launch the app is still `.inactive`; park the scan until
         // active so no scan work lands inside the launch transition. Re-stamp
         // the (sanitized) reason so the deferred re-run, re-armed via the
@@ -232,24 +255,19 @@ internal final class SwiftUIScanCache {
             scheduleScanWhenActive()
             return
         }
-        guard let window = Self.keyVisibleWindow() else {
+        guard let window = window ?? Self.keyVisibleWindow() else {
             #if DEBUG
             SwiftUIScanLog.log("performScan(\(reason)) ABORTED — no key visible window")
             #endif
             return
         }
 
-        // Budget by reason: only the synchronous first-tap (`.manual`) scan uses
+        // Budget by reason: only the synchronous tap-path (`.manual`) scan uses
         // the tight tap-path budget; every background reason uses the larger one.
         //
-        // CRITICAL: the two phases get INDEPENDENT, freshly-computed deadlines.
-        // They must NOT share one deadline — reflection (Phase A) can be both
-        // expensive and fruitless (re-evaluating a NavigationStack root's body
-        // rebuilds an empty navigation state), and a shared deadline let it
-        // consume the whole scan and starve the display-list phase to zero. The
-        // display-list text map is the PRIMARY title source (it reads the live
-        // render tree, not re-evaluated bodies), so it runs FIRST with its own
-        // budget and can never be starved.
+        // The two phases get INDEPENDENT, freshly-computed deadlines so
+        // reflection (Phase A) can never starve the display-list phase, which is
+        // the primary title source and runs first.
         let budget = (reason == .manual) ? SwiftUIScanBudget.tapPath : SwiftUIScanBudget.background
         #if DEBUG
         let budgetName = (reason == .manual) ? "tapPath" : "background"
@@ -257,58 +275,132 @@ internal final class SwiftUIScanCache {
         let scanStart = CFAbsoluteTimeGetCurrent()
         #endif
 
-        // Phase B (primary) — display-list text map: exact frames + resolved
-        // strings for every rendered SwiftUI text, read from the render tree.
-        // Own deadline (= the scan budget) so reflection can never starve it.
-        let textMapDeadline = Date().addingTimeInterval(budget.totalScanSeconds)
-        var textMap: [DisplayListTextMap.Entry] = []
-        for host in DisplayListTextMap.hostingViews(
-            in: window,
-            maxNodes: SwiftUIScanBudget.hostingDiscoveryMaxNodes,
-            maxDepth: SwiftUIScanBudget.hostingDiscoveryMaxDepth,
-            scanDeadline: textMapDeadline
-        ) {
-            if Date() > textMapDeadline { break }
-            let hostDeadline = min(Date().addingTimeInterval(budget.displayListHostSeconds), textMapDeadline)
-            textMap.append(contentsOf: DisplayListTextMap.textMap(
-                for: host,
-                deadline: hostDeadline,
-                maxVisited: budget.displayListMaxVisited
-            ))
+        // Phase B (primary) — display-list text map.
+        let phaseB = scanTextMap(in: window, budget: budget)
+        #if DEBUG
+        let textMapMs = (CFAbsoluteTimeGetCurrent() - scanStart) * 1000
+        #endif
+
+        if SwiftUICaptureHealth.recordScan(hosts: phaseB.hostCount, locatedLists: phaseB.locatedLists,
+                                           textItems: phaseB.textItems, pairedEntries: phaseB.entries.count) {
+            handleBreakerTripped()
+            return
         }
 
-        // Phase A (secondary) — SwiftUI reflection inventory: marks WHICH titles
-        // are interactive so Stage B can prefer confirmed controls when
-        // reflection is available. Since the approximate Stage C fallback is gone,
-        // reflection is skipped when there is no display-list text to pair with.
-        let reflectionPolicy = Self.reflectionPolicy()
-        let reflectionDeadline = Date().addingTimeInterval(budget.reflectionHostSeconds)
-        let (records, invHost) = textMap.isEmpty
-            ? ([], nil)
-            : buildInventory(in: window, budget: budget,
-                             scanDeadline: reflectionDeadline,
-                             bodyEvaluationPolicy: reflectionPolicy)
-        let interactive = Self.interactiveRecords(in: records)
+        // Phase A (secondary) — reflection inventory.
+        let inventory = inventoryForScan(reason: reason, hasText: !phaseB.entries.isEmpty,
+                                         window: window, budget: budget)
 
         snapshotLock.lock()
-        latestInventory = records
-        latestTextMap = textMap
-        latestInteractiveRecords = interactive
-        inventoryHost = invHost
+        latestInventory = inventory.records
+        latestTextMap = phaseB.entries
+        latestInteractiveRecords = inventory.interactive
+        inventoryHost = inventory.host
         cacheGen = currentScreenGen
         let stampedGen = cacheGen
         snapshotLock.unlock()
 
+        if phaseB.truncated, reason != .manual, truncatedFollowUps < Self.maxTruncatedFollowUps {
+            truncatedFollowUps += 1
+            scheduleRescan(reason: .debounced)
+        } else if !phaseB.truncated {
+            truncatedFollowUps = 0
+        }
+
         #if DEBUG
         let elapsedMs = (CFAbsoluteTimeGetCurrent() - scanStart) * 1000
-        SwiftUIScanLog.log(String(format: "performScan(%@) DONE inv=%d textMap=%d interactive=%d "
-            + "elapsed=%.1fms stampedGen=%d host=%@",
-            "\(reason)", records.count, textMap.count, interactive.count, elapsedMs,
-            stampedGen, invHost.map { String(describing: type(of: $0)) } ?? "nil"))
-        let interactiveTitles = interactive.map { $0.title }
-        let textMapTitles = textMap.compactMap { $0.title }
-        logTitleChunks("interactive titles", interactiveTitles)
-        logTitleChunks("textMap titles", textMapTitles)
+        SwiftUIScanLog.log(String(format: "performScan(%@) DONE hosts=%d lists=%d textItems=%d inv=%d textMap=%d interactive=%d "
+            + "elapsed=%.1fms (textMap %.1fms) stampedGen=%d host=%@",
+            "\(reason)", phaseB.hostCount, phaseB.locatedLists, phaseB.textItems, inventory.records.count,
+            phaseB.entries.count, inventory.interactive.count, elapsedMs, textMapMs, stampedGen,
+            inventory.host.map { String(describing: type(of: $0)) } ?? "nil"))
+        logTitleChunks("interactive titles", inventory.interactive.map { $0.title })
+        logTitleChunks("textMap titles", phaseB.entries.compactMap { $0.title })
+        #endif
+    }
+
+    /// Phase B result across every hosting view of the window.
+    private struct TextMapScan {
+        var entries: [DisplayListTextMap.Entry] = []
+        var hostCount = 0
+        var locatedLists = 0
+        var textItems = 0
+        var truncated = false
+    }
+
+    private func scanTextMap(in window: UIWindow, budget: SwiftUIScanBudget.Budget) -> TextMapScan {
+        let textMapDeadline = Date().addingTimeInterval(budget.totalScanSeconds)
+        var result = TextMapScan()
+        let hosts = DisplayListTextMap.hostingViews(
+            in: window,
+            maxNodes: SwiftUIScanBudget.hostingDiscoveryMaxNodes,
+            maxDepth: SwiftUIScanBudget.hostingDiscoveryMaxDepth,
+            scanDeadline: textMapDeadline
+        )
+        for host in hosts {
+            if Date() > textMapDeadline {
+                result.truncated = true
+                break
+            }
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["UP_SUI_STRUCTURE"] == "1" {
+                SwiftUIScanLog.log(DisplayListTextMap.debugDescribeRenderPath(of: host))
+            }
+            #endif
+            let hostDeadline = min(Date().addingTimeInterval(budget.displayListHostSeconds), textMapDeadline)
+            let scan = DisplayListTextMap.scanHost(host, deadline: hostDeadline,
+                                                   maxVisited: budget.displayListMaxVisited)
+            result.hostCount += 1
+            result.locatedLists += scan.locatedDisplayList ? 1 : 0
+            result.textItems += scan.textItemCount
+            result.truncated = result.truncated || scan.truncated
+            result.entries.append(contentsOf: scan.entries)
+        }
+        return result
+    }
+
+    /// Phase A: the reflection inventory marking WHICH titles are interactive.
+    /// Skipped when there is no display-list text to pair with, and on
+    /// touch-end rescans of a screen that already has an inventory (scrolling
+    /// changes rendered text, not the view tree).
+    private func inventoryForScan(reason: RescanReason,
+                                  hasText: Bool,
+                                  window: UIWindow,
+                                  budget: SwiftUIScanBudget.Budget) -> ScanInventory {
+        guard hasText else { return ScanInventory() }
+
+        snapshotLock.lock()
+        let screenAlreadyScanned = cacheGen == currentScreenGen
+        let previous = ScanInventory(records: latestInventory, interactive: latestInteractiveRecords,
+                                     host: inventoryHost)
+        snapshotLock.unlock()
+
+        if reason == .touchEnded, screenAlreadyScanned {
+            return previous
+        }
+        let reflectionDeadline = Date().addingTimeInterval(budget.reflectionHostSeconds)
+        let built = buildInventory(in: window, budget: budget, scanDeadline: reflectionDeadline)
+        return ScanInventory(records: built.0, interactive: Self.interactiveRecords(in: built.0), host: built.1)
+    }
+
+    private struct ScanInventory {
+        var records: [SwiftUIReflection.ViewRecord] = []
+        var interactive: [(title: String, viewType: String)] = []
+        weak var host: UIViewController?
+    }
+
+    /// The render structure was not recognized on this OS for several scans in
+    /// a row: drop all cached state and stop scheduling work for the session.
+    private func handleBreakerTripped() {
+        debouncer.cancel()
+        clearCaches()
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        Userpilot.shared?.config.logger.info(
+            "📊 SwiftUI title capture paused for this session: render structure not recognized (%{public}@)",
+            os
+        )
+        #if DEBUG
+        SwiftUIScanLog.log("circuit breaker TRIPPED — SwiftUI title capture off for this session (\(os))")
         #endif
     }
 
@@ -361,21 +453,15 @@ internal final class SwiftUIScanCache {
     /// buttons that are still visible in a sibling/parent host.
     private func buildInventory(in window: UIWindow,
                                 budget: SwiftUIScanBudget.Budget,
-                                scanDeadline: Date,
-                                bodyEvaluationPolicy: SwiftUIReflection.BodyEvaluationPolicy)
+                                scanDeadline: Date)
         -> ([SwiftUIReflection.ViewRecord], UIViewController?) {
         let controllers = SwiftUIReflection.allHostingControllers(in: window)
         let snapshots = controllers.map {
             host -> (records: [SwiftUIReflection.ViewRecord], host: UIViewController) in
             // Per-host reflection deadline, clamped to the whole-scan deadline so
-            // a late host can never push past the total budget. Once the scan
-            // deadline passes, `hostDeadline` is in the past and reflection
-            // returns near-immediately (its Budget is exhausted on first check).
+            // a late host can never push past the total budget.
             let hostDeadline = min(Date().addingTimeInterval(budget.reflectionHostSeconds), scanDeadline)
-            return (records: SwiftUIReflection.extractInventory(
-                        from: host,
-                        deadline: hostDeadline,
-                        bodyEvaluationPolicy: bodyEvaluationPolicy),
+            return (records: SwiftUIReflection.extractInventory(from: host, deadline: hostDeadline),
                     host: host)
         }
         let merged = Self.mergeInventories(snapshots)
@@ -392,16 +478,6 @@ internal final class SwiftUIScanCache {
             selectedHost = snapshot.host
         }
         return (merged, selectedHost)
-    }
-
-    internal static func reflectionPolicy() -> SwiftUIReflection.BodyEvaluationPolicy {
-        .avoidWarningProneState
-    }
-
-    internal static func reflectionPolicy(
-        forTextMap textMap: [DisplayListTextMap.Entry]
-    ) -> SwiftUIReflection.BodyEvaluationPolicy {
-        reflectionPolicy()
     }
 
     /// One-shot title scan for a specific host. Used by `userpilotScanOnce()`
@@ -431,18 +507,16 @@ internal final class SwiftUIScanCache {
         ) {
             if Date() > textMapDeadline { break }
             let hostDeadline = min(Date().addingTimeInterval(budget.displayListHostSeconds), textMapDeadline)
-            textMap.append(contentsOf: DisplayListTextMap.textMap(
-                for: hostingView,
+            textMap.append(contentsOf: DisplayListTextMap.scanHost(
+                hostingView,
                 deadline: hostDeadline,
                 maxVisited: budget.displayListMaxVisited
-            ))
+            ).entries)
         }
 
-        let reflectionPolicy = Self.reflectionPolicy()
         let inv = SwiftUIReflection.extractInventory(
             from: host,
-            deadline: Date().addingTimeInterval(budget.reflectionHostSeconds),
-            bodyEvaluationPolicy: reflectionPolicy
+            deadline: Date().addingTimeInterval(budget.reflectionHostSeconds)
         )
         let interactive = Self.interactiveRecords(in: inv)
 

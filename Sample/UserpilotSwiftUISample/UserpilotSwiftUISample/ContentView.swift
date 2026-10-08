@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var showUIComponent = false
     @State private var showNestedLazyStacks = false
     @State private var showModalButtons = false
+    @State private var showAutocaptureConfig = false
 
     var body: some View {
         if showClickAnalyticsStateSwap {
@@ -160,6 +161,9 @@ struct ContentView: View {
             }
             .navigationDestination(isPresented: $showNestedLazyStacks) {
                 NestedLazyStackAutocaptureView()
+            }
+            .navigationDestination(isPresented: $showAutocaptureConfig) {
+                SwiftUIAutocaptureConfigTestView()
             }
             .sheet(isPresented: $showModalButtons) {
                 ModalButtonsAutocaptureView()

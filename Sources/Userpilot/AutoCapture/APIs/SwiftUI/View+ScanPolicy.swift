@@ -36,8 +36,9 @@ public extension View {
 
     /// Opts the hosting view controller out of the accessibility read and runs
     /// one title-capture scan for the current rendered/materialized screen.
-    /// For mostly-static screens: one scan, then taps resolve from the cached
-    /// display-list text map without repeated scan scheduling.
+    /// For mostly-static screens: titles are available from the first tap,
+    /// without waiting for the debounced screen-appear scan. (Touch-end
+    /// rescans still run, so content revealed later is picked up.)
     func userpilotScanOnce() -> some View {
         background(SwiftUIScanPolicyInjector(mode: .scanOnce))
     }
@@ -77,7 +78,8 @@ private final class SwiftUIScanPolicyCarrierView: UIView {
     }
 
     func applyIfPossible() {
-        guard window != nil, let host = up_nearestViewController else { return }
+        guard SwiftUITitleCapturePolicy.isSupportedOS,
+              window != nil, let host = up_nearestViewController else { return }
 
         SwiftUIScanPolicy.skipAccessibility(for: host)
 

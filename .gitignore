@@ -62,3 +62,8 @@ fastlane/test_output
 
 # Mac OS X
 *.DS_Store
+
+# Local-only tooling (not committed)
+.github/workflows/private-api-scan.yml
+scripts/scan-private-api.sh
+.claude/
