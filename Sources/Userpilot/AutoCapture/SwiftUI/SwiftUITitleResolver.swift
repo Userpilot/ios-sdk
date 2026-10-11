@@ -59,19 +59,15 @@ internal final class SwiftUITitleResolver {
         at pointInWindow: CGPoint, in window: UIWindow, captureAccessibility: Bool, logger: Logging? = nil
     ) -> String? {
         let hit = window.hitTest(pointInWindow, with: nil)
-        #if DEBUG
-            logger?.debugSwiftUICapture(
-                "resolveTitle at \(pointInWindow) hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil")"
-            )
-        #endif
+        logger?.debugSwiftUICapture(
+            "resolveTitle at \(pointInWindow) hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil")"
+        )
 
         // Stage A — public accessibility-tree walk (config- and policy-gated).
         if captureAccessibility, accessibilityReadEnabled, let hit, !skipsAccessibility(hit: hit, logger: logger),
             let title = accessibilityTreeTitle(at: pointInWindow, hit: hit, in: window)
         {
-            #if DEBUG
-                logger?.debugSwiftUICapture("  ✓ STAGE A (accessibility): \"\(title)\"")
-            #endif
+            logger?.debugSwiftUICapture("  ✓ STAGE A (accessibility): \"\(title)\"")
             return title
         }
 
@@ -82,15 +78,11 @@ internal final class SwiftUITitleResolver {
                 at: pointInWindow, in: window,
                 textMap: textMap, interactive: interactive, logger: logger)
         {
-            #if DEBUG
-                logger?.debugSwiftUICapture("  ✓ STAGE B (display-list): \"\(title)\"")
-            #endif
+            logger?.debugSwiftUICapture("  ✓ STAGE B (display-list): \"\(title)\"")
             return title
         }
 
-        #if DEBUG
-            logger?.debugSwiftUICapture("  ✗ SwiftUI title resolution: nil")
-        #endif
+        logger?.debugSwiftUICapture("  ✗ SwiftUI title resolution: nil")
         return nil
     }
 
@@ -245,16 +237,10 @@ internal final class SwiftUITitleResolver {
         // display-list geometry is authoritative; the inventory is best-effort.
         var fallbackTitle: String?
         var fallbackArea = CGFloat.greatestFiniteMagnitude
-        #if DEBUG
-        var hitCandidates: [String] = []
-        #endif
 
         for entry in textMap {
             guard let title = entry.title,
                   entry.containsWindowPoint(pointInWindow, in: window) else { continue }
-            #if DEBUG
-            hitCandidates.append("\(title) styled=\(entry.isStyledControlTitleCandidate)")
-            #endif
 
             let area = entry.hitFrame.width * entry.hitFrame.height
             if Self.interactiveRecord(matching: title, in: interactive) != nil {
@@ -269,12 +255,22 @@ internal final class SwiftUITitleResolver {
                 }
             }
         }
-        #if DEBUG
-        if bestTitle == nil, fallbackTitle == nil, !hitCandidates.isEmpty {
-            logger?.debugSwiftUICapture("    STAGE B candidates under tap but not resolvable: \(hitCandidates)")
+        if bestTitle == nil, fallbackTitle == nil {
+            logger?.debugSwiftUICapture(unresolvedCandidatesMessage(at: pointInWindow, in: window, textMap: textMap))
         }
-        #endif
         return bestTitle ?? fallbackTitle
+    }
+
+    /// Called lazily by the shared logger, so Release never builds diagnostic candidate strings.
+    private func unresolvedCandidatesMessage(
+        at point: CGPoint, in window: UIWindow, textMap: [DisplayListTextMap.Entry]
+    ) -> String? {
+        let candidates = textMap.compactMap { entry -> String? in
+            guard let title = entry.title, entry.containsWindowPoint(point, in: window) else { return nil }
+            return "\(title) styled=\(entry.isStyledControlTitleCandidate)"
+        }
+        guard !candidates.isEmpty else { return nil }
+        return "    STAGE B candidates under tap but not resolvable: \(candidates)"
     }
 
     // MARK: - Interactive-title matching

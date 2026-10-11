@@ -151,9 +151,7 @@ internal enum DisplayListTextMap {
                          maxVisited: Int = 1_500,
                          logger: Logging? = nil) -> HostScan {
         guard let list = displayList(of: host) else {
-            #if DEBUG
             logger?.debugSwiftUICapture("DisplayListTextMap: no display list on \(type(of: host)) — render path moved?")
-            #endif
             return .notLocated
         }
 
@@ -163,11 +161,9 @@ internal enum DisplayListTextMap {
         walkList(list, origin: .zero, parentFrame: nil, inheritedPrevSibling: nil,
                  inheritedControlFrame: nil,
                  depth: 0, budget: &budget, into: &items)
-        #if DEBUG
         if budget.isExhausted {
             logger?.debugSwiftUICapture("DisplayListTextMap truncated visited=\(budget.visited)/\(budget.maxVisited) rawItems=\(items.count)")
         }
-        #endif
         let textItemCount = items.reduce(0) { $0 + ($1.title == nil ? 0 : 1) }
         guard !items.isEmpty else {
             return HostScan(entries: [], locatedDisplayList: true, textItemCount: 0,
@@ -176,12 +172,10 @@ internal enum DisplayListTextMap {
 
         let layers = drawingLayers(under: host)
         let entries = pair(items: items, with: layers, host: host)
-        #if DEBUG
         if textItemCount > 0, entries.isEmpty {
             logger?.debugSwiftUICapture("DisplayListTextMap: \(textItemCount) text items but 0 paired "
                 + "(drawing layers=\(layers.count)) on \(type(of: host)) — layer bridge moved?")
         }
-        #endif
         return HostScan(entries: entries, locatedDisplayList: true, textItemCount: textItemCount,
                         truncated: budget.isExhausted)
     }
@@ -215,7 +209,8 @@ internal enum DisplayListTextMap {
     /// metadata for ~60 field types on first use (~100 ms measured). Bounded by
     /// depth and node count; class instances are visited once, so a
     /// back-reference to the hosting view ends that branch.
-    private static func locateDisplayList(of host: UIView) -> (list: Any?, hops: [String]) {
+    /// Type names are only needed by the lazily requested render-path diagnostic, not normal scans.
+    private static func locateDisplayList(of host: UIView, describingPath: Bool = false) -> (list: Any?, hops: [String]) {
         var visited = Set<ObjectIdentifier>()
         var nodes = 0
         var hops: [String] = []
@@ -241,7 +236,7 @@ internal enum DisplayListTextMap {
                         return child.value
                     case .hop:
                         #if DEBUG
-                        hops.append("\(label): \(type(of: child.value))")
+                        hops.append(describingPath ? "\(label): \(type(of: child.value))" : label)
                         #else
                         hops.append(label)
                         #endif
@@ -463,7 +458,7 @@ internal enum DisplayListTextMap {
             return parts.joined(separator: " | ")
         }
 
-        let located = locateDisplayList(of: host)
+        let located = locateDisplayList(of: host, describingPath: true)
         if located.list != nil {
             lines.append("  ✓ " + located.hops.joined(separator: " → "))
         } else {

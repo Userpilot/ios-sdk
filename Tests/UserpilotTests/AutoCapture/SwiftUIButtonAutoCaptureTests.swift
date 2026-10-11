@@ -323,11 +323,16 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
         try XCTSkipUnless(isIOS26OrLater, "SwiftUI button autocapture runs on iOS 26 and later only")
         let (window, tapped) = makeRenderedSaveButton(in: StubHostingView())
         addFlaggedSibling(\.userpilotRedactText, below: tapped)
+        let config = makeConfig()
+        let logger = MockSwiftUICaptureLogger()
+        config.logger = logger
 
-        let properties = enrich(tapped, in: window, config: makeConfig())
+        let properties = enrich(tapped, in: window, config: config)
 
         XCTAssertEqual(properties[Constants.AutoCapture.targetText] as? String, Constants.AutoCapture.reductText,
                        "a redacted SwiftUI subtree under the tap must never publish its rendered title")
+        XCTAssertTrue(logger.messages.contains { $0.contains("STAGE B (display-list): \"Save\"") },
+                      "DEBUG diagnostics retain full text while the analytics payload stays redacted")
     }
 
     func testIgnoredSiblingUnderTheTapLeavesTargetTextUnset() throws {

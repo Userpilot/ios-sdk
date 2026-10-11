@@ -30,9 +30,7 @@ internal extension UIViewController {
             config: config,
             isSwiftUIHost: SwiftUIDetection.isHostingController(self)
         ) else { return }
-        #if DEBUG
         config.logger.debugSwiftUICapture("viewDidAppear vc=\(type(of: self))")
-        #endif
         // Invalidate the cached snapshot for the new screen, then schedule the
         // (debounced) scan that repopulates it. A fast first tap before the scan
         // fires triggers a synchronous prepare scan instead of resolving stale.

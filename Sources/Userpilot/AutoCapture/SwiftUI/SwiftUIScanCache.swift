@@ -137,10 +137,8 @@ internal final class SwiftUIScanCache {
             pendingBackgroundReason = backgroundReason
         }
         debouncer.schedule()
-        #if DEBUG
         logger?.debugSwiftUICapture("scheduleRescan(reason=\(reason)) → pendingBg=\(backgroundReason), "
             + "debounce armed (\(Self.backgroundScanDebounceDelay)s)")
-        #endif
     }
 
     /// Marks that the visible screen changed (called from the `viewDidAppear`
@@ -159,9 +157,7 @@ internal final class SwiftUIScanCache {
             return (currentScreenGen, cacheGen)
         }
         truncatedFollowUps = 0
-        #if DEBUG
         logger?.debugSwiftUICapture("markScreenChanged → currentGen=\(gen) (cacheGen=\(stampedGen) now STALE)")
-        #endif
     }
 
     /// Makes sure the cached text map can answer a tap at `pointInWindow`.
@@ -188,9 +184,7 @@ internal final class SwiftUIScanCache {
         }
 
         if isStale {
-            #if DEBUG
             logger?.debugSwiftUICapture("prepareForTap: stale snapshot → synchronous performScan(.manual)")
-            #endif
             debouncer.cancel()
             performScan(reason: .manual, in: window, logger: logger)
             return
@@ -201,9 +195,7 @@ internal final class SwiftUIScanCache {
         }
         guard !coversTap else { return }
 
-        #if DEBUG
         logger?.debugSwiftUICapture("prepareForTap: cache misses tap point → refresh tapped host only")
-        #endif
         refreshHost(containing: tappedView, logger: logger)
     }
 
@@ -236,9 +228,7 @@ internal final class SwiftUIScanCache {
             latestTextMap.removeAll { $0.host == nil || $0.host === host }
             latestTextMap.append(contentsOf: scan.entries)
         }
-        #if DEBUG
         logger?.debugSwiftUICapture("refreshHost \(type(of: host)) → \(scan.entries.count) entries")
-        #endif
     }
 
     // MARK: - Scan
@@ -255,16 +245,12 @@ internal final class SwiftUIScanCache {
         // correctly — `performPendingBackgroundScan()` already consumed it.
         guard UIApplication.shared.applicationState == .active else {
             pendingBackgroundReason = (reason == .manual) ? .debounced : reason
-            #if DEBUG
             logger?.debugSwiftUICapture("performScan(\(reason)) DEFERRED — app not active")
-            #endif
             scheduleScanWhenActive()
             return
         }
         guard let window = window ?? Self.keyVisibleWindow() else {
-            #if DEBUG
             logger?.debugSwiftUICapture("performScan(\(reason)) ABORTED — no key visible window")
-            #endif
             return
         }
 
@@ -276,10 +262,10 @@ internal final class SwiftUIScanCache {
         // the primary title source and runs first.
         let logger = logger ?? InstanceResolver.shared.target(forSource: window)?.config.logger
         let budget = (reason == .manual) ? SwiftUIScanBudget.tapPath : SwiftUIScanBudget.background
+        // Measurements are diagnostic-only; Release performs only the budgeted native reads.
         #if DEBUG
-        let budgetName = (reason == .manual) ? "tapPath" : "background"
         let currentGen = snapshotLock.withLock { currentScreenGen }
-        logger?.debugSwiftUICapture("performScan(\(reason)) START budget=\(budgetName) currentGen=\(currentGen)")
+        logger?.debugSwiftUICapture("performScan(\(reason)) START budget=\(reason == .manual ? "tapPath" : "background") currentGen=\(currentGen)")
         let scanStart = CFAbsoluteTimeGetCurrent()
         #endif
 
@@ -299,13 +285,12 @@ internal final class SwiftUIScanCache {
         let inventory = inventoryForScan(reason: reason, hasText: !phaseB.entries.isEmpty,
                                          window: window, budget: budget, logger: logger)
 
-        let stampedGen = snapshotLock.withLock {
+        snapshotLock.withLock {
             latestInventory = inventory.records
             latestTextMap = phaseB.entries
             latestInteractiveRecords = inventory.interactive
             inventoryHost = inventory.host
             cacheGen = currentScreenGen
-            return cacheGen
         }
 
         if phaseB.truncated, reason != .manual, truncatedFollowUps < Self.maxTruncatedFollowUps {
@@ -317,14 +302,15 @@ internal final class SwiftUIScanCache {
 
         #if DEBUG
         let elapsedMs = (CFAbsoluteTimeGetCurrent() - scanStart) * 1000
+        let stampedGen = snapshotLock.withLock { cacheGen }
         logger?.debugSwiftUICapture(String(format: "performScan(%@) DONE hosts=%d lists=%d textItems=%d inv=%d textMap=%d interactive=%d "
             + "elapsed=%.1fms (textMap %.1fms) stampedGen=%d host=%@",
             "\(reason)", phaseB.hostCount, phaseB.locatedLists, phaseB.textItems, inventory.records.count,
             phaseB.entries.count, inventory.interactive.count, elapsedMs, textMapMs, stampedGen,
             inventory.host.map { String(describing: type(of: $0)) } ?? "nil"))
-        logTitleChunks("interactive titles", inventory.interactive.map { $0.title }, logger: logger)
-        logTitleChunks("textMap titles", phaseB.entries.compactMap { $0.title }, logger: logger)
         #endif
+        logger?.debugSwiftUITitles("interactive titles", inventory.interactive.map { $0.title })
+        logger?.debugSwiftUITitles("textMap titles", phaseB.entries.compactMap { $0.title })
     }
 
     /// Phase A: the reflection inventory marking WHICH titles are interactive.
@@ -366,24 +352,8 @@ internal final class SwiftUIScanCache {
             "📊 SwiftUI title capture paused for this session: render structure not recognized (%{public}@)",
             os
         )
-        #if DEBUG
         logger?.debugSwiftUICapture("circuit breaker TRIPPED — SwiftUI title capture off for this session (\(os))")
-        #endif
     }
-
-    #if DEBUG
-    private func logTitleChunks(_ label: String, _ titles: [String], logger: Logging?, chunkSize: Int = 8) {
-        guard !titles.isEmpty else {
-            logger?.debugSwiftUICapture("  → \(label)(0): []")
-            return
-        }
-        for start in stride(from: 0, to: titles.count, by: chunkSize) {
-            let end = min(start + chunkSize, titles.count)
-            let chunk = Array(titles[start..<end])
-            logger?.debugSwiftUICapture("  → \(label)(\(titles.count))[\(start)..<\(end)]: \(chunk)")
-        }
-    }
-    #endif
 
     /// Runs the coalesced background scan with the recorded reason, then resets
     /// the pending reason to the neutral default.
@@ -462,11 +432,9 @@ internal final class SwiftUIScanCache {
             cacheGen = currentScreenGen
         }
 
-        #if DEBUG
         logger?.debugSwiftUICapture("scanOnceCurrentScreen DONE inv=\(inv.count) textMap=\(textMap.count) "
             + "interactive=\(interactive.count) host=\(type(of: host))")
-        logTitleChunks("scanOnce textMap titles", textMap.compactMap { $0.title }, logger: logger)
-        #endif
+        logger?.debugSwiftUITitles("scanOnce textMap titles", textMap.compactMap { $0.title })
     }
 
     // MARK: - Click-time lookup
@@ -478,9 +446,7 @@ internal final class SwiftUIScanCache {
             let stale = cacheGen != currentScreenGen
             return (stale, stale ? [] : latestInventory, stale ? nil : inventoryHost, cacheGen, currentScreenGen)
         }
-        #if DEBUG
         logger?.debugSwiftUICapture("inventory() → \(stale ? "STALE [] " : "\(records.count) records ")(cacheGen=\(cg) currentGen=\(cur))")
-        #endif
         return (records, host)
     }
 
@@ -492,9 +458,7 @@ internal final class SwiftUIScanCache {
             let stale = cacheGen != currentScreenGen
             return (stale, stale ? [] : latestTextMap, stale ? [] : latestInteractiveRecords, cacheGen, currentScreenGen)
         }
-        #if DEBUG
         logger?.debugSwiftUICapture("textResolution() → \(stale ? "STALE [] " : "textMap=\(map.count) interactive=\(interactive.count) ")(cacheGen=\(cg) currentGen=\(cur))")
-        #endif
         return (textMap: map, interactive: interactive)
     }
 

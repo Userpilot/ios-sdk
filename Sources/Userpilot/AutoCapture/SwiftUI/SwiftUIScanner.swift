@@ -38,9 +38,10 @@ internal enum SwiftUIScanner {
                 break
             }
             #if DEBUG
-            if ProcessInfo.processInfo.environment["UP_SUI_STRUCTURE"] == "1" {
-                logger?.debugSwiftUICapture(DisplayListTextMap.debugDescribeRenderPath(of: host))
-            }
+            logger?.debugSwiftUICapture(
+                ProcessInfo.processInfo.environment["UP_SUI_STRUCTURE"] == "1"
+                    ? DisplayListTextMap.debugDescribeRenderPath(of: host) : nil
+            )
             #endif
             let hostDeadline = min(Date().addingTimeInterval(budget.displayListHostSeconds), textMapDeadline)
             let scan = DisplayListTextMap.scanHost(host, deadline: hostDeadline,
