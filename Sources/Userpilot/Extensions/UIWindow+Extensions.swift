@@ -216,7 +216,7 @@ extension UIWindow {
     // MARK: View Tap Handling
 
     /// Handles tap on regular views (not controls, table cells, or collection cells)
-    private func handleRegularViewTap(
+    internal func handleRegularViewTap(
         on view: UIView,
         target: Userpilot,
         window: UIWindow,
@@ -227,6 +227,12 @@ extension UIWindow {
 
         // SwiftUI button autocapture (opt-in, iOS 26+) only changes taps inside SwiftUI content.
         let isSwiftUIButtonTap = SwiftUITitleCapturePolicy.isFeatureEnabled(config) && view.up_isInsideHostingView
+        // SwiftUI's ignore carrier may be a sibling of the hit view. Reject the entire
+        // interaction before reading metadata, even when UIKit already supplies a title or identifier.
+        if isSwiftUIButtonTap,
+           view.up_outermostHostingView.up_flagInSubtree(containing: point, \.userpilotIgnoreInteractions) {
+            return
+        }
         var eventProperties = view.buildWindowInteractionProperties(
             at: point,
             in: window,

@@ -424,6 +424,7 @@ This means:
 - `target_text` is attached only when the tapped point resolves to a tappable/control-like title. Tapping empty space or a static paragraph does not attach nearby text as a button title. Buttons drawn with no background (plain/borderless styles) may not get a title; use ``userpilotLabel(_:)`` for those.
 - Explicit ``userpilotLabel(_:)`` values win over inferred titles and are recommended for custom composite controls.
 - Global privacy settings such as ``enableInteractionTextCapture(_:)`` and ``enableInteractionAccessibilityLabelCapture(_:)`` still control whether text or accessibility labels are included. SwiftUI's own `.privacySensitive()` is not detected — use ``userpilotRedactText(_:)``.
+- ``userpilotIgnoreInteractions(_:)`` suppresses the whole interaction under the tapped subtree, including clicks that already have a UIKit title or accessibility identifier.
 - Deferred title scans remain bound to the requesting window and SDK instance. Pending scans recheck the requesting instance before executing; stopped instances skip deferred, touch-settle and one-shot scans. Other instances continue capturing.
 - SwiftUI scan diagnostics use the SDK logger and include full captured titles, stages, counts and timing in `DEBUG` builds, including text marked for redaction. The shared logging methods enforce the `DEBUG` gate; standard Release builds neither format nor emit these messages. Analytics payloads still respect redaction.
 

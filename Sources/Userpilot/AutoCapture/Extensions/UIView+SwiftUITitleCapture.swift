@@ -61,11 +61,9 @@ internal extension UIView {
 
     /// SwiftUI button-title enrichment for a regular window tap on this view. Runs only when
     /// nothing produced a title, and writes `target_text` ONLY — target_class / hierarchy /
-    /// accessibility_* are untouched. Ignore at/above the tapped view was already handled by
-    /// `shouldIgnoreInteractions()`; this also catches the pure-SwiftUI case where the policy
-    /// carrier flag sits on a descendant or a sibling under the tap (which the upward
-    /// responder-chain gate can't see). An explicitly ignored tap leaves target_text unset and
-    /// skips the scan entirely; a redacted one publishes the redaction placeholder.
+    /// accessibility_* are untouched. The window-tap caller rejects ignored interactions,
+    /// including sibling/descendant privacy carriers, before building any properties.
+    /// A redacted resolved title uses the existing placeholder in the analytics payload.
     func addSwiftUITitle(
         to properties: inout [String: Any],
         at point: CGPoint,
@@ -75,8 +73,7 @@ internal extension UIView {
         let config = owner.config
         let swiftUIRoot = up_outermostHostingView
         guard properties[Constants.AutoCapture.targetText] == nil,
-              SwiftUITitleCapturePolicy.shouldRun(for: owner),
-              !swiftUIRoot.up_flagInSubtree(containing: point, \.userpilotIgnoreInteractions) else { return }
+              SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
 
         // A fast first tap after navigation can beat the debounced screen-appear
         // scan, and a scroll can reveal rows the cache hasn't seen: make sure the

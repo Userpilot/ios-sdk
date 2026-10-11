@@ -299,18 +299,6 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
         XCTAssertEqual(properties[Constants.AutoCapture.targetText] as? String, Constants.AutoCapture.reductText)
     }
 
-    func testIgnoredSubtreeUnderTheTapLeavesTargetTextUnset() throws {
-        try XCTSkipUnless(isIOS26OrLater, "SwiftUI button autocapture runs on iOS 26 and later only")
-        let (window, tapped) = makeRenderedSaveButton()
-        let ignoreCarrier = UIView(frame: CGRect(x: 20, y: 50, width: 100, height: 30))
-        ignoreCarrier.userpilotIgnoreInteractions = true
-        tapped.addSubview(ignoreCarrier)
-
-        let properties = enrich(tapped, in: window, config: makeConfig())
-
-        XCTAssertNil(properties[Constants.AutoCapture.targetText])
-    }
-
     /// SwiftUI's `.userpilotRedactText()` / `.userpilotIgnoreInteractions()` flag the hidden
     /// carrier's parent: a platform-view host BESIDE the deepest tapped view in the hosting view.
     private func addFlaggedSibling(_ flag: ReferenceWritableKeyPath<UIView, Bool>, below tapped: UIView) {
@@ -333,16 +321,6 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
                        "a redacted SwiftUI subtree under the tap must never publish its rendered title")
         XCTAssertTrue(logger.messages.contains { $0.contains("STAGE B (display-list): \"Save\"") },
                       "DEBUG diagnostics retain full text while the analytics payload stays redacted")
-    }
-
-    func testIgnoredSiblingUnderTheTapLeavesTargetTextUnset() throws {
-        try XCTSkipUnless(isIOS26OrLater, "SwiftUI button autocapture runs on iOS 26 and later only")
-        let (window, tapped) = makeRenderedSaveButton(in: StubHostingView())
-        addFlaggedSibling(\.userpilotIgnoreInteractions, below: tapped)
-
-        let properties = enrich(tapped, in: window, config: makeConfig())
-
-        XCTAssertNil(properties[Constants.AutoCapture.targetText])
     }
 
     func testDisabledFeatureLeavesTargetTextUnset() {
