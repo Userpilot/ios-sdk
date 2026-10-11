@@ -98,7 +98,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertTrue(displayDelay.hasAction)
         XCTAssertNil(host.presentedExperience)
         try presentScheduled()
-        XCTAssertTrue(host.presentedExperience is CarouselExperienceViewController)
+        XCTAssertTrue(host.presentedExperience is UPExperienceHostingController)
         XCTAssertEqual(publisher.getActiveMobileContent()?.experienceId(), 77)
     }
 

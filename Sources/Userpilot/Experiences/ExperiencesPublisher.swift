@@ -532,7 +532,9 @@ extension ExperiencesPublisher {
             openSurvey(survey, operation)
         case .nps:
             showExperience(operation, makeViewModel: NPSViewModel.init,
-                           makeViewController: NPSBottomSheetViewController.init, style: .bottomSheet)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.nps($0)), style: .bottomSheet)
+            }, style: .bottomSheet)
         }
     }
 
@@ -541,13 +543,19 @@ extension ExperiencesPublisher {
         switch flow.type {
         case .carousel:
             showExperience(operation, makeViewModel: ExperienceViewModel.init,
-                           makeViewController: CarouselExperienceViewController.init, style: .fullScreen)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.flow($0)), style: .fullScreen)
+            }, style: .fullScreen)
         case .slideout where flow.isBottomSheet(using: themes):
             showExperience(operation, makeViewModel: ExperienceViewModel.init,
-                           makeViewController: SlideOutBottomSheetViewController.init, style: .bottomSheet)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.flow($0)), style: .bottomSheet)
+            }, style: .bottomSheet)
         case .slideout:
             showExperience(operation, makeViewModel: ExperienceViewModel.init,
-                           makeViewController: SlideOutDialogViewController.init, style: .dialog)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.flow($0)), style: .dialog)
+            }, style: .dialog)
         }
     }
 
@@ -556,13 +564,19 @@ extension ExperiencesPublisher {
         switch survey.type {
         case .list:
             showExperience(operation, makeViewModel: SurveyViewModel.init,
-                           makeViewController: SurveyListViewController.init, style: .fullScreen)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.survey($0)), style: .fullScreen)
+            }, style: .fullScreen)
         case .step where survey.isBottomSheet(using: themes):
             showExperience(operation, makeViewModel: SurveyViewModel.init,
-                           makeViewController: SurveyBottomSheetViewController.init, style: .bottomSheet)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.survey($0)), style: .bottomSheet)
+            }, style: .bottomSheet)
         case .step:
             showExperience(operation, makeViewModel: SurveyViewModel.init,
-                           makeViewController: SurveyDialogViewController.init, style: .dialog)
+                           makeViewController: {
+                UPExperienceHostingController(state: ExperienceRenderState(.survey($0)), style: .dialog)
+            }, style: .dialog)
         }
     }
 
@@ -692,8 +706,9 @@ extension ExperiencesPublisher {
         submissionID: Int64
     ) {
         enqueuePresentation(operation, style: .bottomSheet) { publisher, shown in
-            let controller = ThankYouBottomSheetViewController(surveyContent: survey, surveyTheme: theme)
-            controller.actionButtonClicked = { [weak publisher] deepLink in
+            let state = ExperienceRenderState(.thankYou(survey, theme))
+            let controller = UPExperienceHostingController(state: state, style: .bottomSheet)
+            state.actionButtonClicked = { [weak publisher] deepLink in
                 publisher?.onPresentation(shown) { publisher, operation in
                     let expectedGeneration = operation.generation
                     let completed = ExperienceSurveyCompletedEvent(
@@ -706,7 +721,7 @@ extension ExperiencesPublisher {
                     }
                 }
             }
-            controller.onDismissCompleted = { [weak publisher] in
+            state.onDismissCompleted = { [weak publisher] in
                 publisher?.onMain { $0.didDismissOnMain(shown) }
             }
             return controller

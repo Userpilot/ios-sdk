@@ -283,8 +283,8 @@ extension ExperiencesPublisherTests {
         publisher.experienceDidFinishDismissing(rendererID: original)
         settle()
         XCTAssertEqual(publisher.activeRendererID, thankYou)
-        let controller = try XCTUnwrap(host.presentedExperience as? ThankYouBottomSheetViewController)
-        controller.onDismissCompleted()
+        let controller = try XCTUnwrap(host.presentedExperience as? UPExperienceHostingController)
+        controller.state.onDismissCompleted?()
         settle()
         XCTAssertNil(publisher.activeRendererID)
     }
