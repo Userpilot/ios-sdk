@@ -11,6 +11,8 @@
 import XCTest
 @testable import Userpilot
 
+private final class ScanFixtureHostingView: UIView {}
+
 final class MockSwiftUICaptureLogger: MockLogger {
     var messages: [String] = []
     var onMessage: (() -> Void)?
@@ -22,6 +24,20 @@ final class MockSwiftUICaptureLogger: MockLogger {
 }
 
 final class SwiftUICaptureInfrastructureTests: XCTestCase {
+    func testSharedScanner_preservesHostOnlyVersusWholeWindowScope() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 300, height: 200))
+        let firstHost = ScanFixtureHostingView(frame: window.bounds)
+        let secondHost = ScanFixtureHostingView(frame: window.bounds)
+        window.addSubview(firstHost)
+        window.addSubview(secondHost)
+
+        let oneShot = SwiftUIScanner.scanTextMap(under: firstHost, budget: SwiftUIScanBudget.background, logger: nil)
+        let fullScan = SwiftUIScanner.scanTextMap(under: window, budget: SwiftUIScanBudget.background, logger: nil)
+
+        XCTAssertEqual(oneShot.hostCount, 1)
+        XCTAssertEqual(fullScan.hostCount, 2)
+    }
+
     func testConcurrentTypeLookups_returnOneCachedValue() throws {
         final class Value {}
         let memo = TypeNameMemo { _ in Value() }

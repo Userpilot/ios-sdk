@@ -48,6 +48,14 @@ internal enum SwiftUITitleCapturePolicy {
             && !SwiftUICaptureHealth.isTripped
     }
 
+    /// Check the requesting instance without resolving it again from the window's root.
+    /// Hooks supply their hosting check. Window scans default to allowing pending framework
+    /// detection: startup has no source view, and the scanner simply finds no hosts in UIKit.
+    static func shouldRun(for owner: Userpilot, isSwiftUIHost: Bool = true) -> Bool {
+        shouldRun(config: owner.config, isSwiftUIHost: isSwiftUIHost)
+            && !owner.autoCaptureCoordinator.isStopped
+    }
+
     private static func commonConfigEnabled(_ config: Userpilot.Config) -> Bool {
         isFeatureEnabled(config) && config.enableInteractionTextCapture
     }

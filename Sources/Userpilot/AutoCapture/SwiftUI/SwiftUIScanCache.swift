@@ -27,7 +27,7 @@
 //  session after a few scans.
 //
 
-// swiftlint:disable file_length function_body_length identifier_name line_length type_body_length
+// swiftlint:disable file_length identifier_name line_length type_body_length
 // swiftlint:disable:previous blanket_disable_command
 
 import UIKit
@@ -67,6 +67,10 @@ internal final class SwiftUIScanCache {
     // is attributed correctly and selects the background budget. Touched only on
     // main; the snapshot lock protects only the cached read state.
     private var pendingBackgroundReason: RescanReason = .debounced
+    // Keep the original destination weakly. A delayed scan must never follow a new key
+    // window or keep a disappeared window/SDK instance alive.
+    private weak var pendingWindow: UIWindow?
+    private weak var pendingOwner: Userpilot?
     private var becomeActiveObserver: NSObjectProtocol?
     private var memoryWarningObserver: NSObjectProtocol?
     private static let backgroundScanDebounceDelay: TimeInterval = 0.5
@@ -91,12 +95,8 @@ internal final class SwiftUIScanCache {
     }
 
     private func stopOnMain() {
-        debouncer.cancel()
+        clearPendingScan()
         clearCaches()
-        if let token = becomeActiveObserver {
-            NotificationCenter.default.removeObserver(token)
-            becomeActiveObserver = nil
-        }
         if let token = memoryWarningObserver {
             NotificationCenter.default.removeObserver(token)
             memoryWarningObserver = nil
@@ -109,36 +109,44 @@ internal final class SwiftUIScanCache {
     /// attributed correctly and selects the background budget.
     ///
     /// Contract: this queues background work only. `.manual` is reserved for the
-    /// synchronous tap path in `prepareForTapResolution(at:in:tappedView:)`; if a
+    /// synchronous tap path in `prepareForTapResolution(at:in:tappedView:owner:)`; if a
     /// caller passes it here it is stored as `.debounced` so a queued scan can
     /// never claim the tight tap-path budget.
     ///
-    /// Threading: marshals to main so `pendingBackgroundReason` is only touched
-    /// on the main thread.
-    func scheduleRescan(reason: RescanReason = .debounced, logger: Logging? = nil) {
-        performOnMain { [weak self] in
-            self?.scheduleRescanOnMain(reason: reason, logger: logger)
+    /// Hooks check their source before submitting its window and resolved owner. Startup may
+    /// submit a window while framework detection is pending; the scanner discovers its hosts.
+    /// Threading: pending state and native reads are main-owned.
+    func scheduleRescan(reason: RescanReason = .debounced, window: UIWindow, owner: Userpilot) {
+        performOnMain { [weak self, weak window, weak owner] in
+            guard let self, let window, let owner,
+                  SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+            self.recordPendingScan(reason: reason, window: window, owner: owner)
+            self.debouncer.schedule()
+            owner.config.logger.debugSwiftUICapture("scheduleRescan(reason=\(reason)) → pendingBg=\(self.pendingBackgroundReason), "
+                + "debounce armed (\(Self.backgroundScanDebounceDelay)s)")
         }
     }
 
-    private func scheduleRescanOnMain(reason: RescanReason, logger: Logging?) {
-        guard !SwiftUICaptureHealth.isTripped else { return }
-
-        #if DEBUG
-        assert(reason != .manual,
-               "scheduleRescan(reason:) is background-only; the tap path scans synchronously.")
-        #endif
-
+    /// Preserve screen-appearance priority within one destination. A new owner/window
+    /// replaces the pending request in this shared debouncer.
+    private func recordPendingScan(reason: RescanReason, window: UIWindow, owner: Userpilot) {
         let backgroundReason: RescanReason = (reason == .manual) ? .debounced : reason
+        let preservesAppearance = pendingOwner === owner && pendingWindow === window
+            && pendingBackgroundReason == .screenAppeared && backgroundReason == .touchEnded
+        if !preservesAppearance { pendingBackgroundReason = backgroundReason }
+        pendingWindow = window
+        pendingOwner = owner
+    }
 
-        // A pending screen-appeared scan must keep its reason (it refreshes the
-        // reflection inventory); a later touch-end only re-arms the debounce.
-        if !(pendingBackgroundReason == .screenAppeared && backgroundReason == .touchEnded) {
-            pendingBackgroundReason = backgroundReason
+    private func clearPendingScan() {
+        debouncer.cancel()
+        pendingWindow = nil
+        pendingOwner = nil
+        pendingBackgroundReason = .debounced
+        if let token = becomeActiveObserver {
+            NotificationCenter.default.removeObserver(token)
+            becomeActiveObserver = nil
         }
-        debouncer.schedule()
-        logger?.debugSwiftUICapture("scheduleRescan(reason=\(reason)) → pendingBg=\(backgroundReason), "
-            + "debounce armed (\(Self.backgroundScanDebounceDelay)s)")
     }
 
     /// Marks that the visible screen changed (called from the `viewDidAppear`
@@ -175,9 +183,10 @@ internal final class SwiftUIScanCache {
     /// A tap that legitimately has no title (icon, empty space) costs one
     /// single-host refresh, never a full scan.
     func prepareForTapResolution(
-        at pointInWindow: CGPoint, in window: UIWindow, tappedView: UIView, logger: Logging? = nil
+        at pointInWindow: CGPoint, in window: UIWindow, tappedView: UIView, owner: Userpilot
     ) {
-        guard Thread.isMainThread else { return }
+        guard Thread.isMainThread, SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+        let logger: Logging? = owner.config.logger
 
         let (isStale, textMap, interactive) = snapshotLock.withLock {
             (cacheGen != currentScreenGen, latestTextMap, latestInteractiveRecords)
@@ -185,8 +194,8 @@ internal final class SwiftUIScanCache {
 
         if isStale {
             logger?.debugSwiftUICapture("prepareForTap: stale snapshot → synchronous performScan(.manual)")
-            debouncer.cancel()
-            performScan(reason: .manual, in: window, logger: logger)
+            clearPendingScan()
+            performScan(reason: .manual, window: window, owner: owner)
             return
         }
 
@@ -233,24 +242,18 @@ internal final class SwiftUIScanCache {
 
     // MARK: - Scan
 
-    /// Full scan of `window` (the key visible window when nil).
-    private func performScan(reason: RescanReason, in window: UIWindow? = nil, logger: Logging? = nil) {
-        // All callers are main-owned: the debouncer, native tap path and lifecycle wrappers.
+    /// The requesting owner controls execution, even when the window's root belongs to another
+    /// instance. Recheck current settings and stop state; stop then resume before execution is allowed.
+    private func performScan(reason: RescanReason, window: UIWindow, owner: Userpilot) {
         assert(Thread.isMainThread)
-        guard !SwiftUICaptureHealth.isTripped else { return }
-        // During launch the app is still `.inactive`; park the scan until
-        // active so no scan work lands inside the launch transition. Re-stamp
-        // the (sanitized) reason so the deferred re-run, re-armed via the
-        // debouncer in `scheduleScanWhenActive()`, is still attributed
-        // correctly — `performPendingBackgroundScan()` already consumed it.
+        guard !window.isHidden, SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+        let logger: Logging? = owner.config.logger
+        // During launch/backgrounding retain this destination until active. Do not look up
+        // the then-current key window, which may belong to another scene or SDK instance.
         guard UIApplication.shared.applicationState == .active else {
-            pendingBackgroundReason = (reason == .manual) ? .debounced : reason
+            recordPendingScan(reason: reason, window: window, owner: owner)
             logger?.debugSwiftUICapture("performScan(\(reason)) DEFERRED — app not active")
             scheduleScanWhenActive()
-            return
-        }
-        guard let window = window ?? Self.keyVisibleWindow() else {
-            logger?.debugSwiftUICapture("performScan(\(reason)) ABORTED — no key visible window")
             return
         }
 
@@ -260,7 +263,6 @@ internal final class SwiftUIScanCache {
         // The two phases get INDEPENDENT, freshly-computed deadlines so
         // reflection (Phase A) can never starve the display-list phase, which is
         // the primary title source and runs first.
-        let logger = logger ?? InstanceResolver.shared.target(forSource: window)?.config.logger
         let budget = (reason == .manual) ? SwiftUIScanBudget.tapPath : SwiftUIScanBudget.background
         // Measurements are diagnostic-only; Release performs only the budgeted native reads.
         #if DEBUG
@@ -270,7 +272,7 @@ internal final class SwiftUIScanCache {
         #endif
 
         // Phase B (primary) — display-list text map.
-        let phaseB = SwiftUIScanner.scanTextMap(in: window, budget: budget, logger: logger)
+        let phaseB = SwiftUIScanner.scanTextMap(under: window, budget: budget, logger: logger)
         #if DEBUG
         let textMapMs = (CFAbsoluteTimeGetCurrent() - scanStart) * 1000
         #endif
@@ -295,7 +297,7 @@ internal final class SwiftUIScanCache {
 
         if phaseB.truncated, reason != .manual, truncatedFollowUps < Self.maxTruncatedFollowUps {
             truncatedFollowUps += 1
-            scheduleRescan(reason: .debounced)
+            scheduleRescan(reason: .debounced, window: window, owner: owner)
         } else if !phaseB.truncated {
             truncatedFollowUps = 0
         }
@@ -345,7 +347,7 @@ internal final class SwiftUIScanCache {
     /// The render structure was not recognized on this OS for several scans in
     /// a row: drop all cached state and stop scheduling work for the session.
     private func handleBreakerTripped(logger: Logging?) {
-        debouncer.cancel()
+        clearPendingScan()
         clearCaches()
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         logger?.info(
@@ -355,12 +357,15 @@ internal final class SwiftUIScanCache {
         logger?.debugSwiftUICapture("circuit breaker TRIPPED — SwiftUI title capture off for this session (\(os))")
     }
 
-    /// Runs the coalesced background scan with the recorded reason, then resets
-    /// the pending reason to the neutral default.
+    /// Consume the pending destination once. Native work rechecks policy after the debounce,
+    /// including requests that waited for the app to become active.
     private func performPendingBackgroundScan() {
+        let window = pendingWindow
+        let owner = pendingOwner
         let reason = pendingBackgroundReason
-        pendingBackgroundReason = .debounced
-        performScan(reason: reason)
+        clearPendingScan()
+        guard let window, let owner else { return }
+        performScan(reason: reason, window: window, owner: owner)
     }
 
     /// One-shot deferral of a scan request that arrived before the app finished
@@ -385,38 +390,22 @@ internal final class SwiftUIScanCache {
     /// so a screen that opted out of the accessibility read still gets titles
     /// from its current rendered/materialized SwiftUI display list.
     func scanOnceCurrentScreen(for host: UIViewController) {
-        performOnMain { [weak self] in
+        performOnMain { [weak self, weak host] in
+            guard let host else { return }
             self?.scanOnceCurrentScreenOnMain(for: host)
         }
     }
 
     private func scanOnceCurrentScreenOnMain(for host: UIViewController) {
 
-        guard let userpilot = InstanceResolver.shared.target(forViewController: host) else { return }
-        let config = userpilot.config
-        let logger: Logging? = config.logger
-        guard SwiftUITitleCapturePolicy.shouldRun(
-            config: config,
-            isSwiftUIHost: SwiftUIDetection.isHostingController(host)
-        ) else { return }
-
+        guard let source = host.viewIfLoaded, let window = source.window, !window.isHidden,
+              let owner = InstanceResolver.shared.target(forViewController: host),
+              SwiftUITitleCapturePolicy.shouldRun(for: owner, isSwiftUIHost: source.up_isInsideHostingView) else { return }
+        let logger: Logging? = owner.config.logger
         let budget = SwiftUIScanBudget.background
-        let textMapDeadline = Date().addingTimeInterval(budget.totalScanSeconds)
-        var textMap: [DisplayListTextMap.Entry] = []
-        for hostingView in DisplayListTextMap.hostingViews(
-            under: host.view,
-            maxNodes: SwiftUIScanBudget.hostingDiscoveryMaxNodes,
-            maxDepth: SwiftUIScanBudget.hostingDiscoveryMaxDepth,
-            scanDeadline: textMapDeadline
-        ) {
-            if Date() > textMapDeadline { break }
-            let hostDeadline = min(Date().addingTimeInterval(budget.displayListHostSeconds), textMapDeadline)
-            textMap.append(contentsOf: DisplayListTextMap.scanHost(
-                hostingView,
-                deadline: hostDeadline,
-                maxVisited: budget.displayListMaxVisited, logger: logger
-            ).entries)
-        }
+        // Same display-list traversal/budgets as full scans, scoped to this host rather than
+        // the whole window. Reflection still targets only this controller after geometry is read.
+        let textMap = SwiftUIScanner.scanTextMap(under: source, budget: budget, logger: logger).entries
 
         let inv = SwiftUIReflection.extractInventory(
             from: host,
@@ -488,6 +477,11 @@ internal final class SwiftUIScanCache {
     // MARK: - Helpers
 
     #if DEBUG
+    /// Execute the actual deferred admission path deterministically, without waiting for a timer.
+    func _testPerformPendingScan() {
+        performPendingBackgroundScan()
+    }
+
     /// Test seam — seeds the click-time snapshot directly so the resolver's
     /// stage-selection can be exercised without a live SwiftUI render. NOT used
     /// in production (release builds exclude it).

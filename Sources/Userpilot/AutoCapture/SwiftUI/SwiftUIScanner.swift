@@ -12,7 +12,7 @@ import UIKit
 
 /// Stateless native reads only. SwiftUIScanCache owns scheduling, freshness and scan admission.
 internal enum SwiftUIScanner {
-    /// Phase B result across every hosting view of the window.
+    /// Phase B result across every hosting view below the supplied root.
     struct TextMapScan {
         var entries: [DisplayListTextMap.Entry] = []
         var hostCount = 0
@@ -22,12 +22,12 @@ internal enum SwiftUIScanner {
     }
 
     static func scanTextMap(
-        in window: UIWindow, budget: SwiftUIScanBudget.Budget, logger: Logging?
+        under root: UIView, budget: SwiftUIScanBudget.Budget, logger: Logging?
     ) -> TextMapScan {
         let textMapDeadline = Date().addingTimeInterval(budget.totalScanSeconds)
         var result = TextMapScan()
         let hosts = DisplayListTextMap.hostingViews(
-            in: window,
+            under: root,
             maxNodes: SwiftUIScanBudget.hostingDiscoveryMaxNodes,
             maxDepth: SwiftUIScanBudget.hostingDiscoveryMaxDepth,
             scanDeadline: textMapDeadline

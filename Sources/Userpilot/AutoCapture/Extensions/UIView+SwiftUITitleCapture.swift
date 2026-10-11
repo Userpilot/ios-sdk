@@ -70,20 +70,19 @@ internal extension UIView {
         to properties: inout [String: Any],
         at point: CGPoint,
         in window: UIWindow,
-        config: Userpilot.Config
+        owner: Userpilot
     ) {
+        let config = owner.config
         let swiftUIRoot = up_outermostHostingView
         guard properties[Constants.AutoCapture.targetText] == nil,
-              SwiftUITitleCapturePolicy.shouldRun(
-                config: config, isSwiftUIHost: true
-              ),
+              SwiftUITitleCapturePolicy.shouldRun(for: owner),
               !swiftUIRoot.up_flagInSubtree(containing: point, \.userpilotIgnoreInteractions) else { return }
 
         // A fast first tap after navigation can beat the debounced screen-appear
         // scan, and a scroll can reveal rows the cache hasn't seen: make sure the
         // cache covers this tap before resolving it.
         SwiftUIScanCache.shared.prepareForTapResolution(
-            at: point, in: window, tappedView: self, logger: config.logger
+            at: point, in: window, tappedView: self, owner: owner
         )
         guard let title = SwiftUITitleResolver.shared.resolveTitle(
             at: point, in: window, captureAccessibility: config.enableInteractionAccessibilityLabelCapture,

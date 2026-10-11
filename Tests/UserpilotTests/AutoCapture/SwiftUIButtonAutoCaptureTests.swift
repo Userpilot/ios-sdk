@@ -252,7 +252,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
                         properties: [String: Any] = [:]) -> [String: Any] {
         var properties = properties
         tapped.addSwiftUITitle(
-            to: &properties, at: tap, in: window, config: config
+            to: &properties, at: tap, in: window, owner: MockUserpilot(config: config)
         )
         return properties
     }

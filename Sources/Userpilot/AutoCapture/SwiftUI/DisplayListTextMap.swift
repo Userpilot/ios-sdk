@@ -94,19 +94,8 @@ internal enum DisplayListTextMap {
 
     // MARK: - Public entry points
 
-    /// All hosting views in the window that own a SwiftUI render tree. Bounded
-    /// by node/depth/deadline so the discovery walk on a deep hierarchy cannot
-    /// itself become the source of main-thread jank.
-    static func hostingViews(in window: UIWindow,
-                             maxNodes: Int = SwiftUIScanBudget.hostingDiscoveryMaxNodes,
-                             maxDepth: Int = SwiftUIScanBudget.hostingDiscoveryMaxDepth,
-                             scanDeadline: Date = .distantFuture) -> [UIView] {
-        hostingViews(under: window, maxNodes: maxNodes,
-                     maxDepth: maxDepth, scanDeadline: scanDeadline)
-    }
-
-    /// Hosting views under an arbitrary root view. Used by one-shot scan APIs
-    /// that intentionally scope work to one hosting controller's current view.
+    /// Hosting views under a window or a single controller's view. Bounded by
+    /// node/depth/deadline so discovery cannot become an unbounded main-thread walk.
     static func hostingViews(under root: UIView,
                              maxNodes: Int = SwiftUIScanBudget.hostingDiscoveryMaxNodes,
                              maxDepth: Int = SwiftUIScanBudget.hostingDiscoveryMaxDepth,

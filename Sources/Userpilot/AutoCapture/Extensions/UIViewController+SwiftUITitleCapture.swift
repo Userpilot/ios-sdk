@@ -35,6 +35,7 @@ internal extension UIViewController {
         // (debounced) scan that repopulates it. A fast first tap before the scan
         // fires triggers a synchronous prepare scan instead of resolving stale.
         SwiftUIScanCache.shared.markScreenChanged(logger: config.logger)
-        SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, logger: config.logger)
+        guard let window = viewIfLoaded?.window else { return }
+        SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, window: window, owner: userpilot)
     }
 }

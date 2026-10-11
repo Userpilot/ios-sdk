@@ -57,11 +57,11 @@ extension UIWindow {
     @objc func swizzled_sendEvent(_ event: UIEvent) {
         self.swizzled_sendEvent(event)  // calls original sendEvent
 
-        // No global stop check here: this is touch bookkeeping shared by all
-        // instances. Per-instance pausing is enforced downstream when the captured
-        // touch is published through the owning instance's coordinator.
+        // Keep bookkeeping for every touch so ending/cancelled sequences retire even
+        // while an owner is stopped. Paused owners skip native capture and scan work;
+        // their coordinator also guards publication.
         guard Userpilot.isInitialized, let touches = event.allTouches else { return }
-        var scanLogger: Logging?
+        var scanOwner: Userpilot?
         for touch in touches {
             let point = touch.location(in: self)
             let source = touch.view ?? hitTest(point, with: event) ?? self
@@ -75,17 +75,17 @@ extension UIWindow {
                 timestamp: touch.timestamp,
                 touchCount: touches.count,
                 capturesOnTapEnd: SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config)
-            ) {
+            ), !target.autoCaptureCoordinator.isStopped {
                 captureTouch(touch, event: event)
             }
-            if scanLogger == nil, touch.phase == .ended || touch.phase == .cancelled,
-               SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: true) {
-                scanLogger = config.logger
+            if scanOwner == nil, touch.phase == .ended || touch.phase == .cancelled,
+               SwiftUITitleCapturePolicy.shouldRun(for: target, isSwiftUIHost: source.up_isInsideHostingView) {
+                scanOwner = target
             }
         }
         // Touch settle refreshes lazy content revealed by scrolling, once per native event.
-        if let scanLogger {
-            SwiftUIScanCache.shared.scheduleRescan(reason: .touchEnded, logger: scanLogger)
+        if let scanOwner {
+            SwiftUIScanCache.shared.scheduleRescan(reason: .touchEnded, window: self, owner: scanOwner)
         }
     }
 
@@ -222,7 +222,7 @@ extension UIWindow {
         window: UIWindow,
         point: CGPoint
     ) {
-        guard !view.shouldIgnoreInteractions() else { return }
+        guard !target.autoCaptureCoordinator.isStopped, !view.shouldIgnoreInteractions() else { return }
         let config = target.config
 
         // SwiftUI button autocapture (opt-in, iOS 26+) only changes taps inside SwiftUI content.
@@ -234,7 +234,7 @@ extension UIWindow {
         )
         if isSwiftUIButtonTap {
             view.addSwiftUITitle(
-                to: &eventProperties, at: point, in: window, config: config
+                to: &eventProperties, at: point, in: window, owner: target
             )
         }
 

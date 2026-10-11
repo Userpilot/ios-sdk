@@ -133,7 +133,14 @@ internal class AutoCaptureCoordinator {
     private func setupSwiftUITitleCapture() {
         AutoCaptureSwizzler.swizzleSwiftUIScanScheduling()
         SwiftUIScanCache.shared.start()
-        SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, logger: config.logger)
+        // Initialization can occur after the screen appeared. Resolve its owner after this
+        // coordinator finishes constructing, then bind the initial scan to that window.
+        performOn(.main) { [weak self] in
+            guard let self, let window = SwiftUIScanCache.keyVisibleWindow(),
+                  let owner = InstanceResolver.shared.target(forSource: window),
+                  owner.config === self.config else { return }
+            SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, window: window, owner: owner)
+        }
     }
 }
 
