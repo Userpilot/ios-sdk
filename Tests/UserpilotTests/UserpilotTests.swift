@@ -299,6 +299,34 @@ class UserpilotTests: XCTestCase {
         XCTAssertTrue(experienceEnded)
     }
 
+    /// Verifies the app theme title reaches the theme service unchanged
+    func testTheme_forwardsTitle() throws {
+        // Act
+        userpilot.theme("Brand Dark ")
+
+        // Assert
+        XCTAssertEqual(userpilot.themeHandler.appThemeNames, ["Brand Dark "])
+    }
+
+    /// Verifies a blank app theme title is rejected without touching the selected theme
+    func testTheme_isIgnored_whenTitleIsBlank() throws {
+        // Act
+        userpilot.theme("  ")
+
+        // Assert
+        XCTAssertTrue(userpilot.themeHandler.appThemeNames.isEmpty)
+        XCTAssertEqual(userpilot.themeHandler.clearAppThemeCount, 0)
+    }
+
+    /// Verifies clearing the app theme reaches the theme service
+    func testClearTheme_clearsAppTheme() throws {
+        // Act
+        userpilot.clearTheme()
+
+        // Assert
+        XCTAssertEqual(userpilot.themeHandler.clearAppThemeCount, 1)
+    }
+
     // MARK: - Push
 
     /// Verifies that push token is passed to the push monitor

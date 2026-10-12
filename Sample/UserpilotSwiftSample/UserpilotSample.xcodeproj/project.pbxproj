@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F5A800000000000000000001 /* ThemeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A800000000000000000002 /* ThemeViewController.swift */; };
 		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
 		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
 		AB1942B32CD2609700924844 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942B22CD2609700924844 /* ScreenOneViewController.xib */; };
@@ -85,6 +86,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F5A800000000000000000002 /* ThemeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeViewController.swift; sourceTree = "<group>"; };
 		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		AB1942AD2CD25FD200924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ScreenTwoViewController.xib; sourceTree = "<group>"; };
 		AB1942B02CD25FD200924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/ScreenTwoViewController.xcstrings; sourceTree = "<group>"; };
@@ -590,6 +592,7 @@
 				UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */,
 				UP1D9D3FCE847D46FDB03B8A /* Offline */,
 				UPAE8C6135D07D4AA9914D9D /* OnlineQueue */,
+				F5A800000000000000000003 /* Theme */,
 			);
 			path = Debug;
 			sourceTree = "<group>";
@@ -608,6 +611,14 @@
 				UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */,
 			);
 			path = OnlineQueue;
+			sourceTree = "<group>";
+		};
+		F5A800000000000000000003 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				F5A800000000000000000002 /* ThemeViewController.swift */,
+			);
+			path = Theme;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -750,6 +761,7 @@
 				FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */,
 				UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */,
 				UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */,
+				F5A800000000000000000001 /* ThemeViewController.swift in Sources */,
 				UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */,
 				ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */,
 				ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */,

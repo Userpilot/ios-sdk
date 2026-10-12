@@ -86,10 +86,9 @@ final class SurveyViewModel {
         }
     }
 
-    /// Theme precedence remains survey override followed by the cached base theme.
+    /// A resolved app theme wins; otherwise the survey override falls back to the cached base theme.
     private func prepareTheme(for content: SurveyContent) {
-        let baseTheme = themeHandler.getThemeById(content.baseThemeId)
-        surveyTheme = themeHandler.mergeSurveyThemes(baseTheme, content.surveyTheme.themeData)
+        surveyTheme = themeHandler.surveyTheme(for: content)
     }
 
     var isRTL: Bool {

@@ -102,6 +102,14 @@ class UserpilotManager {
     func triggerExperience(experienceId: String) {
         userpilot?.triggerExperience(experienceId)
     }
+
+    func theme(_ name: String) {
+        userpilot?.theme(name)
+    }
+
+    func clearTheme() {
+        userpilot?.clearTheme()
+    }
     
     func endExperience() {
         userpilot?.endExperience()

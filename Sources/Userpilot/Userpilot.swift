@@ -74,6 +74,7 @@ public class Userpilot: NSObject {
     private lazy var socketManager = container.resolve(SocketManaging.self)
     private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
     private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
+    private lazy var themeHandler = container.resolve(ThemeHandling.self)
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
     private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
     private lazy var linkOpener = container.resolve(LinkOpening.self)
@@ -499,6 +500,36 @@ extension Userpilot {
     @objc
     public func endExperience() {
         experiencesPublisher.endExperience(manualClose: true)
+    }
+
+    /**
+     Renders flows and surveys with the mobile theme that has this exact title, for example the theme
+     matching the app's light or dark appearance. While it is in use, it replaces each experience's own
+     theme, including builder styling and placement. NPS keeps its own theme.
+
+     The change applies from the next experience. If no single theme has this title, experiences keep
+     their own themes.
+
+     - Parameters:
+       - name: the mobile theme's title as defined in Userpilot. Use `clearTheme()` to restore each
+        experience's own theme.
+     */
+    @objc
+    public func theme(_ name: String) {
+        guard name.trim().isNotEmpty else {
+            config.logger.error("Invalid theme name - empty string")
+            return
+        }
+        themeHandler.setAppTheme(name: name)
+    }
+
+    /**
+     Stops applying the theme selected with `theme(_:)` and forgets every fetched app theme, so flows and
+     surveys use their own themes again from the next experience.
+     */
+    @objc
+    public func clearTheme() {
+        themeHandler.clearAppTheme()
     }
 }
 

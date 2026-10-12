@@ -116,7 +116,7 @@ final class SDKEventTests: XCTestCase {
     }
 
     func testFetchAndPushEventsExposeExpectedPayloads() {
-        let theme = ThemeContentEvent(themeId: 7, token: "app-token")
+        let theme = ThemeContentEvent(key: .id(7), token: "app-token")
         let content = ExperienceContentEvent(experienceId: "mobile:1")
         let pushToken = PushNotificationTokenEvent(appToken: "app-token", userId: "user-1", token: "device-token")
         let opened = PushNotificationOpenedEvent(payload: ["notification_id": "n1"])
@@ -133,6 +133,15 @@ final class SDKEventTests: XCTestCase {
         XCTAssertEqual(opened.eventPayload["notification_id"] as? String, "n1")
         XCTAssertEqual(logout.eventName, SDKEventsName.userLogout.rawValue)
         XCTAssertEqual(logout.eventPayload["user_id"] as? String, "user-1")
+    }
+
+    func testAppThemeFetchSendsTitleInsteadOfId() {
+        let theme = ThemeContentEvent(key: .title("Brand Dark"), token: "app-token")
+
+        XCTAssertEqual(theme.eventName, SDKEventsName.fetchExperienceTheme.rawValue)
+        XCTAssertEqual(theme.eventPayload["theme_title"] as? String, "Brand Dark")
+        XCTAssertEqual(theme.eventPayload["app_token"] as? String, "app-token")
+        XCTAssertNil(theme.eventPayload["theme_id"])
     }
 
     /// Mirrors the Android SDK's offline-eligible set; the two must stay identical.

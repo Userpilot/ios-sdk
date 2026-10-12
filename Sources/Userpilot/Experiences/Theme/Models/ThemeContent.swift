@@ -16,10 +16,12 @@ import UIKit
 // swiftlint:disable file_length
 internal struct ThemeContent: Decodable {
     let id: Int?
+    let title: String?
     let themeData: ThemeData?
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case title
         case themeData = "theme_data"
     }
 }
