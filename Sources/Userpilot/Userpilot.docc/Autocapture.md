@@ -1,6 +1,6 @@
 # UIKit & SwiftUI Autocapture
 
-The Userpilot iOS SDK can automatically capture **screen views** and **user interactions** in both UIKit and SwiftUI apps. For a technical overview of how the UIKit AutoCapture classes relate and call each other, see [UIKit AutoCapture Architecture](UIKitAutoCaptureArchitecture.md). Once enabled via configuration, the SDK records which screens users see and which controls they tap—without requiring manual ``Userpilot/screen(_:)`` or ``Userpilot/track(_:properties:)`` calls for every screen or button.
+The Userpilot iOS SDK can automatically capture **screen views** and **user interactions** in both UIKit and SwiftUI apps. Once enabled via configuration, the SDK records which screens users see and which controls they tap—without requiring manual ``Userpilot/screen(_:)`` or ``Userpilot/track(_:properties:)`` calls for every screen or button.
 
 This guide covers configuration for both UIKit and SwiftUI, customizing screen capture behavior, hiding sensitive data, and handling custom clickable views.
 
@@ -8,12 +8,12 @@ This guide covers configuration for both UIKit and SwiftUI, customizing screen c
 
 ## Enabling Autocapture
 
-Autocapture is **off by default**. Enable it when building your ``Userpilot/Config`` and initializing Userpilot.
+Autocapture is **off by default**. Enable it when building your ``Userpilot/Config`` and initializing Userpilot. Retain the resulting instance in your app or integration owner for its intended lifetime.
 
 ```swift
-Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .logging(enabled: true)
-    .appFramework(.UIKit)  // Specify UIKit framework
+    .appFramework(.UIKit)  // UIKit-only; use .SwiftUI for hybrid UIKit + SwiftUI apps
     .enableScreenAutoCapture(true)   // Capture screen views automatically
     .enableInteractionAutoCapture(true) // Capture taps and interactions automatically
 )
@@ -53,7 +53,7 @@ When **interaction autocapture** is enabled, the SDK captures:
 
 | Interaction type | UIKit element | Notes |
 |------------------|---------------|--------|
-| Tap | `UIButton`, other `UIControl` subclasses | Includes target-action name when available |
+| Tap | `UIButton`, other `UIControl` subclasses | Includes target-action name when available. Buttons also support `addAction(_:for:)` and `primaryAction` on iOS 14+. Closure actions omit selector/target fields. |
 | Value change | `UISwitch`, `UISlider`, `UISegmentedControl`, `UIStepper`, `UIDatePicker`, `UIPageControl`, `UIPickerView` | Slider values are cached and sent once per screen to avoid event floods |
 | Text input | `UITextField`, `UITextView` | Cached; one event per field when leaving the screen |
 | Cell selection | `UITableView`, `UICollectionView` | Cell class name, index path, and visible text/labels when available |
@@ -81,7 +81,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 |----------|--------|-------------|--------|
 | ``enableScreenAutoCapture`` | ``enableScreenAutoCapture(_:)`` | Turn automatic screen capture on or off. | `false` |
 | ``enableScreenTitleCapture`` | ``enableScreenTitleCapture(_:)`` | When enabled, screen titles (e.g. navigation title, tab title) may be captured. Set to `false` to disable title capture globally. | `true` |
-| ``appFramework`` | ``appFramework(_:)`` | Specify whether your app uses UIKit or SwiftUI (affects autocapture behavior). | `.UIKit` |
+| ``appFramework`` | ``appFramework(_:)`` | Select UIKit or SwiftUI behavior; when unset, the SDK detects the initial native framework. | `nil` |
 
 ### Interaction options
 
@@ -98,7 +98,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 Example: disable all text and accessibility label capture for maximum privacy:
 
 ```swift
-Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.UIKit)  // Specify UIKit framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
@@ -294,7 +294,7 @@ The Userpilot SDK supports automatic capture in SwiftUI apps. SwiftUI autocaptur
 For SwiftUI apps, set the app framework in your configuration:
 
 ```swift
-Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.SwiftUI)  // Specify SwiftUI framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
@@ -458,7 +458,7 @@ Both modifiers are safe to ship unconditionally: they do nothing unless ``enable
 
 #### Redacting Text — ``userpilotRedactText(_:)``
 
-Marks text content under this view as sensitive. Captured `element_text` becomes `****`; the on-screen text is unchanged. The flag propagates down the responder chain, so applying it to a container redacts every descendant.
+Marks text content under this view as sensitive. Captured `target_text` becomes `****`; the on-screen text is unchanged. The flag propagates down the responder chain, so applying it to a container redacts every descendant.
 
 ```swift
 // One field
@@ -473,7 +473,7 @@ VStack {
 .userpilotRedactText(true)
 ```
 
-> SwiftUI does not currently expose a dedicated modifier for redacting accessibility labels. Use the global ``enableInteractionAccessibilityLabelCapture(_:)`` config to disable accessibility-label capture process-wide, or attach `userpilotRedactAccessibilityLabel = true` to the underlying UIKit view via a `UIViewRepresentable` if you need per-view control.
+> SwiftUI does not currently expose a dedicated modifier for redacting accessibility labels. Use the ``enableInteractionAccessibilityLabelCapture(_:)`` config to disable accessibility-label capture for that instance, or attach `userpilotRedactAccessibilityLabel = true` to the underlying UIKit view via a `UIViewRepresentable` if you need per-view control.
 
 #### Ignoring Interactions — ``userpilotIgnoreInteractions(_:)``
 
@@ -501,7 +501,7 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 | Goal | Approach |
 |------|----------|
 | Turn on screen + interaction capture | ``enableScreenAutoCapture(_:)``, ``enableInteractionAutoCapture(_:)`` |
-| No text/labels in events (global) | ``enableInteractionTextCapture(false)``, ``enableInteractionAccessibilityLabelCapture(false)`` |
+| No text/labels in an instance's events | ``enableInteractionTextCapture(false)``, ``enableInteractionAccessibilityLabelCapture(false)`` |
 | Pause capture for an instance temporarily | `userpilot.stopAutoCapture()` / `userpilot.resumeAutoCapture()` |
 
 ### UIKit
@@ -532,3 +532,31 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 | Suppress interaction events for a view or subtree | ``userpilotIgnoreInteractions(_:)`` |
 
 For manual tracking (e.g. custom events or screens), continue to use ``Userpilot/track(_:properties:)`` and ``Userpilot/screen(_:)`` as described in the [iOS SDK installation](https://userpilot-feature-mobile-revamped.mintlify.app/developer/installation/mobile/ios/installation) guide.
+
+
+## Hybrid apps: UIKit + SwiftUI
+
+Use one retained `Userpilot` instance for one account token. A second UI framework does not require a second instance.
+
+For a hybrid app using UIKit and SwiftUI, configure `.appFramework(.SwiftUI)` and enable interaction autocapture. Enable `.enableSwiftUIButtonAutoCapture(true)` for the opt-in iOS 26+ button-title path. Supported UIKit controls continue through the UIKit hooks; SwiftUI controls use hosting-view taps. Selecting `.UIKit` prevents the SwiftUI title scanner from running, even if SwiftUI screens are embedded later.
+
+```swift
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+    .appFramework(.SwiftUI) // Hybrid UIKit + SwiftUI; UIKit capture stays enabled.
+    .enableScreenAutoCapture(true)
+    .enableInteractionAutoCapture(true)
+    .enableSwiftUIButtonAutoCapture(true) // Opt-in SwiftUI button capture on iOS 26+.
+)
+```
+
+For screens, use automatic capture plus screen-name/ignore helpers, or manual screen calls when automatic screen capture is disabled. Give one visible destination one screen name and ignore redundant container screens. A new SwiftUI body evaluation is not a new screen. For different account tokens, bind UIKit subtrees or existing hosting controllers to their owner as described in the multi-instance guide.
+
+### Current limitation
+
+Framework configuration applies to the whole SDK instance. It affects screen filtering and some control metadata; it is not only a reporting label. With `.SwiftUI`, UIKit `UIStepper` events also omit `selected_value`, even when value capture is enabled. The SDK currently checks the instance framework rather than whether that control belongs to UIKit or SwiftUI.
+
+### Verify your integration
+
+Check navigation between UI frameworks and back, embedded screens, scrolling versus taps, privacy modifiers, and content dismissal. Expect one event per supported interaction on its owning instance; intentional forwarding must follow the configured forwarding rules. Check screen names so the native container and its hosted content do not report the same visible destination twice.
+
+See <doc:MultiInstance> for `attachToView(_:)`, `attachToViewController(_:)`, detach methods, and optional forwarding. Stop/resume affects only the instance on which it is called.

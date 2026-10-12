@@ -99,7 +99,7 @@ Repeating identify any number of times, including with different properties, pre
 
 ### Boundaries of this section
 
-Screen navigation and experience-dismissal refreshes are covered below. On a real background/foreground return, the existing expiry rule sets session-start to the expiry result: `true` after the session timeout, otherwise `false`; a pending new identity still takes precedence when preparing its first screen. This is separate from content dismissal or host view/activity callbacks. Offline replay and screen eligibility have their own rules. This identity table does not make every screen after identify a fake reload, or prevent a lifecycle transition from starting another session.
+Screen navigation and experience-dismissal refreshes are covered below. On a real background/foreground return, the existing expiry rule sets session-start to the expiry result: `true` after more than **30 minutes** in the background, otherwise `false`; a pending new identity still takes precedence when preparing its first screen. Both SDKs use the same 30-minute timeout and a strict greater-than comparison, including when returning to the same screen. This is separate from content dismissal or host view/activity callbacks. Offline replay and screen eligibility have their own rules. This identity table does not make every screen after identify a fake reload, or prevent a lifecycle transition from starting another session.
 
 Both platforms enforce the same identity outcomes while retaining native queue/threading behavior. Their sources for a known screen differ: iOS can use the experience publisher's current title; Android uses the current analytics screen session or its screen tracker. Include the relevant known-screen precondition when comparing generated-screen tests.
 
@@ -146,6 +146,8 @@ After an experience is dismissed or completed and its UI dismissal has finished,
 6. Deliver the refresh through the normal analytics queue and resolve it through its own ACK/error/timeout. Its ACK settles pending identification context and releases its queue slot while preserving session-start.
 
 If content appeared on the first screen and that screen has not changed, dismissal/completion produces `is_session_start=true, fake_reload=true`, even after the first screen ACK and any subsequent refresh ACKs. After live navigation sets the current value to `false`, dismissal/completion produces `is_session_start=false, fake_reload=true`. "Preserve" refers to the current session value, not to copying the flags from the older screen request that originally returned the experience.
+
+This also applies when identify generates the first request from a screen tracked before identification. Android Compose/wrapper screens retain their title-only identity; Activity/Fragment screens retain their native surface identity. A generated request must use the same identity as ordinary navigation, so reloading that screen preserves both session-start and its seen flow/survey IDs. Android native screens include the configured `ui_framework` in both ordinary and identify-generated requests; wrapper screen events omit this native metadata. The field does not participate in screen identity or session transitions.
 
 ### EXP-001: dismissal on the first screen, then after navigation
 
@@ -223,3 +225,50 @@ Add a feature section with stable case IDs and the following information:
 6. **Regression pointers:** corresponding tests and any device/backend QA evidence, clearly distinguished.
 
 Update both platform copies together. Document an intentional platform difference explicitly rather than silently changing the shared business rule.
+
+## Multi-instance ownership and lifetime
+
+These cases describe the runtime refactor on `refactor/multi-instance-runtime`. Implementation is
+available for review. Automated ownership tests and focused two-account runtime QA have run.
+
+| Case | Scenario | Expected result on both platforms |
+| --- | --- | --- |
+| MI-001 | Initialize the same token again, including concurrent calls | Reuse the first configuration and service graph. Do not start another socket, tracker or observer set. |
+| MI-002 | Initialize different tokens | Keep identity, session flags, analytics queues, transport, presentation and storage independent. |
+| MI-003 | Register a default, then another instance requests the default role | Keep the first claimant, preserve the existing warning, and still register the second instance for its claimed UI. |
+| MI-004 | One non-default instance owns the originating UI | Route to that owner even when there is no default. Instance count never bypasses ownership. |
+| MI-005 | UI is unclaimed and no default exists | Drop the automatic event. Never choose an arbitrary registered instance. |
+| MI-006 | UI has a nested explicit owner | The nearest explicit owner wins before configured platform scopes and default fallback. |
+| MI-007 | The selected owner is stopped or has capture disabled | Drop through that owner's capture gates. Never redirect to another enabled/default instance. |
+| MI-008 | Deferred interaction fires after the default or UI ownership changes | Preserve its original destination. Drop if that owner is gone; never redirect pending work to a new owner. |
+| MI-009 | An explicit binding outlives its removed instance | Treat that binding as unavailable; do not fall through to a different tenant. Reattach/detach deliberately to change ownership. |
+| MI-010 | Two instances debounce text changes at the same time | Preserve both pending events independently; one owner's scheduling or stopping cannot cancel another owner's work. |
+| MI-011 | The default opts into forwarding captured events from other instances | Publish locally first, then forward one copy directly to the default publisher. Do not resolve ownership again or recursively forward. |
+| MI-012 | An instance logs out or switches users | Apply the existing identity/queue/session reset inside that instance. Keep its registration and UI ownership; other instances are unaffected. |
+| MI-013 | An instance is removed | Retire its registration and its own resources. Do not promote a surviving non-default or stop process-wide hooks needed by other instances. |
+| MI-014 | Explicit `identify`, `screen` or `track` calls target an instance | Use that instance's publisher directly. Native ownership resolution does not change explicit API destinations. |
+| MI-015 | SwiftUI scan waits after capture admission | Carry the requesting owner and window weakly; recheck its registration and capture policy at execution. A different root/default must not replace that requester. |
+| MI-016 | Stop capture while an interaction is waiting or queued for main delivery | Cancel that instance's unclaimed pending interactions. Other instances keep their work. A callback already claimed to execute may finish. |
+| MI-017 | Resume capture after stopping | Accept new interactions; never replay interactions cancelled by the stop. |
+| MI-018 | An instance reports an automatic or manual screen with interactions pending | Flush only that instance's pending interactions. On main, delivery runs before the screen changes its context; other instances keep their debounce timing. |
+
+Native differences are deliberate:
+
+- Swift initializers return distinct facade objects that retain one canonical owner for the same token.
+  Android's factory returns the canonical object itself. This is the existing API shape, not an OS
+  restriction: an additive Swift factory could also return the canonical object directly.
+- iOS registrations are weak and retire with ARC. Android registrations hold instances until the
+  runtime's internal removal path closes the matching Koin scope. Logout is not disposal.
+- UIKit resolves explicit responder bindings, then controller class, window and bundle scopes.
+  Android Views resolve their nearest View/Activity binding. Compose uses explicit ownership or
+  `UserpilotOwner`, then the native View resolver. UIKit/SwiftUI and View/Compose retain native reads.
+- iOS queues an already captured interaction payload. Android preserves its existing delayed native
+  text/snapshot read and drops the work if that target has moved to a different owner.
+- SwiftUI scans and UIKit hooks remain process-wide. Android compiler bridges and shared gesture
+  suppression remain process-wide; debounce work belongs to the destination instance.
+- A complete SwiftUI screen can attach its existing `UIHostingController`. This refactor does not
+  rehost SwiftUI content or introduce a subtree wrapper that could alter layout or navigation.
+
+The entry flow is native callback → resolve owner → apply that owner's capture rules → owner
+coordinator → owner analytics publisher → owner socket. Optional forwarding is a separate direct
+publication after the local event. Runtime composition never builds analytics payloads or handles ACKs.
