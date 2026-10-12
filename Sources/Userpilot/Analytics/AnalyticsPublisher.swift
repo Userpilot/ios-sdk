@@ -291,14 +291,11 @@ extension AnalyticsPublisher {
             if switchedUser { close(.userSwitch) }
             return
         }
+        // Held events re-enter here on replay, so track events are throttled once, after that hold,
+        // for both destinations: an offline duplicate would be stored and replayed later.
+        if event.isTrackEvent, throttle.shouldThrottle(eventTitle: event.trackEventThrottleKey()) { return }
         if offlineEventsHandler.shouldSaveOffline {
-            if event.isScreenEvent, !setUpScreen(event), experiencesPublisher?.canRequestScreenEvent() != true {
-                return
-            }
-            guard !rejectsAutoCaptureWithoutScreen(event) else { return }
-            networkMonitor.recheckIfOffline()
-            offlineEventsHandler.saveEventToLocalStorage(event: event)
-            if switchedUser { close(.userSwitch) }
+            saveOffline(event, switchedUser: switchedUser)
             return
         }
         guard closing == nil || closing == .userSwitch else { return }
@@ -312,7 +309,18 @@ extension AnalyticsPublisher {
         }
     }
 
-    /// Throttle before retaining a live event. Generated refreshes use their own admission method.
+    /// Preserve screen eligibility offline; a user switch closes the old transport after storing its identify.
+    private func saveOffline(_ event: Event, switchedUser: Bool) {
+        if event.isScreenEvent, !setUpScreen(event), experiencesPublisher?.canRequestScreenEvent() != true {
+            return
+        }
+        guard !rejectsAutoCaptureWithoutScreen(event) else { return }
+        networkMonitor.recheckIfOffline()
+        offlineEventsHandler.saveEventToLocalStorage(event: event)
+        if switchedUser { close(.userSwitch) }
+    }
+
+    /// Throttle screens before retaining a live event. Generated refreshes use their own admission method.
     private func enqueue(_ event: Event) {
         if storage.userId.isEmpty { pending.removeAll() }
         if event.isScreenEvent {
@@ -324,9 +332,6 @@ extension AnalyticsPublisher {
                 return
             }
             guard !throttle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") else { return }
-        }
-        if event.isTrackEvent {
-            if throttle.shouldThrottle(eventTitle: event.trackEventThrottleKey()) { return }
         }
         pending.append(Entry(event: event))
     }

@@ -1533,6 +1533,75 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(publishCount, 1)
     }
 
+    // MARK: - Offline Track Event Throttle
+
+    /// Offline events are stored and replayed later, so a duplicate the live path drops
+    /// must not reach local storage either.
+    func testOffline_identicalAutoCaptureEvents_storeOnce() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    func testOffline_distinctAutoCaptureEvents_areBothStored() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+        analyticsPublisher.testPublish(makeButtonTap(text: "Cancel"))
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 2)
+    }
+
+    func testOffline_customEventsWithSameTitle_storeOnce() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(Event(type: .event("button_clicked")))
+        analyticsPublisher.testPublish(Event(type: .event("button_clicked")))
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    /// Online and offline share one window: the network dropping between two copies of a tap
+    /// must not let the second one through.
+    func testOffline_tapAlreadySentLive_isNotStoredAgainWithinTheWindow() {
+        userpilot.storage.userId = "user-1"
+        XCTAssertEqual(publishAndCountSocketPublishes([makeButtonTap(text: "Save")], expectedCount: 1), 1)
+
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+
+        XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
+    }
+
+    /// An event published before the network state is known is routed again on replay; the throttle
+    /// must run once, after that hold, or the replay drops the event as its own duplicate.
+    func testTapHeldUntilNetworkStateIsKnown_isStoredOnReplay() {
+        userpilot.storage.userId = "user-1"
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+
+        userpilot.networkMonitor.isReady = true
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.networkMonitorDidUpdate(isReady: true, isNetworkAvailable: false)
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    private func makeButtonTap(text: String) -> Event {
+        makeAutoCaptureEvent(properties: [
+            Constants.AutoCapture.hierarchy: "UIButton:attr__index=\"0\";HomeViewController",
+            Constants.AutoCapture.rawInteractionType: "tap",
+            Constants.AutoCapture.targetText: text
+        ])
+    }
+
     // MARK: - User Switch With A Screen Tracked Right After Identify
 
     /// A user switch selects the new id immediately and retains its identify before closing the old
