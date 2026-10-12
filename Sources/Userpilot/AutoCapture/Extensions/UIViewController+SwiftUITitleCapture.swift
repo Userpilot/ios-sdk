@@ -23,6 +23,8 @@ internal extension UIViewController {
         // After the swap this calls the original viewDidAppear.
         self.userpilot__viewDidAppear_swiftUIScan(animated)
 
+        // SDK content must not invalidate the underlying app's title inventory.
+        guard let window = viewIfLoaded?.window, !window.isUserpilotWindow else { return }
         guard let userpilot = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self) else { return }
         guard !userpilot.autoCaptureCoordinator.isStopped else { return }
         let config = userpilot.config
@@ -35,7 +37,6 @@ internal extension UIViewController {
         // (debounced) scan that repopulates it. A fast first tap before the scan
         // fires triggers a synchronous prepare scan instead of resolving stale.
         UserpilotRuntime.shared.scanCache.markScreenChanged(logger: config.logger)
-        guard let window = viewIfLoaded?.window else { return }
         UserpilotRuntime.shared.scanCache.scheduleRescan(reason: .screenAppeared, window: window, owner: userpilot)
     }
 }

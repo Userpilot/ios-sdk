@@ -275,12 +275,11 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
     }
 
     private func appearWithCachedTitle() {
+        let window = makeWindow()
         scanCache._testSeedSnapshot(
             textMap: [],
             inventory: [.init(title: "Save", viewType: "Button", depth: 0, order: 0)]
         )
-        let controller = OwnedHostingController()
-        controller.loadViewIfNeeded()
-        controller.viewDidAppear(false)
+        window.rootViewController!.viewDidAppear(false)
     }
 }

@@ -299,6 +299,24 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
         XCTAssertEqual(properties[Constants.AutoCapture.targetText] as? String, Constants.AutoCapture.reductText)
     }
 
+    func testIgnoredInnerHierarchyKeepsItsPlaceholderWhenAControlTitleResolves() throws {
+        try XCTSkipUnless(isIOS26OrLater, "SwiftUI button autocapture runs on iOS 26 and later only")
+        let container = StubHostingView()
+        let (window, tapped) = makeRenderedSaveButton(in: container)
+        container.userpilotIgnoreInnerHierarchy = true
+        var properties = tapped.buildWindowInteractionProperties(at: tap, in: window, limitsTextToTapPoint: true)
+        XCTAssertEqual(properties[Constants.AutoCapture.targetText] as? String, Constants.AutoCapture.reductText,
+                       "precondition: the window tap masks the ignored inner hierarchy")
+
+        let resolved = tapped.addSwiftUITitle(
+            to: &properties, at: tap, in: window, owner: MockUserpilot(config: makeConfig())
+        )
+
+        XCTAssertTrue(resolved, "a resolved control still admits its hosting-root tap")
+        XCTAssertEqual(properties[Constants.AutoCapture.targetText] as? String, Constants.AutoCapture.reductText,
+                       "an ignored inner hierarchy must never publish the rendered control title")
+    }
+
     /// SwiftUI's `.userpilotRedactText()` / `.userpilotIgnoreInteractions()` flag the hidden
     /// carrier's parent: a platform-view host BESIDE the deepest tapped view in the hosting view.
     private func addFlaggedSibling(_ flag: ReferenceWritableKeyPath<UIView, Bool>, below tapped: UIView) {

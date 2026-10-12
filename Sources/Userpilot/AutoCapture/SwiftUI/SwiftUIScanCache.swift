@@ -123,7 +123,7 @@ internal final class SwiftUIScanCache {
     /// Threading: pending state and native reads are main-owned.
     func scheduleRescan(reason: RescanReason = .debounced, window: UIWindow, owner: Userpilot) {
         performOnMain { [weak self, weak window, weak owner] in
-            guard let self, let window, let owner,
+            guard let self, let window, !window.isUserpilotWindow, let owner,
                   registry.isRegistered(owner), SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
             self.recordPendingScan(reason: reason, window: window, owner: owner)
             self.debouncer.schedule()
@@ -182,7 +182,7 @@ internal final class SwiftUIScanCache {
     ///   - Otherwise, if no cached entry resolves at the point (a scroll revealed
     ///     rows, or a NavigationStack push swapped content inside the same
     ///     hosting controller): refresh only the hosting view under the tap,
-    ///     text map only.
+    ///     refreshing both its rendered text and interactive titles.
     ///   - Otherwise: use the cache as-is.
     ///
     /// A tap that legitimately has no title (icon, empty space) costs one
@@ -222,8 +222,8 @@ internal final class SwiftUIScanCache {
         return interactive.contains(where: { $0.title == title }) || entry.isStyledControlTitleCandidate
     }
 
-    /// Re-reads the display list of the innermost hosting view containing
-    /// `view` and replaces that host's cached entries.
+    /// Re-reads the tapped host's geometry and interactive titles within the tap budgets.
+    /// Replacing only that host's records preserves sibling hosts and removes obsolete titles.
     private func refreshHost(containing view: UIView, logger: Logging?) {
         var current: UIView? = view
         while let candidate = current, !SwiftUIDetection.isHostingView(candidate) {
@@ -237,10 +237,20 @@ internal final class SwiftUIScanCache {
             deadline: Date().addingTimeInterval(budget.displayListHostSeconds),
             maxVisited: budget.displayListMaxVisited, logger: logger
         )
+        let controller = host.up_nearestViewController
+        let inventory = controller.map {
+            SwiftUIReflection.extractInventory(
+                from: $0, deadline: Date().addingTimeInterval(budget.reflectionHostSeconds), logger: logger
+            )
+        } ?? []
 
         snapshotLock.withLock {
             latestTextMap.removeAll { $0.host == nil || $0.host === host }
             latestTextMap.append(contentsOf: scan.entries)
+            latestInventory.removeAll { $0.host == nil || $0.host === controller }
+            latestInventory.append(contentsOf: inventory)
+            latestInteractiveRecords = SwiftUIScanner.interactiveRecords(in: latestInventory)
+            inventoryHost = controller
         }
         logger?.debugSwiftUICapture("refreshHost \(type(of: host)) → \(scan.entries.count) entries")
     }
@@ -251,7 +261,7 @@ internal final class SwiftUIScanCache {
     /// instance. Recheck current settings and stop state; stop then resume before execution is allowed.
     private func performScan(reason: RescanReason, window: UIWindow, owner: Userpilot) {
         assert(Thread.isMainThread)
-        guard !window.isHidden, registry.isRegistered(owner), SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+        guard !window.isHidden, !window.isUserpilotWindow, registry.isRegistered(owner), SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
         let logger: Logging? = owner.config.logger
         // During launch/backgrounding retain this destination until active. Do not look up
         // the then-current key window, which may belong to another scene or SDK instance.
@@ -335,7 +345,7 @@ internal final class SwiftUIScanCache {
              ScanInventory(records: latestInventory, interactive: latestInteractiveRecords, host: inventoryHost))
         }
 
-        if reason == .touchEnded, screenAlreadyScanned {
+        if reason == .touchEnded, screenAlreadyScanned, !previous.records.isEmpty {
             return previous
         }
         let reflectionDeadline = Date().addingTimeInterval(budget.reflectionHostSeconds)
@@ -403,7 +413,7 @@ internal final class SwiftUIScanCache {
 
     private func scanOnceCurrentScreenOnMain(for host: UIViewController) {
 
-        guard let source = host.viewIfLoaded, let window = source.window, !window.isHidden,
+        guard let source = host.viewIfLoaded, let window = source.window, !window.isHidden, !window.isUserpilotWindow,
               let owner = instanceResolver.resolveOwner(from: host),
               SwiftUITitleCapturePolicy.shouldRun(for: owner, isSwiftUIHost: source.up_isInsideHostingView) else { return }
         let logger: Logging? = owner.config.logger

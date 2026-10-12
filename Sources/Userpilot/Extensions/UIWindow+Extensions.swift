@@ -243,13 +243,16 @@ extension UIWindow {
             in: window,
             limitsTextToTapPoint: isSwiftUIButtonTap
         )
+        var resolvedSwiftUIControl = false
         if isSwiftUIButtonTap {
-            view.addSwiftUITitle(
+            resolvedSwiftUIControl = view.addSwiftUITitle(
                 to: &eventProperties, at: point, in: window, owner: target
             )
         }
 
-        target.autoCaptureCoordinator.handleClickTracked(eventProperties)
+        target.autoCaptureCoordinator.handleClickTracked(
+            eventProperties, resolvedSwiftUIControl: resolvedSwiftUIControl
+        )
     }
 
 }

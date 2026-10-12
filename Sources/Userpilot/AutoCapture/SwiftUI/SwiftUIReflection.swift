@@ -72,6 +72,8 @@ internal enum SwiftUIReflection {
         let viewType: String   // "Button" | "NavigationLink" | "Text" | "UserpilotLabel" | <type>
         let depth: Int
         let order: Int         // pre-order traversal index
+        /// Identifies the source for single-host refreshes without retaining its screen.
+        weak var host: UIViewController?
 
         /// View types that represent a tappable control. Stage B intersects
         /// display-list text against the titles of these records.
@@ -81,9 +83,7 @@ internal enum SwiftUIReflection {
 
         var isInteractive: Bool { Self.interactiveTypes.contains(viewType) }
 
-        var description: String {
-            "[\(order) d=\(depth)] \(viewType): \"\(title)\""
-        }
+        var description: String { "[\(order) d=\(depth)] \(viewType): \"\(title)\"" }
     }
 
     /// Find the deepest visible `UIHostingController` reachable from this
@@ -146,6 +146,7 @@ internal enum SwiftUIReflection {
         let start = CFAbsoluteTimeGetCurrent()
         #endif
         walk(rootView, depth: 0, order: &order, budget: &budget, into: &records)
+        for index in records.indices { records[index].host = hostingController }
         #if DEBUG
         logger?.debugSwiftUICapture(String(format: "reflection %@ nodes=%d records=%d %.1fms%@",
                                   String(describing: type(of: hostingController)).prefix(60).description,

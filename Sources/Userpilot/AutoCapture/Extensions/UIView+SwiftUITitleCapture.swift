@@ -59,21 +59,25 @@ internal extension UIView {
         return subviews.contains { $0.up_flagInSubtree(containing: windowPoint, flag) }
     }
 
-    /// SwiftUI button-title enrichment for a regular window tap on this view. Runs only when
-    /// nothing produced a title, and writes `target_text` ONLY — target_class / hierarchy /
+    /// SwiftUI button-title enrichment for a regular window tap on this view. Runs when
+    /// the title is missing or redacted, and writes `target_text` ONLY — target_class / hierarchy /
     /// accessibility_* are untouched. The window-tap caller rejects ignored interactions,
     /// including sibling/descendant privacy carriers, before building any properties.
     /// A redacted resolved title uses the existing placeholder in the analytics payload.
+    /// Returns whether a SwiftUI control resolved, so its hosting root can pass window filtering.
+    @discardableResult
     func addSwiftUITitle(
         to properties: inout [String: Any],
         at point: CGPoint,
         in window: UIWindow,
         owner: Userpilot
-    ) {
+    ) -> Bool {
         let config = owner.config
         let swiftUIRoot = up_outermostHostingView
-        guard properties[Constants.AutoCapture.targetText] == nil,
-              SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+        let existingTitle = properties[Constants.AutoCapture.targetText] as? String
+        // A privacy placeholder alone does not prove that this tap hit an interactive control.
+        guard existingTitle == nil || existingTitle == Constants.AutoCapture.reductText,
+              SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return false }
 
         // A fast first tap after navigation can beat the debounced screen-appear
         // scan, and a scroll can reveal rows the cache hasn't seen: make sure the
@@ -84,11 +88,15 @@ internal extension UIView {
         guard let title = SwiftUITitleResolver.shared.resolveTitle(
             at: point, in: window, captureAccessibility: config.enableInteractionAccessibilityLabelCapture,
             logger: config.logger
-        ) else { return }
+        ) else { return false }
 
-        let isRedacted = swiftUIRoot.up_flagInSubtree(containing: point, \.userpilotRedactText)
+        // An existing placeholder came from a privacy rule (redaction or an ignored inner
+        // hierarchy). The resolved title only admits the tap; it never replaces that placeholder.
+        let isRedacted = existingTitle == Constants.AutoCapture.reductText
+            || swiftUIRoot.up_flagInSubtree(containing: point, \.userpilotRedactText)
         properties[Constants.AutoCapture.targetText] = isRedacted
             ? Constants.AutoCapture.reductText
             : resolvedInteractionText(title)
+        return true
     }
 }

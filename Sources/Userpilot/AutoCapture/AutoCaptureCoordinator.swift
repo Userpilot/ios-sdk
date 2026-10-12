@@ -27,7 +27,7 @@ internal protocol AutoCaptureCoordinating: AnyObject {
     func handleInteractionEvent(_ interaction: InteractionPayload)
 
     /// Publishes window-level tap properties as `mobile_autocapture` when they pass noise filtering.
-    func handleClickTracked(_ properties: [String: Any])
+    func handleClickTracked(_ properties: [String: Any], resolvedSwiftUIControl: Bool)
 
     /// Auto capture screen events from wrappers
     func trackExternalAutoCaptureScreen(_ screen: String)
@@ -219,9 +219,10 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
         publishAutoCaptureEvent(interaction)
     }
 
-    func handleClickTracked(_ properties: [String: Any]) {
+    func handleClickTracked(_ properties: [String: Any], resolvedSwiftUIControl: Bool) {
         guard isInteractionTrackingActive else { return }
-        guard WindowTouchFilter.shouldPublishWindowLevelTouch(properties, config: config) else { return }
+        guard WindowTouchFilter.shouldPublishWindowLevelTouch(
+            properties, config: config, resolvedSwiftUIControl: resolvedSwiftUIControl) else { return }
         guard let payload = InteractionPayload.fromWindowClick(properties) else { return }
         handleInteractionEvent(payload)
     }

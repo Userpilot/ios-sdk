@@ -37,7 +37,7 @@ internal enum WindowTouchFilter {
         "HostingScrollView"
     ]
 
-    /// Private / internal UIKit view class names (e.g. `_UITextLayoutCanvasView`) — never publish as window taps.
+    /// Private UIKit class names. Only a confirmed SwiftUI control may use its hosting root as the target.
     private static func windowTouchIsPrivateUIKitElementType(_ elementType: String) -> Bool {
         if elementType.hasPrefix("_UI") { return true }
         if elementType.hasPrefix("_NS") { return true }
@@ -99,17 +99,20 @@ internal enum WindowTouchFilter {
 
     /// Drops taps on structural containers, private `_UI…` internals, and bare SwiftUI views when there is no signal.
     static func shouldPublishWindowLevelTouch(
-        _ properties: [String: Any], config: Userpilot.Config
+        _ properties: [String: Any], config: Userpilot.Config, resolvedSwiftUIControl: Bool = false
     ) -> Bool {
         guard let elementType = properties[Constants.AutoCapture.targetClass] as? String else {
-            return false
-        }
-        if windowTouchIsPrivateUIKitElementType(elementType) {
             return false
         }
         let hierarchy = properties[Constants.AutoCapture.hierarchy] as? String
         if windowTouchIsSystemKeyboardChrome(elementType: elementType, hierarchy: hierarchy) {
             return false
+        }
+        // SwiftUI controls often hit their private hosting root. A title resolved at the tap
+        // is the admission signal; unrelated private UIKit views and keyboard chrome stay filtered.
+        if windowTouchIsPrivateUIKitElementType(elementType) {
+            return resolvedSwiftUIControl && elementType.contains("HostingView")
+                && SwiftUITitleCapturePolicy.isFeatureEnabled(config) && windowTouchHasMetadata(properties)
         }
         if windowTouchHasMetadata(properties) {
             return true
