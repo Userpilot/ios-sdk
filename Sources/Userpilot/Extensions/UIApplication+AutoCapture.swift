@@ -6,8 +6,8 @@
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
 //  UIApplication+AutoCapture swizzles sendAction(_:to:from:for:) to capture actions
-//  that go through the responder chain: UIBarButtonItem, UIMenu, and UIControl (buttons,
-//  switches, etc.). This single point avoids duplicate events vs. swizzling UIControl alone.
+//  that go through selector target–action dispatch: UIBarButtonItem, UIControl and other
+//  responders. UIButton closure actions use the separate UIControl.sendAction(UIAction) hook.
 //
 
 import UIKit
@@ -70,8 +70,7 @@ extension UIApplication {
         guard config.enableInteractionAutoCapture else { return }
 
         if let control = sender as? UIControl {
-            guard !Self.viewIsWithinSystemKeyboardChrome(control) else { return }
-            control.captureControlInteraction(action: action, target: target, event: event, owner: owningInstance)
+            control.captureSelectorDispatch(action: action, target: target, event: event, owner: owningInstance)
             return
         }
 
@@ -171,7 +170,8 @@ extension UIApplication {
         return false
     }
 
-    private static func viewIsWithinSystemKeyboardChrome(_ view: UIView) -> Bool {
+    /// Shared by selector and UIAction control hooks so neither captures keyboard internals.
+    static func viewIsWithinSystemKeyboardChrome(_ view: UIView) -> Bool {
         var current: UIView? = view
         while let currentView = current {
             if typeNameIndicatesSystemKeyboardChrome(String(describing: type(of: currentView))) {

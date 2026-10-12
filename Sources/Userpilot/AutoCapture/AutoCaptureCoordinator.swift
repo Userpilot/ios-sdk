@@ -134,6 +134,7 @@ internal class AutoCaptureCoordinator {
     private func setupAutoCaptureInteractions() {
         AutoCaptureSwizzler.swizzleClickTracking()
         AutoCaptureSwizzler.swizzleApplicationSendAction()
+        AutoCaptureSwizzler.swizzleControlUIAction()
         AutoCaptureSwizzler.swizzlePickerViewDelegate()
         AutoCaptureSwizzler.registerTextFieldNotifications()
         AutoCaptureSwizzler.registerTextViewNotifications()
@@ -193,7 +194,6 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
 
     func handleTabSelected(name tabName: String, index tabIndex: Int, screenClass: String) {
         guard isInteractionTrackingActive else { return }
-
         let screen = screenNameTracker.getCurrentPayload()
         let interactionType = InteractionType.tabSelected
         let properties = interactionType.buildTabProperties(

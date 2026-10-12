@@ -171,7 +171,7 @@ extension UIWindow {
         let config = target.config
         guard config.enableInteractionAutoCapture else { return }
 
-        // 1. Skip UIControl subclasses (handled by UIControl.sendAction swizzling)
+        // 1. Skip UIControl subclasses (handled by the selector and UIAction action hooks)
         //    EXCEPT: don't skip UITextField — text input is handled by notifications
         if view is UIControl && !(view is UITextField) {
             return

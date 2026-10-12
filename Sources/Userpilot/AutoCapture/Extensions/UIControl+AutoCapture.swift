@@ -11,9 +11,29 @@
 
 import UIKit
 
+/// Which capture path already handled the button tap UIKit is dispatching in this main-queue turn.
+private final class ButtonTapCapture {
+    var selectorCaptured = false
+    var actionCaptured = false
+}
+
+private var buttonTapCaptureKey: UInt8 = 0
+
 // MARK: - UIControl Swizzled Methods
 
 internal extension UIControl {
+
+    /// UIButton's closure actions bypass UIApplication's selector hook. Call UIKit once,
+    /// then use the same control payload and owner gates as selector-based buttons.
+    @available(iOS 14.0, *)
+    @objc
+    func userpilot__sendUIAction(_ action: UIAction) {
+        userpilot__sendUIAction(action)
+
+        guard self is UIButton,
+              let owner = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self) else { return }
+        captureUIActionDispatch(owner: owner)
+    }
 
     /// Swizzled sendAction method that captures control events
     @objc
@@ -26,35 +46,58 @@ internal extension UIControl {
         captureControlInteraction(action: action, target: target, event: event, owner: owner)
     }
 
+    // MARK: - One capture per button tap
+
+    /// Selector entry point used by the UIApplication.sendAction hook. One button tap can reach both
+    /// hooks (a selector target and a UIAction) or several targets/actions; UIKit dispatches them all
+    /// synchronously in one main-queue turn, in registration order. The first selector capture claims
+    /// the tap, so the button publishes once and keeps its selector metadata.
+    func captureSelectorDispatch(action: Selector, target: Any?, event: UIEvent?, owner: Userpilot) {
+        if self is UIButton {
+            let tap = currentButtonTap
+            guard !tap.selectorCaptured else { return }
+            tap.selectorCaptured = true
+        }
+        captureControlInteraction(action: action, target: target, event: event, owner: owner)
+    }
+
+    /// A UIAction-only button cannot also receive a selector dispatch, so it publishes immediately.
+    /// With selector targets, the payload is built now (the handler may release the button), but it
+    /// publishes after this turn only if no selector capture claimed the same tap.
+    private func captureUIActionDispatch(owner: Userpilot) {
+        let tap = currentButtonTap
+        guard !tap.selectorCaptured, !tap.actionCaptured,
+              let payload = controlInteractionPayload(action: nil, target: nil, owner: owner) else { return }
+        tap.actionCaptured = true
+        guard !allTargets.isEmpty else {
+            owner.autoCaptureCoordinator.handleInteractionEvent(payload)
+            return
+        }
+        DispatchQueue.main.async { [weak owner] in
+            guard let owner, !tap.selectorCaptured else { return }
+            owner.autoCaptureCoordinator.handleInteractionEvent(payload)
+        }
+    }
+
+    /// Main-thread state for the tap UIKit is dispatching now; cleared on the next main-queue turn.
+    private var currentButtonTap: ButtonTapCapture {
+        if let tap = objc_getAssociatedObject(self, &buttonTapCaptureKey) as? ButtonTapCapture { return tap }
+        let tap = ButtonTapCapture()
+        objc_setAssociatedObject(self, &buttonTapCaptureKey, tap, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            objc_setAssociatedObject(self, &buttonTapCaptureKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+        return tap
+    }
+
     // MARK: - Internal (used by UIApplication.sendAction swizzle to avoid duplicate capture)
 
     /// Captures control interaction based on control type.
-    /// Called from UIApplication.sendAction swizzle when sender is a UIControl.
-    func captureControlInteraction(action: Selector, target: Any?, event: UIEvent?, owner owningInstance: Userpilot) {
-        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return }
-        // Per-instance stop gate: this control's tenant may have paused capture
-        // via `stopAutoCapture()` while other instances keep running.
-        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
-        let config = owningInstance.config
-        guard config.enableInteractionAutoCapture else { return }
-
-        // Skip tap for text field/text view editing actions when configured;
-        // keep only text_field_changed / text_view_changed
-        if config.ignoreTapForTextInputEditingActions, self is UITextField,
-           Self.isTextEditingAction(action) {
+    /// Both action hooks use this path. UIAction has no selector/target, so those fields stay absent.
+    func captureControlInteraction(action: Selector?, target: Any?, event: UIEvent?, owner owningInstance: Userpilot) {
+        guard let payload = controlInteractionPayload(action: action, target: target, owner: owningInstance) else {
             return
-        }
-
-        // Check if this control should be ignored
-        guard !shouldIgnoreInteractions() else { return }
-
-        // Create the appropriate payload based on control type
-        var payload = buildInteractionPayload(config: config)
-
-        // Add target-action info (e.g., "onBackButtonClicked:" from IBAction)
-        payload.targetAction = NSStringFromSelector(action)
-        if let target = target {
-            payload.ownerTargetClass = String(describing: type(of: target))
         }
 
         // Continuous controls (UISlider): debounce per view — send once after quiet period
@@ -65,6 +108,39 @@ internal extension UIControl {
 
         // Send immediately for discrete controls
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
+    }
+
+    /// Owner, privacy and configuration gates, then this control's payload; nil when not captured.
+    private func controlInteractionPayload(
+        action: Selector?, target: Any?, owner owningInstance: Userpilot
+    ) -> InteractionPayload? {
+        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return nil }
+        guard !UIApplication.viewIsWithinSystemKeyboardChrome(self) else { return nil }
+        // Per-instance stop gate: this control's tenant may have paused capture
+        // via `stopAutoCapture()` while other instances keep running.
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return nil }
+        let config = owningInstance.config
+        guard config.enableInteractionAutoCapture else { return nil }
+
+        // Skip tap for text field/text view editing actions when configured;
+        // keep only text_field_changed / text_view_changed
+        if config.ignoreTapForTextInputEditingActions, self is UITextField, let action,
+           Self.isTextEditingAction(action) {
+            return nil
+        }
+
+        // Check if this control should be ignored
+        guard !shouldIgnoreInteractions() else { return nil }
+
+        // Create the appropriate payload based on control type
+        var payload = buildInteractionPayload(config: config)
+
+        // Add target-action info (e.g., "onBackButtonClicked:" from IBAction)
+        payload.targetAction = action.map(NSStringFromSelector)
+        if let target = target {
+            payload.ownerTargetClass = String(describing: type(of: target))
+        }
+        return payload
     }
 
     // Builds an interaction payload based on the control type

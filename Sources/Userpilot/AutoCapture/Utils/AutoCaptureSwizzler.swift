@@ -41,6 +41,9 @@ internal enum AutoCaptureSwizzler {
     /// Flag to track if UIApplication.sendAction swizzling has been performed
     private static let didSwizzleApplicationSendAction = AtomicReference(false)
 
+    /// Closure-based UIButton actions use UIControl's UIAction overload, not UIApplication's selector hook.
+    private static let didSwizzleControlUIAction = AtomicReference(false)
+
     /// Flag to track if text field notifications have been registered
     private static let didRegisterTextFieldNotifications = AtomicReference(false)
 
@@ -112,6 +115,16 @@ internal enum AutoCaptureSwizzler {
     static func swizzleApplicationSendAction() {
         guard !didSwizzleApplicationSendAction.getAndSet(true) else { return }
         UIApplication.swizzleSendAction()
+    }
+
+    /// Installs the separate UIAction entry point once; selector dispatch stays on UIApplication.
+    static func swizzleControlUIAction() {
+        guard #available(iOS 14.0, *), !didSwizzleControlUIAction.getAndSet(true) else { return }
+        Swizzler.swapInstanceMethods(
+            on: UIControl.self,
+            original: #selector(UIControl.sendAction(_:)),
+            swizzled: #selector(UIControl.userpilot__sendUIAction(_:))
+        )
     }
 
     /// Swizzles UIPickerView.setDelegate(_:) to capture row selections via delegate hooking
