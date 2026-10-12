@@ -25,7 +25,6 @@ final class SwiftUIButtonPrivacyTests: XCTestCase {
         guard #available(iOS 26.0, *) else {
             throw XCTSkip("SwiftUI button capture runs on iOS 26 and later only")
         }
-        Userpilot.Registry.shared.resetForTesting()
         SwiftUICaptureHealth._resetForTesting()
         let config = Userpilot.Config(token: "PRIVACY-\(UUID().uuidString)").appFramework(.SwiftUI)
         userpilot = MockUserpilot(config: config)
@@ -46,14 +45,13 @@ final class SwiftUIButtonPrivacyTests: XCTestCase {
     }
 
     override func tearDown() {
-        SwiftUIScanCache.shared.stop()
+        UserpilotRuntime.shared.scanCache.stop()
         window?.isHidden = true
         tapped = nil
         carrier = nil
         window = nil
         userpilot = nil
         events = []
-        Userpilot.Registry.shared.resetForTesting()
         SwiftUICaptureHealth._resetForTesting()
         super.tearDown()
     }

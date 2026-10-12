@@ -37,7 +37,9 @@ internal final class SwiftUIScanCache {
     // Native hooks share one process-wide view snapshot. It contains no tenant settings:
     // admission and publishing stay with the owning instance, while the health breaker is
     // shared because every instance reads the same OS render structures.
-    static let shared = SwiftUIScanCache()
+
+    private let registry: InstanceRegistering
+    private let instanceResolver: InstanceResolving
 
     enum RescanReason { case screenAppeared, touchEnded, manual, debounced }
 
@@ -82,7 +84,10 @@ internal final class SwiftUIScanCache {
     private var truncatedFollowUps = 0
     private static let maxTruncatedFollowUps = 3
 
-    private init() {}
+    init(registry: InstanceRegistering, instanceResolver: InstanceResolving) {
+        self.registry = registry
+        self.instanceResolver = instanceResolver
+    }
 
     // MARK: - Lifecycle
 
@@ -119,7 +124,7 @@ internal final class SwiftUIScanCache {
     func scheduleRescan(reason: RescanReason = .debounced, window: UIWindow, owner: Userpilot) {
         performOnMain { [weak self, weak window, weak owner] in
             guard let self, let window, let owner,
-                  SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+                  registry.isRegistered(owner), SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
             self.recordPendingScan(reason: reason, window: window, owner: owner)
             self.debouncer.schedule()
             owner.config.logger.debugSwiftUICapture("scheduleRescan(reason=\(reason)) → pendingBg=\(self.pendingBackgroundReason), "
@@ -185,7 +190,7 @@ internal final class SwiftUIScanCache {
     func prepareForTapResolution(
         at pointInWindow: CGPoint, in window: UIWindow, tappedView: UIView, owner: Userpilot
     ) {
-        guard Thread.isMainThread, SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+        guard Thread.isMainThread, registry.isRegistered(owner), SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
         let logger: Logging? = owner.config.logger
 
         let (isStale, textMap, interactive) = snapshotLock.withLock {
@@ -246,7 +251,7 @@ internal final class SwiftUIScanCache {
     /// instance. Recheck current settings and stop state; stop then resume before execution is allowed.
     private func performScan(reason: RescanReason, window: UIWindow, owner: Userpilot) {
         assert(Thread.isMainThread)
-        guard !window.isHidden, SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
+        guard !window.isHidden, registry.isRegistered(owner), SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return }
         let logger: Logging? = owner.config.logger
         // During launch/backgrounding retain this destination until active. Do not look up
         // the then-current key window, which may belong to another scene or SDK instance.
@@ -399,7 +404,7 @@ internal final class SwiftUIScanCache {
     private func scanOnceCurrentScreenOnMain(for host: UIViewController) {
 
         guard let source = host.viewIfLoaded, let window = source.window, !window.isHidden,
-              let owner = InstanceResolver.shared.target(forViewController: host),
+              let owner = instanceResolver.resolveOwner(from: host),
               SwiftUITitleCapturePolicy.shouldRun(for: owner, isSwiftUIHost: source.up_isInsideHostingView) else { return }
         let logger: Logging? = owner.config.logger
         let budget = SwiftUIScanBudget.background

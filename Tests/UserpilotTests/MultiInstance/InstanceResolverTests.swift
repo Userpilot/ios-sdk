@@ -4,154 +4,183 @@
 //
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
+//  Routes real UIKit sources through configured scopes (VC class > window > bundle) and the
+//  explicit default. Bindings, detach and the no-claim fast path live in InstanceResolverBindingTests.
+//
 
 import XCTest
 @testable import Userpilot
 
-// swiftlint:disable all
+final class InstanceResolverTests: InstanceResolverTestCase {
 
-/// Custom view-controller subclasses used to exercise the resolver's VC-class scope rules.
-private class TenantAVC: UIViewController {}
-private class TenantASubclassVC: TenantAVC {}
-private class TenantBVC: UIViewController {}
-private class HostVC: UIViewController {}
-private class WrapperHostingControllerStub: UIViewController {} // pretend SwiftUI hosting
+    // MARK: - Default routing
 
-final class InstanceResolverTests: XCTestCase {
+    func testDefaultOnly_resolvesEverySourceToTheDefault() {
+        startWithoutAttachments()
+        let host = register("HOST", isDefault: true)
+        let controller = HostVC()
+        let window = show(controller)
+        let sources: [UIResponder?] = [addLeaf(to: controller.view).label, controller, window, nil, UIView()]
 
-    private var hostInstance: MockUserpilot!
-    private var vendorInstance: MockUserpilot!
-
-    override func setUpWithError() throws {
-        Userpilot.Registry.shared.resetForTesting()
-
-        // Host app's default instance — claims nothing explicitly so it acts as
-        // the catch-all owner for unscoped UI.
-        hostInstance = MockUserpilot(config: Userpilot.Config(token: "HOST-TOKEN"))
-
-        // Vendor SDK's secondary instance — claims a custom VC class so events
-        // originating from `TenantAVC` (or its subclasses) attribute to it.
-        let vendorConfig = Userpilot.Config(token: "VENDOR-TOKEN")
-            .attach(viewControllerClasses: [TenantAVC.self])
-        vendorInstance = MockUserpilot(config: vendorConfig)
+        assertResolves(sources, to: host, "fast path")
+        // After any binding exists in the process, the same sources take the full walk.
+        UserpilotOwnerBinding.hasAttachments.value = true
+        assertResolves(sources, to: host, "full path")
     }
 
-    override func tearDownWithError() throws {
-        hostInstance = nil
-        vendorInstance = nil
-        Userpilot.Registry.shared.resetForTesting()
+    func testTarget_whenNoInstanceClaimsAndNoDefault_returnsNil() {
+        // Instances exist, but none claimed the default role or this UI: no registration-order fallback.
+        register("VENDOR-A")
+        register("VENDOR-B") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+        let controller = HostVC()
+        let window = show(controller)
+
+        assertResolves([UIView(), addLeaf(to: controller.view).label, controller, window, nil], to: nil)
     }
 
-    // MARK: - VC-class match
+    // MARK: - VC-class scope
 
-    func testTarget_byViewControllerClass_returnsClaimingInstance() throws {
-        let vc = TenantAVC()
-        let resolved = InstanceResolver.shared.target(forViewController: vc)
-        XCTAssertTrue(resolved === vendorInstance)
+    func testTarget_byViewControllerClass_returnsClaimingInstance() {
+        register("HOST", isDefault: true)
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+
+        assertResolves([TenantAVC()], to: vendor)
     }
 
-    func testTarget_byViewControllerSubclass_returnsClaimingInstance() throws {
-        let vc = TenantASubclassVC()
-        let resolved = InstanceResolver.shared.target(forViewController: vc)
-        XCTAssertTrue(resolved === vendorInstance, "Subclasses of attached classes must also resolve to the claiming instance")
+    func testTarget_byViewControllerSubclass_returnsClaimingInstance() {
+        register("HOST", isDefault: true)
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+
+        assertResolves([TenantASubclassVC()], to: vendor, "Subclasses of attached classes resolve to the claimant")
     }
 
-    func testTarget_unattachedViewController_returnsDefault() throws {
-        let vc = HostVC()
-        let resolved = InstanceResolver.shared.target(forViewController: vc)
-        XCTAssertTrue(resolved === hostInstance, "Unscoped VCs must fall back to the registered default instance")
+    func testTarget_unattachedViewController_returnsDefault() {
+        let host = register("HOST", isDefault: true)
+        register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+
+        assertResolves([HostVC()], to: host, "Unscoped VCs must fall back to the registered default instance")
     }
 
-    // MARK: - Window match
+    func testTarget_forSourceView_walksResponderChainToOwningVC() {
+        register("HOST", isDefault: true)
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+        let controller = TenantAVC()
+        let leaf = addLeaf(to: controller.view)
 
-    func testTarget_byWindow_resolvesToOwningInstance() throws {
-        let window = UIWindow(frame: .zero)
-        // Re-register vendor with a window scope.
-        Userpilot.Registry.shared.resetForTesting()
-        let host = MockUserpilot(config: Userpilot.Config(token: "HOST"))
-        let vendorConfig = Userpilot.Config(token: "VENDOR").attach(windows: [window])
-        let vendor = MockUserpilot(config: vendorConfig)
-
-        // Window-level autocapture hooks resolve from the window object itself.
-        let vc = HostVC()
-        window.rootViewController = vc
-        let resolved = InstanceResolver.shared.target(forSource: window)
-        XCTAssertTrue(resolved === vendor)
-
-        _ = host
-        _ = vendor
-        _ = window
+        assertResolves([leaf.label, leaf.container, controller.view], to: vendor)
     }
 
-    // MARK: - Source resolution via responder chain
+    func testEmbeddedVendorController_ownsOnlyItsSubtree() {
+        let host = register("HOST", isDefault: true)
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+        let hostScreen = HostVC()
+        let window = show(hostScreen)
+        let vendorPanel = TenantAVC()
+        embed(vendorPanel, in: hostScreen)
 
-    func testTarget_forSourceView_walksResponderChainToOwningVC() throws {
-        let vc = TenantAVC()
-        let view = UIView()
-        vc.view.addSubview(view)
-        // `view` is now in TenantAVC's view tree → its responder chain reaches TenantAVC.
-
-        let resolved = InstanceResolver.shared.target(forSource: view)
-        XCTAssertTrue(resolved === vendorInstance)
+        assertResolves([addLeaf(to: vendorPanel.view).label, vendorPanel], to: vendor)
+        assertResolves([addLeaf(to: hostScreen.view).label, hostScreen, window], to: host)
     }
 
-    func testTarget_forNilSource_returnsDefault() throws {
-        let resolved = InstanceResolver.shared.target(forSource: nil)
-        XCTAssertTrue(resolved === hostInstance)
-    }
-
-    // MARK: - SwiftUI-style outward walk
-
-    func testTarget_swiftUIHostingControllerWalksOutward() throws {
-        // Outer VC is owned by vendor.
+    func testTarget_swiftUIHostingControllerWalksOutward() {
+        register("HOST", isDefault: true)
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
         let outer = TenantAVC()
-        // Inner VC's class name contains "HostingController" → resolver walks outward
-        // through it to the parent and matches the claimed class on the parent.
         let inner = WrapperHostingControllerStub()
-        outer.addChild(inner)
-        outer.view.addSubview(inner.view)
-        inner.didMove(toParent: outer)
+        embed(inner, in: outer)
 
-        let resolved = InstanceResolver.shared.target(forViewController: inner)
-        XCTAssertTrue(
-            resolved === vendorInstance,
-            "Generic hosting/wrapper VCs must defer scope resolution to the parent VC"
-        )
+        assertResolves([inner, addLeaf(to: inner.view).label], to: vendor,
+                       "Generic hosting/wrapper VCs must defer scope resolution to the parent VC")
     }
 
-    // MARK: - Default fallback
+    func testTarget_forNilSource_returnsDefault() {
+        let host = register("HOST", isDefault: true)
+        register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
 
-    func testTarget_whenNoInstanceClaimsAndNoDefault_returnsNil() throws {
-        // Reset registry so there is no default at all.
-        Userpilot.Registry.shared.resetForTesting()
-
-        let resolved = InstanceResolver.shared.target(forSource: UIView())
-        XCTAssertNil(resolved)
+        assertResolves([nil], to: host)
     }
 
-    // MARK: - Injected registry seam
+    // MARK: - Window and bundle scope
 
-    func testTarget_resolvesThroughInjectedRegistry() throws {
-        // A resolver built with a substitute registry resolves entirely from it —
-        // proving consumers no longer depend on `Registry.shared`.
-        let fake = FakeInstanceRegistry()
-        let host = MockUserpilot(config: Userpilot.Config(token: "FAKE-HOST"))
-        let vendor = MockUserpilot(
-            config: Userpilot.Config(token: "FAKE-VENDOR").attach(viewControllerClasses: [TenantBVC.self])
+    func testTarget_byWindow_resolvesToOwningInstance() {
+        let host = register("HOST", isDefault: true)
+        let vendorWindow = makeWindow()
+        let vendor = register("VENDOR") { $0.attach(windows: [vendorWindow]) }
+        let vendorRoot = HostVC()
+        show(vendorRoot, in: vendorWindow)
+        let hostRoot = HostVC()
+        let hostWindow = show(hostRoot)
+
+        assertResolves([vendorWindow, vendorRoot, addLeaf(to: vendorRoot.view).label], to: vendor)
+        assertResolves([hostWindow, hostRoot, addLeaf(to: hostRoot.view).label], to: host)
+    }
+
+    func testBundleClaim_ownsControllersDeclaredInThatBundle() throws {
+        let host = register("HOST", isDefault: true)
+        let testBundle = Bundle(for: TenantBVC.self)
+        XCTAssertFalse(try XCTUnwrap(testBundle.bundleIdentifier).isEmpty, "Precondition: a claimable bundle")
+        let vendor = register("VENDOR") { $0.attach(bundles: [testBundle]) }
+        let claimedController = TenantBVC()
+        let unclaimedController = UIViewController()
+
+        assertResolves([claimedController, addLeaf(to: claimedController.view).label], to: vendor)
+        assertResolves([unclaimedController, addLeaf(to: unclaimedController.view).label], to: host,
+                       "A UIKit-declared controller is outside the claimed bundle")
+    }
+
+    func testScopePrecedence_classBeatsWindowBeatsBundle_regardlessOfRegistrationOrder() {
+        let claimedWindow = makeWindow()
+        // Least specific registers first, so registration order alone would pick the wrong owner.
+        let bundleOwner = register("BUNDLE") { $0.attach(bundles: [Bundle(for: HostVC.self)]) }
+        let windowOwner = register("WINDOW") { $0.attach(windows: [claimedWindow]) }
+        let classOwner = register("CLASS") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+        let classClaimed = TenantAVC()
+        show(classClaimed, in: claimedWindow)
+        let windowClaimed = HostVC()
+        embed(windowClaimed, in: classClaimed)
+
+        assertResolves([classClaimed], to: classOwner)
+        assertResolves([windowClaimed], to: windowOwner)
+        assertResolves([HostVC()], to: bundleOwner)
+    }
+
+    // MARK: - Non-default instances
+
+    func testSoleNonDefaultInstance_ownsOnlyItsClaimedUI() {
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
+        let hostScreen = HostVC()
+        let window = show(hostScreen)
+        let vendorPanel = TenantAVC()
+        embed(vendorPanel, in: hostScreen)
+
+        assertResolves([addLeaf(to: vendorPanel.view).label, vendorPanel], to: vendor)
+        assertResolves([addLeaf(to: hostScreen.view).label, hostScreen, window, nil], to: nil,
+                       "Being the only instance never makes a non-default instance the fallback")
+    }
+
+    func testSoleNonDefaultInstanceWithoutClaims_ownsNothing() {
+        startWithoutAttachments()
+        register("VENDOR")
+        let controller = HostVC()
+        let window = show(controller)
+
+        assertResolves([addLeaf(to: controller.view).label, controller, window, nil], to: nil)
+    }
+
+    // MARK: - Injected registry
+
+    func testResolvesOnlyFromItsInjectedRegistry() {
+        // Instances also register in the process runtime; this resolver must ignore that registry.
+        let processOnlyClaimant = MockUserpilot(
+            config: Userpilot.Config(token: "PROCESS-\(UUID().uuidString)")
+                .defaultInstance(false)
+                .attach(viewControllerClasses: [TenantBVC.self])
         )
-        fake.instances = [host, vendor]
-        fake.defaultInstance = host
+        let host = register("HOST", isDefault: true)
+        let vendor = register("VENDOR") { $0.attach(viewControllerClasses: [TenantAVC.self]) }
 
-        let resolver = InstanceResolver(registry: fake)
-
-        // Class match resolves to the vendor via the injected registry.
-        XCTAssertTrue(resolver.target(forViewController: TenantBVC()) === vendor)
-        // Unscoped VC falls back to the injected default.
-        XCTAssertTrue(resolver.target(forViewController: HostVC()) === host)
-
-        _ = host
-        _ = vendor
+        assertResolves([TenantAVC()], to: vendor)
+        assertResolves([TenantBVC(), HostVC()], to: host)
+        XCTAssertTrue(UserpilotRuntime.shared.instanceRegistry.isRegistered(processOnlyClaimant))
     }
 }
-
-// swiftlint:enable all

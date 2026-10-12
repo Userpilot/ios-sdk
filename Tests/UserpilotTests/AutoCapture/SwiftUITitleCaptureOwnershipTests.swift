@@ -24,23 +24,23 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
     private var ownerInstance: MockUserpilot!
     private var windows: [UIWindow] = []
     private let logger = MockSwiftUICaptureLogger()
+    /// Production hooks schedule on the runtime's cache; tests drive that same cache.
+    private var scanCache: SwiftUIScanCache { UserpilotRuntime.shared.scanCache }
 
     override func setUp() {
         super.setUp()
         exchangeApplicationState()
-        Userpilot.Registry.shared.resetForTesting()
         SwiftUICaptureHealth._resetForTesting()
-        SwiftUIScanCache.shared.stop()
+        scanCache.stop()
     }
 
     override func tearDown() {
-        SwiftUIScanCache.shared.stop()
+        scanCache.stop()
         windows.forEach { $0.isHidden = true }
         windows = []
         logger.messages = []
         defaultInstance = nil
         ownerInstance = nil
-        Userpilot.Registry.shared.resetForTesting()
         SwiftUICaptureHealth._resetForTesting()
         exchangeApplicationState()
         super.tearDown()
@@ -49,13 +49,13 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
     func testAppearingOwnerOptedOut_doesNotUseEnabledDefault() throws {
         try configure(defaultEnabled: true, ownerEnabled: false)
         appearWithCachedTitle()
-        XCTAssertEqual(SwiftUIScanCache.shared.inventory().0.map(\.title), ["Save"])
+        XCTAssertEqual(scanCache.inventory().0.map(\.title), ["Save"])
     }
 
     func testAppearingOwnerOptedIn_doesNotUseDisabledDefault() throws {
         try configure(defaultEnabled: false, ownerEnabled: true)
         appearWithCachedTitle()
-        XCTAssertTrue(SwiftUIScanCache.shared.inventory().0.isEmpty,
+        XCTAssertTrue(scanCache.inventory().0.isEmpty,
                       "The enabled owner's appearance must invalidate the previous screen snapshot")
     }
 
@@ -65,7 +65,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         let window = makeWindow()
         scheduleScan(in: window)
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertScanCompleted()
     }
@@ -79,9 +79,10 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         root.addChild(child)
         root.view.addSubview(child.view)
         child.didMove(toParent: root)
-        XCTAssertTrue(InstanceResolver.shared.target(forSource: window) === defaultInstance)
-        XCTAssertTrue(InstanceResolver.shared.target(forViewController: child) === ownerInstance)
-        SwiftUIScanCache.shared.stop()
+        let resolver = UserpilotRuntime.shared.instanceResolver
+        XCTAssertTrue(resolver.resolveOwner(from: window) === defaultInstance, "Precondition: disabled root owner")
+        XCTAssertTrue(resolver.resolveOwner(from: child) === ownerInstance, "Precondition: enabled child owner")
+        scanCache.stop()
         seedSnapshot()
         logger.messages = []
 
@@ -89,7 +90,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
 
         XCTAssertTrue(logger.messages.contains { $0.contains("viewDidAppear vc=") })
         XCTAssertTrue(logger.messages.contains { $0.contains("scheduleRescan(reason=screenAppeared)") })
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
         assertScanCompleted()
     }
 
@@ -105,7 +106,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         scheduleScan(in: makeWindow())
         ownerInstance.config.enableSwiftUIButtonAutoCapture(false)
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertNoScan()
     }
@@ -116,7 +117,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         ownerInstance.autoCaptureCoordinator.stopAutoCapture()
         ownerInstance.autoCaptureCoordinator.resumeAutoCapture()
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertScanCompleted()
     }
@@ -126,7 +127,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         scheduleScan(in: makeWindow())
         defaultInstance.autoCaptureCoordinator.stopAutoCapture()
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertScanCompleted()
     }
@@ -136,7 +137,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         scheduleScan(in: makeWindow())
         ownerInstance.autoCaptureCoordinator.stopAutoCapture()
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertNoScan()
     }
@@ -147,7 +148,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         scheduleScan(in: makeWindow())
         ownerInstance.config.appFramework = .UIKit
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertNoScan()
     }
@@ -161,7 +162,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         ownerInstance = nil
         XCTAssertNil(releasedOwner, "Pending scans must not retain the requesting SDK instance")
 
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
 
         assertNoScan()
     }
@@ -173,7 +174,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         seedSnapshot()
         logger.messages = []
 
-        SwiftUIScanCache.shared.scanOnceCurrentScreen(for: window.rootViewController!)
+        scanCache.scanOnceCurrentScreen(for: window.rootViewController!)
 
         assertNoScan()
         XCTAssertFalse(logger.messages.contains { $0.contains("scanOnceCurrentScreen DONE") })
@@ -191,7 +192,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         }
 
         XCTAssertNil(releasedWindow)
-        SwiftUIScanCache.shared._testPerformPendingScan()
+        scanCache._testPerformPendingScan()
         assertNoScan()
     }
 
@@ -204,12 +205,12 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         firstWindow.layer.addSublayer(textLayer)
         let entry = DisplayListTextMap.Entry(title: "Save", textFrame: textLayer.frame,
                                             hitFrame: textLayer.frame, layer: textLayer)
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        scanCache._testSeedSnapshot(
             textMap: [entry], inventory: [.init(title: "Save", viewType: "Button", depth: 0, order: 0)]
         )
         logger.messages = []
 
-        SwiftUIScanCache.shared.prepareForTapResolution(
+        scanCache.prepareForTapResolution(
             at: .zero, in: secondWindow, tappedView: secondWindow.rootViewController!.view, owner: ownerInstance
         )
 
@@ -226,17 +227,17 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
     }
 
     private func scheduleScan(in window: UIWindow) {
-        SwiftUIScanCache.shared.stop()
+        scanCache.stop()
         seedSnapshot()
         logger.messages = []
-        SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, window: window, owner: ownerInstance)
+        scanCache.scheduleRescan(reason: .screenAppeared, window: window, owner: ownerInstance)
         XCTAssertTrue(logger.messages.contains { $0.contains("scheduleRescan(reason=screenAppeared)") },
                       "The test must admit pending work before asserting its outcome")
         logger.messages = []
     }
 
     private func seedSnapshot() {
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        scanCache._testSeedSnapshot(
             textMap: [], inventory: [.init(title: "Save", viewType: "Button", depth: 0, order: 0)]
         )
     }
@@ -244,13 +245,13 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
     private func assertScanCompleted(file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(logger.messages.contains { $0.contains("performScan(screenAppeared) DONE") },
                       "Scheduling or deferring alone does not prove scanning completed", file: file, line: line)
-        XCTAssertTrue(SwiftUIScanCache.shared.inventory().0.isEmpty,
+        XCTAssertTrue(scanCache.inventory().0.isEmpty,
                       "The native empty-window scan must replace the seeded snapshot", file: file, line: line)
     }
 
     private func assertNoScan(file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertFalse(logger.messages.contains { $0.contains("performScan(") }, file: file, line: line)
-        XCTAssertEqual(SwiftUIScanCache.shared.inventory().0.map(\.title), ["Save"], file: file, line: line)
+        XCTAssertEqual(scanCache.inventory().0.map(\.title), ["Save"], file: file, line: line)
     }
 
     private func configure(defaultEnabled: Bool, ownerEnabled: Bool) throws {
@@ -274,7 +275,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
     }
 
     private func appearWithCachedTitle() {
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        scanCache._testSeedSnapshot(
             textMap: [],
             inventory: [.init(title: "Save", viewType: "Button", depth: 0, order: 0)]
         )

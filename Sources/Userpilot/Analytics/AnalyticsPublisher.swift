@@ -140,6 +140,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private let networkMonitor: NetworkMonitoring
     private let userSessionStateMachine: UserSessionStateManaging
     private let screenNameTracker: ScreenNameTracking
+    private let captureIntegration: AutoCaptureIntegrating
 
     // Resolve circular dependencies only after initialization/registration has completed.
     private var experiencesPublisher: ExperiencesPublishing? { container?.resolve(ExperiencesPublishing.self) }
@@ -174,6 +175,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
         self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.userSessionStateMachine = container.resolve(UserSessionStateManaging.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
+        self.captureIntegration = container.resolve(AutoCaptureIntegrating.self)
         queue.setSpecific(key: queueKey, value: true)
 
         if let saved = storage.temporaryUser {
@@ -749,8 +751,8 @@ extension AnalyticsPublisher {
     /// Prevent SwiftUI reappearance after SDK content from duplicating the generated screen refresh.
     private func suppressScreenAutocapture() {
         guard config.enableScreenAutoCapture, config.appFramework == .SwiftUI else { return }
-        performOn(.main) {
-            InstanceResolver.shared.suppressScreenAutoCaptureAfterSDKContent()
+        performOn(.main) { [captureIntegration] in
+            captureIntegration.suppressScreenAutoCaptureAfterSDKContent()
         }
     }
 }

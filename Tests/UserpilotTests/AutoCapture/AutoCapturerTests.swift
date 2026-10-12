@@ -17,6 +17,9 @@ final class AutoCapturerTests: XCTestCase {
                 .defaultInstance(false)
         )
         let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
+        // Native screen hooks reach the coordinator only with screen capture on; enable it after
+        // construction so this payload test installs no process-wide hooks.
+        userpilot.config.enableScreenAutoCapture = true
         let expectation = expectation(description: "SwiftUI screen event published")
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { event in
@@ -46,6 +49,7 @@ final class AutoCapturerTests: XCTestCase {
                 .defaultInstance(false)
         )
         let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
+        userpilot.config.enableScreenAutoCapture = true
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
         let payload = ScreenTrackingPayload(

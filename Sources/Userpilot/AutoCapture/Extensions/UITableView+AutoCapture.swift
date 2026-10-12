@@ -17,13 +17,8 @@ internal extension UITableViewCell {
 
     /// Captures a table view cell selection interaction
     /// - Parameter touchedView: The specific view that was touched within the cell
-    func captureTableViewCellSelection(touchedView: UIView?) {
-        guard Userpilot.isInitialized else { return }
-        // Resolve the owning Userpilot instance from this cell. Touched view is preferred
-        // because it lives deeper in the responder chain (more accurate scope match).
-        guard let owningInstance = InstanceResolver.shared.target(forSource: touchedView ?? self) else {
-            return
-        }
+    func captureTableViewCellSelection(touchedView: UIView?, owner owningInstance: Userpilot) {
+        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return }
         guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
         let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }

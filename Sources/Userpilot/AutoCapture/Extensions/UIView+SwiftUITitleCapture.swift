@@ -78,7 +78,7 @@ internal extension UIView {
         // A fast first tap after navigation can beat the debounced screen-appear
         // scan, and a scroll can reveal rows the cache hasn't seen: make sure the
         // cache covers this tap before resolving it.
-        SwiftUIScanCache.shared.prepareForTapResolution(
+        UserpilotRuntime.shared.scanCache.prepareForTapResolution(
             at: point, in: window, tappedView: self, owner: owner
         )
         guard let title = SwiftUITitleResolver.shared.resolveTitle(

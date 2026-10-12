@@ -28,10 +28,13 @@ class MockUserpilot: Userpilot {
     override func initializeContainer() {
         container.owner = self
         container.register(Userpilot.Config.self, value: config)
-        // The real `AutoCaptureCoordinator` resolves `InstanceRegistering`; register
-        // the shared registry (which these MockUserpilot instances register into on
-        // init) so forwarding tests see the same default-resolution behavior.
-        container.register(InstanceRegistering.self, value: Userpilot.Registry.shared)
+        // The real coordinator and native hooks use the process runtime that these instances
+        // register into on init; share the same runtime services as production `initializeContainer()`.
+        let runtime = UserpilotRuntime.shared
+        container.register(InstanceRegistering.self, value: runtime.instanceRegistry)
+        container.register(InstanceResolving.self, value: runtime.instanceResolver)
+        container.register(AutoCaptureIntegrating.self, value: runtime.captureIntegration)
+        container.register(SwiftUIScanCache.self, value: runtime.scanCache)
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
         container.register(NetworkMonitoring.self, value: networkMonitor)

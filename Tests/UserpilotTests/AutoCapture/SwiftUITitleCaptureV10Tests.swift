@@ -26,11 +26,11 @@ final class SwiftUIScanCacheGenerationTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        SwiftUIScanCache.shared.clearCaches()
+        UserpilotRuntime.shared.scanCache.clearCaches()
     }
 
     override func tearDown() {
-        SwiftUIScanCache.shared.clearCaches()
+        UserpilotRuntime.shared.scanCache.clearCaches()
         super.tearDown()
     }
 
@@ -43,25 +43,25 @@ final class SwiftUIScanCacheGenerationTests: XCTestCase {
     }
 
     func testFreshSeededSnapshotReturnsThroughAccessors() {
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: sampleTextMap(),
             inventory: sampleInventory())
-        let (records, _) = SwiftUIScanCache.shared.inventory()
-        let (textMap, interactive) = SwiftUIScanCache.shared.textResolution()
+        let (records, _) = UserpilotRuntime.shared.scanCache.inventory()
+        let (textMap, interactive) = UserpilotRuntime.shared.scanCache.textResolution()
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(textMap.count, 1)
         XCTAssertEqual(interactive.first?.title, "Save")
     }
 
     func testMarkScreenChangedInvalidatesAccessors() {
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: sampleTextMap(),
             inventory: sampleInventory())
         // A new screen appeared but no scan has run yet → readers must return
         // empty rather than the previous screen's snapshot.
-        SwiftUIScanCache.shared.markScreenChanged()
-        let (records, host) = SwiftUIScanCache.shared.inventory()
-        let (textMap, interactive) = SwiftUIScanCache.shared.textResolution()
+        UserpilotRuntime.shared.scanCache.markScreenChanged()
+        let (records, host) = UserpilotRuntime.shared.scanCache.inventory()
+        let (textMap, interactive) = UserpilotRuntime.shared.scanCache.textResolution()
         XCTAssertTrue(records.isEmpty)
         XCTAssertNil(host)
         XCTAssertTrue(textMap.isEmpty)
@@ -69,33 +69,33 @@ final class SwiftUIScanCacheGenerationTests: XCTestCase {
     }
 
     func testStaleSeedIsRejected() {
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: sampleTextMap(),
             inventory: sampleInventory(),
             fresh: false)
-        let (records, _) = SwiftUIScanCache.shared.inventory()
-        let (textMap, _) = SwiftUIScanCache.shared.textResolution()
+        let (records, _) = UserpilotRuntime.shared.scanCache.inventory()
+        let (textMap, _) = UserpilotRuntime.shared.scanCache.textResolution()
         XCTAssertTrue(
             records.isEmpty, "a snapshot stamped with a prior generation must not resolve")
         XCTAssertTrue(textMap.isEmpty)
     }
 
     func testClearCachesResetsGeneration() {
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: sampleTextMap(),
             inventory: sampleInventory())
-        SwiftUIScanCache.shared.clearCaches()
-        let (records, _) = SwiftUIScanCache.shared.inventory()
+        UserpilotRuntime.shared.scanCache.clearCaches()
+        let (records, _) = UserpilotRuntime.shared.scanCache.inventory()
         XCTAssertTrue(records.isEmpty)
     }
 
     func testSeedSnapshotCanSetInventoryHost() {
         let host = UIViewController()
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: sampleTextMap(),
             inventory: sampleInventory(),
             inventoryHost: host)
-        let (_, returnedHost) = SwiftUIScanCache.shared.inventory()
+        let (_, returnedHost) = UserpilotRuntime.shared.scanCache.inventory()
         XCTAssertTrue(returnedHost === host)
     }
 }
@@ -146,7 +146,7 @@ final class SwiftUIReflectionDeadlineTests: XCTestCase {
     final class SwiftUITitleResolverEmptyInventoryTests: XCTestCase {
 
         override func tearDown() {
-            SwiftUIScanCache.shared.clearCaches()
+            UserpilotRuntime.shared.scanCache.clearCaches()
             super.tearDown()
         }
 
@@ -171,7 +171,7 @@ final class SwiftUIReflectionDeadlineTests: XCTestCase {
                 layer: layer
             )
             // EMPTY inventory → no interactive records (the NavigationStack case).
-            SwiftUIScanCache.shared._testSeedSnapshot(textMap: [entry], inventory: [])
+            UserpilotRuntime.shared.scanCache._testSeedSnapshot(textMap: [entry], inventory: [])
 
             let title = SwiftUITitleResolver.shared.resolveTitle(
                 at: CGPoint(x: 150, y: 30), in: window, captureAccessibility: false)

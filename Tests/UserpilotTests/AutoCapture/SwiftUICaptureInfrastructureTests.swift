@@ -99,7 +99,7 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
         window.isHidden = false
         defer {
             window.isHidden = true
-            SwiftUIScanCache.shared.clearCaches()
+            UserpilotRuntime.shared.scanCache.clearCaches()
         }
         let layer = CALayer()
         layer.frame = CGRect(x: 20, y: 50, width: 100, height: 30)
@@ -107,14 +107,14 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
         let sensitiveTitle = "private-survey-answer"
         let entry = DisplayListTextMap.Entry(title: sensitiveTitle, textFrame: layer.frame,
                                             hitFrame: layer.frame, layer: layer)
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: [entry],
             inventory: [.init(title: sensitiveTitle, viewType: "Button", depth: 0, order: 0)]
         )
         let resolver = SwiftUITitleResolver.shared
         XCTAssertEqual(resolver.resolveTitle(at: CGPoint(x: 40, y: 60), in: window,
                                              captureAccessibility: false, logger: logger), sensitiveTitle)
-        SwiftUIScanCache.shared._testSeedSnapshot(textMap: [entry], inventory: [])
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(textMap: [entry], inventory: [])
         XCTAssertNil(resolver.resolveTitle(at: CGPoint(x: 40, y: 60), in: window,
                                           captureAccessibility: false, logger: logger))
 
@@ -124,7 +124,7 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
 
     func testSnapshotDiagnostics_invokeLoggerAfterUnlocking() {
         let logger = MockSwiftUICaptureLogger()
-        let cache = SwiftUIScanCache.shared
+        let cache = UserpilotRuntime.shared.scanCache
         defer { cache.clearCaches() }
         cache._testSeedSnapshot(
             textMap: [], inventory: [.init(title: "Save", viewType: "Button", depth: 0, order: 0)]

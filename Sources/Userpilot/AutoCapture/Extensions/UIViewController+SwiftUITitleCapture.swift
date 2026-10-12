@@ -23,7 +23,7 @@ internal extension UIViewController {
         // After the swap this calls the original viewDidAppear.
         self.userpilot__viewDidAppear_swiftUIScan(animated)
 
-        guard let userpilot = InstanceResolver.shared.target(forViewController: self) else { return }
+        guard let userpilot = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self) else { return }
         guard !userpilot.autoCaptureCoordinator.isStopped else { return }
         let config = userpilot.config
         guard SwiftUITitleCapturePolicy.shouldRun(
@@ -34,8 +34,8 @@ internal extension UIViewController {
         // Invalidate the cached snapshot for the new screen, then schedule the
         // (debounced) scan that repopulates it. A fast first tap before the scan
         // fires triggers a synchronous prepare scan instead of resolving stale.
-        SwiftUIScanCache.shared.markScreenChanged(logger: config.logger)
+        UserpilotRuntime.shared.scanCache.markScreenChanged(logger: config.logger)
         guard let window = viewIfLoaded?.window else { return }
-        SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, window: window, owner: userpilot)
+        UserpilotRuntime.shared.scanCache.scheduleRescan(reason: .screenAppeared, window: window, owner: userpilot)
     }
 }

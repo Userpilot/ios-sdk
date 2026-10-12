@@ -216,7 +216,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
     }
 
     override func tearDown() {
-        SwiftUIScanCache.shared.clearCaches()
+        UserpilotRuntime.shared.scanCache.clearCaches()
         SwiftUICaptureHealth._resetForTesting()
         super.tearDown()
     }
@@ -241,7 +241,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
             hitFrame: textLayer.frame,
             layer: textLayer
         )
-        SwiftUIScanCache.shared._testSeedSnapshot(
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: [entry],
             inventory: [SwiftUIReflection.ViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)]
         )

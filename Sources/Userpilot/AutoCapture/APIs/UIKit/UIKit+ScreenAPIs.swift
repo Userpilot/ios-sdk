@@ -37,7 +37,7 @@ extension UIViewController {
         // Use the owning instance's `enableScreenTitleCapture` so embedded SDKs and
         // the host app each control their own screens' title capture independently.
         let titleCaptureEnabled =
-            InstanceResolver.shared.target(forViewController: self)?.config.enableScreenTitleCapture ?? true
+            UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self)?.config.enableScreenTitleCapture ?? true
         if let containerTitle = ScreenNameResolver.tabBarControllerPreferredTitle(
             self, titleCaptureEnabled: titleCaptureEnabled
         ) {

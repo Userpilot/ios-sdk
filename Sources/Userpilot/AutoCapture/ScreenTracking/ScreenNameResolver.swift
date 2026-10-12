@@ -36,7 +36,7 @@ internal final class ScreenNameResolver {
         // Resolve via the OWNING Userpilot instance so e.g. an embedded SDK that
         // disabled `enableScreenTitleCapture` is honoured for its own VCs even when
         // the host app's instance has it enabled.
-        let config = InstanceResolver.shared.target(forViewController: viewController)?.config
+        let config = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: viewController)?.config
         let titleCaptureEnabled = config?.enableScreenTitleCapture ?? true
 
         if let name = viewController.userpilotSwiftUIScreenName, !name.isEmpty { return name }

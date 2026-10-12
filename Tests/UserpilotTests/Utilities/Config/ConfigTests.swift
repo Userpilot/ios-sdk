@@ -20,6 +20,12 @@ final class EnvironmentTests: XCTestCase {
         userpilot.storage.socketURL = "wss://socket.prod.example.com"
     }
 
+    override func tearDown() {
+        // The runtime registry has no reset: a retained instance would keep the default claim and token.
+        userpilot = nil
+        super.tearDown()
+    }
+
     func test_getSocketURL_returnsFromStorageInProduction() {
         // Act
         let result = Environment.getSocketURL(storage: userpilot.storage)

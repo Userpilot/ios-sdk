@@ -179,11 +179,11 @@ internal final class ExperienceOverlayWindow: UIWindow {
     // MARK: - Window Level
 
     /// Computes a deterministic `UIWindow.Level` for `instance` based on its
-    /// registration order in `Userpilot.Registry`. Default instance sits at
+    /// registration order in `InstanceRegistry`. Default instance sits at
     /// `normal + 1`, secondaries stack above it.
     private static func computeWindowLevel(for instance: Userpilot) -> UIWindow.Level {
         let token = instance.config.token
-        let index = Userpilot.Registry.shared.registrationIndex(forToken: token) ?? 0
+        let index = UserpilotRuntime.shared.instanceRegistry.registrationIndex(forToken: token) ?? 0
         // `+ 1` keeps the overlay above ordinary app windows; `+ index` separates
         // multiple instances so two experiences never collide on the same level.
         return UIWindow.Level.normal + CGFloat(1 + index)

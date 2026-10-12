@@ -12,7 +12,6 @@ class PushNotificationMonitorTestCase: XCTestCase {
     var userpilot: MockUserpilot!
 
     override func setUpWithError() throws {
-        Userpilot.Registry.shared.resetForTesting()
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         userpilot = MockUserpilot(config: config)
         pushNotificationMonitor = PushNotificationMonitor(container: userpilot.container)
@@ -21,7 +20,6 @@ class PushNotificationMonitorTestCase: XCTestCase {
     override func tearDownWithError() throws {
         pushNotificationMonitor = nil
         userpilot = nil
-        Userpilot.Registry.shared.resetForTesting()
         try super.tearDownWithError()
     }
 

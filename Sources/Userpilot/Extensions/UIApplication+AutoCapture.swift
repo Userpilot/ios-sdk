@@ -50,7 +50,6 @@ extension UIApplication {
     private func captureSendAction(
         action: Selector, to target: Any?, from sender: Any?, for event: UIEvent?
     ) {
-        guard Userpilot.isInitialized else { return }
         guard !shouldIgnoreInternalTextSelectionAction(action: action, target: target) else {
             return
         }
@@ -61,7 +60,7 @@ extension UIApplication {
         // default instance via the resolver's default fallback.
         let senderResponder: UIResponder? = (sender as? UIView)
             ?? (sender as? UIGestureRecognizer)?.view
-        guard let owningInstance = InstanceResolver.shared.target(forSource: senderResponder) else {
+        guard let owningInstance = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: senderResponder) else {
             return
         }
         // Per-instance stop gate: resolve the owner first so a paused tenant's
@@ -72,7 +71,7 @@ extension UIApplication {
 
         if let control = sender as? UIControl {
             guard !Self.viewIsWithinSystemKeyboardChrome(control) else { return }
-            control.captureControlInteraction(action: action, target: target, event: event)
+            control.captureControlInteraction(action: action, target: target, event: event, owner: owningInstance)
             return
         }
 

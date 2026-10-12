@@ -35,7 +35,7 @@ internal extension UIViewController {
     func resolveNavigationTitle() -> String? {
         // Use the owning instance's config so navigation titles are gated by the
         // tenant whose VC this is.
-        guard let config = InstanceResolver.shared.target(forViewController: self)?.config,
+        guard let config = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self)?.config,
               config.enableScreenTitleCapture
         else { return nil }
         return userpilotScreenTitle

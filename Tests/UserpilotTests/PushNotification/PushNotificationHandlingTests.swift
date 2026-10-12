@@ -99,7 +99,6 @@ final class PushNotificationHandlingTests: PushNotificationMonitorTestCase {
 
     func testDidReceiveNotification_routesToMatchingInstanceWhenMultipleInstancesExist() throws {
         // Arrange
-        Userpilot.Registry.shared.resetForTesting()
         let host = MockUserpilot(config: Userpilot.Config(token: "HOST-PUSH"))
         let vendor = MockUserpilot(config: Userpilot.Config(token: "VENDOR-PUSH").defaultInstance(false))
         let hostMonitor = PushNotificationMonitor(container: host.container)

@@ -94,14 +94,11 @@ internal extension UIViewController {
     // readability without removing any logic.
     // swiftlint:disable:next cyclomatic_complexity
     private func captureScreenIfNeeded() {
-        guard Userpilot.isInitialized else { return }
         guard view.window?.isUserpilotWindow != true else { return }
 
-        // Resolve the owning Userpilot instance from this view controller. In a
-        // single-instance integration this is always the default instance and
-        // matches the previous global fallback lookup. In multi-instance the
-        // resolution honours the bundle / window / VC-class scope of each instance.
-        guard let owningInstance = InstanceResolver.shared.target(forViewController: self) else {
+        // Resolve once before reading capture metadata. A non-default instance captures
+        // only its claimed UI, even when it is the only registered instance.
+        guard let owningInstance = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self) else {
             return
         }
         let config = owningInstance.config
@@ -134,8 +131,10 @@ internal extension UIViewController {
         // first screen event to miss the custom name.
         if config.appFramework == .SwiftUI,
            screenClassName.contains("HostingController") {
-            performOn(.main) { [weak self] in
-                guard let self else { return }
+            performOn(.main) { [weak self, weak owningInstance] in
+                guard let self, let owningInstance,
+                      UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance),
+                      !owningInstance.autoCaptureCoordinator.isStopped else { return }
                 owningInstance.autoCaptureCoordinator.trackScreen(buildScreenTrackingPayload(config: config))
             }
         } else {

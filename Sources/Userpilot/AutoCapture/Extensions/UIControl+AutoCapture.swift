@@ -22,18 +22,16 @@ internal extension UIControl {
         userpilot__sendAction(action, to: target, for: event)
 
         // Capture the interaction with action and target info
-        captureControlInteraction(action: action, target: target, event: event)
+        guard let owner = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self) else { return }
+        captureControlInteraction(action: action, target: target, event: event, owner: owner)
     }
 
     // MARK: - Internal (used by UIApplication.sendAction swizzle to avoid duplicate capture)
 
     /// Captures control interaction based on control type.
     /// Called from UIApplication.sendAction swizzle when sender is a UIControl.
-    func captureControlInteraction(action: Selector, target: Any?, event: UIEvent?) {
-        guard Userpilot.isInitialized else { return }
-        // Resolve the owning Userpilot instance from the responder chain so this
-        // control's events follow its tenant's privacy / capture flags.
-        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+    func captureControlInteraction(action: Selector, target: Any?, event: UIEvent?, owner owningInstance: Userpilot) {
+        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return }
         // Per-instance stop gate: this control's tenant may have paused capture
         // via `stopAutoCapture()` while other instances keep running.
         guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
@@ -61,7 +59,7 @@ internal extension UIControl {
 
         // Continuous controls (UISlider): debounce per view — send once after quiet period
         if self is UISlider {
-            InteractionEventCache.sendDebouncedInteraction(payload, for: self)
+            InteractionEventCache.sendDebouncedInteraction(payload, for: self, owner: owningInstance)
             return
         }
 

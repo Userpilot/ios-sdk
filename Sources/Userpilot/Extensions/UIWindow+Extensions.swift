@@ -60,12 +60,14 @@ extension UIWindow {
         // Keep bookkeeping for every touch so ending/cancelled sequences retire even
         // while an owner is stopped. Paused owners skip native capture and scan work;
         // their coordinator also guards publication.
-        guard Userpilot.isInitialized, let touches = event.allTouches else { return }
+        guard let touches = event.allTouches else { return }
+        let resolver = UserpilotRuntime.shared.instanceResolver
         var scanOwner: Userpilot?
         for touch in touches {
             let point = touch.location(in: self)
-            let source = touch.view ?? hitTest(point, with: event) ?? self
-            guard let target = InstanceResolver.shared.target(forSource: source) else { continue }
+            let hitView = touch.view ?? hitTest(point, with: event)
+            let source = touchOwnerSource(hitView: hitView, at: point, phase: touch.phase, resolver: resolver)
+            guard let target = resolver.resolveOwner(from: source.view) else { continue }
             let config = target.config
             // The touched view's owner controls timing, just as it controls text/privacy flags.
             if WindowTapCapture.tracker.shouldCapture(
@@ -75,31 +77,39 @@ extension UIWindow {
                 timestamp: touch.timestamp,
                 touchCount: touches.count,
                 capturesOnTapEnd: SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config)
-            ), !target.autoCaptureCoordinator.isStopped {
-                captureTouch(touch, event: event)
+            ), let hitView, !target.autoCaptureCoordinator.isStopped {
+                let capturedView = capturedTapView(hitView: hitView, source: source, at: point)
+                handleTouchOnView(capturedView, target: target, window: self, point: point)
             }
             if scanOwner == nil, touch.phase == .ended || touch.phase == .cancelled,
-               SwiftUITitleCapturePolicy.shouldRun(for: target, isSwiftUIHost: source.up_isInsideHostingView) {
+               SwiftUITitleCapturePolicy.shouldRun(for: target, isSwiftUIHost: source.view.up_isInsideHostingView) {
                 scanOwner = target
             }
         }
         // Touch settle refreshes lazy content revealed by scrolling, once per native event.
         if let scanOwner {
-            SwiftUIScanCache.shared.scheduleRescan(reason: .touchEnded, window: self, owner: scanOwner)
+            UserpilotRuntime.shared.scanCache.scheduleRescan(reason: .touchEnded, window: self, owner: scanOwner)
         }
     }
 
-    private func captureTouch(_ touch: UITouch, event: UIEvent) {
-        let locationInWindow = touch.location(in: self)
-        // SwiftUI often leaves touch.view nil; fall back to hit-testing the window.
-        let touchedView = touch.view ?? self.hitTest(locationInWindow, with: event)
-        guard let view = touchedView else { return }
+    // MARK: Touch Routing
 
-        let resolvedView = deepestSubview(at: locationInWindow, in: view) ?? view
-        handleTouchOnView(resolvedView, window: self, point: locationInWindow, event: event)
+    /// A nested owner on a descendant can affect click timing, so tap boundaries resolve
+    /// from the innermost view, but only when a binding or configured scope exists.
+    func touchOwnerSource(
+        hitView: UIView?, at point: CGPoint, phase: UITouch.Phase, resolver: InstanceResolving
+    ) -> (view: UIView, isInnermost: Bool) {
+        let resolvesFromInnermost = (phase == .began || phase == .ended) && resolver.sourceAffectsOwner
+        let view = hitView.map {
+            resolvesFromInnermost ? deepestSubview(at: point, in: $0) ?? $0 : $0
+        } ?? self
+        return (view, resolvesFromInnermost)
     }
 
-    // MARK: Touch Routing
+    /// The payload always describes the innermost view; compute it only for a captured tap.
+    func capturedTapView(hitView: UIView, source: (view: UIView, isInnermost: Bool), at point: CGPoint) -> UIView {
+        source.isInnermost ? source.view : deepestSubview(at: point, in: hitView) ?? hitView
+    }
 
     /// Finds the deepest (front-most) subview whose frame contains `point`,
     /// ignoring `isUserInteractionEnabled` so we can discover UILabel / UIImageView.
@@ -156,13 +166,8 @@ extension UIWindow {
     ///   - view: The UIView that was touched (already resolved to deepest subview)
     ///   - window: The window where the touch occurred
     ///   - point: Touch location in window coordinates
-    ///   - event: The UI event
-    private func handleTouchOnView(_ view: UIView, window: UIWindow, point: CGPoint, event: UIEvent) {
-        // Resolve the owning Userpilot instance for this view so its config drives
-        // privacy and capture decisions (text/value/accessibility flags). In a
-        // single-instance integration this is the default instance, identical to
-        // the previous global fallback config behaviour.
-        guard let target = InstanceResolver.shared.target(forSource: view) else { return }
+    private func handleTouchOnView(_ view: UIView, target: Userpilot, window: UIWindow, point: CGPoint) {
+        // Continue with the owner selected at the native touch boundary.
         let config = target.config
         guard config.enableInteractionAutoCapture else { return }
 
@@ -189,13 +194,13 @@ extension UIWindow {
             if tableCell.findAncestorUIPickerView() != nil {
                 return
             }
-            tableCell.captureTableViewCellSelection(touchedView: view)
+            tableCell.captureTableViewCellSelection(touchedView: view, owner: target)
             return
         }
 
         // 3. Check for UICollectionViewCell
         if let collectionCell = view.findParentCollectionViewCell() {
-            collectionCell.captureCollectionViewItemSelection(touchedView: view)
+            collectionCell.captureCollectionViewItemSelection(touchedView: view, owner: target)
             return
         }
 
@@ -244,7 +249,7 @@ extension UIWindow {
             )
         }
 
-        InstanceResolver.shared.handleClickTracked(eventProperties, source: view)
+        target.autoCaptureCoordinator.handleClickTracked(eventProperties)
     }
 
 }

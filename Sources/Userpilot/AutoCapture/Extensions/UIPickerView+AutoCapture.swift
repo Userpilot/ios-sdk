@@ -84,9 +84,8 @@ internal extension UIPickerView {
 
     /// Builds and dispatches an interaction payload for a picker row selection.
     func capturePickerViewSelection(row: Int, component: Int) {
-        guard Userpilot.isInitialized else { return }
         // Resolve the owning Userpilot instance for this picker view.
-        guard let owningInstance = InstanceResolver.shared.target(forSource: self) else { return }
+        guard let owningInstance = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self) else { return }
         guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
         let config = owningInstance.config
         guard config.enableInteractionAutoCapture else { return }

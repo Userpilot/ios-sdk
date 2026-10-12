@@ -14,7 +14,6 @@ import UIKit
 
 /// Per-instance entry points for native hooks and wrappers to publish captured screens and interactions.
 internal protocol AutoCaptureCoordinating: AnyObject {
-
     /// Records a screen transition and publishes a `.screen` analytics event when allowed.
     func trackScreen(_ screen: ScreenTrackingPayload)
 
@@ -39,6 +38,12 @@ internal protocol AutoCaptureCoordinating: AnyObject {
     /// `true` when capture is paused for this instance via `stopAutoCapture()`.
     var isStopped: Bool { get }
 
+    /// Debounces work for this instance; stop cancels every action still awaiting delivery.
+    func scheduleInteraction(key: String, action: @escaping () -> Void)
+
+    /// Flushes this instance's pending interactions before its screen context changes.
+    func flushPendingInteractions()
+
     /// Pauses automatic screen + interaction capture for THIS instance only;
     /// other instances in the process keep capturing. Reversed by `resumeAutoCapture()`.
     func stopAutoCapture()
@@ -52,15 +57,14 @@ internal protocol AutoCaptureCoordinating: AnyObject {
 /// Screen coalescing and suppression share a lock; publishing occurs after releasing it.
 internal class AutoCaptureCoordinator {
 
-    // MARK: - Dependencies
-
     private let analyticsPublisher: AnalyticsPublishing
     private let config: Userpilot.Config
     private let screenNameTracker: ScreenNameTracking
 
-    /// Process-wide instance registry, injected so the external-source forwarding
-    /// path can resolve the default instance without touching `Registry.shared`.
-    private let registry: InstanceRegistering
+    /// Runtime registry supplies forwarding targets and validates deferred owner lifetimes.
+    private let instanceRegistry: InstanceRegistering
+    private weak var userpilot: Userpilot?
+    private let scanCache: SwiftUIScanCache
 
     /// Protects pending SwiftUI screen state and SDK-content dismissal suppression.
     private let screenCaptureStateLock = NSLock()
@@ -82,13 +86,18 @@ internal class AutoCaptureCoordinator {
 
     /// Pauses this instance without disabling capture for other registered instances.
     private let stoppedState = AtomicReference<Bool>(false)
+    private let interactionDebounce = EventDebounce<() -> Void>(
+        delay: Constants.AutoCapture.interactionDebounceInterval
+    ) { $0() }
 
     /// Resolves instance dependencies and installs the configured native hooks; wrappers provide their own events.
     init(container: DIContainer) {
         self.config = container.resolve(Userpilot.Config.self)
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
-        self.registry = container.resolve(InstanceRegistering.self)
+        self.instanceRegistry = container.resolve(InstanceRegistering.self)
+        self.userpilot = container.owner?.canonicalInstance
+        self.scanCache = container.resolve(SwiftUIScanCache.self)
 
         guard !config.isWrapperSDK else { return }
 
@@ -113,6 +122,8 @@ internal class AutoCaptureCoordinator {
         }
     }
 
+    deinit { interactionDebounce.shutdown() }
+
     /// Installs view-controller lifecycle and tab-selection hooks.
     private func setupAutoCaptureScreens() {
         AutoCaptureSwizzler.swizzleUIKitScreenTracking()
@@ -132,31 +143,29 @@ internal class AutoCaptureCoordinator {
     /// The cache itself defers any scan requested before the app becomes active.
     private func setupSwiftUITitleCapture() {
         AutoCaptureSwizzler.swizzleSwiftUIScanScheduling()
-        SwiftUIScanCache.shared.start()
-        // Initialization can occur after the screen appeared. Resolve its owner after this
-        // coordinator finishes constructing, then bind the initial scan to that window.
+        scanCache.start()
+        // Defer until construction finishes, keeping the requester: its child screen may have
+        // appeared already under another owner's root. The cache rechecks the requester's gates.
         performOn(.main) { [weak self] in
-            guard let self, let window = SwiftUIScanCache.keyVisibleWindow(),
-                  let owner = InstanceResolver.shared.target(forSource: window),
-                  owner.config === self.config else { return }
-            SwiftUIScanCache.shared.scheduleRescan(reason: .screenAppeared, window: window, owner: owner)
+            guard let self, let owner = userpilot,
+                  instanceRegistry.isRegistered(owner),
+                  let window = SwiftUIScanCache.keyVisibleWindow() else { return }
+            scanCache.scheduleRescan(reason: .screenAppeared, window: window, owner: owner)
         }
     }
 }
 
 extension AutoCaptureCoordinator: AutoCaptureCoordinating {
 
-    // MARK: - Screen Tracking
-
     /// Applies stop/suppression gates, flushes interactions, then routes dialogs or native screens.
     func trackScreen(_ screen: ScreenTrackingPayload) {
         tryCatch {
-            guard !isStopped else { return }
+            guard config.enableScreenAutoCapture, !isStopped else { return }
             guard !shouldSuppressScreenAutoCapture else { return }
 
             // Flush debounced text changes before navigation can attribute them to the new screen.
             if config.enableInteractionAutoCapture {
-                InteractionEventCache.flushPendingInteractions()
+                flushPendingInteractions()
             }
 
             if screen.isDialogPresentation {
@@ -182,8 +191,6 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
         }
     }
 
-    // MARK: - Tab Tracking
-
     func handleTabSelected(name tabName: String, index tabIndex: Int, screenClass: String) {
         guard isInteractionTrackingActive else { return }
 
@@ -197,17 +204,15 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
             framework: config.appFramework
         )
 
-        let event = makeEvent(
+        let event = Event(
             type: EventType.autoCaptureEvent,
             properties: properties,
-            screen: screen,
+            screen: screen?.toEventDictionary(),
             interactionEventName: interactionType.toInteractionEventType().rawValue
         )
 
         publishWithForwarding(event)
     }
-
-    // MARK: - Interaction Tracking
 
     func handleInteractionEvent(_ interaction: InteractionPayload) {
         guard isInteractionTrackingActive else { return }
@@ -221,15 +226,29 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
         handleInteractionEvent(payload)
     }
 
-    // MARK: - Stop / Resume (per instance)
-
-    /// `true` while this instance's capture is paused. Thread-safe.
-    var isStopped: Bool {
-        stoppedState.value
+    /// Admission and stop share the state lock; queued delivery invokes actions outside it on main.
+    func scheduleInteraction(key: String, action: @escaping () -> Void) {
+        stoppedState.read { isStopped in
+            guard !isStopped else { return }
+            interactionDebounce.schedule(key: key, value: { [weak self] in
+                guard let self, !self.isStopped else { return }
+                action()
+            })
+        }
     }
 
+    func flushPendingInteractions() {
+        interactionDebounce.flushPending()
+    }
+
+    /// `true` while this instance's capture is paused. Thread-safe.
+    var isStopped: Bool { stoppedState.value }
+
     func stopAutoCapture() {
-        stoppedState.value = true
+        stoppedState.update { _ in
+            interactionDebounce.shutdown()
+            return true
+        }
         screenCaptureStateLock.withLock {
             pendingSwiftUIScreenID = nil
             swiftUIScreenDelay.cancelDelay()
@@ -240,8 +259,6 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
         stoppedState.value = false
     }
 }
-
-// MARK: - Private Helpers
 
 private extension AutoCaptureCoordinator {
 
@@ -289,7 +306,8 @@ private extension AutoCaptureCoordinator {
             }
             return true
         }
-        guard shouldPublish, !isStopped else { return }
+        guard shouldPublish, !isStopped,
+              instanceRegistry.instance(forToken: config.token)?.config === config else { return }
         publishScreen(screen)
     }
 
@@ -305,10 +323,10 @@ private extension AutoCaptureCoordinator {
 
         screenNameTracker.updateScreen(with: screen)
 
-        let event = makeEvent(
+        let event = Event(
             type: EventType.screen(screen.screenEventIdentity(framework: config.appFramework)),
             properties: screen.toDictionary(),
-            screen: screen
+            screen: screen.toEventDictionary()
         )
 
         publishWithForwarding(event)
@@ -320,10 +338,10 @@ private extension AutoCaptureCoordinator {
         let screen = screenNameTracker.getCurrentPayload()
         let properties = interaction.buildEventProperties(screen: screen, framework: config.appFramework)
 
-        let event = makeEvent(
+        let event = Event(
             type: EventType.autoCaptureEvent,
             properties: properties,
-            screen: screen,
+            screen: screen?.toEventDictionary(),
             interactionEventName: interaction.interactionType.toInteractionEventType().rawValue
         )
         publishWithForwarding(event)
@@ -336,7 +354,7 @@ private extension AutoCaptureCoordinator {
     }
 
     private func forwardToDefaultIfNeeded(_ event: Event) {
-        guard let defaultInstance = registry.default else { return }
+        guard let defaultInstance = instanceRegistry.default else { return }
         // This instance is the default → the event is already its own; do not self-forward.
         guard defaultInstance.config.token != config.token else { return }
         guard defaultInstance.config.allowReceiveEventsFromExternalSource else { return }
@@ -350,22 +368,6 @@ private extension AutoCaptureCoordinator {
         let payload = InteractionPayload.fromDialog(screen)
         publishAutoCaptureEvent(payload)
     }
-
-    /// Creates an event using the supplied screen snapshot; analytics owns decoration.
-    func makeEvent(
-        type: EventType,
-        properties: [String: Any],
-        screen: ScreenTrackingPayload?,
-        interactionEventName: String? = nil
-    ) -> Event {
-        Event(
-            type: type,
-            properties: properties,
-            screen: screen.map { $0.toEventDictionary() },
-            interactionEventName: interactionEventName
-        )
-    }
-
 }
 
 // MARK: Auto capture wrappers APIs

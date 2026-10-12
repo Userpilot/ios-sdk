@@ -362,7 +362,7 @@ final class SwiftUIReflectionTests: XCTestCase {
 final class SwiftUITitleResolverStageTests: XCTestCase {
 
     override func tearDown() {
-        SwiftUIScanCache.shared.clearCaches()
+        UserpilotRuntime.shared.scanCache.clearCaches()
         super.tearDown()
     }
 
@@ -394,7 +394,7 @@ final class SwiftUITitleResolverStageTests: XCTestCase {
             SwiftUIReflection.ViewRecord(title: "Add to Cart", viewType: "Button", depth: 0, order: 1),
             SwiftUIReflection.ViewRecord(title: "Custom Styled Button", viewType: "Button", depth: 0, order: 2)
         ]
-        SwiftUIScanCache.shared._testSeedSnapshot(textMap: unmatchable, inventory: inventory)
+        UserpilotRuntime.shared.scanCache._testSeedSnapshot(textMap: unmatchable, inventory: inventory)
 
         let title = SwiftUITitleResolver.shared.resolveTitle(at: point, in: window, captureAccessibility: false)
 

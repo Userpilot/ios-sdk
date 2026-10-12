@@ -38,12 +38,7 @@ public class Userpilot: NSObject {
     /// SDK-internal call sites use this as the fallback for unattributed
     /// autocapture and screen-tracking work.
     internal static var shared: Userpilot? {
-        return Registry.shared.default
-    }
-
-    /// Returns `true` if the SDK has been initialized and the default instance is available.
-    internal static var isInitialized: Bool {
-        return Registry.shared.default != nil
+        return UserpilotRuntime.shared.instanceRegistry.default
     }
 
     /// Look up a registered `Userpilot` instance by its configured token.
@@ -54,7 +49,7 @@ public class Userpilot: NSObject {
     /// Useful for code paths that need to reach a specific tenant from outside the
     /// callsite that created it (e.g. callbacks from a vendor SDK back into Userpilot).
     internal static func instance(forToken token: String) -> Userpilot? {
-        return Registry.shared.instance(forToken: token)
+        return UserpilotRuntime.shared.instanceRegistry.instance(forToken: token)
     }
 
     // MARK: - Properties
@@ -69,9 +64,8 @@ public class Userpilot: NSObject {
     /// Services keep weak owner references; retaining only the container would leave those references empty.
     private var adoptedInstance: Userpilot?
 
-    /// Keeps lookup, registration and startup together, matching Android's synchronized factory.
-    /// Startup only schedules UI work; it must never synchronously wait for main while holding this lock.
-    private static let initializationLock = NSRecursiveLock()
+    /// Same-token facades share one registered owner, including native UI attachment and queued capture.
+    internal var canonicalInstance: Userpilot { adoptedInstance ?? self }
 
     // Resolved lazily, never in `init`: the idempotent initializer may swap `container` for an
     // already-registered instance's, and these must bind to that one.
@@ -182,50 +176,20 @@ public class Userpilot: NSObject {
         // ensures only one tenant ever absorbs the legacy v1 suite.
         StorageMigrator.runIfNeeded(forToken: config.token)
 
-        Self.initializationLock.withLock { initializeInstance() }
+        let owner = UserpilotRuntime.shared.initializeInstance(
+            self,
+            configure: { initializeContainer() },
+            start: { startServices() }
+        )
+        if owner !== self {
+            adoptedInstance = owner
+            container = owner.container
+            self.config = owner.config
+        }
     }
 
-    /// Called under initializationLock; only the fresh owner starts services and registers native observers.
-    private func initializeInstance() {
-        // Idempotent: if a Userpilot for this token already exists, adopt its
-        // container and return. The new wrapper still resolves the same
-        // services (analytics, socket, storage, etc.) as the original — the
-        // existing instance and this returned facade publish through the same
-        // underlying machinery. Callers that hold the original reference and
-        // the one returned here both observe the same state.
-        if let existing = Registry.shared.instance(forToken: config.token) {
-            let suppliedConfig = config
-            adoptedInstance = existing
-            container = existing.container
-            config = existing.config
-            suppliedConfig.logger.error(
-                // swiftlint:disable:next line_length
-                "⚠️ Userpilot already initialized for token %{public}@; returning the existing instance. The supplied config was discarded.",
-                config.token
-            )
-            return
-        }
-
-        // Default-instance resolution: if `Config.defaultInstance(true)` was set
-        // (the default), this instance claims the default role (first claim wins).
-        // When the role is already held, the claim is rejected. See
-        // `Registry.register(_:)`.
-        // The registry is a pure data structure, so when it rejects a second
-        // `isDefault` claim it returns the existing claimant's token and the
-        // warning is emitted here at the call site.
-        if let existingDefaultToken = Registry.shared.register(self) {
-            config.logger.error(
-                // swiftlint:disable:next line_length
-                "⚠️ isDefault is already claimed by token %{public}@; ignoring isDefault=true on token %{public}@. Only one Userpilot instance per process can be the default; unattributed events will continue to route to %{public}@.",
-                existingDefaultToken,
-                config.token,
-                existingDefaultToken
-            )
-        }
-
-        // Set up the dependency container and register required services
-        initializeContainer()
-
+    /// Called once by the runtime after registration; native startup order remains per instance.
+    private func startServices() {
         // Register pushNotificationMonitoring for push notification auto config
         PushNotificationAutoConfig.register(observer: pushNotificationMonitor)
 
@@ -245,7 +209,7 @@ public class Userpilot: NSObject {
     }
 
     deinit {
-        Registry.shared.unregister(self)
+        UserpilotRuntime.shared.removeInstance(self)
         releaseExperienceOverlayWindowOnMain()
     }
 
@@ -275,11 +239,11 @@ public class Userpilot: NSObject {
     internal func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
-        // Inject the process-wide registry as an abstraction so consumers
-        // (e.g. `AutoCaptureCoordinator`) resolve it instead of reaching for
-        // `Registry.shared` directly. The value is the shared singleton, so
-        // every instance's container hands back the same registry.
-        container.register(InstanceRegistering.self, value: Registry.shared)
+        let runtime = UserpilotRuntime.shared
+        container.register(InstanceRegistering.self, value: runtime.instanceRegistry)
+        container.register(InstanceResolving.self, value: runtime.instanceResolver)
+        container.register(AutoCaptureIntegrating.self, value: runtime.captureIntegration)
+        container.register(SwiftUIScanCache.self, value: runtime.scanCache)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         // One implementation per delivery contract.
@@ -417,7 +381,7 @@ extension Userpilot {
     /// Automatic screen capture flushes through the coordinator instead.
     private func flushPendingInteractionCaptures() {
         guard config.enableInteractionAutoCapture else { return }
-        InteractionEventCache.flushPendingInteractions()
+        autoCaptureCoordinator.flushPendingInteractions()
     }
 
     /**
@@ -661,6 +625,50 @@ extension Userpilot {
 
 }
 
+// MARK: - Native UI ownership
+
+extension Userpilot {
+
+    /// Assigns this view and its descendants to this instance for autocapture.
+    /// Nested bindings take precedence. Passing a UIWindow owns its native subtree.
+    /// Call on main before displaying the view; background calls are enqueued on main.
+    @objc public func attachToView(_ view: UIView) {
+        performOnMain { [weak self, weak view] in
+            guard let self, let view else { return }
+            view.attachUserpilotOwner(self)
+        }
+    }
+
+    /// Releases this instance's binding on the view, or a binding whose owner was released.
+    /// Configured scopes or the nearest remaining binding then apply; another live
+    /// instance's binding is preserved.
+    @objc public func detachFromView(_ view: UIView) {
+        performOnMain { [weak self, weak view] in
+            guard let self, let view else { return }
+            view.detachUserpilotOwner(self)
+        }
+    }
+
+    /// Assigns a controller and its native subtree to this instance without loading
+    /// its view. Use the screen's UIHostingController to own a complete SwiftUI screen.
+    /// Call on main before presentation; background calls are enqueued on main.
+    @objc public func attachToViewController(_ viewController: UIViewController) {
+        performOnMain { [weak self, weak viewController] in
+            guard let self, let viewController else { return }
+            viewController.attachUserpilotOwner(self)
+        }
+    }
+
+    /// Releases this instance's controller binding, or one whose owner was released,
+    /// allowing ancestor bindings or configured scopes to apply again.
+    @objc public func detachFromViewController(_ viewController: UIViewController) {
+        performOnMain { [weak self, weak viewController] in
+            guard let self, let viewController else { return }
+            viewController.detachUserpilotOwner(self)
+        }
+    }
+}
+
 // MARK: - Deep links
 
 extension Userpilot {
@@ -685,4 +693,5 @@ extension Userpilot {
     }
 
 }
+
 // swiftlint:enable file_length

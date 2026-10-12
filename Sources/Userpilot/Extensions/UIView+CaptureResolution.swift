@@ -73,7 +73,7 @@ internal extension UIView {
         // policy follows that tenant's config, not the host's. Critical for
         // multi-instance integrations: the host might allow text capture while
         // the embedded SDK requires redaction (or vice versa).
-        if let config = InstanceResolver.shared.target(forSource: self)?.config {
+        if let config = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self)?.config {
             return !config.enableInteractionTextCapture
         }
         return false
@@ -124,7 +124,7 @@ internal extension UIView {
 
     /// True when the owning instance has `enableInteractionAccessibilityLabelCapture` set to `false`.
     func isInteractionAccessibilityLabelCaptureDisabled() -> Bool {
-        if let config = InstanceResolver.shared.target(forSource: self)?.config {
+        if let config = UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self)?.config {
             return !config.enableInteractionAccessibilityLabelCapture
         }
         return false

@@ -90,7 +90,7 @@ private final class SwiftUIScanPolicyCarrierView: UIView {
 
         if mode == .scanOnce, !didScanOnce {
             didScanOnce = true
-            SwiftUIScanCache.shared.scanOnceCurrentScreen(for: host)
+            UserpilotRuntime.shared.scanCache.scanOnceCurrentScreen(for: host)
         }
     }
 }

@@ -145,6 +145,8 @@ final class AutoCaptureCoordinatorPayloadTests: XCTestCase {
         dialog.isDialogPresentation = true
         dialog.alertTitle = "Confirm"
         dialog.alertMessage = "Continue?"
+        // Native hooks deliver dialogs through screen capture, so its gate applies.
+        userpilot.config.enableScreenAutoCapture = true
 
         coordinator.trackScreen(dialog)
 
@@ -170,6 +172,19 @@ final class AutoCaptureCoordinatorPayloadTests: XCTestCase {
 
         XCTAssertTrue(events.isEmpty)
         XCTAssertEqual(tracker.reads, 0)
+    }
+
+    func testScreenCaptureDisabled_dropsScreensAndDialogsAtTheCoordinator() {
+        // Hooks call the resolved owner's coordinator directly, so the owner's screen gate lives here.
+        var dialog = ScreenTrackingPayload(screenTitle: "UIAlertController")
+        dialog.isDialogPresentation = true
+        let screen = ScreenTrackingPayload(screenTitle: "SettingsVC")
+
+        coordinator.trackScreen(dialog)
+        coordinator.trackScreen(screen)
+
+        XCTAssertTrue(events.isEmpty)
+        XCTAssertEqual(tracker.payload?.screenClass, "HomeVC", "A disabled owner must not replace screen context")
     }
 }
 

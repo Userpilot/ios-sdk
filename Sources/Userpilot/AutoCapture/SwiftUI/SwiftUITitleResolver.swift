@@ -72,7 +72,7 @@ internal final class SwiftUITitleResolver {
         }
 
         // Stage B — display-list text map ∩ interactive inventory.
-        let (textMap, interactive) = SwiftUIScanCache.shared.textResolution(logger: logger)
+        let (textMap, interactive) = UserpilotRuntime.shared.scanCache.textResolution(logger: logger)
         if !textMap.isEmpty,
             let title = textMapTitle(
                 at: pointInWindow, in: window,
@@ -101,7 +101,7 @@ internal final class SwiftUITitleResolver {
     }
 
     private func skipsAccessibility(hit: UIView, logger: Logging?) -> Bool {
-        let (_, inventoryHost) = SwiftUIScanCache.shared.inventory(logger: logger)
+        let (_, inventoryHost) = UserpilotRuntime.shared.scanCache.inventory(logger: logger)
         let resolvedHost = inventoryHost ?? hit.up_nearestViewController
         return resolvedHost.map { SwiftUIScanPolicy.shouldSkipAccessibility($0) } ?? false
     }

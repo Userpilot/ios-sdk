@@ -57,7 +57,9 @@ private struct UserpilotSwiftUIViewModifier: ViewModifier {
         content.onAppear {
             // Explicit param wins; otherwise route to the default. If neither
             // exists (SDK not initialised), the event is a silent no-op.
-            (userpilot ?? Userpilot.Registry.shared.default)?.screen(screenEventName)
+            let registry = UserpilotRuntime.shared.instanceRegistry
+            guard let owner = userpilot ?? registry.default, registry.isRegistered(owner) else { return }
+            owner.screen(screenEventName)
         }
     }
 }
