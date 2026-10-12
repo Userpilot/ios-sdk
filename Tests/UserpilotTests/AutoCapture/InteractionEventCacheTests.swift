@@ -13,15 +13,13 @@ final class InteractionEventCacheTests: XCTestCase {
 
     private var userpilot: MockUserpilot!
 
-    /// Delivered lengths are remembered process-wide by owner and view identity, and identities can
-    /// be reused after deallocation. A per-test base keeps earlier tests from deduplicating these.
-    private var length = 0
+    /// Delivered lengths live on each field, so every test starts from fresh fields with no history.
+    private let length = 12
 
     private var debounceTimeout: TimeInterval { Constants.AutoCapture.interactionDebounceInterval + 0.5 }
 
     override func setUp() {
         super.setUp()
-        length = Int.random(in: 10_000...1_000_000) * 10
         userpilot = makeOwner()
     }
 
@@ -112,6 +110,36 @@ final class InteractionEventCacheTests: XCTestCase {
                        "The repeated length is dropped only for the view that already delivered it")
         XCTAssertEqual(otherPublished.textLengths, [length],
                        "Another owner's delivery history must not suppress this owner's text change")
+    }
+
+    /// Screens are rebuilt all the time, and a new field can be allocated at a released field's
+    /// address. It starts with no delivery history, so its first text change publishes.
+    func testFieldAtAReleasedFieldsAddress_doesNotInheritItsDeliveredLength() throws {
+        let published = record(userpilot)
+        weak var released: UITextField?
+        var releasedAddress: ObjectIdentifier?
+        autoreleasepool {
+            let closedField = UITextField()
+            released = closedField
+            releasedAddress = ObjectIdentifier(closedField)
+            send(length, for: closedField, owner: userpilot)
+            userpilot.autoCaptureCoordinator.flushPendingInteractions()
+        }
+        // The allocator normally hands the freed block straight to the next field.
+        var reusingField: UITextField?
+        for _ in 0..<20 where reusingField == nil {
+            autoreleasepool {
+                let candidate = UITextField()
+                if ObjectIdentifier(candidate) == releasedAddress { reusingField = candidate }
+            }
+        }
+        XCTAssertNil(released, "Precondition: the first field was deallocated")
+        let newField = try XCTUnwrap(reusingField, "Precondition: a new field reused the released field's address")
+
+        send(length, for: newField, owner: userpilot)
+        userpilot.autoCaptureCoordinator.flushPendingInteractions()
+
+        XCTAssertEqual(published.textLengths, [length, length])
     }
 
     func testDuplicateFacade_sharesTheOwnersPendingInteraction() {
@@ -245,18 +273,23 @@ final class InteractionEventCacheTests: XCTestCase {
         wait(for: [noDelivery], timeout: debounceTimeout)
     }
 
-    func testPendingInteraction_doesNotRetainItsOwner() {
+    func testPendingInteraction_doesNotRetainItsOwnerOrField() {
         weak var releasedOwner: MockUserpilot?
+        weak var releasedField: UITextField?
         let pending: PendingInteraction = autoreleasepool {
             let owner = makeOwner()
+            let field = UITextField()
             releasedOwner = owner
+            releasedField = field
             return PendingInteraction(
-                payload: textPayload(length: length), textLengthForDedupe: length, debounceKey: "test", owner: owner
+                payload: textPayload(length: length), textLengthForDedupe: length, owner: owner, view: field
             )
         }
 
         XCTAssertNil(releasedOwner)
+        XCTAssertNil(releasedField)
         XCTAssertNil(pending.owner)
+        XCTAssertNil(pending.view)
     }
 
     // MARK: - Helpers

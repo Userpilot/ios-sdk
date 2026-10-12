@@ -10,17 +10,16 @@
 //
 //  For text inputs, if `text_length` matches the last delivered event for that field, the new notification
 //  is ignored (e.g. spurious `textDidChange` when tapping another control). Last length is updated when the
-//  debounced delivery runs on the main queue, before publishing the interaction.
+//  debounced delivery runs on the main queue, before publishing the interaction. Delivered lengths live on
+//  the field itself, so they are released with it and never carry over to a field reusing its address.
 //
 
 import UIKit
 
 internal enum InteractionEventCache {
 
-    private static let lastDeliveredLock = NSLock()
-    private static var lastDeliveredTextLengthByDebounceKey: [String: Int] = [:]
-
     /// Schedules sending the interaction after `interactionDebounceInterval` of quiet time for this view.
+    /// Main thread only, like the UIKit callers that capture the payload.
     ///
     /// - Parameter textLengthForDedupe: For text field / text view, pass current `text.count` so a new
     ///   notification with the same length as the last delivered event is ignored. Omit for sliders.
@@ -33,16 +32,16 @@ internal enum InteractionEventCache {
         guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owner) else { return }
         let key = debounceKey(for: view, owner: owner.canonicalInstance)
 
-        if let length = textLengthForDedupe {
-            let last = lastDeliveredLock.withLock { lastDeliveredTextLengthByDebounceKey[key] }
-            guard last != length else { return }
+        if let length = textLengthForDedupe,
+           view.userpilotDeliveredTextLengths.byOwner[ObjectIdentifier(owner.canonicalInstance)] == length {
+            return
         }
 
         let envelope = PendingInteraction(
             payload: payload,
             textLengthForDedupe: textLengthForDedupe,
-            debounceKey: key,
-            owner: owner
+            owner: owner,
+            view: view
         )
         owner.autoCaptureCoordinator.scheduleInteraction(key: key) { deliver(envelope) }
     }
@@ -53,14 +52,30 @@ internal enum InteractionEventCache {
               UserpilotRuntime.shared.instanceRegistry.isRegistered(owner),
               !owner.autoCaptureCoordinator.isStopped else { return }
         if let length = envelope.textLengthForDedupe {
-            lastDeliveredLock.withLock {
-                lastDeliveredTextLengthByDebounceKey[envelope.debounceKey] = length
-            }
+            envelope.view?.userpilotDeliveredTextLengths.byOwner[ObjectIdentifier(owner)] = length
         }
         owner.autoCaptureCoordinator.handleInteractionEvent(envelope.payload)
     }
 
     private static func debounceKey(for view: UIView, owner: Userpilot) -> String {
         "interaction_debounce_\(ObjectIdentifier(owner))_\(ObjectIdentifier(view))"
+    }
+}
+
+/// The last text length a field delivered, per owner.
+private final class DeliveredTextLengths {
+    var byOwner: [ObjectIdentifier: Int] = [:]
+}
+
+private var deliveredTextLengthsKey: UInt8 = 0
+
+private extension UIView {
+    var userpilotDeliveredTextLengths: DeliveredTextLengths {
+        if let lengths = objc_getAssociatedObject(self, &deliveredTextLengthsKey) as? DeliveredTextLengths {
+            return lengths
+        }
+        let lengths = DeliveredTextLengths()
+        objc_setAssociatedObject(self, &deliveredTextLengthsKey, lengths, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return lengths
     }
 }
