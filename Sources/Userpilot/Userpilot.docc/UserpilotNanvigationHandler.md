@@ -22,7 +22,7 @@ For example:
 During the SDK initialization, pass a `navigationDelegate` to handle deep link navigation:
 
 ```swift
-Userpilot.setup(config: Userpilot.Config(token: appToken)
+Userpilot(config: Userpilot.Config(token: appToken)
     .setNavigationHandler(navigationDelegate: self))
 ```
 

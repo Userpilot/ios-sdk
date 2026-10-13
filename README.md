@@ -80,14 +80,14 @@ To use Userpilot, initialize it once in your App Delegate or Scene Delegate duri
 
 func application(_ application: UIApplication,
                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>"))
+    userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>"))
 }
 
 ```
 
-`Userpilot.setup(config:)` is safe to call more than once: for a token that is already set up it returns the same instance and ignores the new config. Objective-C: `[Userpilot setupWithConfig:config]`. Keep the returned instance in a stored property. Duplicate warnings follow the original logging configuration. Surrounding token whitespace is removed once before registration and service startup.
+Create and retain one Userpilot instance per app token. Repeated initialization with the same live token is unsupported; reuse your stored instance. Use different tokens for independent instances. Surrounding token whitespace is removed once before registration and service startup.
 
-This branch removes the public initializer. See the [initialization migration](Sources/Userpilot/Userpilot.docc/MultiInstance.md#migration-from-the-public-initializer) before upgrading an app or native wrapper.
+Objective-C: `[[Userpilot alloc] initWithConfig:config]`. The original native initialization APIs remain supported by apps and wrappers.
 
 ### Using the SDK
 
@@ -228,7 +228,7 @@ Interaction value capture is disabled by default. Call `.enableInteractionValueC
 SwiftUI button autocapture (iOS 26 and later) is disabled by default. Call `.enableSwiftUIButtonAutoCapture(true)` with interaction autocapture to capture one click per SwiftUI tap together with the button's title. See [SwiftUI button autocapture](Sources/Userpilot/Userpilot.docc/Autocapture.md#swiftui-button-autocapture).
 
 ```swift
-userpilot = Userpilot.setup(
+userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
         .logging(enabled: true) // Enable or disable logging.
         .enableUseInAppBrowser(true) // Enable Open external link In-app browser using SFSafariViewController.

@@ -11,7 +11,7 @@ This guide covers configuration for both UIKit and SwiftUI, customizing screen c
 Autocapture is **off by default**. Enable it when building your ``Userpilot/Config`` and initializing Userpilot. Retain the resulting instance in your app or integration owner for its intended lifetime.
 
 ```swift
-let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .logging(enabled: true)
     .appFramework(.UIKit)  // UIKit-only; use .Hybrid for hybrid UIKit + SwiftUI apps
     .enableScreenAutoCapture(true)   // Capture screen views automatically
@@ -98,7 +98,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 Example: disable all text and accessibility label capture for maximum privacy:
 
 ```swift
-let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.UIKit)  // Specify UIKit framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
@@ -294,7 +294,7 @@ The Userpilot SDK supports automatic capture in SwiftUI apps. SwiftUI autocaptur
 For SwiftUI apps, set the app framework in your configuration:
 
 ```swift
-let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.SwiftUI)  // Specify SwiftUI framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
@@ -541,7 +541,7 @@ Use one retained `Userpilot` instance for one account token. A second UI framewo
 For a hybrid app using UIKit and SwiftUI, configure `.appFramework(.Hybrid)` and enable interaction autocapture. Enable `.enableSwiftUIButtonAutoCapture(true)` for the opt-in iOS 26+ button-title path. Supported UIKit controls continue through the UIKit hooks; SwiftUI controls use hosting-view taps. Selecting `.UIKit` prevents the SwiftUI title scanner from running, even if SwiftUI screens are embedded later.
 
 ```swift
-let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.Hybrid) // Capture UIKit and SwiftUI using each surface’s native behavior.
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)

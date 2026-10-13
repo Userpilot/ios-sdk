@@ -233,7 +233,7 @@ available for review. Automated ownership tests and focused two-account runtime 
 
 | Case | Scenario | Expected result on both platforms |
 | --- | --- | --- |
-| MI-001 | Initialize the same token again, including concurrent calls | Reuse the first configuration and service graph. Do not start another socket, tracker or observer set. Keep the original logging configuration for duplicate warnings. `setup` returns the registered instance itself; surrounding token whitespace is removed once at the initialization input boundary; registration, storage, and socket configuration use that same token. |
+| MI-001 | Initialize and retain one instance per app token | Each supported initialization creates and registers its own service graph. Repeated initialization with the same live token is unsupported client integration; callers reuse their stored instance. Surrounding token whitespace is removed once at the input boundary, before storage and service startup. |
 | MI-002 | Initialize different tokens | Keep identity, session flags, analytics queues, transport, presentation and storage independent. |
 | MI-003 | Register a default, then another instance requests the default role | Keep the first claimant, preserve the existing warning, and still register the second instance for its claimed UI. |
 | MI-004 | One non-default instance owns the originating UI | Route to that owner even when there is no default. Instance count never bypasses ownership. |
@@ -254,10 +254,9 @@ available for review. Automated ownership tests and focused two-account runtime 
 
 Native differences are deliberate:
 
-- `Userpilot.setup(config:)` (iOS) and `Userpilot.setup(context, token)` (Android) return the
-  canonical object itself. Android's top-level `Userpilot(context, token)` factory delegates to `setup`.
-  iOS construction is internal; apps and native wrappers must migrate from `Userpilot(config:)`
-  to `Userpilot.setup(config:)`. This breaking iOS change requires a major release and wrapper migration.
+- iOS uses `Userpilot(config:)`; Android uses the top-level `Userpilot(context, token)` factory.
+  Both initialize a new instance with its own services. Callers initialize once per token and
+  retain that instance. The original native initialization signatures remain available to wrappers.
 - iOS registrations are weak and retire with ARC. Android registrations hold instances until the
   runtime's internal removal path closes the matching Koin scope. Logout is not disposal.
 - UIKit resolves explicit responder bindings, then controller class, window and bundle scopes.

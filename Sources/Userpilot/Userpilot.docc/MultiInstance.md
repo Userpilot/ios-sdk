@@ -10,7 +10,7 @@ same process**. The most common reason to need this is the "vendor SDK" pattern:
 
 > [!IMPORTANT]
 > **If you only have one Userpilot instance in your app, nothing changes.**
-> Keep using the `Userpilot` instance returned by `Userpilot.setup(config:)`. The SDK
+> Keep using the `Userpilot` instance returned by `Userpilot(config:)`. The SDK
 > still resolves unattributed autocapture and screen-tracking events through the
 > instance that claimed the default role (`isDefault`, which defaults to `true`).
 
@@ -20,18 +20,18 @@ same process**. The most common reason to need this is the "vendor SDK" pattern:
 
 | Scenario | Use |
 | --- | --- |
-| Single instance (host app only) | `Userpilot.setup(config:)` — `isDefault` defaults to `true`, so the host claims default automatically |
-| Vendor SDK that embeds Userpilot | `Userpilot.setup(config:)` inside the vendor's facade with `.defaultInstance(false)` |
-| Re-initialise idempotently | `Userpilot.setup(config:)` — returns the registered instance itself for the same token |
+| Single instance (host app only) | `Userpilot(config:)` — `isDefault` defaults to `true`, so the host claims default automatically |
+| Vendor SDK that embeds Userpilot | `Userpilot(config:)` inside the vendor's facade with `.defaultInstance(false)` |
+| Subsequent SDK calls | Reuse the stored instance; initialize only once per app token |
 
 `Userpilot.Config.isDefault` defaults to **`true`**. The host application does not
 need to call `.defaultInstance(true)` — a plain `Userpilot.Config(token:)` already
 claims the default role. Embedded vendor SDKs **MUST** call
 `.defaultInstance(false)` so they do not compete for that role.
 
-Use `Userpilot.setup(config:)` to create or retrieve an instance. Because `isDefault`
+Use `Userpilot(config:)` to initialize an instance. Because `isDefault`
 defaults to `true`, a new instance claims the default role when it is unclaimed.
-Repeated setup for the same token returns the existing object and preserves its configuration.
+Create and retain one Userpilot instance per app token. Repeated initialization with the same live token is unsupported; reuse your stored instance. Use different tokens for independent instances.
 A different token cannot displace an existing default claimant; the original warning is logged.
 
 ---
@@ -80,7 +80,7 @@ let config = Userpilot.Config(token: "YOUR_TOKEN")
     .enableScreenAutoCapture()
     .enableInteractionAutoCapture()
 
-let userpilot = Userpilot.setup(config: config)        // isDefault defaults to true → claims default
+let userpilot = Userpilot(config: config)        // isDefault defaults to true → claims default
 userpilot.identify(userId: "user-123")
 userpilot.track(eventName: "Added to Cart")
 ```
@@ -95,9 +95,8 @@ No `.defaultInstance(true)` is required — `isDefault` already defaults to
 ### 1. Vendor SDK that embeds Userpilot
 
 If you ship an SDK that uses Userpilot internally, initialise with
-`Userpilot.setup(config:)` from inside your SDK. The factory is **idempotent**, so
-re-calls with the same token reuse the existing owner instead of replacing
-the host app's default.
+`Userpilot(config:)` once from inside your SDK and retain the instance. Use your own app token
+and `.defaultInstance(false)` to keep your SDK separate from the host app.
 
 ```swift
 public final class AcmeSDK {
@@ -113,7 +112,7 @@ public final class AcmeSDK {
             // ↓ tells autocapture which UI belongs to this instance
             .attach(bundles: [Bundle(for: AcmeSDK.self)])
 
-        userpilot = Userpilot.setup(config: config)
+        userpilot = Userpilot(config: config)
     }
 
     public func identifyAcmeUser(_ id: String) {
@@ -160,7 +159,7 @@ let config = Userpilot.Config(token: "HOST_APP_TOKEN")
     .enableInteractionAutoCapture()
     // no .defaultInstance(true) needed — isDefault defaults to true
 
-let userpilot = Userpilot.setup(config: config)         // claims default automatically
+let userpilot = Userpilot(config: config)         // claims default automatically
 AcmeSDK.shared.identifyAcmeUser("…")  // vendor instance kept alive by AcmeSDK
 ```
 
@@ -358,38 +357,27 @@ attributed to an arbitrary tenant. Keep the default of `true` on the host app
 so it owns un-anchored events.
 
 Surviving instances are **not** auto-promoted when the default is torn down. A newly
-created instance can claim the vacant role with `isDefault = true`. Repeating setup for
-an existing instance preserves its original configuration and default claim.
+created instance can claim the vacant role with `isDefault = true`.
 
 ---
 
-## Idempotent initialisation
+## Initialization and lifetime
 
-`Userpilot.setup(config:)` is a get-or-create factory, matching Android's
-`Userpilot.setup(context, token)`. When an instance for the token is already registered,
-it returns that same instance (`===`), discards the supplied config and uses the original logger for the warning.
-The token is trimmed once when creating `Userpilot.Config`, before registry, storage, or socket use. Concurrent calls for one
-token return one instance:
+Create and retain one Userpilot instance per app token. Repeated initialization with the same live token is unsupported; reuse your stored instance. Use different tokens for independent instances.
 
 ```swift
-let a = Userpilot.setup(config: .init(token: "HOST"))
-let b = Userpilot.setup(config: .init(token: " HOST "))
-// a === b — the second config is discarded and a diagnostic is logged.
+let userpilot = Userpilot(config: .init(token: "<APP_TOKEN>"))
 ```
 
-The returned instance owns its services, presentation window and weak delegates. Keep it in a
-stored property for the lifetime of the integration. Repeated setup returns that same object;
-its original `isDefault` and logging configuration stay unchanged.
+Objective-C: `[[Userpilot alloc] initWithConfig:config]`.
 
-### Migration from the public initializer
+`Userpilot.Config` trims surrounding token whitespace once. Initialization migrates storage,
+registers the owner, then builds and starts that instance's services. The instance owns its
+presentation window and weak delegates; the registry holds the instance weakly, so retain it
+in a stored property for the lifetime of the integration.
 
-This branch replaces the public initializer with `setup`. Swift callers change
-`Userpilot(config: config)` to `Userpilot.setup(config: config)`; Objective-C callers change
-`[[Userpilot alloc] initWithConfig:config]` to `[Userpilot setupWithConfig:config]`.
-
-This is a breaking API change and requires a major SDK release. Flutter, React Native,
-Capacitor, Cordova and MAUI native integrations must migrate their iOS initialization calls
-before adopting that release. Wrapper source changes are deferred to their own update.
+The original Swift initializer and Objective-C selector remain supported. Native wrappers
+using those entry points do not need an initialization API migration.
 
 ---
 
@@ -425,7 +413,7 @@ instances.
 
 If your app is upgrading from a Userpilot v1 SDK that wrote into
 `com.userpilot.storage.<bundleId>` (no token), the SDK runs a one-shot,
-idempotent migration the first time `Userpilot.setup(config:)` is called:
+idempotent migration the first time `Userpilot(config:)` is called:
 
 1. **Tenant suite already at the current migration version?** Skip. The
    per-tenant `userpilot.storage.migrationVersion` key records the highest
@@ -484,10 +472,8 @@ the exact stored version: bump `currentMigrationVersion` and gate the new step.
 - **SwiftUI ownership** uses an existing UIKit hosting boundary. Attach the screen's
   `UIHostingController` with `attachToViewController(_:)`. An explicit `userpilot:`
   on `View.userpilotScreen(...)` selects only that manual screen event's recipient.
-- **Two instances with the same token** never happens through the public
-  factory — `Userpilot.setup(config:)` is idempotent. Direct construction from
-  low-level test code or reflection that bypasses the factory will trigger
-  an `error`-level log on the second registration.
+- **Repeated initialization with the same live token** is unsupported. Initialize once and reuse
+  your stored instance.
 
 ---
 
@@ -501,7 +487,7 @@ let hostConfig = Userpilot.Config(token: "HOST")
     .logging(enabled: true)
     .enableScreenAutoCapture()
     .enableInteractionAutoCapture()
-let hostUserpilot = Userpilot.setup(config: hostConfig) // isDefault defaults to true → claims default
+let hostUserpilot = Userpilot(config: hostConfig) // isDefault defaults to true → claims default
 
 // AcmeSDK.swift (vendor SDK)
 let vendorConfig = Userpilot.Config(token: "ACME")
@@ -509,7 +495,7 @@ let vendorConfig = Userpilot.Config(token: "ACME")
     .enableScreenAutoCapture()
     .enableInteractionAutoCapture()
     .attach(bundles: [Bundle(for: AcmeSDK.self)])
-let acmeUserpilot = Userpilot.setup(config: vendorConfig)
+let acmeUserpilot = Userpilot(config: vendorConfig)
 
 // Both can identify, both autocapture, both can present experiences.
 hostUserpilot.identify(userId: "host-42")         // → HOST tenant
