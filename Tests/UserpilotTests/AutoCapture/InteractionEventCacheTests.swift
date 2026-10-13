@@ -142,21 +142,6 @@ final class InteractionEventCacheTests: XCTestCase {
         XCTAssertEqual(published.textLengths, [length, length])
     }
 
-    func testRepeatedSetup_sharesTheOwnersPendingInteraction() {
-        let sameInstance = MockUserpilot.make(config: Userpilot.Config(token: userpilot.config.token))
-        XCTAssertTrue(sameInstance === userpilot, "Precondition: same-token setup returns the owner")
-        let view = UITextField()
-        let published = record(userpilot)
-
-        send(length, targetClass: "FromFacade", for: view, owner: sameInstance)
-        send(length + 1, targetClass: "FromOwner", for: view, owner: userpilot)
-        userpilot.autoCaptureCoordinator.flushPendingInteractions()
-
-        XCTAssertEqual(published.textLengths, [length + 1], "One owner and view have one pending slot")
-        XCTAssertEqual(published.events.first?.properties?[Constants.AutoCapture.targetClass] as? String,
-                       "FromOwner")
-    }
-
     // MARK: - Per-owner isolation
 
     func testTwoOwnersOnSameView_eachDeliversItsOwnPendingInteraction() {

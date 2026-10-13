@@ -66,9 +66,9 @@ internal class LinkOpener: LinkOpening {
     /// Opens routing and delivers a deep link held from before the host was ready.
     ///
     /// A cold-start push tap is replayed from `PushNotificationAutoConfig.register(observer:)`,
-    /// which runs *inside* `Userpilot.setup` — before the caller has had any chance to assign
+    /// which runs *inside* `Userpilot.init(config:)` — before the caller has had any chance to assign
     /// `navigationDelegate`. Routing there sends the link nowhere, so `handleURL` holds it until
-    /// this is called: from `navigationDelegate`'s `didSet`, and one runloop turn after `setup`
+    /// this is called: from `navigationDelegate`'s `didSet`, and one runloop turn after `init`
     /// returns so hosts that never set a delegate still get the URL-opening fallback.
     ///
     /// Idempotent — later calls with nothing held do nothing.

@@ -17,7 +17,7 @@ static Userpilot *sharedInstance = nil;
         Config *config = [[Config alloc] initWithToken:@"<#TOKEN#>"];
         [config loggingWithEnabled:YES];
 
-        sharedInstance = [Userpilot setupWithConfig:config];
+        sharedInstance = [[Userpilot alloc] initWithConfig:config];
     }
 
     return sharedInstance;

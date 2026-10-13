@@ -31,7 +31,7 @@ class UserpilotManager {
     // MARK: - Userpilot SDK APIs
 
     func initialize() {
-        userpilot = Userpilot.setup(
+        userpilot = Userpilot(
             config: Userpilot.Config(token: "<#APP_TOKEN#>")
                 .logging(enabled: true)
                 .enableUseInAppBrowser()

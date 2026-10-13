@@ -27,7 +27,7 @@ public class Userpilot: NSObject {
     /// the default role.
     ///
     /// In single-instance integrations (the common case) this is the only
-    /// instance the host app created via `Userpilot.setup(config:)`; `isDefault`
+    /// instance the host app created via `Userpilot(config:)`; `isDefault`
     /// defaults to `true`, so no extra configuration is needed. In multi-instance
     /// integrations (e.g. an app that uses Userpilot directly while also depending
     /// on a vendor SDK that embeds Userpilot) this returns whichever instance
@@ -57,7 +57,7 @@ public class Userpilot: NSObject {
     /// Services belong to this instance; other SDK components may resolve but cannot replace its container.
     internal private(set) var container = DIContainer()
 
-    private(set) var config: Config
+    internal let config: Config
 
     // Resolve services only after the runtime registers this owner and configures its container.
     private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
@@ -112,7 +112,7 @@ public class Userpilot: NSObject {
     /// The weak delegate that handles screen navigation.
     @objc public weak var navigationDelegate: UserpilotNavigationDelegate? {
         didSet {
-            // Cold-start push routing may be waiting for the first delegate assignment after setup.
+            // Cold-start push routing may be waiting for the first delegate assignment after initialization.
             guard navigationDelegate != nil else { return }
             linkOpener.processPendingDeepLink()
         }
@@ -126,37 +126,14 @@ public class Userpilot: NSObject {
 
     // MARK: - Initialization
 
-    /// Construction is passive. Only `setup` may register and start a production instance.
-    internal init(config: Config) {
+    /// Initializes the SDK with its own services and registers it for `config.token`.
+    /// Create and retain one instance per app token. Repeated initialization with the same
+    /// live token is unsupported; use different tokens for independent instances.
+    /// Surrounding token whitespace is trimmed by `Config` before services are initialized.
+    @objc public init(config: Config) {
         self.config = config
         super.init()
-    }
-
-    /**
-     Sets up the Userpilot SDK for `config.token` and returns its instance.
-
-     Get-or-create: when an instance for the token is already registered, that same instance is
-     returned (`===`), the supplied `config` is discarded and the original logger handles the warning — the first setup
-     wins. Otherwise a new instance is created, registered and started. Tokens are compared after
-     trimming surrounding whitespace. Concurrent calls for one token return one instance.
-
-     Matches Android's `Userpilot.setup(context, token)`.
-
-     ```swift
-     let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>"))
-     ```
-
-     - Parameter config: The configuration used only when no instance exists for its token.
-     - Returns: The registered instance for `config.token`.
-     */
-    @objc(setupWithConfig:)
-    public static func setup(config: Config) -> Userpilot {
-        setup(config: config) { Userpilot(config: $0) }
-    }
-
-    /// `make` builds the instance only when the token is not registered; tests supply mock instances.
-    internal static func setup(config: Config, make: (Config) -> Userpilot) -> Userpilot {
-        UserpilotRuntime.shared.initializeInstance(config: config) { make(config) }
+        UserpilotRuntime.shared.initializeInstance(self)
     }
 
     /// Called once by the runtime after registration; native startup order remains per instance.
@@ -172,7 +149,7 @@ public class Userpilot: NSObject {
         // Log the initialization of the SDK with the current version.
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
 
-        // Hosts assign `navigationDelegate` on the lines *after* setup returns, so a
+        // Hosts assign `navigationDelegate` on the lines *after* init returns, so a
         // cold-start push replayed by `register(observer:)` above has nowhere to route to yet.
         // Opening routing one runloop turn later lets those assignments land first, and still
         // delivers the link for hosts that never set a delegate at all.

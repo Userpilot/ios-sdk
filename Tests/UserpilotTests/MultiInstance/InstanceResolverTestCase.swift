@@ -56,8 +56,8 @@ class InstanceResolverTestCase: XCTestCase {
         super.tearDown()
     }
 
-    /// Registers a real instance in this test's registry. Tokens are unique per call, so same-token
-    /// adoption in the process runtime never merges two fixtures. Pass `retained: false` when the
+    /// Registers a real instance in this test's registry. Unique tokens keep each fixture's
+    /// services and process registration independent. Pass `retained: false` when the
     /// test itself controls when the instance is released.
     @discardableResult
     func register(

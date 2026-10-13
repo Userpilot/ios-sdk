@@ -166,7 +166,7 @@ final class InstanceRegistryTests: XCTestCase {
     func testUnregisteringUnregisteredObject_keepsTheOwnerRegistered() {
         let owner = makeInstance("OWNER")
         registry.register(owner)
-        let unregistered = Userpilot(config: Userpilot.Config(token: owner.config.token))
+        let unregistered = makeInstance("UNREGISTERED")
         XCTAssertFalse(unregistered === owner)
 
         registry.unregister(unregistered)
@@ -192,21 +192,6 @@ final class InstanceRegistryTests: XCTestCase {
 
         XCTAssertTrue(registry.instance(forToken: replacement.config.token) === replacement)
         XCTAssertTrue(registry.isRegistered(replacement))
-    }
-
-    // MARK: - Same-token initialization
-
-    func testDoubleInit_sameToken_keepsExistingInstanceRegistered() {
-        // Repeated setup returns the registered object and never replaces its services.
-        let token = "TOKEN-DUP-\(UUID().uuidString)"
-        let first = MockUserpilot.make(config: Userpilot.Config(token: token))
-        let second = MockUserpilot.make(config: Userpilot.Config(token: token))
-        let runtimeRegistry = UserpilotRuntime.shared.instanceRegistry
-
-        XCTAssertTrue(Userpilot.instance(forToken: token) === first)
-        XCTAssertTrue(second === first)
-        XCTAssertEqual(runtimeRegistry.allInstances.filter { $0.config.token == token }.count, 1)
-        XCTAssertTrue(second === first, "Repeated setup returns the same default owner")
     }
 
     // MARK: - Concurrent access

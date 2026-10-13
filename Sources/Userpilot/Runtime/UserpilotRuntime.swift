@@ -20,7 +20,7 @@ internal final class UserpilotRuntime {
     let captureIntegration: AutoCaptureIntegrating
     let scanCache: SwiftUIScanCache
 
-    /// Serializes get-or-create, registration and startup. Startup may enqueue UI work, never wait for main.
+    /// Serializes registration and service startup. Startup may enqueue UI work, never wait for main.
     private let lifecycleLock = NSRecursiveLock()
 
     init() {
@@ -31,20 +31,10 @@ internal final class UserpilotRuntime {
         scanCache = SwiftUIScanCache(registry: registry, instanceResolver: instanceResolver)
     }
 
-    /// Lookup, construction and startup share one lock: a repeated token returns the original object.
     /// Register before eager services are built so native callbacks can resolve their owner during startup.
-    func initializeInstance(config: Userpilot.Config, make: () -> Userpilot) -> Userpilot {
+    func initializeInstance(_ instance: Userpilot) {
         lifecycleLock.withLock {
-            if let existing = instanceRegistry.instance(forToken: config.token) {
-                existing.config.logger.error(
-                    // swiftlint:disable:next line_length
-                    "⚠️ Userpilot already initialized for token %{public}@; returning the existing instance. The supplied config was discarded.",
-                    existing.config.token
-                )
-                return existing
-            }
-            StorageMigrator.runIfNeeded(forToken: config.token)
-            let instance = make()
+            StorageMigrator.runIfNeeded(forToken: instance.config.token)
             if let existingDefaultToken = instanceRegistry.register(instance) {
                 instance.config.logger.error(
                     // swiftlint:disable:next line_length
@@ -55,7 +45,6 @@ internal final class UserpilotRuntime {
                 )
             }
             instance.initializeInstance()
-            return instance
         }
     }
 

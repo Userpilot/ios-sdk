@@ -413,7 +413,7 @@ class UserpilotTests: XCTestCase {
 
         // Act
         autoreleasepool {
-            let userpilot = Userpilot.setup(
+            let userpilot = Userpilot(
                 config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
             )
 
