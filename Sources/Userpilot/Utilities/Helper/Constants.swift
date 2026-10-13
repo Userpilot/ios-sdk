@@ -42,6 +42,7 @@ internal enum Constants {
     enum Analytics {
         static let metaDataProperty = "metadata"
         static let identifyCompanyProperty = "company"
+        static let localeCodeProperty = "locale_code"
         static let screenTitleProperty = "title"
         static let isSessionStartedProperty = "is_session_start"
         static let fakeReload = "fake_reload"

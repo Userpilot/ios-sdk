@@ -147,6 +147,16 @@ userpilot.identify(
 - Ensure the User ID source is consistent across Web, Android, and iOS.
 - While properties are optional, setting them enhances Userpilot’s segmentation capabilities.
 
+#### User Locale
+
+After `identify` or `anonymous`, update the current user's locale:
+
+```swift
+userpilot.locale("en-US")
+```
+
+This re-identifies the current user with the `locale_code` property. Surrounding whitespace is trimmed; blank codes and calls before identification are ignored. It does not change the app's language or create a new user.
+
 #### Tracking Screens (Required)
 
 Calling screen is crucial for unlocking Userpilot’s core engagement and analytics capabilities. When a user navigates to a particular screen, invoking screen records that view and triggers any eligible in-app experiences. Subsequent events are also attributed to the most recently tracked screen, providing context for richer analytical insights. For these reasons, we strongly recommend tracking all of your app’s screen views.

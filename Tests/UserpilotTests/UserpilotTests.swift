@@ -136,6 +136,51 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(firstUserId, secondUserId, "Second call should reuse the cached user ID")
     }
 
+    // MARK: - Locale
+
+    /// Re-identifies the cached user with only the trimmed locale code as a user property
+    func testLocale_identifiesTheCachedUserWithLocaleCode() throws {
+        var published: [Event] = []
+        userpilot.analyticsPublisher.onPublish = { published.append($0) }
+        userpilot.storage.userId = "user-42"
+
+        userpilot.locale(" ar ")
+
+        XCTAssertEqual(published.count, 1)
+        let event = try XCTUnwrap(published.first)
+        guard case let .identify(userId) = event.type else {
+            return XCTFail("Expected an identify event")
+        }
+        XCTAssertEqual(userId, "user-42")
+        XCTAssertEqual(event.properties as NSDictionary?, ["locale_code": "ar"] as NSDictionary)
+        XCTAssertNil(event.company)
+    }
+
+    /// Without a cached user there is nobody to attach the locale to
+    func testLocale_isIgnored_whenNoUserIsIdentified() {
+        var published = false
+        userpilot.analyticsPublisher.onPublish = { _ in published = true }
+        let logger = MockLogger()
+        userpilot.config.logger = logger
+        userpilot.storage.userId = ""
+
+        userpilot.locale("ar")
+
+        XCTAssertFalse(published)
+        XCTAssertEqual(logger.loggedErrors.filter { $0.contains("Locale needs an identified user") }.count, 1)
+    }
+
+    /// A blank locale code is rejected before identify
+    func testLocale_isIgnored_whenCodeIsBlank() {
+        var published = false
+        userpilot.analyticsPublisher.onPublish = { _ in published = true }
+        userpilot.storage.userId = "user-42"
+
+        userpilot.locale("   ")
+
+        XCTAssertFalse(published)
+    }
+
     // MARK: - Screen
 
     /// Verifies that an empty screen name does not trigger screen tracking

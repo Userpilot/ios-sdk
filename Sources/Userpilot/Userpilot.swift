@@ -322,6 +322,28 @@ extension Userpilot {
     }
 
     /**
+     Sets the current user's locale. Call it after `identify(userId:properties:company:)` or `anonymous()`;
+     before either call, the locale is ignored and an error is logged.
+
+     - Parameters:
+       - localeCode: the user's locale code, for example `"en"`, `"en-US"` or `"fr-FR"`.
+     */
+    @objc
+    public func locale(_ localeCode: String) {
+        let normalizedLocaleCode = localeCode.trim()
+        guard normalizedLocaleCode.isNotEmpty else {
+            config.logger.error("Invalid locale code - empty string")
+            return
+        }
+        let userId = storage.userId
+        guard userId.isNotEmpty else {
+            config.logger.error("Locale needs an identified user - call identify(userId:) first")
+            return
+        }
+        identify(userId: userId, properties: [Constants.Analytics.localeCodeProperty: normalizedLocaleCode])
+    }
+
+    /**
      Tracks a screen view event when a user navigates to a specific screen in the app.
 
      This method records the screen title and sends it to the analytics service for tracking
