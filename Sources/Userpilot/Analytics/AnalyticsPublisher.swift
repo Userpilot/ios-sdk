@@ -140,6 +140,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private let networkMonitor: NetworkMonitoring
     private let userSessionStateMachine: UserSessionStateManaging
     private let screenNameTracker: ScreenNameTracking
+    private let debugEventStore: DebugEventStoring
     private let captureIntegration: AutoCaptureIntegrating
 
     // Resolve circular dependencies only after initialization/registration has completed.
@@ -175,6 +176,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
         self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.userSessionStateMachine = container.resolve(UserSessionStateManaging.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
+        self.debugEventStore = container.resolve(DebugEventStoring.self)
         self.captureIntegration = container.resolve(AutoCaptureIntegrating.self)
         queue.setSpecific(key: queueKey, value: true)
 
@@ -241,6 +243,7 @@ extension AnalyticsPublisher {
     /// events then join the owner queue, including an event submitted just before backgrounding.
     /// Identify waits for admission so a following push-token call observes the newly selected user.
     func publish(_ event: Event) {
+        debugEventStore.record(event)
         // Navigation reaches experiences now; analytics screen state advances in FIFO order.
         if event.isScreenEvent, event.isFakeReload == nil { experiencesPublisher?.updateScreen(event) }
         guard sessionMonitor?.isAppActive == true else { return }
@@ -471,6 +474,7 @@ extension AnalyticsPublisher {
     func publishInternalSDKEvent(
         _ event: SDKEvent, shouldSend: @escaping () -> Bool, completion: SocketCompletion?
     ) {
+        debugEventStore.record(event)
         let expectedGeneration = generation.value
         let send = SDKSend(event: event, shouldSend: { [weak self] in
             self?.generation.value == expectedGeneration && shouldSend()

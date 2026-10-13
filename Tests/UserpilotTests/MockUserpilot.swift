@@ -32,6 +32,11 @@ class MockUserpilot: Userpilot {
         container.register(InstanceResolving.self, value: runtime.instanceResolver)
         container.register(AutoCaptureIntegrating.self, value: runtime.captureIntegration)
         container.register(SwiftUIScanCache.self, value: runtime.scanCache)
+        container.register(DebugEventStoring.self, value: debugEventStore)
+        container.register(DebugFontCataloging.self, value: debugFontCatalog)
+        container.register(DebugConfigSnapshotMaking.self, value: debugConfigFactory)
+        container.register(DebugUserSnapshotMaking.self, value: debugUserFactory)
+        container.register(UserpilotDebuggerManaging.self, value: debuggerManager)
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
         container.register(NetworkMonitoring.self, value: networkMonitor)
@@ -70,6 +75,16 @@ class MockUserpilot: Userpilot {
     var imageLoader = MockImageLoader()
     var linkOpener = MockLinkOpening()
     var mockLogger = MockLogger()
+    var debugEventStore = DebugEventStore()
+    var debugFontCatalog = DebugFontCatalog()
+    lazy var debugConfigFactory = DebugConfigSnapshotFactory(
+        config: config,
+        storage: storage,
+        fontCatalog: debugFontCatalog,
+        owner: self
+    )
+    lazy var debugUserFactory = DebugUserSnapshotFactory(storage: storage)
+    var debuggerManager = MockUserpilotDebuggerManager()
 }
 
 // MARK: - Mock Image Loader
@@ -716,6 +731,26 @@ class MockUPExperience: UIViewController, UPExperience {
     ) {
         onTriggerClose?(manualClose)
         completion?()
+    }
+}
+
+// MARK: - Mock Debugger Manager
+
+class MockUserpilotDebuggerManager: UserpilotDebuggerManaging {
+    var showCount = 0
+    var resetCount = 0
+    var hideCount = 0
+
+    func show() {
+        showCount += 1
+    }
+
+    func reset() {
+        resetCount += 1
+    }
+
+    func hide() {
+        hideCount += 1
     }
 }
 

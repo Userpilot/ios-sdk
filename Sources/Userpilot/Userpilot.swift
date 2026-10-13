@@ -69,6 +69,7 @@ public class Userpilot: NSObject {
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
     private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
     private lazy var linkOpener = container.resolve(LinkOpening.self)
+    private lazy var debuggerManager = container.resolve(UserpilotDebuggerManaging.self)
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
@@ -210,6 +211,11 @@ public class Userpilot: NSObject {
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
         container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
+        container.registerLazy(DebugEventStoring.self) { DebugEventStore() }
+        container.registerLazy(DebugFontCataloging.self, initializer: DebugFontCatalog.init(container:))
+        container.registerLazy(DebugConfigSnapshotMaking.self, initializer: DebugConfigSnapshotFactory.init)
+        container.registerLazy(DebugUserSnapshotMaking.self, initializer: DebugUserSnapshotFactory.init)
+        container.registerLazy(UserpilotDebuggerManaging.self, initializer: UserpilotDebuggerManager.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
@@ -392,7 +398,14 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         analyticsPublisher.logout()
+        debuggerManager.reset()
         clean()
+    }
+
+    /// Shows this instance's in-app debugger with configuration, stored identity and live events.
+    /// Events appear when submitted to the publisher; this is not a socket acknowledgment view.
+    @objc public func debug() {
+        debuggerManager.show()
     }
 
     /**

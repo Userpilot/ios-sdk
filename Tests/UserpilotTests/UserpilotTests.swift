@@ -248,6 +248,11 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(lastUpdate.properties?["price"] as? Int, 29)
     }
 
+    func testDebug_showsThisInstancesDebugger() {
+        userpilot.debug()
+        XCTAssertEqual(userpilot.debuggerManager.showCount, 1)
+    }
+
     // MARK: - Logout
 
     /// Verifies logout clears all user-related data and emits logout event
@@ -261,6 +266,7 @@ class UserpilotTests: XCTestCase {
 
         // Assert
         XCTAssertTrue(logoutCalled)
+        XCTAssertEqual(userpilot.debuggerManager.resetCount, 1)
         XCTAssertNil(userpilot.storage.pushToken)
         XCTAssertEqual(userpilot.storage.userId, "")
     }

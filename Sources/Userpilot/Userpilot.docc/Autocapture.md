@@ -564,3 +564,7 @@ Existing `.UIKit`, `.SwiftUI`, and unset configurations retain their behavior. U
 Check navigation between UI frameworks and back, embedded screens, scrolling versus taps, privacy modifiers, and content dismissal. Expect one event per supported interaction on its owning instance; intentional forwarding must follow the configured forwarding rules. Check screen names so the native container and its hosted content do not report the same visible destination twice.
 
 See <doc:MultiInstance> for `attachToView(_:)`, `attachToViewController(_:)`, detach methods, and optional forwarding. Stop/resume affects only the instance on which it is called.
+
+## Inspect captured events
+
+Call `userpilot.debug()` to inspect this instance's capture submissions in the [in-app debugger](Debugging.md).

@@ -364,6 +364,10 @@ Userpilot SDK supports handling push notifications to help you deliver targeted 
 
 Userpilot iOS SDK supports running multiple independent instances in the same process. Each instance keeps its own analytics, autocapture scope, storage, and experience overlay window isolated from other instances. For setup instructions and routing details, see the official [Multi-Instance Guide](https://docs.userpilot.com/developer/installation/mobile/ios/multi-instance).
 
+### In-App Debugger
+
+Call `userpilot.debug()` to show a development overlay with SDK config, stored identity, and live manual / autocapture / internal events. See the [In-App Debugger](Sources/Userpilot/Userpilot.docc/Debugging.md) guide.
+
 ## 📝 Documentation
 
 Full documentation is available at [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation)

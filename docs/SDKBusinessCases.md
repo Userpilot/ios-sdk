@@ -288,3 +288,18 @@ A hybrid app uses one retained SDK instance per account token. iOS selects `.app
 | Existing explicit modes or unset framework | Keep their previous behavior. Hybrid must be selected explicitly. |
 
 Android still requires both View and Compose Gradle instrumentation and the existing Compose screen tracker/modifier. Ignore redundant native host screens. iOS SwiftUI button titles/tap-end capture still require the opt-in and iOS 26+; UIKit outside hosted SwiftUI retains its existing touch timing. Below iOS 26, existing capture paths remain in use.
+
+## In-app debugger
+
+| Case | Expected behavior on both platforms |
+| --- | --- |
+| SDK initialization | Do not open UI or record debugger history until `debug` is called. |
+| Repeated `debug` | Reuse the active debugger and record each submission once. |
+| Submitted event | Show the publisher submission; a row is not proof of queue admission, socket delivery, or ACK. |
+| Burst recording | Keep the newest 50 events per channel, even while the UI is busy or the panel is closed. |
+| Logout | Clear only that instance's debugger history synchronously. An open debugger continues recording subsequent events. |
+| Multiple SDK instances | Each has its own manager, event store, and snapshots. Reset/teardown of one does not clear another. |
+| Dismiss panel | Keep the floating button and recording active. |
+| Instance teardown | Stop recording, cancel pending presentation, remove native observation, and release UI resources. |
+
+The same store owns activation, mapping, IDs, buffers and reset. iOS uses a short `NSLock.withLock` transition and UI invalidation callbacks; Android uses `synchronized` and StateFlow snapshots. UI updates consume the latest history, so a delayed update cannot restore events from before logout. These diagnostic operations do not change analytics session flags, payloads, logs, retries, or ACK behavior.

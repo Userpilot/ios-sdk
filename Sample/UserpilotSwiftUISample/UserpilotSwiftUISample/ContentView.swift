@@ -58,6 +58,7 @@ struct ContentView: View {
                             gradient: [.blue, .cyan],
                             action: { showScreensFlow = true }
                         )
+
                     }
 
                     sampleSection(
@@ -181,6 +182,14 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Userpilot sample")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { UserpilotManager.shared.debug() }) {
+                        Image(systemName: "ladybug")
+                    }
+                    .accessibilityLabel("Open debugger")
+                }
+            }
             .userpilotScreenName("HomeScreen")
             .onReceive(NotificationCenter.default.publisher(for: UserpilotManager.openScreenOneNotification)) { _ in
                 showScreensFlow = true

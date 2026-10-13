@@ -32,6 +32,11 @@ final class MainViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Userpilot"
+        let debuggerButton = UIBarButtonItem(
+            image: UIImage(systemName: "ladybug"), style: .plain, target: self, action: #selector(showDebugger)
+        )
+        debuggerButton.accessibilityLabel = "debugger_title".localized
+        navigationItem.rightBarButtonItem = debuggerButton
         setupTable()
         UserpilotManager.shared.settings()
         presentConfigIfNeeded()
@@ -40,6 +45,10 @@ final class MainViewController: BaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         UserpilotManager.shared.screen("main")
+    }
+
+    @objc private func showDebugger() {
+        UserpilotManager.shared.debug()
     }
 
     private func setupTable() {
