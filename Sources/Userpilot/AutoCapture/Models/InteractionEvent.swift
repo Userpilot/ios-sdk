@@ -23,6 +23,9 @@ internal struct InteractionPayload {
     /// The element type (e.g., "button", "switch", "slider")
     var targetClass: String
 
+    /// Framework captured at the native source, retained across deferred delivery in Hybrid mode.
+    var appFramework: Userpilot.AppFramework?
+
     // MARK: - Optional Element Properties
 
     /// The display text or label of the element
@@ -90,6 +93,7 @@ extension InteractionPayload {
             interactionType: .viewPresented,
             elementType: Constants.AutoCapture.elementTypeUIAlertController
         )
+        payload.appFramework = screen.appFramework
         payload.dialogTitle = screen.alertTitle
         payload.dialogMessage = screen.alertMessage
 
@@ -120,6 +124,9 @@ extension InteractionPayload {
         }
         if let targetResourceId = properties[Constants.AutoCapture.accessibilityIdentifier] as? String {
             payload.accessibilityIdentifier = targetResourceId
+        }
+        if let framework = properties[Constants.AutoCapture.uiFramework] as? String {
+            payload.appFramework = Userpilot.AppFramework(rawValue: framework)
         }
         payload.hierarchy = properties[Constants.AutoCapture.hierarchy] as? String
         return payload

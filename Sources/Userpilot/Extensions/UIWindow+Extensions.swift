@@ -76,7 +76,9 @@ extension UIWindow {
                 at: point,
                 timestamp: touch.timestamp,
                 touchCount: touches.count,
-                capturesOnTapEnd: SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config)
+                capturesOnTapEnd: SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(
+                    config, isSwiftUIHost: config.appFramework == .Hybrid && source.view.up_isInsideHostingView
+                )
             ), let hitView, !target.autoCaptureCoordinator.isStopped {
                 let capturedView = capturedTapView(hitView: hitView, source: source, at: point)
                 handleTouchOnView(capturedView, target: target, window: self, point: point)
@@ -250,6 +252,9 @@ extension UIWindow {
             )
         }
 
+        if config.appFramework == .Hybrid {
+            eventProperties[Constants.AutoCapture.uiFramework] = view.captureFramework(config: config)?.rawValue
+        }
         target.autoCaptureCoordinator.handleClickTracked(
             eventProperties, resolvedSwiftUIControl: resolvedSwiftUIControl
         )

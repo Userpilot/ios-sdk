@@ -531,7 +531,7 @@ extension AnalyticsPublisher {
         if let title = event.screenTitle {
             if config.shouldSyncManualScreenForInteractionPayload() {
                 screenNameTracker.updateScreen(
-                    with: ScreenTrackingPayload(screenTitle: title, appFramework: config.appFramework)
+                    with: ScreenTrackingPayload(screenTitle: title, appFramework: config.resolvedFramework(nil))
                 )
             }
         }
@@ -755,7 +755,8 @@ extension AnalyticsPublisher {
 
     /// Prevent SwiftUI reappearance after SDK content from duplicating the generated screen refresh.
     private func suppressScreenAutocapture() {
-        guard config.enableScreenAutoCapture, config.appFramework == .SwiftUI else { return }
+        guard config.enableScreenAutoCapture,
+              config.resolvedFramework(screenNameTracker.getCurrentPayload()?.appFramework) == .SwiftUI else { return }
         performOn(.main) { [captureIntegration] in
             captureIntegration.suppressScreenAutoCaptureAfterSDKContent()
         }

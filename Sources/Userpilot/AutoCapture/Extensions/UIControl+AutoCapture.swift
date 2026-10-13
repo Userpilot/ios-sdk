@@ -149,6 +149,7 @@ internal extension UIControl {
         var payload: InteractionPayload
 
         let elementType = String(describing: type(of: self))
+        let framework = captureFramework(config: config)
 
         // Determine interaction type and extract value based on control type
         switch self {
@@ -200,7 +201,7 @@ internal extension UIControl {
             // only as an input proxy, so its `.value` stays at the default (0) and never reflects the
             // bound value. Drop `selected_value` for SwiftUI rather than emit a misleading 0. In UIKit
             // `UIStepper.value` is authoritative, so it's still captured there.
-            if config.enableInteractionValueCapture, config.appFramework != .SwiftUI {
+            if config.enableInteractionValueCapture, framework != .SwiftUI {
                 payload.sourceProperties[Constants.AutoCapture.selectedValue] = stepper.value
             }
 
@@ -231,6 +232,8 @@ internal extension UIControl {
             payload.elementText = getTextContent()
         }
 
+        payload.appFramework = framework
+
         // Add common properties (getters return "****" when redaction/config disables capture)
         payload.accessibilityIdentifier = accessibilityIdentifier
         payload.accessibilityLabel = getAccessibilityLabelContent()
@@ -241,7 +244,7 @@ internal extension UIControl {
         // and only for SwiftUI — UIKit sibling indices already differ. `siblingOrdinal` returns nil for
         // controls other than slider/text inputs, so buttons/switches/steppers/etc. are unaffected.
         let effectiveView = userpilotEffectiveViewForCapture()
-        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
+        let leafIndexOverride = (effectiveView === self && framework == .SwiftUI)
             ? UIKitViewResolver.siblingOrdinal(for: self)
             : nil
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)

@@ -46,10 +46,9 @@ internal struct ScreenTrackingPayload: Equatable {
     /// Alert message from `UIAlertController.message`.
     var alertMessage: String?
 
-    /// The app framework reported by the owning Userpilot instance at the time the
-    /// payload was built. Stored on the payload so screen events route the correct
-    /// per-tenant `ui_framework` value rather than reading from the SDK default
-    /// fallback, which is wrong when multiple instances coexist.
+    /// The framework resolved from the owner and native surface when captured.
+    /// Hybrid stores UIKit or SwiftUI here so deferred screens and reloads retain
+    /// their origin without reading another instance or the current visible view.
     var appFramework: Userpilot.AppFramework?
 }
 

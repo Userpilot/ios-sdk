@@ -201,6 +201,7 @@ extension UIApplication {
         if config.enableInteractionTextCapture {
             payload.elementText = menuAction.title
         }
+        payload.appFramework = config.resolvedFramework(.UIKit)
         payload.accessibilityIdentifier = menuAction.identifier.rawValue
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
@@ -224,6 +225,7 @@ extension UIApplication {
         if config.enableInteractionTextCapture {
             payload.elementText = menu.title
         }
+        payload.appFramework = config.resolvedFramework(.UIKit)
         payload.accessibilityIdentifier = menu.identifier.rawValue
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
@@ -239,7 +241,8 @@ extension UIApplication {
     ) {
         guard !view.shouldIgnoreInteractions() else { return }
 
-        let payload = view.buildActionInteractionPayload(action: action, target: target)
+        var payload = view.buildActionInteractionPayload(action: action, target: target)
+        payload.appFramework = view.captureFramework(config: config)
 
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
@@ -266,6 +269,7 @@ extension UIApplication {
         if config.enableInteractionAccessibilityLabelCapture {
             payload.accessibilityLabel = item.accessibilityLabel
         }
+        payload.appFramework = config.resolvedFramework(.UIKit)
         payload.accessibilityIdentifier = item.accessibilityIdentifier
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
@@ -285,7 +289,8 @@ extension UIApplication {
         guard let view = gestureRecognizer.view else { return }
         guard !view.shouldIgnoreInteractions() else { return }
 
-        let payload = view.buildActionInteractionPayload(action: action, target: target)
+        var payload = view.buildActionInteractionPayload(action: action, target: target)
+        payload.appFramework = view.captureFramework(config: config)
 
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }

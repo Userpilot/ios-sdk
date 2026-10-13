@@ -103,10 +103,11 @@ internal extension UIViewController {
         }
         let config = owningInstance.config
         guard config.enableScreenAutoCapture else { return }
+        let framework = config.resolvedFramework(SwiftUIDetection.isHostingController(self) ? .SwiftUI : .UIKit)
 
         guard !isUIKitSystemContainerViewController() else { return }
 
-        if config.appFramework == .SwiftUI {
+        if framework == .SwiftUI {
             // ✅ SwiftUI path: filter noisy system VCs, keep HostingControllers
             if isSwiftUISystemNoisyViewController() {
                 return
@@ -129,7 +130,7 @@ internal extension UIViewController {
         // the screen name set via .userpilotScreenName(). Without this,
         // viewWillAppear fires before the bridge UIView is created, causing the
         // first screen event to miss the custom name.
-        if config.appFramework == .SwiftUI,
+        if framework == .SwiftUI,
            screenClassName.contains("HostingController") {
             performOn(.main) { [weak self, weak owningInstance] in
                 guard let self, let owningInstance,
@@ -161,7 +162,9 @@ internal extension UIViewController {
             alertTitle: dialogText?.title,
             alertMessage: dialogText?.message
         )
-        payload.appFramework = config.appFramework
+        payload.appFramework = config.resolvedFramework(
+            SwiftUIDetection.isHostingController(self) ? .SwiftUI : .UIKit
+        )
         return payload
     }
 }

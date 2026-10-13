@@ -27,9 +27,11 @@ internal enum SwiftUITitleCapturePolicy {
     /// finger, short, little movement): SwiftUI has no UIControl target-action
     /// to tell a tap from the start of a scroll, so touch-began capture would log
     /// a click for every scroll that starts on a button. UIKit apps and wrapper
-    /// hosts keep touch-began capture. Each touch is still captured at most once.
-    static func capturesClicksOnTapEnd(_ config: Userpilot.Config) -> Bool {
-        isFeatureEnabled(config) && config.appFramework == .SwiftUI && !config.isWrapperSDK
+    /// hosts keep touch-began capture. Hybrid selects by the touched hosting boundary.
+    /// Each touch is still captured at most once.
+    static func capturesClicksOnTapEnd(_ config: Userpilot.Config, isSwiftUIHost: Bool = false) -> Bool {
+        let framework = config.resolvedFramework(isSwiftUIHost ? .SwiftUI : .UIKit)
+        return isFeatureEnabled(config) && framework == .SwiftUI && !config.isWrapperSDK
     }
 
     /// Whether the SDK should install SwiftUI title-capture hooks/cache. This is
@@ -43,8 +45,9 @@ internal enum SwiftUITitleCapturePolicy {
     /// host or hosting-backed tap. On top of the static config this applies the
     /// local session circuit breaker.
     static func shouldRun(config: Userpilot.Config, isSwiftUIHost: Bool) -> Bool {
-        commonConfigEnabled(config)
-            && (config.appFramework == .SwiftUI || (config.appFramework == nil && isSwiftUIHost))
+        let allowsHostDetection = config.appFramework == nil || config.appFramework == .Hybrid
+        return commonConfigEnabled(config)
+            && (config.appFramework == .SwiftUI || (allowsHostDetection && isSwiftUIHost))
             && !SwiftUICaptureHealth.isTripped
     }
 

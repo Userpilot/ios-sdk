@@ -117,6 +117,7 @@ internal extension UIPickerView {
         payload.accessibilityLabel = getAccessibilityLabelContent()
         payload.targetViewName = resolveReferenceName()
 
+        payload.appFramework = captureFramework(config: config)
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 

@@ -14,6 +14,11 @@ import UIKit
 
 /// Internal extension providing helper methods for checking autocapture properties
 internal extension UIView {
+    /// Only Hybrid needs a per-view framework read; existing modes keep their configured behavior.
+    func captureFramework(config: Userpilot.Config) -> Userpilot.AppFramework? {
+        guard config.appFramework == .Hybrid else { return config.appFramework }
+        return up_isInsideHostingView ? .SwiftUI : .UIKit
+    }
 
     /// Returns the view to use for path/type when capturing: the first self or ancestor that has
     /// userpilotIgnoreInnerHierarchy == true. If none, returns self.

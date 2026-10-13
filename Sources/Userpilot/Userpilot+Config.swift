@@ -16,12 +16,14 @@ import os.log
 
 extension Userpilot {
 
-    // The app framework used by the client application.
-    // Used by the SDK for autocapture and lifecycle behavior.
+    /// The native UI framework used for autocapture and screen behavior.
     public enum AppFramework: String {
+        /// UIKit screens and controls.
         case UIKit
-        // swiftlint:disable:next identifier_name
-        case SwiftUI
+        /// SwiftUI screens and controls, including their UIKit backing views.
+        case SwiftUI // swiftlint:disable:this identifier_name
+        /// UIKit and SwiftUI in one app; capture uses the originating native surface.
+        case Hybrid // swiftlint:disable:this identifier_name
     }
 
     // Note: `Config` is a class so that it can be initialized inline with the chained setters. E.g:
@@ -43,7 +45,7 @@ extension Userpilot {
         /// interaction autocapture is handled by the wrapper layer.
         var additionalProperties: [String: Any] = [:]
 
-        /// The app framework (UIKit or SwiftUI).
+        /// The app framework (UIKit, SwiftUI, or Hybrid).
         ///
         /// `nil` means the SDK will auto-detect the framework once the key window
         /// is attached. Set explicitly via `appFramework(_:)` to override
@@ -213,12 +215,13 @@ extension Userpilot {
             return self
         }
 
-        /// Sets the app framework (UIKit or SwiftUI).
+        /// Sets the app framework (UIKit, SwiftUI, or Hybrid).
         ///
         /// When set explicitly, this disables runtime auto-detection.
         /// Use this to guarantee correct framework tagging from the first
         /// event, especially in apps that send events before the key window
         /// is attached (e.g. from `application:didFinishLaunchingWithOptions:`).
+        /// Use `.Hybrid` for UIKit + SwiftUI; each capture retains its native framework behavior.
         ///
         /// - Parameter framework: The framework used by the client app.
         /// - Returns: The `Configuration` object, allowing for method chaining.

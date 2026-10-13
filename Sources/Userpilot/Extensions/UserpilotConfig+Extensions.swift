@@ -12,6 +12,12 @@
 import Foundation
 
 internal extension Userpilot.Config {
+    /// Hybrid resolves from the captured surface; an unknown source leaves framework metadata absent.
+    /// Existing explicit modes and automatic detection retain their previous behavior.
+    func resolvedFramework(_ source: Userpilot.AppFramework?) -> Userpilot.AppFramework? {
+        appFramework == .Hybrid ? source : appFramework
+    }
+
     /// `true` when this config belongs to a supported wrapper SDK integration.
     ///
     /// Wrapper SDKs, such as React Native, Flutter, and Ionic, pass

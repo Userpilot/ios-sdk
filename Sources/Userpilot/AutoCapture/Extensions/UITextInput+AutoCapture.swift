@@ -84,10 +84,11 @@ internal extension UITextView {
 private extension UIView {
     /// Finalizes identity after each editor has read its own text/placeholder semantics.
     func completeTextInteractionPayload(_ payload: inout InteractionPayload, config: Userpilot.Config) {
+        payload.appFramework = captureFramework(config: config)
         let effectiveView = userpilotEffectiveViewForCapture()
         // SwiftUI siblings need their stable on-screen ordinal. An ignored inner hierarchy uses
         // its effective ancestor; UIKit retains its existing sibling indices.
-        let leafIndexOverride = (effectiveView === self && config.appFramework == .SwiftUI)
+        let leafIndexOverride = (effectiveView === self && payload.appFramework == .SwiftUI)
             ? UIKitViewResolver.siblingOrdinal(for: self)
             : nil
         payload.hierarchy = UIKitViewResolver.resolvePath(view: effectiveView, leafIndexOverride: leafIndexOverride)

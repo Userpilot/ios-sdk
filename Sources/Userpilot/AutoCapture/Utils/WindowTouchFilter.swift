@@ -66,13 +66,13 @@ internal enum WindowTouchFilter {
 
     /// SwiftUI scaffolding leaf (hosting / platform container) with no metadata — a dead click.
     ///
-    /// Only consulted for SwiftUI-configured apps and only after `windowTouchHasMetadata` has already
+    /// Only consulted for SwiftUI or Hybrid apps and only after `windowTouchHasMetadata` has already
     /// returned `false`, so this can never suppress a tap that resolved any text / accessibility signal.
     /// These class names are SwiftUI-exclusive, so UIKit capture is unaffected.
     private static func windowTouchIsSwiftUIStructuralContainer(
         _ elementType: String, config: Userpilot.Config
     ) -> Bool {
-        guard config.appFramework == .SwiftUI else { return false }
+        guard config.appFramework == .SwiftUI || config.appFramework == .Hybrid else { return false }
         if Self.swiftUIStructuralContainerTypes.contains(elementType) { return true }
         // SwiftUI's private hosting wrappers embed these stable, framework-internal substrings.
         if elementType.contains("HostingView") || elementType.contains("HostingScrollView") {

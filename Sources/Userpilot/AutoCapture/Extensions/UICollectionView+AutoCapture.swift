@@ -42,6 +42,7 @@ internal extension UICollectionViewCell {
         }
 
         // Send to the owning instance's engine
+        payload.appFramework = captureFramework(config: config)
         owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
     }
 

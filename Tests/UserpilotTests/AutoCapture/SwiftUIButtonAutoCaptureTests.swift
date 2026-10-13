@@ -71,6 +71,18 @@ final class SwiftUIButtonAutoCapturePolicyTests: XCTestCase {
         ), isIOS26OrLater)
     }
 
+    func testHybrid_usesTapEndOnlyInsideSwiftUIAndKeepsOptInGates() {
+        let config = makeConfig(framework: .Hybrid)
+        XCTAssertFalse(SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config, isSwiftUIHost: false))
+        XCTAssertEqual(SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config, isSwiftUIHost: true), isIOS26OrLater)
+        XCTAssertEqual(SwiftUITitleCapturePolicy.shouldInstall(config: config), isIOS26OrLater)
+        XCTAssertFalse(SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: false))
+        XCTAssertEqual(SwiftUITitleCapturePolicy.shouldRun(config: config, isSwiftUIHost: true), isIOS26OrLater)
+        config.enableSwiftUIButtonAutoCapture = false
+        XCTAssertFalse(SwiftUITitleCapturePolicy.shouldInstall(config: config))
+        XCTAssertFalse(SwiftUITitleCapturePolicy.capturesClicksOnTapEnd(config, isSwiftUIHost: true))
+    }
+
     func testRequiresInteractionAutoCapture() {
         let config = makeConfig(interactionCapture: false)
 

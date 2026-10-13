@@ -53,6 +53,14 @@ final class UIActionButtonCaptureTests: XCTestCase {
         XCTAssertNil(properties[Constants.AutoCapture.ownerTargetClass])
     }
 
+    func testHybridAction_runsOnceAndReportsUIKit() {
+        owner.config.appFramework = .Hybrid
+        button.sendActions(for: .touchUpInside)
+        XCTAssertEqual(actionCount, 1)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.properties?["ui_framework"] as? String, "UIKit")
+    }
+
     func testPrimaryAction_usesTheSameCapturePath() {
         let action = UIAction(title: "Continue") { [weak self] _ in self?.actionCount += 1 }
         let primaryButton = UIButton(type: .system, primaryAction: action)

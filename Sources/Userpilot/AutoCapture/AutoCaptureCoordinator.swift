@@ -56,7 +56,6 @@ internal protocol AutoCaptureCoordinating: AnyObject {
 /// Payload models own field conversion; native hooks retain responsibility for redaction.
 /// Screen coalescing and suppression share a lock; publishing occurs after releasing it.
 internal class AutoCaptureCoordinator {
-
     private let analyticsPublisher: AnalyticsPublishing
     private let config: Userpilot.Config
     private let screenNameTracker: ScreenNameTracking
@@ -201,7 +200,7 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
             index: tabIndex,
             screenClass: screenClass,
             screen: screen,
-            framework: config.appFramework
+            framework: config.resolvedFramework(.UIKit)
         )
 
         let event = Event(
@@ -262,7 +261,6 @@ extension AutoCaptureCoordinator: AutoCaptureCoordinating {
 }
 
 private extension AutoCaptureCoordinator {
-
     /// Clears an expired SDK-dismissal suppression window under the shared screen lock.
     var shouldSuppressScreenAutoCapture: Bool {
         screenCaptureStateLock.withLock {
@@ -280,7 +278,7 @@ private extension AutoCaptureCoordinator {
 
     /// SwiftUI parent/child hosting appearances are coalesced so the latest resolved screen wins.
     func shouldCoalesceSwiftUIScreen(_ screen: ScreenTrackingPayload) -> Bool {
-        config.appFramework == .SwiftUI && screen.screenClass.contains("HostingController")
+        config.resolvedFramework(screen.appFramework) == .SwiftUI && screen.screenClass.contains("HostingController")
     }
 
     /// Replaces the pending SwiftUI screen; stop or SDK dismissal can invalidate its delivery.
@@ -316,16 +314,17 @@ private extension AutoCaptureCoordinator {
     func publishScreen(_ screen: ScreenTrackingPayload) {
         let previousScreen = screenNameTracker.getCurrentPayload()
         var screen = screen
-        if config.appFramework == .SwiftUI {
+        let framework = config.resolvedFramework(screen.appFramework)
+        if framework == .SwiftUI {
             screen.screenNameMatchesPreviousScreen = screen.matchesPreviousScreen(
-                previousScreen, framework: config.appFramework
+                previousScreen, framework: framework
             )
         }
 
         screenNameTracker.updateScreen(with: screen)
 
         let event = Event(
-            type: EventType.screen(screen.screenEventIdentity(framework: config.appFramework)),
+            type: EventType.screen(screen.screenEventIdentity(framework: framework)),
             properties: screen.toDictionary(),
             screen: screen.toEventDictionary()
         )
@@ -337,7 +336,9 @@ private extension AutoCaptureCoordinator {
     /// `handleInteractionEvent` applies the interaction guard; dialog capture uses its own gate.
     private func publishAutoCaptureEvent(_ interaction: InteractionPayload) {
         let screen = screenNameTracker.getCurrentPayload()
-        let properties = interaction.buildEventProperties(screen: screen, framework: config.appFramework)
+        let properties = interaction.buildEventProperties(
+            screen: screen, framework: config.resolvedFramework(interaction.appFramework)
+        )
 
         let event = Event(
             type: EventType.autoCaptureEvent,
@@ -372,7 +373,6 @@ private extension AutoCaptureCoordinator {
 }
 
 // MARK: Auto capture wrappers APIs
-
 extension AutoCaptureCoordinator {
     /// Auto capture screen events from wrappers
     func trackExternalAutoCaptureScreen(_ title: String) {
