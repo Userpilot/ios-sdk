@@ -140,9 +140,9 @@ extension SurveyDialogViewController {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension SurveyDialogViewController: UPExperience {
+extension SurveyDialogViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?

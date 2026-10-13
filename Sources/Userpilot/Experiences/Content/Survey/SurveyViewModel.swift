@@ -62,7 +62,7 @@ final class SurveyViewModel {
      */
     func onStart() {
         guard
-            let surveyContent = experiencesPublisher.getActiveMobileContent(rendererID: rendererID)?.asSurveyContent()
+            let surveyContent = experiencesPublisher.getActiveExperience(rendererID: rendererID)?.asSurveyContent()
         else {
             bindData?(false)
             return

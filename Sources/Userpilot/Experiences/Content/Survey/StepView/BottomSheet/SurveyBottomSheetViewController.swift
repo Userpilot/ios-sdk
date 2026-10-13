@@ -145,9 +145,9 @@ extension SurveyBottomSheetViewController {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension SurveyBottomSheetViewController: UPExperience {
+extension SurveyBottomSheetViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?

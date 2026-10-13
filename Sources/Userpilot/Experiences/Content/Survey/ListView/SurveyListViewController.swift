@@ -106,9 +106,9 @@ internal class SurveyListViewController: UIViewController {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension SurveyListViewController: UPExperience {
+extension SurveyListViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?

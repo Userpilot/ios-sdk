@@ -70,7 +70,7 @@ internal class ExperienceViewModel {
      */
     func onStart() {
         guard
-            let flowContent = experiencesPublisher.getActiveMobileContent(rendererID: rendererID)?.asFlowContent()
+            let flowContent = experiencesPublisher.getActiveExperience(rendererID: rendererID)?.asFlowContent()
         else {
             bindData?(false)
             return

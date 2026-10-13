@@ -49,7 +49,7 @@ final class NPSViewModel {
     /// Binds only the content belonging to the controller that launched this renderer.
     func onStart() {
         guard
-            let npsContent = experiencesPublisher.getActiveMobileContent(rendererID: rendererID)?.asNPSContent()
+            let npsContent = experiencesPublisher.getActiveExperience(rendererID: rendererID)?.asNPSContent()
         else {
             bindData?(false)
             return

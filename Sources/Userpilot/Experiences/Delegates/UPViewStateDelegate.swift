@@ -1,5 +1,5 @@
 //
-//  ViewStateDelegate.swift
+//  UPViewStateDelegate.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 09/01/2025.
@@ -8,7 +8,7 @@
 //  A protocol that defines a delegate for observing view state changes.
 //
 
-internal protocol ViewStateDelegate: AnyObject {
+internal protocol UPViewStateDelegate: AnyObject {
 
     /// Called when the view state changes.
     /// - Parameter isValid: A `Bool` indicating whether the current state of the view is valid.

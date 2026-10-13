@@ -144,7 +144,7 @@ final class SDKEventTests: XCTestCase {
         XCTAssertNil(theme.eventPayload["theme_id"])
     }
 
-    /// Mirrors the Android SDK's offline-eligible set; the two must stay identical.
+    /// Verifies the event kinds eligible for offline persistence and replay.
     private static let offlineEligibleEventNames: Set<String> = [
         "seen_mobile_content",
         "dismissed_mobile_content",

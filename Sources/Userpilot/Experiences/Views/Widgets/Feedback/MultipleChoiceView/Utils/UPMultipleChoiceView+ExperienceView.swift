@@ -5,15 +5,15 @@
 //  Created by Userpilot on 19/01/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  Extension of `UPMultipleChoiceView` to conform to `UPExperienceView` protocol.
+//  Extension of `UPMultipleChoiceView` to conform to `UPExperienceViewDelegate` protocol.
 //  Provides methods to validate the answer and retrieve the answer payload.
 //
 
 import Foundation
 
-extension UPMultipleChoiceView: UPExperienceView {
+extension UPMultipleChoiceView: UPExperienceViewDelegate {
 
-    // MARK: - UPExperienceView
+    // MARK: - UPExperienceViewDelegate
 
     /// Validates whether the answer meets the survey step's requirements.
     ///

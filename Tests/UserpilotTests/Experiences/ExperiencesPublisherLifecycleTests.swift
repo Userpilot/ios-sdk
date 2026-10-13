@@ -14,10 +14,10 @@ import XCTest
 extension ExperiencesPublisherTests {
     func testContentReadsKeepCurrentContentUntilDismissal() throws {
         let renderer = try presentFlow()
-        XCTAssertEqual(publisher.getActiveMobileContent(rendererID: renderer)?.experienceId(), 77)
-        XCTAssertEqual(publisher.getActiveMobileContent(rendererID: renderer)?.experienceId(), 77)
-        XCTAssertNil(publisher.getActiveMobileContent(rendererID: UUID()))
-        XCTAssertNil(publisher.getActiveMobileContent(rendererID: nil))
+        XCTAssertEqual(publisher.getActiveExperience(rendererID: renderer)?.experienceId(), 77)
+        XCTAssertEqual(publisher.getActiveExperience(rendererID: renderer)?.experienceId(), 77)
+        XCTAssertNil(publisher.getActiveExperience(rendererID: UUID()))
+        XCTAssertNil(publisher.getActiveExperience(rendererID: nil))
     }
 
     func testCloseEventWaitsForFinalDismissalBeforeRequestingReload() throws {
@@ -105,7 +105,7 @@ extension ExperiencesPublisherTests {
         publishedEvents.removeAll()
         publisher.logout()
         XCTAssertNil(publisher.activeRendererID)
-        XCTAssertNil(publisher.getActiveMobileContent(rendererID: renderer))
+        XCTAssertNil(publisher.getActiveExperience(rendererID: renderer))
         publisher.publishInternalSDKEvent(MockSDKEvent(), rendererID: renderer)
         settle()
         XCTAssertTrue(publishedEvents.isEmpty)
@@ -271,7 +271,7 @@ extension ExperiencesPublisherTests {
         receiveScreen(response)
         try presentScheduled()
         let original = try XCTUnwrap(publisher.activeRendererID)
-        let survey = try XCTUnwrap(publisher.getActiveMobileContent()?.asSurveyContent())
+        let survey = try XCTUnwrap(publisher.getActiveExperience()?.asSurveyContent())
         XCTAssertTrue(publisher.hasNextFlowStep(rendererID: original))
         publisher.showThankYouMessage(survey, MockContentFactory.makeSurveyTheme(), 10, rendererID: original)
         publisher.mockWaitForQueue()

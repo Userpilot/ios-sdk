@@ -7,7 +7,7 @@
 //
 //  Registered for SocketManaging in `Userpilot.initializeContainer()`.
 //  Main owns each connection from settings lookup through teardown.
-//  See .agents/features/socket-v2-design.md for callback ordering and deliberate behavior changes.
+//  See .agents/features/socket-design.md for callback ordering and deliberate behavior changes.
 //
 //
 //  Keep the service contract and implementation together, like the publishers.
@@ -54,7 +54,7 @@ internal protocol SocketManaging: AnyObject {
     )
 
     /// Registers a weakly held subscriber for socket lifecycle and push results.
-    func registerCallback(_ socketSubscription: SocketSubscription)
+    func registerCallback(_ socketSubscription: SocketSubscriptionDelegate)
 }
 
 /// Owns one connection attempt from settings lookup through local teardown.
@@ -93,7 +93,7 @@ internal final class SocketManager: SocketManaging {
     private let remote: UserpilotRemoteSourcing
     private let logger: Logging
     private let socketFactory: SocketFactory
-    private let subscribers = MulticastDelegate<SocketSubscription>()
+    private let subscribers = MulticastDelegate<SocketSubscriptionDelegate>()
 
     // Resolve this cycle only when delivering a response, after DI registration is complete.
     private var sessionMonitor: SessionMonitoring? { container?.resolve(SessionMonitoring.self) }
@@ -183,7 +183,7 @@ internal final class SocketManager: SocketManaging {
     }
 
     /// The multicast owns its lock and weak references; registration does not wait on main.
-    func registerCallback(_ socketSubscription: SocketSubscription) {
+    func registerCallback(_ socketSubscription: SocketSubscriptionDelegate) {
         subscribers.add(socketSubscription)
     }
 

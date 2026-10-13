@@ -122,9 +122,9 @@ internal class CarouselExperienceViewController: UIViewController {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension CarouselExperienceViewController: UPExperience {
+extension CarouselExperienceViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?

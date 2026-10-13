@@ -50,7 +50,7 @@ internal class UPSingleInputView: UIView {
     internal var surveyTheme: SurveyTheme?
 
     /// Delegate for handling view state changes
-    internal weak var viewStateProtocol: ViewStateDelegate?
+    internal weak var viewStateProtocol: UPViewStateDelegate?
 
     /// Survey step containing data for the input view
     internal var isRTL = false
@@ -92,7 +92,7 @@ internal class UPSingleInputView: UIView {
         surveyTheme: SurveyTheme,
         isListView: Bool,
         isRTL: Bool,
-        viewStateProtocol: ViewStateDelegate,
+        viewStateProtocol: UPViewStateDelegate,
         parentViewController: UIViewController
     ) {
         self.surveyStep = surveyStep

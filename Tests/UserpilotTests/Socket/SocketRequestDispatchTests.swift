@@ -55,7 +55,7 @@ private final class RecordingRequestSocket: SocketManaging {
 
     func connect() {}
     func close() {}
-    func registerCallback(_ socketSubscription: SocketSubscription) {}
+    func registerCallback(_ socketSubscription: SocketSubscriptionDelegate) {}
     func publish(_ eventName: String, payload: Payload) {
         legacyPublishCount += 1
     }

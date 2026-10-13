@@ -60,7 +60,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertTrue(callbackRegistered)
         XCTAssertTrue(publisher.canRequestScreenEvent())
         XCTAssertNil(publisher.activeRendererID)
-        XCTAssertNil(publisher.getActiveMobileContent())
+        XCTAssertNil(publisher.getActiveExperience())
     }
 
     func testManualRequestOwnsAdmissionWhileFetchingContent() throws {
@@ -100,7 +100,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertNil(host.presentedExperience)
         try presentScheduled()
         XCTAssertTrue(host.presentedExperience is CarouselExperienceViewController)
-        XCTAssertEqual(publisher.getActiveMobileContent()?.experienceId(), 77)
+        XCTAssertEqual(publisher.getActiveExperience()?.experienceId(), 77)
     }
 
     func testMissingThemeRequestsThemeBeforeDisplay() throws {

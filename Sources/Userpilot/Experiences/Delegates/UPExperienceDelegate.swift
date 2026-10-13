@@ -1,5 +1,5 @@
 //
-//  UPExperience.swift
+//  UPExperienceDelegate.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 29/12/2024.
@@ -10,9 +10,8 @@
 
 import Foundation
 
-/// A protocol representing an experience in the Userpilot SDK.
-/// Conforming types can handle experience closure events.
-internal protocol UPExperience: AnyObject {
+/// Delegate implemented by a native renderer to close its experience.
+internal protocol UPExperienceDelegate: AnyObject {
 
     /// Triggers the closure of the current experience.
     func triggerCloseExperience(

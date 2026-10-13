@@ -329,7 +329,7 @@ internal class SurveyContainerView: UIView {
     /// This function extracts the answer from the user input and transitions to the next step in the survey.
     private func getAnswerAndMoveToNextStep() {
         let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap { $0 as? UPExperienceView }
+            .compactMap { $0 as? UPExperienceViewDelegate }
             .first
 
         let answer = upExperienceView?.getAnswer()
@@ -508,7 +508,7 @@ extension SurveyContainerView {
 
 }
 
-extension SurveyContainerView: ViewStateDelegate {
+extension SurveyContainerView: UPViewStateDelegate {
 
     func onViewStateChanged(isValid: Bool) {
         actionButton.updateEnableState(isEnabled: isValid)

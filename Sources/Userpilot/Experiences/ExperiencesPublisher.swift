@@ -7,7 +7,7 @@
 //
 //  Registered for ExperiencesPublishing in `Userpilot.initializeContainer()`.
 //  Coordinates when backend-selected experiences (flows, surveys, NPS) may use the UI. One operation
-//  owns the UI from acceptance to final dismissal; any other content arriving meanwhile is dropped.
+//  owns the UI from acceptance to final dismissal; any other experience arriving meanwhile is dropped.
 //  Only a QR preview interrupts it: it cancels preparation or dismisses the UI, then takes over.
 //
 
@@ -17,14 +17,14 @@ import UIKit
 
 /*
  The `ExperiencesPublishing` protocol defines the required methods for managing experiences,
- such as starting the service, retrieving active carousel content, and sending socket requests.
+ such as starting the service, retrieving active carousel experience, and sending socket requests.
  */
 internal protocol ExperiencesPublishing: AnyObject {
 
     /// Whether the publisher is currently processing a preview experience.
 
     /// Get current experience
-    func getActiveMobileContent() -> ExperienceContent?
+    func getActiveExperience() -> ExperienceContent?
 
     /// Send experience event to backend
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
@@ -56,7 +56,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Try to handle the deep link internally
     func triggerDeepLink(url: URL)
 
-    /// Invalidates callbacks and closes current content without requesting a screen refresh.
+    /// Invalidates callbacks and closes current experience without requesting a screen refresh.
     func logout()
 
     /// Show thank you message
@@ -67,7 +67,7 @@ internal protocol ExperiencesPublishing: AnyObject {
 
     /// Renderers capture this identity at construction and return it with every callback.
     var activeRendererID: UUID? { get }
-    func getActiveMobileContent(rendererID: UUID?) -> ExperienceContent?
+    func getActiveExperience(rendererID: UUID?) -> ExperienceContent?
     func hasNextFlowStep(rendererID: UUID?) -> Bool
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent, rendererID: UUID?)
     func experienceDidFinishDismissing(rendererID: UUID?)
@@ -85,7 +85,7 @@ extension ExperiencesPublishing {
     }
 
     var activeRendererID: UUID? { nil }
-    func getActiveMobileContent(rendererID: UUID?) -> ExperienceContent? { getActiveMobileContent() }
+    func getActiveExperience(rendererID: UUID?) -> ExperienceContent? { getActiveExperience() }
     func hasNextFlowStep(rendererID: UUID?) -> Bool { hasNextFlowStep() }
     func publishInternalSDKEvent(_ sdkEvent: SDKEvent, rendererID: UUID?) { publishInternalSDKEvent(sdkEvent) }
     func experienceDidFinishDismissing(rendererID: UUID?) { experienceDidFinishDismissing() }
@@ -98,8 +98,8 @@ extension ExperiencesPublishing {
 
 /// `experienceQueue` owns orchestration state; main owns UIKit and renderer references.
 /// Synchronous queries read the `reads` snapshot, so neither thread ever waits on the other.
-/// The backend selects eligible content; the once-per-screen NPS limit is the only local presentation rule.
-internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscription {
+/// The backend selects eligible experience; the once-per-screen NPS limit is the only local presentation rule.
+internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscriptionDelegate {
 
     /// Where an operation came from. Manual fetches match their own reply; preview suppresses analytics.
     private enum Trigger {
@@ -108,7 +108,7 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
 
     /// Preparation steps of the one accepted operation, not separate admission gates.
     private enum Phase {
-        case content
+        case experience
         case theme(ThemeKey)
         case delay
         case visible
@@ -122,18 +122,18 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
         let generation: UUID
         var presentation: Presentation?
         let isCancelled = AtomicReference(false)
-        var content: ExperienceContent?
-        var phase: Phase = .content
+        var experience: ExperienceContent?
+        var phase: Phase = .experience
         var needsThankYou = false
         /// Screen changes, logout, and preview replacement skip the post-dismissal fake reload.
         var refreshAfterDismissal = true
         /// Decides the post-dismissal fake reload; receiving it does not release ownership.
         var closeEvent: SDKEvent?
 
-        init(trigger: Trigger, generation: UUID, content: ExperienceContent? = nil) {
+        init(trigger: Trigger, generation: UUID, experience: ExperienceContent? = nil) {
             self.trigger = trigger
             self.generation = generation
-            self.content = content
+            self.experience = experience
         }
     }
 
@@ -146,7 +146,7 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
     /// Any-thread snapshot for analytics and renderer queries.
     private struct ReadState {
         var screen = ""
-        var content: ExperienceContent?
+        var experience: ExperienceContent?
         var presentation: Presentation?
         var generation: UUID?
         /// Main may present the current operation only while this is true.
@@ -258,7 +258,7 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
         reads.update {
             var state = $0
             state.busy = operation != nil || waitingPreview
-            state.content = operation?.content
+            state.experience = operation?.experience
             state.presentation = operation?.presentation
             state.generation = operation?.generation
             state.isVisible = false
@@ -276,16 +276,16 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
         return state.generation == generation.value ? state.presentation?.id : nil
     }
 
-    func getActiveMobileContent() -> ExperienceContent? {
-        getActiveMobileContent(rendererID: activeRendererID)
+    func getActiveExperience() -> ExperienceContent? {
+        getActiveExperience(rendererID: activeRendererID)
     }
 
-    /// Return content only to the current presentation and user generation, including during dismissal.
-    func getActiveMobileContent(rendererID: UUID?) -> ExperienceContent? {
+    /// Return experience only to the current presentation and user generation, including during dismissal.
+    func getActiveExperience(rendererID: UUID?) -> ExperienceContent? {
         let state = reads.value
         guard rendererID != nil, state.presentation?.id == rendererID,
               state.generation == generation.value else { return nil }
-        return state.content
+        return state.experience
     }
 
     func hasNextFlowStep() -> Bool { hasNextFlowStep(rendererID: activeRendererID) }
@@ -325,7 +325,7 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
 
 extension ExperiencesPublisher {
 
-    /// Manual API entry. Claims ownership before requesting content; dropped while busy.
+    /// Manual API entry. Claims ownership before requesting experience; dropped while busy.
     func triggerExperience(_ experienceId: String) {
         guard !reads.value.busy else { return }
         onQueue { publisher in
@@ -340,11 +340,11 @@ extension ExperiencesPublisher {
         }
     }
 
-    /// Admits backend-selected screen or track content. Idle starts preparation; busy drops it.
-    private func accept(_ content: ExperienceContent) {
+    /// Admits backend-selected screen or track experience. Idle starts preparation; busy drops it.
+    private func accept(_ experience: ExperienceContent) {
         assertOnQueue()
         guard !isPreviewing else { return }
-        guard !isSuppressedNPS(content) else {
+        guard !isSuppressedNPS(experience) else {
             logger.info("NPS suppressed - already shown on the current screen")
             return
         }
@@ -352,13 +352,13 @@ extension ExperiencesPublisher {
             logger.info("Experience dropped - another experience is in progress")
             return
         }
-        let operation = Operation(trigger: .automatic, generation: generation.value, content: content)
+        let operation = Operation(trigger: .automatic, generation: generation.value, experience: experience)
         current = operation
         publishReadState()
         prepare(operation)
     }
 
-    /// Socket push carrying track-triggered content.
+    /// Socket push carrying track-triggered experience.
     func onNewMessage(_ message: Message) {
         guard !reads.value.busy else { return }
         onQueue { publisher in
@@ -366,12 +366,12 @@ extension ExperiencesPublisher {
                   let payload = message.payload["payload"] as? [String: Any],
                   payload.keys.contains("request_id"), payload["request_id"] as? Int == nil,
                   let response = payload.toJSONString(),
-                  let content = response.experienceCandidates(logger: publisher.logger).first else { return }
-            publisher.accept(content)
+                  let experience = response.experienceCandidates(logger: publisher.logger).first else { return }
+            publisher.accept(experience)
         }
     }
 
-    /// Screen replies remain shared notifications; content/theme requests own their completions.
+    /// Screen replies remain shared notifications; experience/theme requests own their completions.
     func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
         guard eventName == Constants.Event.screenEvent, !reads.value.busy else { return }
         onQueue { publisher in
@@ -380,38 +380,38 @@ extension ExperiencesPublisher {
         }
     }
 
-    /// Admits a screen reply unless the user already left that screen; its content would
+    /// Admits a screen reply unless the user already left that screen; its experience would
     /// otherwise appear on the new one.
     private func receiveScreen(_ payload: Payload, _ message: Message, success: Bool) {
         assertOnQueue()
         guard success, let response = message.payload.toJSONString(),
-              let content = response.experienceCandidates(logger: logger).first else { return }
+              let experience = response.experienceCandidates(logger: logger).first else { return }
         if let sentScreen = payload?[Constants.Analytics.screenTitleProperty] as? String,
            sentScreen != getCurrentScreen {
             logger.info("Screen response ignored - the screen has changed")
             return
         }
-        accept(content)
+        accept(experience)
     }
 
     /// Continues the current manual fetch. A failed or empty reply releases the gate.
-    /// Equal content tokens from an older request cannot release this operation.
-    private func receiveManualContent(_ operation: Operation, _ message: Message, success: Bool) {
+    /// Equal experience tokens from an older request cannot release this operation.
+    private func receiveManualExperience(_ operation: Operation, _ message: Message, success: Bool) {
         assertOnQueue()
-        guard operation.trigger == .manual, case .content = operation.phase else { return }
+        guard operation.trigger == .manual, case .experience = operation.phase else { return }
         guard success, let response = message.payload.toJSONString(),
-              let content = response.experienceCandidates(logger: logger).first else {
+              let experience = response.experienceCandidates(logger: logger).first else {
             logger.info("Manual experience request returned no content")
             finish(operation)
             return
         }
-        operation.content = content
+        operation.experience = experience
         publishReadState()
         prepare(operation)
     }
 
     /// Continues the operation waiting for this theme. A failed app theme reply falls back to the
-    /// content's own theme; any other failed reply releases the gate.
+    /// experience's own theme; any other failed reply releases the gate.
     private func receiveTheme(_ operation: Operation, _ message: Message, success: Bool) {
         assertOnQueue()
         guard case .theme(let key) = operation.phase else { return }
@@ -443,13 +443,13 @@ extension ExperiencesPublisher {
         themes.resetAppThemes()
     }
 
-    /// Socket loss abandons preparation still waiting for a content/theme reply.
+    /// Socket loss abandons preparation still waiting for a experience/theme reply.
     /// Delayed or visible UI and HTTP-based preview work continue.
     func onSocketClosed() {
         onQueue { publisher in
             guard let operation = publisher.current, operation.trigger != .preview else { return }
             switch operation.phase {
-            case .content, .theme:
+            case .experience, .theme:
                 publisher.finish(operation)
             default:
                 break
@@ -466,16 +466,16 @@ extension ExperiencesPublisher {
     /// which is the app theme while one is selected and available.
     private func prepare(_ operation: Operation) {
         assertOnQueue()
-        guard let content = operation.content else {
+        guard let experience = operation.experience else {
             finish(operation)
             return
         }
-        guard !isSuppressedNPS(content) else {
+        guard !isSuppressedNPS(experience) else {
             logger.info("NPS suppressed - already shown on the current screen")
             finish(operation)
             return
         }
-        guard let themeKey = themes.requiredThemeKey(for: content) else {
+        guard let themeKey = themes.requiredThemeKey(for: experience) else {
             schedulePresentation(operation)
             return
         }
@@ -498,7 +498,7 @@ extension ExperiencesPublisher {
             self?.onQueue { publisher in
                 guard publisher.owns(operation) else { return }
                 if eventName == SDKEventsName.fetchExperienceContent.rawValue {
-                    publisher.receiveManualContent(operation, message, success: success)
+                    publisher.receiveManualExperience(operation, message, success: success)
                 } else {
                     publisher.receiveTheme(operation, message, success: success)
                 }
@@ -506,10 +506,10 @@ extension ExperiencesPublisher {
         })
     }
 
-    /// Apply this content's display delay; the scheduled continuation rechecks operation ownership.
+    /// Apply this experience's display delay; the scheduled continuation rechecks operation ownership.
     private func schedulePresentation(_ operation: Operation) {
-        guard let content = operation.content else { finish(operation); return }
-        schedule(operation, after: content.resolvedDelay()) { $0.openExperience($1) }
+        guard let experience = operation.experience else { finish(operation); return }
+        schedule(operation, after: experience.resolvedDelay()) { $0.openExperience($1) }
     }
 
     /// One delay at a time (initial display or thank-you). DelayUtils fires on main, so the action
@@ -532,8 +532,8 @@ extension ExperiencesPublisher {
     }
 
     /// Do not repeat NPS within the same screen visit, even if the backend returns it again.
-    private func isSuppressedNPS(_ content: ExperienceContent) -> Bool {
-        content.asNPSContent() != nil && npsShownOnCurrentScreen
+    private func isSuppressedNPS(_ experience: ExperienceContent) -> Bool {
+        experience.asNPSContent() != nil && npsShownOnCurrentScreen
     }
 }
 
@@ -543,8 +543,8 @@ extension ExperiencesPublisher {
 
     /// Picks the existing renderer and presentation style. UIKit work happens later on main.
     private func openExperience(_ operation: Operation) {
-        guard let content = operation.content else { finish(operation); return }
-        switch content {
+        guard let experience = operation.experience else { finish(operation); return }
+        switch experience {
         case .flow(let flow):
             openFlow(flow, operation)
         case .survey(let survey):
@@ -592,11 +592,11 @@ extension ExperiencesPublisher {
         makeViewController: @escaping (VM) -> VC,
         style: PresentationStyle
     ) {
-        guard let content = operation.content else {
+        guard let experience = operation.experience else {
             finish(operation)
             return
         }
-        if let survey = content.asSurveyContent(), survey.type == .list,
+        if let survey = experience.asSurveyContent(), survey.type == .list,
            let last = survey.modules.last, last.type == .completed, last.metadata?.enabled != false {
             operation.needsThankYou = true
         }
@@ -652,7 +652,7 @@ extension ExperiencesPublisher {
         }
         shown.controller = controller
         onPresentation(shown) { publisher, operation in
-            guard operation.content?.asNPSContent() != nil,
+            guard operation.experience?.asNPSContent() != nil,
                   publisher.getCurrentScreen == screen else { return }
             publisher.npsShownOnCurrentScreen = true
         }
@@ -692,7 +692,7 @@ extension ExperiencesPublisher {
                   shown.controller?.presentingViewController == nil else { return }
             publisher.onPresentation(shown) { publisher, operation in
                 guard operation.needsThankYou,
-                      operation.content?.asSurveyContent()?.id == survey.id else { return }
+                      operation.experience?.asSurveyContent()?.id == survey.id else { return }
                 operation.needsThankYou = false
                 operation.presentation = nil
                 let interval = ThemeHandler.DefaultValues.delayTimeForExperience
@@ -741,7 +741,7 @@ extension ExperiencesPublisher {
     func experienceDidFinishDismissing() { experienceDidFinishDismissing(rendererID: nil) }
 
     /// Accept dismissal only for the named presentation after UIKit has detached its controller.
-    /// A completed/dismissed analytics event alone cannot release the operation or request the next content.
+    /// A completed/dismissed analytics event alone cannot release the operation or request the next experience.
     func experienceDidFinishDismissing(rendererID: UUID?) {
         guard let rendererID else { return }
         onMain { publisher in
@@ -790,7 +790,7 @@ extension ExperiencesPublisher {
         let completed: () -> Void = { [weak self] in
             self?.onMain { $0.didDismissOnMain(shown) }
         }
-        if let experience = renderer as? UPExperience {
+        if let experience = renderer as? UPExperienceDelegate {
             experience.triggerCloseExperience(manualClose: manualClose, completion: completed)
         } else if let sheet = renderer as? BottomSheetViewController {
             sheet.dismissBottomSheet(completion: completed)
@@ -877,7 +877,7 @@ extension ExperiencesPublisher {
 
 extension ExperiencesPublisher {
 
-    /// QR entry, the only input that interrupts the current operation. Preparation (content or theme
+    /// QR entry, the only input that interrupts the current operation. Preparation (experience or theme
     /// fetch, display delay) is cancelled at once; a visible renderer finishes dismissing first.
     /// The latest scan wins, including over an older preview.
     func triggerPreviewExperience(_ experienceId: String, _ queryItems: [URLQueryItem]) {
@@ -908,14 +908,14 @@ extension ExperiencesPublisher {
                 guard let operation, publisher.owns(operation) else { return }
                 switch result {
                 case .success(let preview):
-                    let content = preview.flow.map { ExperienceContent.flow(content: $0) }
+                    let experience = preview.flow.map { ExperienceContent.flow(content: $0) }
                         ?? preview.survey.map { ExperienceContent.survey(content: $0) }
-                    guard let content, let theme = preview.theme else {
+                    guard let experience, let theme = preview.theme else {
                         publisher.logger.info("Preview dropped - response has no content or theme")
                         publisher.finish(operation)
                         return
                     }
-                    operation.content = content
+                    operation.experience = experience
                     publisher.themes.saveTheme(theme)
                     publisher.publishReadState()
                     publisher.schedulePresentation(operation)

@@ -5,14 +5,14 @@
 //  Created by Userpilot on 20/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  A extension to confirm UPExperienceView
+//  A extension to confirm UPExperienceViewDelegate
 //
 
 import UIKit
 
-// MARK: - UPExperienceView Protocol Implementation for UPSingleInputView
+// MARK: - UPExperienceViewDelegate Protocol Implementation for UPSingleInputView
 
-extension UPSingleInputView: UPExperienceView {
+extension UPSingleInputView: UPExperienceViewDelegate {
 
     // MARK: - Answer Validation
 

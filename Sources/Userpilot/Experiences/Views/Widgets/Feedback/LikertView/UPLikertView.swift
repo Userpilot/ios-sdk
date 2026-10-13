@@ -60,7 +60,7 @@ internal class UPLikertView: UIView {
     internal var isRTL = false
 
     // View state delegate for managing view state changes
-    internal weak var viewStateProtocol: ViewStateDelegate?
+    internal weak var viewStateProtocol: UPViewStateDelegate?
 
     // View Margin left, right
     internal var margin = CGFloat(0)
@@ -94,7 +94,7 @@ internal class UPLikertView: UIView {
         isListView: Bool,
         isDialog: Bool,
         isRTL: Bool,
-        viewStateProtocol: ViewStateDelegate
+        viewStateProtocol: UPViewStateDelegate
     ) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme
@@ -140,7 +140,7 @@ internal class UPLikertView: UIView {
         npsTheme: NPSTheme,
         isRTL: Bool,
         answer: Int,
-        viewStateProtocol: ViewStateDelegate
+        viewStateProtocol: UPViewStateDelegate
     ) {
         self.npsTheme = npsTheme
         self.isRTL = isRTL

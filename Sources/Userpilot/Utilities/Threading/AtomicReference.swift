@@ -11,7 +11,7 @@
 import Foundation
 
 /// A thread-safe generic reference value that may be updated atomically.
-/// This class mimics the behavior of Kotlin's AtomicReference<T>.
+/// Synchronizes reads, writes and updates of one shared value.
 internal class AtomicReference<T> {
     private var _value: T
     private let lock = NSLock()

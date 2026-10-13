@@ -14,7 +14,7 @@ final class SocketManagerTests: XCTestCase {
 
     private var userpilot: MockUserpilot!
     private var socketManager: SocketManager!
-    private var subscription: RecordingSocketSubscription!
+    private var subscription: RecordingSocketSubscriptionDelegate!
     private var transports: [FakePhoenixTransport]!
     private var socketEndpoints: [String]!
     private var socketParams: [SwiftPhoenixClientPayload?]!
@@ -25,7 +25,7 @@ final class SocketManagerTests: XCTestCase {
         userpilot.storage.socketURL = "https://socket.example.com/mobile/v1/events/websocket"
         userpilot.storage.userId = "user-1"
         userpilot.sessionMonitor.isAppActive = true
-        subscription = RecordingSocketSubscription()
+        subscription = RecordingSocketSubscriptionDelegate()
         transports = []
         socketEndpoints = []
         socketParams = []

@@ -12,7 +12,7 @@
 import Foundation
 @testable import Userpilot
 
-final class RecordingSocketSubscription: SocketSubscription {
+final class RecordingSocketSubscriptionDelegate: SocketSubscriptionDelegate {
     struct SentEvent {
         let event: String
         let payload: Payload

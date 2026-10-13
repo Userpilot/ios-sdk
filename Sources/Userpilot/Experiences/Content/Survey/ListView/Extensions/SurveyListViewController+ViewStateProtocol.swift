@@ -8,13 +8,13 @@
 //  SurveyListViewController+ViewStateProtocol.swift//  Userpilot SDK
 //
 //
-//  This class confirm to ViewStateDelegate to listen for view updates.
+//  This class confirm to UPViewStateDelegate to listen for view updates.
 //
 //
-//  Extension for SurveyListViewController to conform to the ViewStateDelegate protocol.
+//  Extension for SurveyListViewController to conform to the UPViewStateDelegate protocol.
 //
 
-extension SurveyListViewController: ViewStateDelegate {
+extension SurveyListViewController: UPViewStateDelegate {
 
     /// Called when the view state changes.
     /// - Parameter isValid: A Boolean indicating whether the current view state is valid.

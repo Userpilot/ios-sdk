@@ -1,30 +1,14 @@
 //
-//  UIWindow+Extensions.swift
+//  UIWindow+AutoCapture.swift
 //  Userpilot SDK
 //
-//  Created by Userpilot on 06/01/2026.
-//  Copyright © 2024 Userpilot. All rights reserved.
+//  Created by Userpilot on 13/10/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  UIWindow+Extensions implements automatic click tracking by intercepting touch events
-//  at the window level, providing comprehensive analytics capture for both UIKit and SwiftUI.
+//  Window touch interception, instance routing and tap capture for native screens.
 //
 
 import UIKit
-
-// MARK: - Public
-
-@objc
-public extension UIWindow {
-    /// `true` when this window is an internal Userpilot SDK overlay.
-    ///
-    /// Useful from screen-capture / analytics integrations that need to skip
-    /// SDK-owned UI when walking the application's window list. Also used
-    /// internally by `ExperienceOverlayWindow`'s scene resolver to avoid
-    /// picking its own scene as the fallback host.
-    var isUserpilotWindow: Bool {
-        return self is ExperienceOverlayWindow
-    }
-}
 
 /// Touch starts for tap-end click capture (see `SwiftUITitleCapturePolicy.capturesClicksOnTapEnd`).
 /// `sendEvent` runs on main, so the shared tracker is main-confined.

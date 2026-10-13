@@ -22,7 +22,7 @@ internal class UPOpenTextView: UIView {
     internal let maxLength = 500
 
     internal var surveyStep: SurveyStep?
-    internal weak var viewStateProtocol: ViewStateDelegate?
+    internal weak var viewStateProtocol: UPViewStateDelegate?
 
     // View Margin left, right
     internal var margin = CGFloat(0)
@@ -63,7 +63,7 @@ internal class UPOpenTextView: UIView {
         surveyTheme: SurveyTheme,
         isListView: Bool,
         isRTL: Bool,
-        viewStateProtocol: ViewStateDelegate
+        viewStateProtocol: UPViewStateDelegate
     ) {
         self.surveyStep = surveyStep
         self.viewStateProtocol = viewStateProtocol
@@ -94,7 +94,7 @@ internal class UPOpenTextView: UIView {
         placeholder: String?,
         npsTheme: NPSTheme,
         isRTL: Bool,
-        viewStateProtocol: ViewStateDelegate
+        viewStateProtocol: UPViewStateDelegate
     ) {
         guard let followUpQuestion else { return }
         self.viewStateProtocol = viewStateProtocol

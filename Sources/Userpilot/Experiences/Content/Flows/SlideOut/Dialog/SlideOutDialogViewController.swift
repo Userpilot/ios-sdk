@@ -130,9 +130,9 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension SlideOutDialogViewController: UPExperience {
+extension SlideOutDialogViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
