@@ -233,7 +233,7 @@ available for review. Automated ownership tests and focused two-account runtime 
 
 | Case | Scenario | Expected result on both platforms |
 | --- | --- | --- |
-| MI-001 | Initialize the same token again, including concurrent calls | Reuse the first configuration and service graph. Do not start another socket, tracker or observer set. |
+| MI-001 | Initialize the same token again, including concurrent calls | Reuse the first configuration and service graph. Do not start another socket, tracker or observer set. Keep the original logging configuration for duplicate warnings. `setup` returns the registered instance itself; surrounding token whitespace is removed once at the initialization input boundary; registration, storage, and socket configuration use that same token. |
 | MI-002 | Initialize different tokens | Keep identity, session flags, analytics queues, transport, presentation and storage independent. |
 | MI-003 | Register a default, then another instance requests the default role | Keep the first claimant, preserve the existing warning, and still register the second instance for its claimed UI. |
 | MI-004 | One non-default instance owns the originating UI | Route to that owner even when there is no default. Instance count never bypasses ownership. |
@@ -254,9 +254,10 @@ available for review. Automated ownership tests and focused two-account runtime 
 
 Native differences are deliberate:
 
-- Swift initializers return distinct facade objects that retain one canonical owner for the same token.
-  Android's factory returns the canonical object itself. This is the existing API shape, not an OS
-  restriction: an additive Swift factory could also return the canonical object directly.
+- `Userpilot.setup(config:)` (iOS) and `Userpilot.setup(context, token)` (Android) return the
+  canonical object itself. Android's top-level `Userpilot(context, token)` factory delegates to `setup`.
+  iOS construction is internal; apps and native wrappers must migrate from `Userpilot(config:)`
+  to `Userpilot.setup(config:)`. This breaking iOS change requires a major release and wrapper migration.
 - iOS registrations are weak and retire with ARC. Android registrations hold instances until the
   runtime's internal removal path closes the matching Koin scope. Logout is not disposal.
 - UIKit resolves explicit responder bindings, then controller class, window and bundle scopes.
@@ -272,3 +273,19 @@ Native differences are deliberate:
 The entry flow is native callback → resolve owner → apply that owner's capture rules → owner
 coordinator → owner analytics publisher → owner socket. Optional forwarding is a separate direct
 publication after the local event. Runtime composition never builds analytics payloads or handles ACKs.
+
+## Hybrid native autocapture
+
+A hybrid app uses one retained SDK instance per account token. iOS selects `.appFramework(.Hybrid)` for UIKit + SwiftUI; Android selects `uiFramework = UiFramework.Hybrid` for Android Views + Compose. This option does not enable capture by itself or change ownership/forwarding.
+
+| Case | Expected behavior |
+| --- | --- |
+| Native imperative surface | UIKit/View capture uses its existing native hooks, identity and value rules. |
+| Native declarative surface | SwiftUI/Compose capture uses its existing hosting/instrumentation path and logical screen name. |
+| Event framework metadata | Report UIKit/SwiftUI or View/Compose from the originating surface; never Hybrid. Manual context without a known native source omits it. |
+| Identify or content reload | Retain the tracked screen's native framework and identity. A same-screen reload preserves session-start and seen content. Queue admission and `fake_reload` rules above are unchanged. |
+| Navigation between frameworks | A real screen change clears the previous screen's seen IDs and changes session-start according to the same session state machine. A framework label alone does not start a new session. |
+| Privacy, stop/resume and ownership | Apply the captured owner's configuration and existing ignore/redaction gates. The mode creates no second SDK instance or duplicate capture pipeline. |
+| Existing explicit modes or unset framework | Keep their previous behavior. Hybrid must be selected explicitly. |
+
+Android still requires both View and Compose Gradle instrumentation and the existing Compose screen tracker/modifier. Ignore redundant native host screens. iOS SwiftUI button titles/tap-end capture still require the opt-in and iOS 26+; UIKit outside hosted SwiftUI retains its existing touch timing. Below iOS 26, existing capture paths remain in use.

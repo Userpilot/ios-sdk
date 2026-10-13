@@ -80,10 +80,14 @@ To use Userpilot, initialize it once in your App Delegate or Scene Delegate duri
 
 func application(_ application: UIApplication,
                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>"))
+    userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>"))
 }
 
 ```
+
+`Userpilot.setup(config:)` is safe to call more than once: for a token that is already set up it returns the same instance and ignores the new config. Objective-C: `[Userpilot setupWithConfig:config]`. Keep the returned instance in a stored property. Duplicate warnings follow the original logging configuration. Surrounding token whitespace is removed once before registration and service startup.
+
+This branch removes the public initializer. See the [initialization migration](Sources/Userpilot/Userpilot.docc/MultiInstance.md#migration-from-the-public-initializer) before upgrading an app or native wrapper.
 
 ### Using the SDK
 
@@ -203,6 +207,8 @@ userpilot.clearTheme()
 
 See [App Theme](Sources/Userpilot/Userpilot.docc/AppTheme.md) for following light and dark mode and the full behavior.
 
+For a hybrid UIKit + SwiftUI app, configure `.appFramework(.Hybrid)`. Each native surface keeps its capture behavior and reports its actual UI framework. See the [hybrid app setup](Sources/Userpilot/Userpilot.docc/Autocapture.md#hybrid-apps-uikit--swiftui), including the separate iOS 26+ SwiftUI button opt-in.
+
 ### **Configurations (Optional)**
 
 If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
@@ -212,7 +218,7 @@ Interaction value capture is disabled by default. Call `.enableInteractionValueC
 SwiftUI button autocapture (iOS 26 and later) is disabled by default. Call `.enableSwiftUIButtonAutoCapture(true)` with interaction autocapture to capture one click per SwiftUI tap together with the button's title. See [SwiftUI button autocapture](Sources/Userpilot/Userpilot.docc/Autocapture.md#swiftui-button-autocapture).
 
 ```swift
-userpilot = Userpilot(
+userpilot = Userpilot.setup(
     config: Userpilot.Config(token: "APP_TOKEN")
         .logging(enabled: true) // Enable or disable logging.
         .enableUseInAppBrowser(true) // Enable Open external link In-app browser using SFSafariViewController.

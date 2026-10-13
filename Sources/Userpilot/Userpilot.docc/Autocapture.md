@@ -11,9 +11,9 @@ This guide covers configuration for both UIKit and SwiftUI, customizing screen c
 Autocapture is **off by default**. Enable it when building your ``Userpilot/Config`` and initializing Userpilot. Retain the resulting instance in your app or integration owner for its intended lifetime.
 
 ```swift
-let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
     .logging(enabled: true)
-    .appFramework(.UIKit)  // UIKit-only; use .SwiftUI for hybrid UIKit + SwiftUI apps
+    .appFramework(.UIKit)  // UIKit-only; use .Hybrid for hybrid UIKit + SwiftUI apps
     .enableScreenAutoCapture(true)   // Capture screen views automatically
     .enableInteractionAutoCapture(true) // Capture taps and interactions automatically
 )
@@ -43,7 +43,7 @@ When **screen autocapture** is enabled, the SDK publishes a screen event the fir
 | `vc_accessibility_identifier` | string | optional | Only included when set on the VC's view. |
 | `vc_accessibility_label` | string | optional | Only included when set on the VC's view. |
 | `screen_name_matches_previous_screen` | bool | optional | SwiftUI only — emitted when the resolved name matches the previous screen (used by the SDK to coalesce duplicate hosting-controller appearances). |
-| `ui_framework` | string | optional | `"UIKit"` or `"SwiftUI"`, set from `Config.appFramework`. |
+| `ui_framework` | string | optional | `"UIKit"` or `"SwiftUI"`. Hybrid resolves the captured native surface; `Hybrid` is not an event value. |
 
 `UIAlertController` is **not** tracked as a screen. Its presentation is rerouted to the dialog autocapture path and emitted as a `mobile_autocapture` interaction with `interaction_type = "view_presented"` carrying the alert's title and message.
 
@@ -81,7 +81,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 |----------|--------|-------------|--------|
 | ``enableScreenAutoCapture`` | ``enableScreenAutoCapture(_:)`` | Turn automatic screen capture on or off. | `false` |
 | ``enableScreenTitleCapture`` | ``enableScreenTitleCapture(_:)`` | When enabled, screen titles (e.g. navigation title, tab title) may be captured. Set to `false` to disable title capture globally. | `true` |
-| ``appFramework`` | ``appFramework(_:)`` | Select UIKit or SwiftUI behavior; when unset, the SDK detects the initial native framework. | `nil` |
+| ``appFramework`` | ``appFramework(_:)`` | Select `.UIKit`, `.SwiftUI`, or `.Hybrid` for UIKit + SwiftUI apps. When unset, the SDK detects the initial native framework. | `nil` |
 
 ### Interaction options
 
@@ -98,7 +98,7 @@ Configure global capture and privacy via ``Userpilot/Config``.
 Example: disable all text and accessibility label capture for maximum privacy:
 
 ```swift
-let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.UIKit)  // Specify UIKit framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
@@ -294,7 +294,7 @@ The Userpilot SDK supports automatic capture in SwiftUI apps. SwiftUI autocaptur
 For SwiftUI apps, set the app framework in your configuration:
 
 ```swift
-let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
     .appFramework(.SwiftUI)  // Specify SwiftUI framework
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
@@ -310,7 +310,7 @@ On iOS 26, SwiftUI draws button titles itself instead of using UIKit labels, so 
 
 When it is on:
 
-- **One click per tap.** In SwiftUI apps (`appFramework(.SwiftUI)`), a tap is captured once, when the touch **ends**, and only for a real tap — one finger, under 0.5 s, moving less than 10 pt — so the start of a scroll on a button is not reported as a click. UIKit apps and wrapper SDK hosts (React Native, Flutter, Ionic) keep capturing on touch start.
+- **One click per tap.** In SwiftUI apps (`appFramework(.SwiftUI)`) and SwiftUI-hosted content in `.Hybrid` apps, a tap is captured once, when the touch **ends**, and only for a real tap — one finger, under 0.5 s, moving less than 10 pt — so the start of a scroll on a button is not reported as a click. UIKit apps and wrapper SDK hosts (React Native, Flutter, Ionic) keep capturing on touch start.
 - **Button titles.** A tap inside SwiftUI content that has no UIKit text gets the title SwiftUI rendered under the finger as `target_text`. This also requires ``enableInteractionTextCapture(_:)``. See [How it works and its limits](#swiftui-title-capture-how-it-works-and-its-limits).
 - **Text under the finger.** Inside SwiftUI content, only text under the tap can supply `target_text`, so a tap on the second segment of a segmented picker reports that segment, not the first one.
 
@@ -538,11 +538,11 @@ For manual tracking (e.g. custom events or screens), continue to use ``Userpilot
 
 Use one retained `Userpilot` instance for one account token. A second UI framework does not require a second instance.
 
-For a hybrid app using UIKit and SwiftUI, configure `.appFramework(.SwiftUI)` and enable interaction autocapture. Enable `.enableSwiftUIButtonAutoCapture(true)` for the opt-in iOS 26+ button-title path. Supported UIKit controls continue through the UIKit hooks; SwiftUI controls use hosting-view taps. Selecting `.UIKit` prevents the SwiftUI title scanner from running, even if SwiftUI screens are embedded later.
+For a hybrid app using UIKit and SwiftUI, configure `.appFramework(.Hybrid)` and enable interaction autocapture. Enable `.enableSwiftUIButtonAutoCapture(true)` for the opt-in iOS 26+ button-title path. Supported UIKit controls continue through the UIKit hooks; SwiftUI controls use hosting-view taps. Selecting `.UIKit` prevents the SwiftUI title scanner from running, even if SwiftUI screens are embedded later.
 
 ```swift
-let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
-    .appFramework(.SwiftUI) // Hybrid UIKit + SwiftUI; UIKit capture stays enabled.
+let userpilot = Userpilot.setup(config: Userpilot.Config(token: "<APP_TOKEN>")
+    .appFramework(.Hybrid) // Capture UIKit and SwiftUI using each surface’s native behavior.
     .enableScreenAutoCapture(true)
     .enableInteractionAutoCapture(true)
     .enableSwiftUIButtonAutoCapture(true) // Opt-in SwiftUI button capture on iOS 26+.
@@ -551,9 +551,13 @@ let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
 
 For screens, use automatic capture plus screen-name/ignore helpers, or manual screen calls when automatic screen capture is disabled. Give one visible destination one screen name and ignore redundant container screens. A new SwiftUI body evaluation is not a new screen. For different account tokens, bind UIKit subtrees or existing hosting controllers to their owner as described in the multi-instance guide.
 
-### Current limitation
+### Framework behavior
 
-Framework configuration applies to the whole SDK instance. It affects screen filtering and some control metadata; it is not only a reporting label. With `.SwiftUI`, UIKit `UIStepper` events also omit `selected_value`, even when value capture is enabled. The SDK currently checks the instance framework rather than whether that control belongs to UIKit or SwiftUI.
+Hybrid resolves the native surface for each captured screen or interaction. UIKit screens keep their controller identity; SwiftUI hosting screens use their resolved logical names. Events report `ui_framework=UIKit` or `ui_framework=SwiftUI`; `Hybrid` is a configuration option only. A manual screen with no known native source omits the framework field.
+
+With SwiftUI button capture enabled on iOS 26+, hosted SwiftUI taps use tap-end capture and its scroll filter. UIKit taps keep their existing timing. UIKit controls outside a hosting view keep native value capture (including `UIStepper.selected_value` when enabled); SwiftUI-hosted proxy controls retain their existing value restrictions. All capture, ignore, redaction, stop/resume, and ownership gates still apply.
+
+Existing `.UIKit`, `.SwiftUI`, and unset configurations retain their behavior. Use `.Hybrid` explicitly for a hybrid app; automatic initial-framework detection does not select Hybrid.
 
 ### Verify your integration
 
