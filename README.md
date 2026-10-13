@@ -25,9 +25,9 @@ This document provides a step-by-step walkthrough of the installation and initia
     - [Initializing](#initializing)
     - [Using the SDK](#using-the-SDK)
     - [Configurations](#configurations-optional)
-    - [Features](#features)
     - [Auto Capture](#auto-capture)
     - [Push Notification](#push-notification)
+    - [Features](#features)
  - [📝 Documentation](#-documentation)
  - [🎬 Samples](#-samples)
  - [📄 License](#-license)
@@ -145,16 +145,6 @@ userpilot.identify(
 - Ensure the User ID source is consistent across Web, Android, and iOS.
 - While properties are optional, setting them enhances Userpilot’s segmentation capabilities.
 
-#### User Locale
-
-After `identify` or `anonymous`, update the current user's locale:
-
-```swift
-userpilot.locale("en-US")
-```
-
-This re-identifies the current user with the `locale_code` property. Surrounding whitespace is trimmed; blank codes and calls before identification are ignored. It does not change the app's language or create a new user.
-
 #### Tracking Screens (Required)
 
 Calling screen is crucial for unlocking Userpilot’s core engagement and analytics capabilities. When a user navigates to a particular screen, invoking screen records that view and triggers any eligible in-app experiences. Subsequent events are also attributed to the most recently tracked screen, providing context for richer analytical insights. For these reasons, we strongly recommend tracking all of your app’s screen views.
@@ -213,29 +203,24 @@ Clears the selected theme so experiences use their own themes again:
 userpilot.clearTheme()
 ```
 
-See [App Theme](Sources/Userpilot/Userpilot.docc/AppTheme.md) for following light and dark mode and the full behavior.
+See the [iOS SDK Features guide](https://docs.userpilot.com/developer/installation/mobile/ios/features).
 
-For a hybrid UIKit + SwiftUI app, configure `.appFramework(.Hybrid)`. Each native surface keeps its capture behavior and reports its actual UI framework. See the [hybrid app setup](Sources/Userpilot/Userpilot.docc/Autocapture.md#hybrid-apps-uikit--swiftui), including the separate iOS 26+ SwiftUI button opt-in.
+### Configurations (Optional)
 
-### **Configurations (Optional)**
-
-If you have additional configuration needs, you can pass a custom configuration when initializing Userpilot. You can enable logging, provide navigation and experience delegates, and set up analytics listeners.
-
-Interaction value capture is disabled by default. Call `.enableInteractionValueCapture(true)` on the configuration to capture control values when interaction autocapture is enabled.
-
-SwiftUI button autocapture (iOS 26 and later) is disabled by default. Call `.enableSwiftUIButtonAutoCapture(true)` with interaction autocapture to capture one click per SwiftUI tap together with the button's title. See [SwiftUI button autocapture](Sources/Userpilot/Userpilot.docc/Autocapture.md#swiftui-button-autocapture).
+Pass a custom configuration when initializing Userpilot. Assign navigation, analytics, and experience delegates to handle SDK callbacks.
 
 ```swift
 userpilot = Userpilot(
-    config: Userpilot.Config(token: "APP_TOKEN")
-        .logging(enabled: true) // Enable or disable logging.
-        .enableUseInAppBrowser(true) // Enable Open external link In-app browser using SFSafariViewController.
-        .disableRequestPushNotificationsPermission() // Disable SDK push permission request flow (default false).
+    config: Userpilot.Config(token: "<APP_TOKEN>")
+        .logging(enabled: true)
+        .enableUseInAppBrowser(true)
 )
 userpilot.navigationDelegate = self
 userpilot.analyticsDelegate = self
 userpilot.experienceDelegate = self
 ```
+
+See the [Configuration guide](https://docs.userpilot.com/developer/installation/mobile/ios/installation#configuration-optional) for all available options.
 
 #### Navigation Handler
 
@@ -327,17 +312,17 @@ public protocol UserpilotExperienceDelegate: AnyObject {
 }
 ```
 
-### Features
-
-Explore SDK capabilities and setup instructions in the [iOS SDK Features guide](https://docs.userpilot.com/developer/installation/mobile/ios/features).
-
 ### Auto Capture
 
-The Userpilot SDK supports automatic capture of screen views and user interaction events. please refer to the [Userpilot Documentation](https://docs.userpilot.com/developer/installation/mobile/ios/installation).
+The Userpilot SDK supports automatic capture of screen views and user interaction events. See the [Auto Capture guide](https://docs.userpilot.com/developer/installation/mobile/ios/auto-capture).
 
 ### Push Notification
 
 Userpilot SDK supports handling push notifications to help you deliver targeted messages and enhance user engagement. For setup instructions and integration details, see the official [Push Notifications Guide](https://docs.userpilot.com/developer/installation/mobile/ios/push-notifications).
+
+### Features
+
+Explore SDK capabilities and setup instructions in the [iOS SDK Features guide](https://docs.userpilot.com/developer/installation/mobile/ios/features).
 
 ## 📝 Documentation
 
