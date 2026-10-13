@@ -1,5 +1,5 @@
 //
-//  SocketSubscription.swift
+//  SocketSubscriptionDelegate.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 05/10/2026.
@@ -13,8 +13,8 @@ import Foundation
 /// A single push's response and success status, delivered to its submitting operation.
 internal typealias SocketCompletion = (Message, Bool) -> Void
 
-/// Receives socket lifecycle, push results and backend messages, like Android's socket listener.
-internal protocol SocketSubscription: AnyObject {
+/// Receives socket lifecycle, push results and backend messages.
+internal protocol SocketSubscriptionDelegate: AnyObject {
 
     /// Called after the current connection closes.
     func onSocketClosed()
@@ -34,8 +34,8 @@ internal protocol SocketSubscription: AnyObject {
     func onNewMessage(_ message: Message)
 }
 
-/// Swift protocol defaults keep each callback optional, as Android's listener interface does.
-extension SocketSubscription {
+/// Default implementations let subscribers implement only the callbacks they need.
+extension SocketSubscriptionDelegate {
     func onSocketClosed() {
         // Default implementation (optional)
     }

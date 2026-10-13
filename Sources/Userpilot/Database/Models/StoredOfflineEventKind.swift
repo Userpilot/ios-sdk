@@ -12,8 +12,8 @@ import Foundation
 
 /// Which pipeline a stored offline row came from.
 ///
-/// The raw values are a cross-platform contract with the Android SDK's
-/// `StoredOfflineEventKind` — do not rename them without changing both.
+/// The raw values are persisted and sent in offline batches; renaming them requires
+/// a storage migration and compatibility with the backend batch contract.
 internal enum StoredOfflineEventKind: String, Codable {
     case analytics
     /// `internal` is a Swift keyword, so the case is spelled differently from its raw value.

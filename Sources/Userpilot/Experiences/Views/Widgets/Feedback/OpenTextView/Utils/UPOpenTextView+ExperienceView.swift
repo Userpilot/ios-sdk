@@ -5,10 +5,10 @@
 //  Created by Userpilot on 19/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  A extension to confirm UPExperienceView
+//  A extension to confirm UPExperienceViewDelegate
 //
 
-extension UPOpenTextView: UPExperienceView {
+extension UPOpenTextView: UPExperienceViewDelegate {
 
     /// Checks if the answer is valid based on the survey step's requirements.
     ///

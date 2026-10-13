@@ -20,7 +20,7 @@ internal class UPMultipleChoiceView: UIView {
     internal var surveyStep: SurveyStep?
     internal var surveyTheme: SurveyTheme?
     internal var isRTL = false
-    internal weak var viewStateProtocol: ViewStateDelegate?
+    internal weak var viewStateProtocol: UPViewStateDelegate?
 
     internal var choices = [Choice]()
 
@@ -63,7 +63,7 @@ internal class UPMultipleChoiceView: UIView {
         surveyTheme: SurveyTheme,
         isListView: Bool,
         isRTL: Bool,
-        viewStateProtocol: ViewStateDelegate
+        viewStateProtocol: UPViewStateDelegate
     ) {
         self.surveyStep = surveyStep
         self.surveyTheme = surveyTheme

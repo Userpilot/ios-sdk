@@ -126,9 +126,9 @@ extension NPSBottomSheetViewController {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension NPSBottomSheetViewController: UPExperience {
+extension NPSBottomSheetViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?

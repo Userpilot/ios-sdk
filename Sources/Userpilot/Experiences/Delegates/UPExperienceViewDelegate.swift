@@ -1,5 +1,5 @@
 //
-//  UPExperienceView.swift
+//  UPExperienceViewDelegate.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 19/01/2025.
@@ -8,7 +8,8 @@
 //  A protocol that defines the requirements for an experience view in the Userpilot SDK.
 //
 
-internal protocol UPExperienceView: AnyObject {
+/// Delegate used by experience containers to validate and collect input.
+internal protocol UPExperienceViewDelegate: AnyObject {
 
     /// Validates whether the current input in the experience view is valid.
     /// - Returns: A `Bool` indicating whether the input meets the required validation criteria.

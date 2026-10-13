@@ -116,7 +116,7 @@ internal extension String {
     }
 
     /**
-    Decodes model JSON strings using `JSONDecoder`, like `toObject` on Android.
+    Decodes model JSON strings using `JSONDecoder`.
     An empty string is `nil`, and a failure is logged through `logger`
     with its reason and coding path, then `nil`, so each caller keeps its own fallback.
 

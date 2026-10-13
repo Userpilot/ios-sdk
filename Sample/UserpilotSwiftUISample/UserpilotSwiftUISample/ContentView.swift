@@ -9,6 +9,7 @@ import SwiftUI
 import Userpilot
 
 struct ContentView: View {
+    @State private var showConfig = SampleConfig.load().token.isEmpty
     @State private var showIdentifyScreen = false
     @State private var showScreensFlow = false
     @State private var showClickAnalytics = false
@@ -37,6 +38,13 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     header
+                    sampleRow(
+                        title: "Configuration",
+                        subtitle: "Save the app token and SDK options for the next launch.",
+                        icon: "gearshape",
+                        gradient: [.gray, .blue],
+                        action: { showConfig = true }
+                    )
 
                     sampleSection(
                         title: "User & screens",
@@ -145,6 +153,9 @@ struct ContentView: View {
                 .padding(.bottom, 32)
             }
             .background(Color(.systemGroupedBackground))
+            .navigationDestination(isPresented: $showConfig) {
+                ConfigView()
+            }
             .navigationDestination(isPresented: $showIdentifyScreen) {
                 IdentifyScreen()
             }

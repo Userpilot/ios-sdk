@@ -1349,7 +1349,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertFalse(connectCalled)
     }
 
-    // MARK: - Autocapture screen guard (Android parity)
+    // MARK: - Autocapture screen guard
 
     /// An autocapture event with no screen is meaningless, so it must be neither sent nor STORED.
     /// The offline branch of `publish` returns before `trackEvent` runs, so the guard has to sit

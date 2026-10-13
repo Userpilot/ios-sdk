@@ -117,7 +117,7 @@ internal enum SDKEventsName: String, CaseIterable {
 
 extension SDKEventsName {
 
-    /// Internal events worth persisting while offline. Must stay identical to the Android SDK's set.
+    /// Internal events eligible for persistence and replay in offline batches.
     ///
     /// Excluded on purpose:
     /// - `fetchExperienceContent` / `fetchExperienceTheme`: request/response, a stale replay asks the

@@ -15,7 +15,7 @@ import XCTest
 final class SocketManagerStressTests: XCTestCase {
     private var userpilot: MockUserpilot!
     private var manager: SocketManager!
-    private var subscription: RecordingSocketSubscription!
+    private var subscription: RecordingSocketSubscriptionDelegate!
     private var transports: [FakePhoenixTransport] = []
     private var sockets: [Socket] = []
     private let producerCount = 4
@@ -27,7 +27,7 @@ final class SocketManagerStressTests: XCTestCase {
         userpilot.storage.userId = "stress-user"
         userpilot.storage.socketURL = "wss://socket.example.test/socket"
         userpilot.sessionMonitor.isAppActive = true
-        subscription = RecordingSocketSubscription()
+        subscription = RecordingSocketSubscriptionDelegate()
         manager = SocketManager(container: userpilot.container) { [weak self] endpoint, params in
             XCTAssertTrue(Thread.isMainThread, "Phoenix must remain on its iOS owner queue")
             // Check during creation, not just after the burst: overlapping transports are a failure.

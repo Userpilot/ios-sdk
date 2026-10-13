@@ -194,7 +194,7 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     var previewExperienceMode = false
 
     var onGetActiveMobileContent: (() -> ExperienceContent)?
-    func getActiveMobileContent() -> ExperienceContent? {
+    func getActiveExperience() -> ExperienceContent? {
         return onGetActiveMobileContent?() ?? nil
     }
 
@@ -327,8 +327,8 @@ class MockSocketManager: SocketManaging {
         onClose?()
     }
 
-    var onRegisterCallback: ((SocketSubscription) -> Void)?
-    func registerCallback(_ socketSubscription: SocketSubscription) {
+    var onRegisterCallback: ((SocketSubscriptionDelegate) -> Void)?
+    func registerCallback(_ socketSubscription: SocketSubscriptionDelegate) {
         onRegisterCallback?(socketSubscription)
     }
 
@@ -720,9 +720,9 @@ class MockSDKEvent: SDKEvent {
     }
 }
 
-// MARK: - Mock UPExperience
+// MARK: - Mock UPExperienceDelegate
 
-class MockUPExperience: UIViewController, UPExperience {
+class MockUPExperienceDelegate: UIViewController, UPExperienceDelegate {
     var onTriggerClose: ((Bool) -> Void)?
 
     func triggerCloseExperience(
@@ -756,7 +756,7 @@ class MockUserpilotDebuggerManager: UserpilotDebuggerManaging {
 
 // MARK: - Mock Socket Subscription
 
-class MockSocketSubscription: SocketSubscription {
+class MockSocketSubscriptionDelegate: SocketSubscriptionDelegate {
     var onSocketClosedCalled: (() -> Void)?
     var onSocketOpenedCalled: (() -> Void)?
     var onSocketEventSentCalled: ((String, [String: Any]?, Message, Bool) -> Void)?

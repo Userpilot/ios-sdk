@@ -6,7 +6,7 @@
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
 //  Stable JSON payload stored inside the offline events database.
-//  Mirrors the Android `StoredOfflineEvent` so both platforms replay the same batch shape.
+//  Stores offline events in the batch envelope expected by the backend.
 //
 
 import Foundation
@@ -77,7 +77,7 @@ extension StoredOfflineEvent: Codable {
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
             ?? Self.schemaVersionValue
         // Required, not defaulted: every writer sets it, so a row without one is corrupt and
-        // must not be silently filed as analytics. Matches the Android envelope.
+        // must not be silently filed as analytics. Preserves the stored envelope's event kind.
         kind = try container.decode(StoredOfflineEventKind.self, forKey: .kind)
         eventType = try container.decode(String.self, forKey: .eventType)
         event = try container.decodeIfPresent(Event.self, forKey: .event)

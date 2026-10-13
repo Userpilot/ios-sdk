@@ -53,7 +53,7 @@ extension SurveyListViewController {
         guard actionButton.isEnabled else { return }
 
         let answersPayload = containerView.subviews
-            .compactMap { ($0 as? UPExperienceView)?.getAnswerPayload() }
+            .compactMap { ($0 as? UPExperienceViewDelegate)?.getAnswerPayload() }
 
         surveyViewModel.onSurveyListSubmitted(answersPayload: answersPayload)
         showThankYouMessage()
@@ -62,7 +62,7 @@ extension SurveyListViewController {
     /// Update button enabled state based on views' validation status.
     func checkActionButtonState() {
         let isValidForm = containerView.subviews
-            .compactMap { $0 as? UPExperienceView }
+            .compactMap { $0 as? UPExperienceViewDelegate }
             .allSatisfy { $0.isValidAnswer() }
 
         actionButton.updateEnableState(isEnabled: isValidForm)

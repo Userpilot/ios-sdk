@@ -7,7 +7,7 @@
 //
 //  Registered for AnalyticsPublishing in `Userpilot.initializeContainer()`.
 //  One serial queue owns admission, buffers, identity transitions, and ACK progression.
-//  See .agents/features/analytics-v2-design.md for preserved behavior and integration limitations.
+//  See .agents/features/analytics-design.md for preserved behavior and integration limitations.
 //
 
 // swiftlint:disable file_length
@@ -92,7 +92,7 @@ extension AnalyticsPublishing {
 /// Queue-owned processing with one in-flight operation. Main delivers delegate callbacks
 /// and socket lifecycle calls whose implementation accesses Phoenix state.
 /// Ordinary entry points enqueue work; the few synchronous contracts use withQueue.
-internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription, NetworkMonitoringDelegate {
+internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscriptionDelegate, NetworkMonitoringDelegate {
 
     /// One FIFO position; equal event values still occupy distinct entries.
     private struct Entry {

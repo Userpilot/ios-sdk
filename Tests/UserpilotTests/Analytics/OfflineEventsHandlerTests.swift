@@ -138,7 +138,7 @@ class OfflineEventsHandlerTests: XCTestCase {
     /// failure bound. The handler's own completion is unusable here: once a batch is published
     /// the completion is parked in `offlineRestoreCompletion` until the socket ACKs, and the
     /// mock never ACKs.
-    /// Mirrors Android: the batch goes out on the CURRENT user's channel and its items carry no
+    /// The batch goes out on the CURRENT user's channel and its items carry no
     /// user id, so a row that outlived an offline user switch would be reported as this user's
     /// activity.
     func testRestore_dropsRowsStoredForAnotherUser() throws {
@@ -289,7 +289,7 @@ class OfflineEventsHandlerTests: XCTestCase {
         XCTAssertNotNil(formatter.date(from: createdAt))
 
         // Spread flat, NOT nested under `metadata` the way an analytics item is. This is the
-        // cross-platform wire contract — Android's `buildInternalEventData` emits the same keys.
+        // backend wire contract — internal batch items retain their original event keys.
         XCTAssertEqual(item["mobile_content_id"] as? Int, 42)
         XCTAssertEqual(item["step_id"] as? Int, 7)
         XCTAssertNil(item[Constants.Analytics.metaDataProperty])

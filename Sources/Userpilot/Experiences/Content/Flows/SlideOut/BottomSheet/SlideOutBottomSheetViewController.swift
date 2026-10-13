@@ -145,9 +145,9 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension SlideOutBottomSheetViewController: UPExperience {
+extension SlideOutBottomSheetViewController: UPExperienceDelegate {
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?

@@ -470,7 +470,7 @@ extension NPSContainerView {
     }
 }
 
-extension NPSContainerView: ViewStateDelegate {
+extension NPSContainerView: UPViewStateDelegate {
 
     func onViewStateChanged(isValid: Bool) {
         if currentStep == 0, isValid {
@@ -480,7 +480,7 @@ extension NPSContainerView: ViewStateDelegate {
 
     private func getAnswerAndMoveToFollowUpQuestion() {
         guard let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap({ $0 as? UPExperienceView })
+            .compactMap({ $0 as? UPExperienceViewDelegate })
             .first else { return }
 
         if let answer = upExperienceView.getAnswer() as? Int {
@@ -493,7 +493,7 @@ extension NPSContainerView: ViewStateDelegate {
 
     private func getFollowUpAnswer() {
         guard let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap({ $0 as? UPExperienceView })
+            .compactMap({ $0 as? UPExperienceViewDelegate })
             .first else { return }
 
         if let answer = upExperienceView.getAnswer() as? String {
