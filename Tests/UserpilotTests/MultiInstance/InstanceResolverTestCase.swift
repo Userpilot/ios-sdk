@@ -68,7 +68,7 @@ class InstanceResolverTestCase: XCTestCase {
     ) -> MockUserpilot {
         let config = Userpilot.Config(token: "\(name)-\(UUID().uuidString)").defaultInstance(isDefault)
         configure(config)
-        let instance = MockUserpilot(config: config)
+        let instance = MockUserpilot.make(config: config)
         registry.register(instance)
         if retained { liveInstances.append(instance) }
         return instance

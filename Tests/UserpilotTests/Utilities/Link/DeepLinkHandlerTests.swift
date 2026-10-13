@@ -20,7 +20,7 @@ final class DeepLinkHandlerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let config = Userpilot.Config(token: "NX-12345").defaultInstance(false)
-        mockUserpilot = MockUserpilot(config: config)
+        mockUserpilot = MockUserpilot.make(config: config)
         mockExperiencesPublisher = mockUserpilot.experiencesPublisher
         deepLinkHandler = DeepLinkHandler(container: mockUserpilot.container)
         mockTopControllerGetting = MockTopControllerGetting()

@@ -19,7 +19,7 @@ final class AutoCaptureCoordinatorPayloadTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(config: Userpilot.Config(token: "PAYLOAD-\(UUID().uuidString)")
+        userpilot = MockUserpilot.make(config: Userpilot.Config(token: "PAYLOAD-\(UUID().uuidString)")
             .appFramework(.UIKit).defaultInstance(false))
         tracker = MockPayloadScreenTracker()
         tracker.payload = ScreenTrackingPayload(screenTitle: "HomeVC")

@@ -13,7 +13,7 @@ final class ExperienceViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(
+        userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "FLOW-VM-\(UUID().uuidString)").defaultInstance(false)
         )
         userpilot.themeHandler.onMergeExperienceThemes = { _, _, _ in

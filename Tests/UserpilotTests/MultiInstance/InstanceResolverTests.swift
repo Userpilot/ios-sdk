@@ -171,7 +171,7 @@ final class InstanceResolverTests: InstanceResolverTestCase {
 
     func testResolvesOnlyFromItsInjectedRegistry() {
         // Instances also register in the process runtime; this resolver must ignore that registry.
-        let processOnlyClaimant = MockUserpilot(
+        let processOnlyClaimant = MockUserpilot.make(
             config: Userpilot.Config(token: "PROCESS-\(UUID().uuidString)")
                 .defaultInstance(false)
                 .attach(viewControllerClasses: [TenantBVC.self])

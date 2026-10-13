@@ -11,7 +11,7 @@ import XCTest
 final class AutoCapturerTests: XCTestCase {
 
     func testScreenEventIdentity_usesLogicalScreenNameForSwiftUI() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-SWIFTUI-\(UUID().uuidString)")
                 .appFramework(.SwiftUI)
                 .defaultInstance(false)
@@ -43,7 +43,7 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testScreenEventIdentity_keepsClassNameForUIKit() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-UIKIT-\(UUID().uuidString)")
                 .appFramework(.UIKit)
                 .defaultInstance(false)
@@ -68,7 +68,7 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureScreen_isIgnoredForNonWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
                 .defaultInstance(false)
         )
@@ -82,7 +82,7 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureScreen_isPublishedForWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-WRAPPER-\(UUID().uuidString)")
                 .additionalProperties([
                     WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeReactNative
@@ -99,7 +99,7 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureEvent_isIgnoredForNonWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
                 .defaultInstance(false)
         )
@@ -113,7 +113,7 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureEvent_isPublishedForWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-WRAPPER-\(UUID().uuidString)")
                 .additionalProperties([
                     WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter

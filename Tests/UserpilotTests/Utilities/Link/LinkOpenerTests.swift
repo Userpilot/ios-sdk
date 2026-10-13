@@ -20,7 +20,7 @@ final class LinkOpenerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
-        mockUserpilot = MockUserpilot(config: config)
+        mockUserpilot = MockUserpilot.make(config: config)
         linkOpener = LinkOpener(container: mockUserpilot.container)
         urlOpener = MockURLOpener()
         linkOpener.urlOpener = urlOpener

@@ -87,10 +87,10 @@ final class AutoCaptureForwardingTests: XCTestCase {
     }
 
     private func configure(forward: Bool, hostCapture: Bool = true, vendorCapture: Bool = true) {
-        host = MockUserpilot(config: Userpilot.Config(token: "HOST-\(UUID().uuidString)")
+        host = MockUserpilot.make(config: Userpilot.Config(token: "HOST-\(UUID().uuidString)")
             .allowReceiveEventsFromExternalSource(forward)
             .enableInteractionAutoCapture(hostCapture))
-        vendor = MockUserpilot(config: Userpilot.Config(token: "VENDOR-\(UUID().uuidString)")
+        vendor = MockUserpilot.make(config: Userpilot.Config(token: "VENDOR-\(UUID().uuidString)")
             .defaultInstance(false)
             .enableInteractionAutoCapture(vendorCapture))
         host.analyticsPublisher.onPublish = { [weak self] in self?.hostEvents.append($0) }

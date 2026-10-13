@@ -30,10 +30,10 @@ internal enum InteractionEventCache {
         textLengthForDedupe: Int? = nil
     ) {
         guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owner) else { return }
-        let key = debounceKey(for: view, owner: owner.canonicalInstance)
+        let key = debounceKey(for: view, owner: owner)
 
         if let length = textLengthForDedupe,
-           view.userpilotDeliveredTextLengths.byOwner[ObjectIdentifier(owner.canonicalInstance)] == length {
+           view.userpilotDeliveredTextLengths.byOwner[ObjectIdentifier(owner)] == length {
             return
         }
 

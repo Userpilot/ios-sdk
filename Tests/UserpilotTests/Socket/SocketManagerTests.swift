@@ -21,7 +21,7 @@ final class SocketManagerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(config: Userpilot.Config(token: "NX-test-token"))
+        userpilot = MockUserpilot.make(config: Userpilot.Config(token: "NX-test-token"))
         userpilot.storage.socketURL = "https://socket.example.com/mobile/v1/events/websocket"
         userpilot.storage.userId = "user-1"
         userpilot.sessionMonitor.isAppActive = true
@@ -52,7 +52,7 @@ final class SocketManagerTests: XCTestCase {
     }
 
     func testConnectWithEmptyTokenDoesNotFetchSettingsOrCreateSocket() {
-        userpilot = MockUserpilot(config: Userpilot.Config(token: ""))
+        userpilot = MockUserpilot.make(config: Userpilot.Config(token: ""))
         userpilot.storage.socketURL = "https://socket.example.com/mobile/v1/events/websocket"
         userpilot.storage.userId = "user-1"
         userpilot.remoteSource.onFetchSettings = { _ in

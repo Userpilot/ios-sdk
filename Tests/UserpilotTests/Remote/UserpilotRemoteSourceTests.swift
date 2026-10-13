@@ -22,7 +22,7 @@ final class UserpilotRemoteSourceTests: XCTestCase {
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         logger = MockLogger()
         config.logger = logger
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
 
         let sessionConfig = URLSessionConfiguration.ephemeral
         sessionConfig.protocolClasses = [URLProtocolStub.self]

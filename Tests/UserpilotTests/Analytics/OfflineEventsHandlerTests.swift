@@ -22,7 +22,7 @@ class OfflineEventsHandlerTests: XCTestCase {
         let config = Userpilot.Config(token: "NX-00000")
         logger = MockLogger()
         config.logger = logger
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         eventStore = try XCTUnwrap(userpilot.container.resolve(EventStoring.self) as? MockEventStorage)
         storage = try XCTUnwrap(userpilot.container.resolve(DataStoring.self) as? MockStorage)
         socketManager = try XCTUnwrap(

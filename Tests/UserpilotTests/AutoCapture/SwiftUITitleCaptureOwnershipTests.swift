@@ -265,8 +265,8 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
             config.appFramework = .SwiftUI
             return config
         }
-        defaultInstance = MockUserpilot(config: config(enabled: defaultEnabled))
-        ownerInstance = MockUserpilot(config: config(enabled: ownerEnabled)
+        defaultInstance = MockUserpilot.make(config: config(enabled: defaultEnabled))
+        ownerInstance = MockUserpilot.make(config: config(enabled: ownerEnabled)
             .attach(viewControllerClasses: [OwnedHostingController.self]))
         ownerInstance.config.logger = logger
         // Install the same process-wide hook used in production, through the enabled coordinator.

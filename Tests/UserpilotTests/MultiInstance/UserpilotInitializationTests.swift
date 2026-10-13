@@ -5,7 +5,7 @@
 //  Created by Userpilot on 06/10/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  Verifies same-token startup, owner lifetime and weak delegate sharing without real services.
+//  Verifies same-token startup, owner lifetime and weak delegates without real services.
 //
 
 import XCTest
@@ -14,80 +14,139 @@ import XCTest
 final class UserpilotInitializationTests: XCTestCase {
     override func setUp() {
         super.setUp()
+        CountingUserpilot.constructions.value = 0
         CountingUserpilot.initializations.value = 0
     }
 
-    func testDuplicateInitialization_sharesFirstConfigurationAndServices() {
-        let firstConfig = Userpilot.Config(token: "INIT-CONFIG").defaultInstance(false)
-        let owner = CountingUserpilot(config: firstConfig)
-        let alias = CountingUserpilot(config: Userpilot.Config(token: "INIT-CONFIG"))
+    func testSetup_returnsTheRegisteredObjectAndKeepsFirstConfigurationAndServices() {
+        let config = Userpilot.Config(token: "INIT-CONFIG").defaultInstance(false)
+        let first = CountingUserpilot.create(config: config)
+        let second = CountingUserpilot.create(config: Userpilot.Config(token: config.token))
 
-        XCTAssertTrue(alias.config === firstConfig)
-        XCTAssertTrue(alias.container === owner.container)
-        XCTAssertTrue(alias.container.owner === owner)
-        XCTAssertTrue(Userpilot.instance(forToken: "INIT-CONFIG") === owner)
-        XCTAssertFalse(alias.config.isDefault)
+        XCTAssertTrue(second === first)
+        XCTAssertTrue(second.config === config)
+        XCTAssertTrue(second.container.owner === first)
+        XCTAssertTrue(Userpilot.instance(forToken: config.token) === first)
+        XCTAssertFalse(second.config.isDefault)
+        XCTAssertEqual(CountingUserpilot.constructions.value, 1)
         XCTAssertEqual(CountingUserpilot.initializations.value, 1)
     }
 
-    func testDuplicateInitialization_retainsOwnerUntilLastFacadeIsReleased() {
+    func testSetup_differentTokensHaveIndependentInstances() {
+        let first = CountingUserpilot.create(config: Userpilot.Config(token: "INIT-A").defaultInstance(false))
+        let second = CountingUserpilot.create(config: Userpilot.Config(token: "INIT-B").defaultInstance(false))
+
+        XCTAssertFalse(first === second)
+        XCTAssertFalse(first.container === second.container)
+        XCTAssertEqual(CountingUserpilot.initializations.value, 2)
+    }
+
+    func testSetup_returnsOwnerUntilLastReferenceIsReleased() {
         weak var weakOwner: Userpilot?
-        var alias: Userpilot?
+        var second: Userpilot?
         var published: String?
         autoreleasepool {
-            let owner = CountingUserpilot(config: Userpilot.Config(token: "INIT-LIFETIME"))
-            weakOwner = owner
-            owner.analyticsPublisher.onPublish = { published = $0.userId }
-            alias = CountingUserpilot(config: Userpilot.Config(token: "INIT-LIFETIME"))
+            let first = CountingUserpilot.create(config: Userpilot.Config(token: "INIT-LIFETIME"))
+            weakOwner = first
+            first.analyticsPublisher.onPublish = { published = $0.userId }
+            second = Userpilot.setup(config: Userpilot.Config(token: "INIT-LIFETIME"))
+            XCTAssertTrue(second === first)
         }
 
         XCTAssertNotNil(weakOwner)
-        XCTAssertTrue(alias?.container.owner === weakOwner)
         XCTAssertTrue(Userpilot.shared === weakOwner)
-        alias?.identify(userId: "retained-owner")
+        second?.identify(userId: "retained-owner")
         XCTAssertEqual(published, "retained-owner")
 
-        alias = nil
+        second = nil
         XCTAssertNil(weakOwner)
         XCTAssertNil(Userpilot.instance(forToken: "INIT-LIFETIME"))
     }
 
-    func testDuplicateInitialization_sharesWeakDelegatesAndPendingLinkRouting() {
-        let owner = CountingUserpilot(config: Userpilot.Config(token: "INIT-DELEGATES"))
-        let alias = CountingUserpilot(config: Userpilot.Config(token: "INIT-DELEGATES"))
+    func testSetup_delegatesStayWeakAndNavigationAssignmentReplaysPendingLink() {
+        let first = CountingUserpilot.create(config: Userpilot.Config(token: "INIT-DELEGATES"))
+        let second = Userpilot.setup(config: Userpilot.Config(token: "INIT-DELEGATES"))
         weak var weakDelegate: InitializationDelegate?
 
         autoreleasepool {
             let delegate = InitializationDelegate()
             weakDelegate = delegate
-            alias.navigationDelegate = delegate
-            alias.analyticsDelegate = delegate
-            alias.experienceDelegate = delegate
-            XCTAssertTrue(owner.navigationDelegate === delegate)
-            XCTAssertTrue(owner.analyticsDelegate === delegate)
-            XCTAssertTrue(owner.experienceDelegate === delegate)
-            XCTAssertTrue(owner.linkOpener.didProcessPendingDeepLink)
-
-            owner.analyticsDelegate = nil
-            XCTAssertNil(alias.analyticsDelegate)
-            owner.analyticsDelegate = delegate
-            XCTAssertTrue(alias.analyticsDelegate === delegate)
+            second.navigationDelegate = delegate
+            second.analyticsDelegate = delegate
+            second.experienceDelegate = delegate
+            XCTAssertTrue(first.navigationDelegate === delegate)
+            XCTAssertTrue(first.analyticsDelegate === delegate)
+            XCTAssertTrue(first.experienceDelegate === delegate)
+            XCTAssertTrue(first.linkOpener.didProcessPendingDeepLink)
         }
 
         XCTAssertNil(weakDelegate)
-        XCTAssertNil(owner.navigationDelegate)
-        XCTAssertNil(alias.analyticsDelegate)
-        XCTAssertNil(alias.experienceDelegate)
+        XCTAssertNil(first.navigationDelegate)
+        XCTAssertNil(first.analyticsDelegate)
+        XCTAssertNil(first.experienceDelegate)
     }
 
-    func testConcurrentInitialization_startsOneServiceContainer() throws {
-        let completed = expectation(description: "concurrent initializers")
+    func testSetup_duplicateWarningUsesOriginalLogger() {
+        let config = Userpilot.Config(token: "INIT-LOGGER").defaultInstance(false)
+        let originalLogger = MockLogger()
+        config.logger = originalLogger
+        let first = CountingUserpilot.create(config: config)
+        let newConfig = Userpilot.Config(token: config.token)
+        let newLogger = MockLogger()
+        newConfig.logger = newLogger
+
+        let second = Userpilot.setup(config: newConfig)
+
+        XCTAssertTrue(second === first)
+        XCTAssertEqual(originalLogger.loggedErrors.filter { $0.contains("already initialized") }.count, 1)
+        XCTAssertTrue(newLogger.loggedErrors.isEmpty)
+    }
+
+    func testSetup_duplicateCannotEnablePreviouslyDisabledLogging() {
+        let first = CountingUserpilot.create(config: Userpilot.Config(token: "INIT-QUIET").defaultInstance(false))
+        let newConfig = Userpilot.Config(token: first.config.token)
+        let newLogger = MockLogger()
+        newConfig.logger = newLogger
+
+        let second = Userpilot.setup(config: newConfig)
+
+        XCTAssertTrue(second === first)
+        XCTAssertTrue(newLogger.loggedErrors.isEmpty)
+    }
+
+    func testSetup_duplicateCannotDisablePreviouslyEnabledLogging() {
+        let config = Userpilot.Config(token: "INIT-LOGGING").defaultInstance(false)
+        let originalLogger = MockLogger()
+        config.logger = originalLogger
+        let first = CountingUserpilot.create(config: config)
+
+        let second = Userpilot.setup(config: Userpilot.Config(token: config.token).logging(enabled: false))
+
+        XCTAssertTrue(second === first)
+        XCTAssertEqual(originalLogger.loggedErrors.filter { $0.contains("already initialized") }.count, 1)
+    }
+
+    func testSetup_matchesTokensAfterTrimmingWhitespace() {
+        let first = CountingUserpilot.create(config: Userpilot.Config(token: " \tINIT-TRIM\n").defaultInstance(false))
+        let second = Userpilot.setup(config: Userpilot.Config(token: "INIT-TRIM"))
+        let third = Userpilot.setup(config: Userpilot.Config(token: " INIT-TRIM "))
+
+        XCTAssertTrue(second === first)
+        XCTAssertTrue(third === first)
+        XCTAssertEqual(first.config.token, "INIT-TRIM")
+        XCTAssertTrue(Userpilot.instance(forToken: "INIT-TRIM") === first)
+        XCTAssertEqual(CountingUserpilot.constructions.value, 1)
+    }
+
+    func testConcurrentSetup_constructsAndStartsOnlyOneObject() throws {
+        let completed = expectation(description: "concurrent setups")
         completed.expectedFulfillmentCount = 24
         let instances = AtomicReference<[Userpilot]>([])
 
         for _ in 0..<24 {
             DispatchQueue.global().async {
-                let instance = CountingUserpilot(config: Userpilot.Config(token: "INIT-CONCURRENT"))
+                let config = Userpilot.Config(token: "INIT-CONCURRENT").defaultInstance(false)
+                let instance = CountingUserpilot.create(config: config)
                 instances.update { $0 + [instance] }
                 completed.fulfill()
             }
@@ -95,75 +154,52 @@ final class UserpilotInitializationTests: XCTestCase {
         wait(for: [completed], timeout: 5)
 
         let owner = try XCTUnwrap(Userpilot.instance(forToken: "INIT-CONCURRENT"))
+        XCTAssertEqual(CountingUserpilot.constructions.value, 1)
         XCTAssertEqual(CountingUserpilot.initializations.value, 1)
-        XCTAssertEqual(registeredCount(forToken: "INIT-CONCURRENT"), 1)
-        for instance in instances.value {
-            XCTAssertTrue(instance.container === owner.container)
-            XCTAssertTrue(instance.config === owner.config)
-            XCTAssertTrue(instance.container.owner === owner)
-        }
+        XCTAssertEqual(instances.value.count, 24)
+        XCTAssertTrue(instances.value.allSatisfy { $0 === owner })
     }
 
-    // MARK: - Runtime ownership
-
-    func testDuplicateInitialization_adoptsCanonicalOwnerWithoutRegisteringASecondInstance() {
-        let token = "INIT-ADOPT-\(UUID().uuidString)"
-        let registry = UserpilotRuntime.shared.instanceRegistry
-        let owner = CountingUserpilot(config: Userpilot.Config(token: token).defaultInstance(false))
-        let ownerIndex = registry.registrationIndex(forToken: token)
-
-        let alias = CountingUserpilot(config: Userpilot.Config(token: token))
-
-        XCTAssertTrue(alias.canonicalInstance === owner)
-        XCTAssertTrue(owner.canonicalInstance === owner)
-        XCTAssertTrue(registry.instance(forToken: token) === owner)
-        XCTAssertEqual(registeredCount(forToken: token), 1)
-        XCTAssertEqual(registry.registrationIndex(forToken: token), ownerIndex)
-        XCTAssertTrue(registry.isRegistered(alias), "A facade is registered through its canonical owner")
-        XCTAssertEqual(CountingUserpilot.initializations.value, 1, "Only the owner builds services")
-    }
-
-    func testReleasingDuplicateFacade_keepsTheOwnerRegistered() {
-        let token = "INIT-FACADE-\(UUID().uuidString)"
-        let owner = CountingUserpilot(config: Userpilot.Config(token: token).defaultInstance(false))
-        weak var releasedAlias: Userpilot?
-        autoreleasepool {
-            let alias = CountingUserpilot(config: Userpilot.Config(token: token))
-            releasedAlias = alias
-        }
-
-        XCTAssertNil(releasedAlias, "Precondition: the duplicate facade was released")
-        XCTAssertTrue(Userpilot.instance(forToken: token) === owner)
-        XCTAssertTrue(UserpilotRuntime.shared.instanceRegistry.isRegistered(owner))
-    }
-
-    func testSecondDefaultClaim_isRejectedAndTheFirstClaimantStaysDefault() {
-        // A dedicated runtime owns the default slot, independent of instances other tests left alive.
+    func testSecondDefaultClaim_keepsFirstDefaultAndStartsSecondInstance() {
         let runtime = UserpilotRuntime()
-        let first = MockUserpilot(config: Userpilot.Config(token: "INIT-DEFAULT-A-\(UUID().uuidString)"))
-        let second = MockUserpilot(config: Userpilot.Config(token: "INIT-DEFAULT-B-\(UUID().uuidString)"))
+        let firstConfig = Userpilot.Config(token: "INIT-DEFAULT-A")
+        let secondConfig = Userpilot.Config(token: "INIT-DEFAULT-B")
         let logger = MockLogger()
-        second.config.logger = logger
-        var started: [String] = []
+        secondConfig.logger = logger
 
-        let firstOwner = runtime.initializeInstance(first, configure: {}, start: { started.append("first") })
-        let secondOwner = runtime.initializeInstance(second, configure: {}, start: { started.append("second") })
+        let first = runtime.initializeInstance(config: firstConfig) { CountingUserpilot(config: firstConfig) }
+        let second = runtime.initializeInstance(config: secondConfig) { CountingUserpilot(config: secondConfig) }
 
-        XCTAssertTrue(firstOwner === first)
-        XCTAssertTrue(secondOwner === second)
         XCTAssertTrue(runtime.instanceRegistry.default === first)
         XCTAssertTrue(runtime.instanceRegistry.isRegistered(second))
-        XCTAssertEqual(started, ["first", "second"], "A rejected default claim still starts its own instance")
+        XCTAssertEqual(CountingUserpilot.initializations.value, 2)
         XCTAssertEqual(logger.loggedErrors.filter { $0.contains("isDefault is already claimed") }.count, 1)
     }
 
-    private func registeredCount(forToken token: String) -> Int {
-        UserpilotRuntime.shared.instanceRegistry.allInstances.filter { $0.config.token == token }.count
+    func testInternalConstruction_doesNotRegisterOrStartServices() {
+        let instance = CountingUserpilot(config: Userpilot.Config(token: "INIT-PASSIVE"))
+
+        XCTAssertNil(Userpilot.instance(forToken: instance.config.token))
+        XCTAssertEqual(CountingUserpilot.initializations.value, 0)
     }
 }
 
 private final class CountingUserpilot: MockUserpilot {
+    static let constructions = AtomicReference(0)
     static let initializations = AtomicReference(0)
+
+    override init(config: Config) {
+        Self.constructions.update { $0 + 1 }
+        super.init(config: config)
+    }
+
+    static func create(config: Config) -> CountingUserpilot {
+        let instance = Userpilot.setup(config: config) { CountingUserpilot(config: $0) }
+        guard let counted = instance as? CountingUserpilot else {
+            preconditionFailure("Initialization tests must use their own tokens")
+        }
+        return counted
+    }
 
     override func initializeContainer() {
         Self.initializations.update { $0 + 1 }

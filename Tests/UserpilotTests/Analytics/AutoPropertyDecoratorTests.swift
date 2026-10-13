@@ -16,7 +16,7 @@ final class AutoPropertyDecoratorTests: XCTestCase {
 
     override func setUpWithError() throws {
         let config = Userpilot.Config(token: "NX-00000")
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         decorator = AutoPropertyDecorator(container: userpilot.container)
     }
 

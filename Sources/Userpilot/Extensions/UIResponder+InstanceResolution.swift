@@ -33,7 +33,7 @@ internal final class UserpilotOwnerBinding {
     weak var owner: Userpilot?
 
     init(owner: Userpilot) {
-        self.owner = owner.canonicalInstance
+        self.owner = owner
     }
 }
 
@@ -70,7 +70,7 @@ internal extension UIResponder {
     /// A binding whose owner is gone can be released by any instance, since its owner never can.
     func detachUserpilotOwner(_ owner: Userpilot) {
         guard let binding = userpilotOwnerBinding,
-              binding.owner == nil || binding.owner === owner.canonicalInstance else { return }
+              binding.owner == nil || binding.owner === owner else { return }
         userpilotOwnerBinding = nil
     }
 }

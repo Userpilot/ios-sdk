@@ -13,7 +13,7 @@ final class SurveyViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(
+        userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "SURVEY-VM-\(UUID().uuidString)").defaultInstance(false)
         )
         userpilot.themeHandler.onMergeSurveyThemes = { _, surveyTheme in

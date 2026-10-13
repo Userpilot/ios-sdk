@@ -22,7 +22,8 @@ final class ExperiencesPublisherTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false))
+        userpilot = MockUserpilot.make(
+            config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false))
         // Resolve real renderer ViewModels against the real publisher, but keep the presentation host
         // independent from the facade's UIKit overlay so no window or animation enters these tests.
         userpilot.container.owner = nil

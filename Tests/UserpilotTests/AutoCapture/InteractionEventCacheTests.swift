@@ -142,13 +142,13 @@ final class InteractionEventCacheTests: XCTestCase {
         XCTAssertEqual(published.textLengths, [length, length])
     }
 
-    func testDuplicateFacade_sharesTheOwnersPendingInteraction() {
-        let facade = MockUserpilot(config: Userpilot.Config(token: userpilot.config.token))
-        XCTAssertTrue(facade.canonicalInstance === userpilot, "Precondition: same-token init adopts the owner")
+    func testRepeatedSetup_sharesTheOwnersPendingInteraction() {
+        let sameInstance = MockUserpilot.make(config: Userpilot.Config(token: userpilot.config.token))
+        XCTAssertTrue(sameInstance === userpilot, "Precondition: same-token setup returns the owner")
         let view = UITextField()
         let published = record(userpilot)
 
-        send(length, targetClass: "FromFacade", for: view, owner: facade)
+        send(length, targetClass: "FromFacade", for: view, owner: sameInstance)
         send(length + 1, targetClass: "FromOwner", for: view, owner: userpilot)
         userpilot.autoCaptureCoordinator.flushPendingInteractions()
 
@@ -264,10 +264,10 @@ final class InteractionEventCacheTests: XCTestCase {
 
         send(length, for: view, owner: userpilot)
         UserpilotRuntime.shared.removeInstance(userpilot)
-        let replacement = MockUserpilot(
+        let replacement = MockUserpilot.make(
             config: Userpilot.Config(token: token).enableInteractionAutoCapture().defaultInstance(false)
         )
-        XCTAssertFalse(replacement.canonicalInstance === userpilot, "Precondition: replacement is a new owner")
+        XCTAssertFalse(replacement === userpilot, "Precondition: replacement is a new owner")
         replacement.analyticsPublisher.onPublish = { _ in noDelivery.fulfill() }
 
         wait(for: [noDelivery], timeout: debounceTimeout)
@@ -295,7 +295,7 @@ final class InteractionEventCacheTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeOwner() -> MockUserpilot {
-        MockUserpilot(
+        MockUserpilot.make(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)")
                 .enableInteractionAutoCapture()
                 .appFramework(.UIKit)

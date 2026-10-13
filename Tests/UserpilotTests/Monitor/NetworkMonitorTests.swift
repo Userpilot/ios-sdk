@@ -64,7 +64,7 @@ final class NetworkMonitorTests: XCTestCase {
         super.setUp()
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         config.logger = MockLogger()
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
 
         monitor = NetworkMonitor(container: userpilot.container)
         // Collapse the interface debounce so the tests exercise ordering, not wall-clock.

@@ -513,7 +513,8 @@ private extension OnlineQueueViewController {
 
     @objc private func runIdentifyOnly() {
         identify(userA(), ["scenario": "identify_only"])
-        setStatus("S1: identify(A) submitted. Preserve session-start: true on first screen, false after navigation; fake_reload=true.")
+        setStatus("S1: identify(A) submitted. Preserve session-start: true on first screen, " +
+                  "false after navigation; fake_reload=true.")
     }
 
     @objc private func runNewUser() {

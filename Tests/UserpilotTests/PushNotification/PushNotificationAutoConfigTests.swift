@@ -71,7 +71,7 @@ final class PushNotificationAutoConfigTests: PushNotificationMonitorTestCase {
 
         // The instance comes up afterwards, the way it does when a hybrid app
         // finally calls initialize. Its monitor registers from `init`.
-        let lateUserpilot = MockUserpilot(
+        let lateUserpilot = MockUserpilot.make(
             config: Userpilot.Config(token: lateToken).defaultInstance(false)
         )
         lateUserpilot.storage.userId = "default-00000"

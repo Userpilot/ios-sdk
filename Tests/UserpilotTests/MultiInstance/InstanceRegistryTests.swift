@@ -112,7 +112,7 @@ final class InstanceRegistryTests: XCTestCase {
         let first = makeInstance("A")
         registry.register(first)
         autoreleasepool {
-            registry.register(makeInstance("DEALLOC"))
+            _ = registry.register(makeInstance("DEALLOC"))
         }
         let last = makeInstance("C")
         registry.register(last)
@@ -163,17 +163,17 @@ final class InstanceRegistryTests: XCTestCase {
 
     // MARK: - Identity
 
-    func testUnregisteringDuplicateFacade_keepsTheOwnerRegistered() {
+    func testUnregisteringUnregisteredObject_keepsTheOwnerRegistered() {
         let owner = makeInstance("OWNER")
         registry.register(owner)
-        let facade = MockUserpilot(config: Userpilot.Config(token: owner.config.token))
-        XCTAssertTrue(facade.canonicalInstance === owner, "Precondition: same-token init adopts the owner")
+        let unregistered = Userpilot(config: Userpilot.Config(token: owner.config.token))
+        XCTAssertFalse(unregistered === owner)
 
-        registry.unregister(facade)
+        registry.unregister(unregistered)
 
         XCTAssertTrue(registry.instance(forToken: owner.config.token) === owner)
         XCTAssertTrue(registry.isRegistered(owner))
-        XCTAssertTrue(registry.isRegistered(facade), "A facade is registered through its canonical owner")
+        XCTAssertFalse(registry.isRegistered(unregistered))
         XCTAssertTrue(registry.default === owner)
     }
 
@@ -182,8 +182,8 @@ final class InstanceRegistryTests: XCTestCase {
         // token before the released instance's deinit reaches unregister.
         let replaced = makeInstance("REPLACED")
         UserpilotRuntime.shared.removeInstance(replaced)
-        let replacement = MockUserpilot(config: Userpilot.Config(token: replaced.config.token))
-        XCTAssertFalse(replacement.canonicalInstance === replaced, "Precondition: a new owner, not a facade")
+        let replacement = MockUserpilot.make(config: Userpilot.Config(token: replaced.config.token))
+        XCTAssertFalse(replacement === replaced, "Precondition: a replacement is a different object")
         registry.register(replaced)
         registry.register(replacement)
 
@@ -197,17 +197,16 @@ final class InstanceRegistryTests: XCTestCase {
     // MARK: - Same-token initialization
 
     func testDoubleInit_sameToken_keepsExistingInstanceRegistered() {
-        // Get-or-create through the real initializer: the duplicate adopts the canonical owner and
-        // never takes over its runtime registration.
+        // Repeated setup returns the registered object and never replaces its services.
         let token = "TOKEN-DUP-\(UUID().uuidString)"
-        let first = MockUserpilot(config: Userpilot.Config(token: token))
-        let second = MockUserpilot(config: Userpilot.Config(token: token))
+        let first = MockUserpilot.make(config: Userpilot.Config(token: token))
+        let second = MockUserpilot.make(config: Userpilot.Config(token: token))
         let runtimeRegistry = UserpilotRuntime.shared.instanceRegistry
 
         XCTAssertTrue(Userpilot.instance(forToken: token) === first)
-        XCTAssertTrue(second.canonicalInstance === first)
+        XCTAssertTrue(second === first)
         XCTAssertEqual(runtimeRegistry.allInstances.filter { $0.config.token == token }.count, 1)
-        XCTAssertFalse(Userpilot.shared === second, "A duplicate facade never becomes the default")
+        XCTAssertTrue(second === first, "Repeated setup returns the same default owner")
     }
 
     // MARK: - Concurrent access
@@ -234,6 +233,6 @@ final class InstanceRegistryTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeInstance(_ name: String, isDefault: Bool = true) -> MockUserpilot {
-        MockUserpilot(config: Userpilot.Config(token: "\(name)-\(UUID().uuidString)").defaultInstance(isDefault))
+        MockUserpilot.make(config: Userpilot.Config(token: "\(name)-\(UUID().uuidString)").defaultInstance(isDefault))
     }
 }

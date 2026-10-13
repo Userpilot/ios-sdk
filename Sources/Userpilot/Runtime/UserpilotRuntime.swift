@@ -31,18 +31,20 @@ internal final class UserpilotRuntime {
         scanCache = SwiftUIScanCache(registry: registry, instanceResolver: instanceResolver)
     }
 
-    /// Returns the existing canonical owner, or builds and starts the supplied instance exactly once.
-    /// Registration precedes eager dependency construction, preserving the existing iOS startup contract.
-    func initializeInstance(_ instance: Userpilot, configure: () -> Void, start: () -> Void) -> Userpilot {
+    /// Lookup, construction and startup share one lock: a repeated token returns the original object.
+    /// Register before eager services are built so native callbacks can resolve their owner during startup.
+    func initializeInstance(config: Userpilot.Config, make: () -> Userpilot) -> Userpilot {
         lifecycleLock.withLock {
-            if let existing = instanceRegistry.instance(forToken: instance.config.token) {
-                instance.config.logger.error(
+            if let existing = instanceRegistry.instance(forToken: config.token) {
+                existing.config.logger.error(
                     // swiftlint:disable:next line_length
-                    "⚠️ Userpilot already initialized for token %{public}@; sharing the existing instance. The supplied config was discarded.",
-                    instance.config.token
+                    "⚠️ Userpilot already initialized for token %{public}@; returning the existing instance. The supplied config was discarded.",
+                    existing.config.token
                 )
                 return existing
             }
+            StorageMigrator.runIfNeeded(forToken: config.token)
+            let instance = make()
             if let existingDefaultToken = instanceRegistry.register(instance) {
                 instance.config.logger.error(
                     // swiftlint:disable:next line_length
@@ -52,8 +54,7 @@ internal final class UserpilotRuntime {
                     existingDefaultToken
                 )
             }
-            configure()
-            start()
+            instance.initializeInstance()
             return instance
         }
     }

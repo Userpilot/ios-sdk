@@ -20,7 +20,7 @@ final class UIActionButtonCaptureTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        owner = MockUserpilot(config: Userpilot.Config(token: "ACTION-\(UUID().uuidString)")
+        owner = MockUserpilot.make(config: Userpilot.Config(token: "ACTION-\(UUID().uuidString)")
             .defaultInstance(false).appFramework(.UIKit).enableInteractionAutoCapture())
         owner.analyticsPublisher.onPublish = { [weak self] in self?.events.append($0) }
         button = UIButton(type: .system)
@@ -107,7 +107,7 @@ final class UIActionButtonCaptureTests: XCTestCase {
     }
 
     func testRemovedOwner_doesNotRerouteToDefault() {
-        let fallback = MockUserpilot(config: Userpilot.Config(token: "DEFAULT-\(UUID().uuidString)")
+        let fallback = MockUserpilot.make(config: Userpilot.Config(token: "DEFAULT-\(UUID().uuidString)")
             .enableInteractionAutoCapture())
         var fallbackEvents: [Event] = []
         fallback.analyticsPublisher.onPublish = { fallbackEvents.append($0) }
@@ -222,7 +222,7 @@ final class UIActionButtonCaptureTests: XCTestCase {
     }
 
     func testForwarding_usesTheBoundOwnerAndOptedInDefault() {
-        let fallback = MockUserpilot(config: Userpilot.Config(token: "FORWARD-\(UUID().uuidString)")
+        let fallback = MockUserpilot.make(config: Userpilot.Config(token: "FORWARD-\(UUID().uuidString)")
             .enableInteractionAutoCapture().allowReceiveEventsFromExternalSource(true))
         var forwarded: [Event] = []
         fallback.analyticsPublisher.onPublish = { forwarded.append($0) }

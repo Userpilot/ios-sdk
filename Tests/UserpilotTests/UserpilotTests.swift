@@ -18,7 +18,7 @@ class UserpilotTests: XCTestCase {
     override func setUpWithError() throws {
         token = "NX-\(UUID().uuidString)"
         let config = Userpilot.Config(token: token).defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
     }
 
     override func tearDownWithError() throws {
@@ -368,7 +368,7 @@ class UserpilotTests: XCTestCase {
 
         // Act
         autoreleasepool {
-            let userpilot = Userpilot(
+            let userpilot = Userpilot.setup(
                 config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
             )
 

@@ -96,7 +96,7 @@ internal class AutoCaptureCoordinator {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.screenNameTracker = container.resolve(ScreenNameTracking.self)
         self.instanceRegistry = container.resolve(InstanceRegistering.self)
-        self.userpilot = container.owner?.canonicalInstance
+        self.userpilot = container.owner
         self.scanCache = container.resolve(SwiftUIScanCache.self)
 
         guard !config.isWrapperSDK else { return }

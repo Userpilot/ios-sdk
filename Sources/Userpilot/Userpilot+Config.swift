@@ -29,7 +29,7 @@ extension Userpilot {
     @objc
     public class Config: NSObject {
 
-        /// Customer token
+        /// Customer token, normalized once at the configuration entry point.
         let token: String
 
         /// Userpilot SDK logger
@@ -174,9 +174,10 @@ extension Userpilot {
 
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
+        ///   Surrounding whitespace is removed before the token reaches SDK services.
         @objc
         public init(token: String) {
-            self.token = token
+            self.token = token.trim()
         }
 
         /// Sets the logging status for the configuration.

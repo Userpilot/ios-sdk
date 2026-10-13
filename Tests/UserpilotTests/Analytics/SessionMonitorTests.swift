@@ -17,7 +17,7 @@ final class SessionMonitorTests: XCTestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         monitor = SessionMonitor(container: userpilot.container)
     }
 

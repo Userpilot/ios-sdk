@@ -20,7 +20,7 @@ final class AnalyticsPublisherTests: XCTestCase {
     override func setUpWithError() throws {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
 
         analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
     }
@@ -270,7 +270,7 @@ final class AnalyticsPublisherTests: XCTestCase {
                 WrapperSDKConstants.enableInteractionAutoCapture: true
             ])
             .defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
         userpilot.socketManager.isSocketOpened = true
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
@@ -293,7 +293,7 @@ final class AnalyticsPublisherTests: XCTestCase {
                 WrapperSDKConstants.enableInteractionAutoCapture: true
             ])
             .defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
         userpilot.socketManager.isSocketOpened = true
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }

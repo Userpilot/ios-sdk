@@ -17,19 +17,16 @@ import UserNotifications
 public typealias Payload = [String: Any]?
 
 class MockUserpilot: Userpilot {
-    init() {
-        super.init(config: Userpilot.Config(token: "NX-00000"))
-    }
-
-    override init(config: Config) {
-        super.init(config: config)
+    /// Exercise runtime registration and startup while replacing service dependencies with mocks.
+    static func make(config: Config = Userpilot.Config(token: "NX-00000")) -> MockUserpilot {
+        Userpilot.setup(config: config) { MockUserpilot(config: $0) } as! MockUserpilot
     }
 
     override func initializeContainer() {
         container.owner = self
         container.register(Userpilot.Config.self, value: config)
         // The real coordinator and native hooks use the process runtime that these instances
-        // register into on init; share the same runtime services as production `initializeContainer()`.
+        // register into during setup; share the same runtime services as production `initializeContainer()`.
         let runtime = UserpilotRuntime.shared
         container.register(InstanceRegistering.self, value: runtime.instanceRegistry)
         container.register(InstanceResolving.self, value: runtime.instanceResolver)

@@ -55,7 +55,7 @@ final class OwnerRegistrationGuardTests: XCTestCase {
         let token = owner.config.token
         UserpilotRuntime.shared.removeInstance(owner)
         let replacement = makeOwner(token: token)
-        XCTAssertFalse(replacement.canonicalInstance === owner, "Precondition: a new owner, not a facade")
+        XCTAssertFalse(replacement === owner, "Precondition: a replacement is a different object")
         var replacementEvents: [Event] = []
         replacement.analyticsPublisher.onPublish = { replacementEvents.append($0) }
         let toggle = UISwitch()
@@ -118,7 +118,7 @@ final class OwnerRegistrationGuardTests: XCTestCase {
     }
 
     private func makeOwner(token: String) -> MockUserpilot {
-        MockUserpilot(
+        MockUserpilot.make(
             config: Userpilot.Config(token: token)
                 .enableInteractionAutoCapture()
                 .appFramework(.UIKit)

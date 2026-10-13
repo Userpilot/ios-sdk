@@ -31,7 +31,7 @@ class UserpilotManager {
     // MARK: - Userpilot SDK APIs
 
     func initialize() {
-        userpilot = Userpilot(
+        userpilot = Userpilot.setup(
             config: Userpilot.Config(token: "<#APP_TOKEN#>")
                 .logging(enabled: true)
                 .enableUseInAppBrowser()
@@ -39,6 +39,7 @@ class UserpilotManager {
                 .enableInteractionAutoCapture()
                 .enableSwiftUIButtonAutoCapture()
                 .enableInteractionValueCapture()
+                .appFramework(.SwiftUI)
         )
         userpilot?.navigationDelegate = self
     }

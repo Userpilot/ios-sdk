@@ -24,14 +24,14 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     override func setUpWithError() throws {
         // Host uses a plain Config: `isDefault` now defaults to `true`, so the host
         // claims the default role without an explicit `defaultInstance()` call.
-        hostInstance = MockUserpilot(config: Userpilot.Config(token: "HOST-\(UUID().uuidString)"))
+        hostInstance = MockUserpilot.make(config: Userpilot.Config(token: "HOST-\(UUID().uuidString)"))
 
         // Vendor MUST opt out of the default role (it would otherwise claim it on a
         // before-host init and trigger a rejected-claim warning).
         let vendorConfig = Userpilot.Config(token: "VENDOR-\(UUID().uuidString)")
             .defaultInstance(false)
             .attach(viewControllerClasses: [VendorScreenVC.self])
-        vendorInstance = MockUserpilot(config: vendorConfig)
+        vendorInstance = MockUserpilot.make(config: vendorConfig)
     }
 
     override func tearDownWithError() throws {
@@ -133,7 +133,7 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     /// gone — asserting on ARC release timing would only measure the autorelease pool.
     func testInstanceReleasedOffTheMainThread_tearsItsOverlayDownOnTheMainThread() throws {
         // Arrange — a surfaced overlay attached to a live scene
-        var instance: MockUserpilot? = MockUserpilot(
+        var instance: MockUserpilot? = MockUserpilot.make(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         )
         let overlay = try XCTUnwrap(instance?.experienceOverlayWindow)
@@ -179,10 +179,10 @@ final class MultiInstanceIntegrationTests: XCTestCase {
         hostInstance = nil
         vendorInstance = nil
 
-        let host = MockUserpilot(
+        let host = MockUserpilot.make(
             config: Userpilot.Config(token: "HOST-FWD").allowReceiveEventsFromExternalSource()
         )
-        let vendor = MockUserpilot(
+        let vendor = MockUserpilot.make(
             config: Userpilot.Config(token: "VENDOR-FWD")
                 .defaultInstance(false)
                 .enableInteractionAutoCapture()
@@ -208,8 +208,8 @@ final class MultiInstanceIntegrationTests: XCTestCase {
         vendorInstance = nil
 
         // Host does NOT opt in (default `allowReceiveEventsFromExternalSource == false`).
-        let host = MockUserpilot(config: Userpilot.Config(token: "HOST-NOFWD"))
-        let vendor = MockUserpilot(
+        let host = MockUserpilot.make(config: Userpilot.Config(token: "HOST-NOFWD"))
+        let vendor = MockUserpilot.make(
             config: Userpilot.Config(token: "VENDOR-NOFWD")
                 .defaultInstance(false)
                 .enableInteractionAutoCapture()
@@ -236,7 +236,7 @@ final class MultiInstanceIntegrationTests: XCTestCase {
 
         // Default host opts in AND emits its own interaction: it must not duplicate the
         // event to itself.
-        let host = MockUserpilot(
+        let host = MockUserpilot.make(
             config: Userpilot.Config(token: "HOST-SELF")
                 .allowReceiveEventsFromExternalSource()
                 .enableInteractionAutoCapture()

@@ -252,7 +252,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
                         properties: [String: Any] = [:]) -> [String: Any] {
         var properties = properties
         tapped.addSwiftUITitle(
-            to: &properties, at: tap, in: window, owner: MockUserpilot(config: config)
+            to: &properties, at: tap, in: window, owner: MockUserpilot.make(config: config)
         )
         return properties
     }
@@ -309,7 +309,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
                        "precondition: the window tap masks the ignored inner hierarchy")
 
         let resolved = tapped.addSwiftUITitle(
-            to: &properties, at: tap, in: window, owner: MockUserpilot(config: makeConfig())
+            to: &properties, at: tap, in: window, owner: MockUserpilot.make(config: makeConfig())
         )
 
         XCTAssertTrue(resolved, "a resolved control still admits its hosting-root tap")

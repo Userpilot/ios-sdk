@@ -27,7 +27,7 @@ internal final class PendingInteraction {
     ) {
         self.payload = payload
         self.textLengthForDedupe = textLengthForDedupe
-        self.owner = owner.canonicalInstance
+        self.owner = owner
         self.view = view
     }
 }

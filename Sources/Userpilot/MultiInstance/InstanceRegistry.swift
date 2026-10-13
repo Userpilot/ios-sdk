@@ -21,9 +21,9 @@ internal protocol InstanceRegistering: AnyObject {
 }
 
 internal extension InstanceRegistering {
-    /// Same-token facades share a canonical owner. A replacement registration is a different lifetime.
+    /// Only the registered object belongs to this lifetime; a replacement with the same token is different.
     func isRegistered(_ instance: Userpilot) -> Bool {
-        self.instance(forToken: instance.config.token) === instance.canonicalInstance
+        self.instance(forToken: instance.config.token) === instance
     }
 }
 
@@ -78,7 +78,7 @@ internal final class InstanceRegistry: InstanceRegistering {
         }
     }
 
-    /// Compare identity, not just token: releasing a duplicate facade cannot unregister its owner.
+    /// Compare identity, not just token: releasing a replaced instance cannot unregister its successor.
     /// The stored identity also works during deinit, when Swift has already cleared weak references.
     func unregister(_ instance: Userpilot) {
         lock.withLock {

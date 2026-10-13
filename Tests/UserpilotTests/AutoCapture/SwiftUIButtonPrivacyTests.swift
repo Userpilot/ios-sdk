@@ -27,7 +27,7 @@ final class SwiftUIButtonPrivacyTests: XCTestCase {
         }
         SwiftUICaptureHealth._resetForTesting()
         let config = Userpilot.Config(token: "PRIVACY-\(UUID().uuidString)").appFramework(.SwiftUI)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         // Resolve before opting in: these publication fixtures do not need process-wide hooks.
         _ = userpilot.autoCaptureCoordinator
         config.enableInteractionAutoCapture(true).enableSwiftUIButtonAutoCapture(true)

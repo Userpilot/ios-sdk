@@ -16,7 +16,7 @@ final class EnvironmentTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         userpilot.storage.socketURL = "wss://socket.prod.example.com"
     }
 

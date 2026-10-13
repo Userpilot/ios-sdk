@@ -23,7 +23,7 @@ final class SocketManagerStressTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(config: Userpilot.Config(token: "NX-test-token"))
+        userpilot = MockUserpilot.make(config: Userpilot.Config(token: "NX-test-token"))
         userpilot.storage.userId = "stress-user"
         userpilot.storage.socketURL = "wss://socket.example.test/socket"
         userpilot.sessionMonitor.isAppActive = true

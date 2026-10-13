@@ -40,7 +40,7 @@ class UserpilotManager {
     
     func initialize() {
         guard let appToken: String = StorageManager.shared.get(forKey: StorageManager.Keys.appToken) else { return }
-        userpilot = Userpilot(config: Userpilot.Config(token: appToken)
+        userpilot = Userpilot.setup(config: Userpilot.Config(token: appToken)
             .logging(enabled: ConfigFlag.loggingEnabled.value)
             .enableUseInAppBrowser(ConfigFlag.useInAppBrowser.value)
             .allowReceiveEventsFromExternalSource(ConfigFlag.allowReceiveEventsFromExternalSource.value)

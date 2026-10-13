@@ -30,7 +30,7 @@ final class SwiftUIScanRefreshTests: XCTestCase {
         cache.stop()
         let config = Userpilot.Config(token: "REFRESH-\(UUID().uuidString)")
             .defaultInstance(false).appFramework(.SwiftUI)
-        owner = MockUserpilot(config: config)
+        owner = MockUserpilot.make(config: config)
         _ = owner.autoCaptureCoordinator
         window = UIWindow(frame: CGRect(x: 0, y: 0, width: 300, height: 300))
         window.rootViewController = UIViewController()

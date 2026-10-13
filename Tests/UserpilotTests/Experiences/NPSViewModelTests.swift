@@ -13,7 +13,7 @@ final class NPSViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(
+        userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "NPS-VM-\(UUID().uuidString)").defaultInstance(false)
         )
         viewModel = NPSViewModel(container: userpilot.container)

@@ -43,7 +43,7 @@ internal final class InstanceResolver: InstanceResolving {
 
         if let binding = responder.userpilotOwnerBindingInHierarchy {
             guard let owner = binding.owner, registry.isRegistered(owner) else { return nil }
-            return owner.canonicalInstance
+            return owner
         }
 
         if let viewController = responder.instanceResolutionViewController {
