@@ -399,7 +399,7 @@ extension Userpilot {
         storage.temporaryUser = nil
         analyticsPublisher.logout()
         debuggerManager.reset()
-        clean()
+        storage.clean()
     }
 
     /// Shows this instance's in-app debugger with configuration, stored identity and live events.
@@ -441,19 +441,6 @@ extension Userpilot {
         ]
     }
 
-    // MARK: - SDK APIs
-
-    /**
-     Clear user session data.
-
-     This method should be called when the user logs out or when identify called with new userId.
-     It resets the session state, clears user-related data, and ensures no further tracking occurs for
-     the logged-out user.
-     */
-    internal func clean() {
-        storage.pushToken = nil
-        storage.userId = ""
-    }
 }
 
 // MARK: - Experiences

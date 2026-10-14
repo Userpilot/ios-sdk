@@ -271,18 +271,6 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(userpilot.storage.userId, "")
     }
 
-    // MARK: - Clean
-
-    /// Verifies that clean clears stored token and userId
-    func testClean_clearsUserIdAndPushToken() throws {
-        // Act
-        userpilot.clean()
-
-        // Assert
-        XCTAssertNil(userpilot.storage.pushToken)
-        XCTAssertEqual(userpilot.storage.userId, "")
-    }
-
     // MARK: - Settings
 
     /// Settings expose the live identity and device/app diagnostics without restoring a merged profile.
