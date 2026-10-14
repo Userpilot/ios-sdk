@@ -27,7 +27,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     func getActiveExperience() -> ExperienceContent?
 
     /// Send experience event to backend
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceId: String)
@@ -69,7 +69,7 @@ internal protocol ExperiencesPublishing: AnyObject {
     var activeRendererID: UUID? { get }
     func getActiveExperience(rendererID: UUID?) -> ExperienceContent?
     func hasNextFlowStep(rendererID: UUID?) -> Bool
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, rendererID: UUID?)
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent, rendererID: UUID?)
     func experienceDidFinishDismissing(rendererID: UUID?)
     func showThankYouMessage(
         _ survey: SurveyContent, _ theme: SurveyTheme, _ submissionId: Int64, rendererID: UUID?
@@ -87,7 +87,7 @@ extension ExperiencesPublishing {
     var activeRendererID: UUID? { nil }
     func getActiveExperience(rendererID: UUID?) -> ExperienceContent? { getActiveExperience() }
     func hasNextFlowStep(rendererID: UUID?) -> Bool { hasNextFlowStep() }
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, rendererID: UUID?) { publishInternalSDKEvent(sdkEvent) }
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent, rendererID: UUID?) { publishInternalSDKEvent(sdkEvent) }
     func experienceDidFinishDismissing(rendererID: UUID?) { experienceDidFinishDismissing() }
     func showThankYouMessage(
         _ survey: SurveyContent, _ theme: SurveyTheme, _ submissionId: Int64, rendererID: UUID?
@@ -128,7 +128,7 @@ internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscrip
         /// Screen changes, logout, and preview replacement skip the post-dismissal fake reload.
         var refreshAfterDismissal = true
         /// Decides the post-dismissal fake reload; receiving it does not release ownership.
-        var closeEvent: SDKEvent?
+        var closeEvent: ExperienceEvent?
 
         init(trigger: Trigger, generation: UUID, experience: ExperienceContent? = nil) {
             self.trigger = trigger
@@ -336,7 +336,7 @@ extension ExperiencesPublisher {
             let operation = Operation(trigger: .manual, generation: publisher.generation.value)
             publisher.current = operation
             publisher.publishReadState()
-            publisher.request(ExperienceContentEvent(experienceId: experienceId), for: operation)
+            publisher.request(FetchExperienceEvent(experienceId: experienceId), for: operation)
         }
     }
 
@@ -485,7 +485,7 @@ extension ExperiencesPublisher {
             return
         }
         operation.phase = .theme(themeKey)
-        request(ThemeContentEvent(key: themeKey, token: config.token), for: operation)
+        request(FetchThemeEvent(key: themeKey, token: config.token), for: operation)
     }
 
     /// The completion belongs to this operation; cancellation also covers time in the SDK queue.
@@ -715,8 +715,8 @@ extension ExperiencesPublisher {
             controller.actionButtonClicked = { [weak publisher] deepLink in
                 publisher?.onPresentation(shown) { publisher, operation in
                     let expectedGeneration = operation.generation
-                    let completed = ExperienceSurveyCompletedEvent(
-                        surveyId: survey.id, submissionId: submissionID, hasDeepLinkContent: deepLink != nil
+                    let completed = SurveyExperienceActionEvent.completed(
+                        surveyId: survey.id, submissionId: submissionID, hasDeepLink: deepLink != nil
                     )
                     publisher.publishEvent(completed, operation: operation)
                     delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak publisher] in
@@ -822,8 +822,9 @@ extension ExperiencesPublisher {
         onMain { $0.userpilot?.existingExperienceOverlayWindow?.hideIfIdle() }
         startWaitingPreview()
         guard current == nil, operation.generation == generation.value, operation.refreshAfterDismissal,
-              let close = operation.closeEvent, close.isEventForCloseExperience(), !close.hasDeepLink else { return }
-        analytics.publishFakeReloadScreenEvent(close.getContentType(), close.getContentId())
+              let close = operation.closeEvent, close.isEventForCloseExperience(), !close.hasDeepLink,
+              let experience = close.experience else { return }
+        analytics.publishFakeReloadScreenEvent(experience.type, experience.id)
     }
 
     /// Starts the latest QR request once the outgoing operation has released ownership.
@@ -947,12 +948,12 @@ extension ExperiencesPublisher {
 extension ExperiencesPublisher {
 
     /// Legacy calls without a renderer identity cannot publish for whichever presentation is current.
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent) {
         publishInternalSDKEvent(sdkEvent, rendererID: nil)
     }
 
     /// Resolve the named presentation, then validate operation ownership on the experience queue.
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent, rendererID: UUID?) {
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent, rendererID: UUID?) {
         guard let rendererID else { return }
         let state = reads.value
         guard let shown = state.presentation, shown.id == rendererID else { return }
@@ -960,12 +961,12 @@ extension ExperiencesPublisher {
     }
 
     /// Close events record reload policy; ownership is released only after UIKit dismissal.
-    private func publishEvent(_ sdkEvent: SDKEvent, operation: Operation) {
+    private func publishEvent(_ sdkEvent: ExperienceEvent, operation: Operation) {
         assertOnQueue()
         if operation.trigger != .preview {
             analytics.publishInternalSDKEvent(sdkEvent)
-            if sdkEvent.isSeenContentEvent(), let id = sdkEvent.getContentId() {
-                analytics.experiencePublished(sdkEvent.getContentType(), id)
+            if sdkEvent.isSeenContentEvent(), let experience = sdkEvent.experience {
+                analytics.experiencePublished(experience.type, experience.id)
             }
         }
         guard sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() else { return }

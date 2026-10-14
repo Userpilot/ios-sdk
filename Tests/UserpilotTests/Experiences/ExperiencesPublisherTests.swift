@@ -65,7 +65,7 @@ final class ExperiencesPublisherTests: XCTestCase {
 
     func testManualRequestOwnsAdmissionWhileFetchingContent() throws {
         let request = try beginManual()
-        XCTAssertEqual((request.event as? ExperienceContentEvent)?.experienceId, "flow-a")
+        XCTAssertEqual((request.event as? FetchExperienceEvent)?.experienceId, "flow-a")
         XCTAssertTrue(request.shouldSend())
         XCTAssertFalse(publisher.canRequestScreenEvent())
     }
@@ -107,7 +107,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         userpilot.themeHandler.onGetThemeById = { _ in nil }
         receiveScreen(MockContentFactory.makeFlowContentPayload())
         let request = try XCTUnwrap(userpilot.analyticsPublisher.requests.last)
-        XCTAssertTrue(request.event is ThemeContentEvent)
+        XCTAssertTrue(request.event is FetchThemeEvent)
         XCTAssertFalse(displayDelay.hasAction)
         var themeSaved = false
         userpilot.themeHandler.onSaveTheme = { _ in themeSaved = true }

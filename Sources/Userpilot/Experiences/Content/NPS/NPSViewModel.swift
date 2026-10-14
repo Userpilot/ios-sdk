@@ -78,7 +78,7 @@ final class NPSViewModel {
         guard npsContent != nil else { return }
         notifyExperienceState(.started)
 
-        let eventExperienceSeen = ExperienceNPSSeenEvent()
+        let eventExperienceSeen = NPSExperienceActionEvent.seen
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen, rendererID: rendererID)
     }
 
@@ -87,7 +87,7 @@ final class NPSViewModel {
         guard npsContent != nil else { return }
         notifyExperienceState(.dismissed)
 
-        let eventExperienceDismissed = ExperienceNPSDismissedEvent()
+        let eventExperienceDismissed = NPSExperienceActionEvent.dismissed
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed, rendererID: rendererID)
     }
 
@@ -96,7 +96,7 @@ final class NPSViewModel {
         guard let npsContent else { return }
         notifyExperienceState(.submitted)
 
-        let eventExperienceSubmitted = ExperienceNPSSubmittedEvent(
+        let eventExperienceSubmitted = NPSExperienceActionEvent.submitted(
             score: userAnswer - 1,
             npsKey: npsContent.content.survey.key ?? "",
             feedback: userFollowUp,

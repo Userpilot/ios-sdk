@@ -22,7 +22,7 @@ extension ExperiencesPublisherTests {
         }
         receiveScreen(MockContentFactory.makeFlowContentPayload())
         let request = try XCTUnwrap(userpilot.analyticsPublisher.requests.last)
-        let event = try XCTUnwrap(request.event as? ThemeContentEvent)
+        let event = try XCTUnwrap(request.event as? FetchThemeEvent)
         XCTAssertEqual(event.key, .title("Dark"))
         XCTAssertEqual(event.eventPayload["theme_title"] as? String, "Dark")
         XCTAssertNil(event.eventPayload["theme_id"])
@@ -49,7 +49,7 @@ extension ExperiencesPublisherTests {
         XCTAssertEqual(themes.unavailableAppThemes, ["Dark"])
         XCTAssertFalse(displayDelay.hasAction)
         let fallback = try XCTUnwrap(userpilot.analyticsPublisher.requests.last)
-        XCTAssertEqual((fallback.event as? ThemeContentEvent)?.key, .id(1))
+        XCTAssertEqual((fallback.event as? FetchThemeEvent)?.key, .id(1))
 
         fallback.completion?(Message(payload: ["id": 1, "theme_data": [:]]), true)
         publisher.mockWaitForQueue()

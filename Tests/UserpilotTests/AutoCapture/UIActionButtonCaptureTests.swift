@@ -261,9 +261,15 @@ final class UIActionButtonCaptureTests: XCTestCase {
             requests += 1
             request.completion?(Message(), true)
         }
-        for var event in events {
-            event.screen = [Constants.AutoCapture.screenName: "Checkout"]
-            publisher.testPublish(event)
+        for event in events {
+            publisher.testPublish(Event(
+                type: event.type,
+                properties: event.properties,
+                company: event.company,
+                screen: [Constants.AutoCapture.screenName: "Checkout"],
+                interactionEventName: event.interactionEventName,
+                isFakeReload: event.isFakeReload
+            ))
         }
         publisher.testSettle()
         return requests

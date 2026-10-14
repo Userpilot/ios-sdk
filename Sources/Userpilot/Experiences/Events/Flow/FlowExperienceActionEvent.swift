@@ -5,105 +5,44 @@
 //  Created by Userpilot on 29/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This class is responsible for defining flow experience events.
+//  Defines flow engagement payloads and the local completion deep-link policy.
 //
 
-import Foundation
+internal enum FlowExperienceActionEvent: ExperienceEvent {
+    case seen(flowId: Int)
+    case dismissed(flowId: Int, stepId: Int)
+    case completed(flowId: Int, hasDeepLink: Bool = false)
+}
 
-// MARK: - FlowExperienceActionEvent
-/**
- Base class representing various types of experience action events for mobile content.
-
- - Parameters:
-   - flowContentId: The Id of the mobile content associated with the event.
-   - hasDeepLinkContent: To allow fetch next experience or open deep link screen.
- */
-internal class FlowExperienceActionEvent: SDKEvent {
-    /// Experience Id
-    let flowId: Int
-    /// Has deeplink to open it
-    let hasDeepLinkContent: Bool
-
-    /// The action type of the event.
-    var name: String {
-        fatalError("Subclasses need to implement the `name` property.")
+extension FlowExperienceActionEvent {
+    var name: SDKEventsName {
+        switch self {
+        case .seen: return .flowExperienceSeen
+        case .dismissed: return .flowExperienceDismissed
+        case .completed: return .flowExperienceCompleted
+        }
     }
 
-    /// Event name, defaulted to "mobile_content".
-    var eventName: String {
-        return name
+    private var flowId: Int {
+        switch self {
+        case .seen(let flowId), .dismissed(let flowId, _), .completed(let flowId, _):
+            return flowId
+        }
     }
 
-    /// Payload for the event represented as a dictionary.
-    var eventPayload: [String: Any] {
-        return toMap()
-    }
+    var experience: (type: ExperienceType, id: Int)? { (.flow, flowId) }
 
     var hasDeepLink: Bool {
-        return hasDeepLinkContent
+        guard case .completed(_, let hasDeepLink) = self else { return false }
+        return hasDeepLink
     }
 
-    /// Creates a dictionary representation of the event data.
-    ///
-    /// - Returns: A dictionary containing the action type, mobile content Id, application token, and user Id.
-    func toMap() -> [String: Any] {
-        return [
-            "mobile_content_id": flowId
-        ]
-    }
-
-    init(
-        flowId: Int,
-        hasDeepLinkContent: Bool = false
-    ) {
-        self.flowId = flowId
-        self.hasDeepLinkContent = hasDeepLinkContent
-    }
-}
-
-// MARK: - FlowExperienceActionEvent Subclasses
-/**
- Represents the 'seen' action event.
- */
-internal class ExperienceFlowSeenEvent: FlowExperienceActionEvent {
-    override var name: String {
-        return SDKEventsName.flowExperienceSeen.rawValue
-    }
-}
-
-/**
- Represents the 'dismissed' action event with extra custom parameters.
-*/
-internal class ExperienceFlowDismissedEvent: FlowExperienceActionEvent {
-
-    // Custom parameters for the dismissed event
-    let stepId: Int
-
-    init(
-        flowId: Int,
-        stepId: Int
-    ) {
-        self.stepId = stepId
-        super.init(flowId: flowId)
-    }
-
-    override var name: String {
-        return SDKEventsName.flowExperienceDismissed.rawValue
-    }
-
-    /// Combines base event payload with custom parameters.
-    override var eventPayload: [String: Any] {
-        var basePayload = super.eventPayload
-        basePayload["step_id"] = stepId
-        return basePayload
-    }
-}
-
-/**
- Represents the 'completed' action event.
- */
-internal class ExperienceFlowCompletedEvent: FlowExperienceActionEvent {
-    override var name: String {
-        return SDKEventsName.flowExperienceCompleted.rawValue
+    /// Only dismissal includes a step ID; completion reports the flow as a whole.
+    var eventPayload: [String: Any] {
+        var payload: [String: Any] = ["mobile_content_id": flowId]
+        if case .dismissed(_, let stepId) = self {
+            payload["step_id"] = stepId
+        }
+        return payload
     }
 }

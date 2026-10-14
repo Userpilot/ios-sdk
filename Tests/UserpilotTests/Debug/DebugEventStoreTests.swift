@@ -35,7 +35,7 @@ final class DebugEventStoreTests: XCTestCase {
         store.start()
         store.record(track("old"))
         store.record(Event(type: .autoCaptureEvent, interactionEventName: "tap"))
-        store.record(ExperienceFlowSeenEvent(flowId: 1))
+        store.record(FlowExperienceActionEvent.seen(flowId: 1))
         store.reset()
         XCTAssertTrue(DebugEventChannel.allCases.allSatisfy { store.events(for: $0).isEmpty })
         store.record(track("new"))

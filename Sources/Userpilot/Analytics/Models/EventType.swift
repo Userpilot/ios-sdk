@@ -8,8 +8,6 @@
 //  Defines analytics event kinds and the names sent to the backend.
 //
 
-import Foundation
-
 /// Type-safe analytics event kinds and their wire names.
 internal enum EventType: Equatable {
 
@@ -29,13 +27,25 @@ internal enum EventType: Equatable {
     var eventName: String {
         switch self {
         case .event:
-            return EventType.trackEvent
+            return Constants.Event.trackEvent
         case .autoCaptureEvent:
-            return EventType.trackAutoCaptureEvent
+            return Constants.Event.autoCaptureEvent
         case .screen:
-            return EventType.screenEvent
+            return Constants.Event.screenEvent
         case .identify:
-            return EventType.identifyEvent
+            return Constants.Event.identifyEvent
+        }
+    }
+
+    /// Public callback category; custom and autocaptured interactions are both track events.
+    var userpilotAnalytic: UserpilotAnalytic {
+        switch self {
+        case .identify:
+            return .identify
+        case .screen:
+            return .screen
+        case .event, .autoCaptureEvent:
+            return .event
         }
     }
 
@@ -108,22 +118,12 @@ internal enum EventType: Equatable {
     }
 }
 
-extension EventType {
-
-    // Wire values are defined once in `Constants.Event`; these are internal aliases
-    // for the `eventName` mapping above.
-    static let identifyEvent = Constants.Event.identifyEvent
-    static let screenEvent = Constants.Event.screenEvent
-    private static let trackEvent = Constants.Event.trackEvent
-    private static let trackAutoCaptureEvent = Constants.Event.autoCaptureEvent
-}
-
 // MARK: - Codable Conformance
 
 extension EventType: Codable {
 
     /// Coding keys for the persisted offline-storage representation.
-    enum CodingKeys: String, CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case type
         case value
     }
@@ -153,19 +153,12 @@ extension EventType: Codable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(eventName, forKey: .type)
         switch self {
-        case .event(let eventName):
-            try container.encode(Constants.Event.trackEvent, forKey: .type)
-            try container.encode(eventName, forKey: .value)
+        case .event(let value), .screen(let value), .identify(let value):
+            try container.encode(value, forKey: .value)
         case .autoCaptureEvent:
-            try container.encode(Constants.Event.autoCaptureEvent, forKey: .type)
             try container.encode("", forKey: .value)
-        case .screen(let screenTitle):
-            try container.encode(Constants.Event.screenEvent, forKey: .type)
-            try container.encode(screenTitle, forKey: .value)
-        case .identify(let userId):
-            try container.encode(Constants.Event.identifyEvent, forKey: .type)
-            try container.encode(userId, forKey: .value)
         }
     }
 }

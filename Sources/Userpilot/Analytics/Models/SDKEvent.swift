@@ -5,87 +5,22 @@
 //  Created by Userpilot on 24/11/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This file defines the `SDKEvent` protocol and related event names used within the SDK
-//  to track and manage different types of user experience events.
+//  Defines the shared transport contract and offline policy for internal SDK events.
 //
 
 import Foundation
 
-// MARK: - SDKEvent
-/**
- Protocol defining the structure for SDK events.
- */
+/// Transport values consumed by analytics, socket delivery and offline storage.
 internal protocol SDKEvent {
     var eventName: String { get }
     var eventPayload: [String: Any] { get }
-    var hasDeepLink: Bool { get }
 }
 
 extension SDKEvent {
-
-    var hasDeepLink: Bool {
-        return false
-    }
-
-    func isEventForCloseExperience() -> Bool {
-        return self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
-        self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
-        self.eventName == SDKEventsName.surveyExperienceDismissed.rawValue ||
-        self.eventName == SDKEventsName.surveyExperienceCompleted.rawValue
-    }
-
-    func isEventForCloseNPSExperience() -> Bool {
-        return self.eventName == SDKEventsName.npsExperienceDismissed.rawValue ||
-        self.eventName == SDKEventsName.npsExperienceSubmitted.rawValue
-    }
-
-}
-
-/// Used to pass seen content for cached ScreenSessionStateMachine
-extension SDKEvent {
-
-    func getContentType() -> ExperienceType {
-        if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
-            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
-            self.eventName == SDKEventsName.flowExperienceSeen.rawValue {
-            return .flow
-        } else {
-            return .survey
-        }
-    }
-
-    func getContentId() -> Int? {
-        if self.eventName == SDKEventsName.flowExperienceDismissed.rawValue ||
-            self.eventName == SDKEventsName.flowExperienceCompleted.rawValue ||
-            self.eventName == SDKEventsName.flowExperienceSeen.rawValue {
-            return self.eventPayload["mobile_content_id"] as? Int
-        } else {
-            return self.eventPayload["survey_id"] as? Int
-        }
-    }
-
-    func isSeenContentEvent() -> Bool {
-        if self.eventName == SDKEventsName.flowExperienceSeen.rawValue ||
-            self.eventName == SDKEventsName.surveyExperienceSeen.rawValue {
-            return true
-        } else {
-            return false
-        }
-    }
-
-}
-
-/// Used to decide which internal events survive an offline period
-extension SDKEvent {
-
-    /// Whether this event is persisted while offline and replayed in the `batch_events` batch.
-    ///
-    /// Resolves to false for any name the enum does not know, so an event coming from outside
-    /// `SDKEventsName` is excluded until someone deliberately opts it in.
+    /// Unknown names are excluded until explicitly admitted by the offline policy.
     var isOfflineEligible: Bool {
-        return SDKEventsName(rawValue: self.eventName)?.isOfflineEligible ?? false
+        return SDKEventsName(rawValue: eventName)?.isOfflineEligible ?? false
     }
-
 }
 
 internal enum SDKEventsName: String, CaseIterable {

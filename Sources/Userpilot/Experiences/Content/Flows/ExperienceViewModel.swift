@@ -127,10 +127,10 @@ internal class ExperienceViewModel {
 
         notifyStepState(.started, stepId: step.id, step: 1, content: flowContent)
 
-        let eventExperienceSeen = ExperienceFlowSeenEvent(flowId: flowContent.id)
+        let eventExperienceSeen = FlowExperienceActionEvent.seen(flowId: flowContent.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen, rendererID: rendererID)
 
-        let eventStepSeen = ExperienceFlowStepSeenEvent(flowId: flowContent.id, stepId: step.id)
+        let eventStepSeen = FlowExperienceStepActionEvent.seen(flowId: flowContent.id, stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
     }
 
@@ -149,14 +149,14 @@ internal class ExperienceViewModel {
 
         let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
 
-        let eventStepCompleted = ExperienceFlowStepCompletedEvent(
+        let eventStepCompleted = FlowExperienceStepActionEvent.completed(
             flowId: flowContent.id,
             stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepCompleted, rendererID: rendererID)
 
-        let eventContentCompleted = ExperienceFlowCompletedEvent(
+        let eventContentCompleted = FlowExperienceActionEvent.completed(
             flowId: flowContent.id,
-            hasDeepLinkContent: hasDeepLink)
+            hasDeepLink: hasDeepLink)
         experiencesPublisher.publishInternalSDKEvent(eventContentCompleted, rendererID: rendererID)
     }
 
@@ -181,12 +181,12 @@ internal class ExperienceViewModel {
 
         notifyStepState(.started, stepId: currentStep.id, step: step + 1, content: flowContent)
 
-        let eventStepCompleted = ExperienceFlowStepCompletedEvent(
+        let eventStepCompleted = FlowExperienceStepActionEvent.completed(
             flowId: flowContent.id,
             stepId: oldStep.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepCompleted, rendererID: rendererID)
 
-        let eventStepSeen = ExperienceFlowStepSeenEvent(
+        let eventStepSeen = FlowExperienceStepActionEvent.seen(
             flowId: flowContent.id,
             stepId: currentStep.id)
         experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
@@ -203,7 +203,7 @@ internal class ExperienceViewModel {
 
         notifyExperienceState(.dismissed, content: flowContent)
 
-        let eventExperienceDismissed = ExperienceFlowDismissedEvent(
+        let eventExperienceDismissed = FlowExperienceActionEvent.dismissed(
             flowId: flowContent.id,
             stepId: step.id)
         experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed, rendererID: rendererID)

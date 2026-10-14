@@ -5,55 +5,32 @@
 //  Created by Userpilot on 29/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This class is responsible for defining flow experience `step` events.
+//  Builds flow step engagement without treating step completion as flow completion.
 //
 
-import Foundation
-
-// MARK: - FlowExperienceStepActionEvent
-/**
- Base class representing various types of experience step action events for mobile content.
-
- - Parameters:
-   - mobileContentId: The Id of the mobile content associated with the event.
-   - stepId: The Id of the step associated with the event.
- */
-internal class FlowExperienceStepActionEvent: FlowExperienceActionEvent {
-    let stepId: Int
-
-    /// Creates a dictionary representation of the event data, including the step ID.
-    ///
-    /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
-    override func toMap() -> [String: Any] {
-        var map = super.toMap()
-        map["step_id"] = stepId
-        return map
-    }
-
-    init(
-        flowId: Int,
-        stepId: Int
-    ) {
-        self.stepId = stepId
-        super.init(flowId: flowId)
-    }
+internal enum FlowExperienceStepActionEvent: ExperienceEvent {
+    case seen(flowId: Int, stepId: Int)
+    case completed(flowId: Int, stepId: Int)
 }
 
-// MARK: - FlowExperienceStepActionEvent Subclasses
-/**
- Represents the 'seen' step action event.
- */
-internal class ExperienceFlowStepSeenEvent: FlowExperienceStepActionEvent {
-    override var name: String {
-        return SDKEventsName.flowExperienceStepSeen.rawValue
+extension FlowExperienceStepActionEvent {
+    var name: SDKEventsName {
+        switch self {
+        case .seen: return .flowExperienceStepSeen
+        case .completed: return .flowExperienceStepCompleted
+        }
     }
-}
 
-/**
- Represents the 'completed' step action event.
- */
-internal class ExperienceFlowStepCompletedEvent: FlowExperienceStepActionEvent {
-    override var name: String {
-        return SDKEventsName.flowExperienceStepCompleted.rawValue
+    private var identity: (flowId: Int, stepId: Int) {
+        switch self {
+        case let .seen(flowId, stepId), let .completed(flowId, stepId):
+            return (flowId, stepId)
+        }
+    }
+
+    var experience: (type: ExperienceType, id: Int)? { (.flow, identity.flowId) }
+
+    var eventPayload: [String: Any] {
+        return ["mobile_content_id": identity.flowId, "step_id": identity.stepId]
     }
 }

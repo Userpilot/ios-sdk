@@ -5,149 +5,53 @@
 //  Created by Userpilot on 29/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This class is responsible for defining survey experience events.
+//  Builds survey engagement and batch-answer payloads, preserving optional fields.
 //
 
-import Foundation
+internal enum SurveyExperienceActionEvent: ExperienceEvent {
+    case seen(surveyId: Int, submissionId: Int64)
+    case dismissed(surveyId: Int, submissionId: Int64, moduleId: Int?, type: String?)
+    case completed(surveyId: Int, submissionId: Int64, hasDeepLink: Bool = false)
+    case submitted(surveyId: Int, submissionId: Int64, feedback: Any? = nil)
+}
 
-// MARK: - SurveyExperienceActionEvent
-/**
- Base class representing various types of experience action events for mobile content.
-
- - Parameters:
-   - mobileContentId: The Id of the mobile content associated with the event.
- */
-internal class SurveyExperienceActionEvent: SDKEvent {
-    /// Experience Id
-    let surveyId: Int
-    /// Submission Id
-    let submissionId: Int64
-    /// Has deeplink to open it
-    let hasDeepLinkContent: Bool
-
-    /// The action type of the event.
-    var name: String {
-        fatalError("Subclasses need to implement the `name` property.")
+extension SurveyExperienceActionEvent {
+    var name: SDKEventsName {
+        switch self {
+        case .seen: return .surveyExperienceSeen
+        case .dismissed: return .surveyExperienceDismissed
+        case .completed: return .surveyExperienceCompleted
+        case .submitted: return .surveyExperienceSubmitted
+        }
     }
 
-    /// Event name, defaulted to "mobile_content".
-    var eventName: String {
-        return name
+    private var identity: (surveyId: Int, submissionId: Int64) {
+        switch self {
+        case let .seen(surveyId, submissionId), let .dismissed(surveyId, submissionId, _, _),
+             let .completed(surveyId, submissionId, _), let .submitted(surveyId, submissionId, _):
+            return (surveyId, submissionId)
+        }
     }
 
-    /// Payload for the event represented as a dictionary.
-    var eventPayload: [String: Any] {
-        return toMap()
-    }
+    var experience: (type: ExperienceType, id: Int)? { (.survey, identity.surveyId) }
 
     var hasDeepLink: Bool {
-        return hasDeepLinkContent
+        guard case .completed(_, _, let hasDeepLink) = self else { return false }
+        return hasDeepLink
     }
 
-    /// Creates a dictionary representation of the event data.
-    ///
-    /// - Returns: A dictionary containing the action type, mobile content Id, application token, and user Id.
-    func toMap() -> [String: Any] {
-        let params: [String: Any] = [
-            "survey_id": surveyId,
-            "submission_id": submissionId
-        ]
-        return params
-    }
-
-    init(
-        surveyId: Int,
-        submissionId: Int64,
-        hasDeepLinkContent: Bool = false
-    ) {
-        self.surveyId = surveyId
-        self.submissionId = submissionId
-        self.hasDeepLinkContent = hasDeepLinkContent
-    }
-}
-
-// MARK: - SurveyExperienceActionEvent Subclasses
-/**
- Represents the 'seen' action event.
- */
-internal class ExperienceSurveySeenEvent: SurveyExperienceActionEvent {
-    override var name: String {
-        return SDKEventsName.surveyExperienceSeen.rawValue
-    }
-}
-
-/**
- Represents the 'dismissed' action event.
- */
-internal class ExperienceSurveyDismissedEvent: SurveyExperienceActionEvent {
-    // Custom parameters for the Submitted event
-    let moduleId: Int?
-    let type: String?
-
-    init(
-        surveyId: Int,
-        submissionId: Int64,
-        moduleId: Int?,
-        type: String?
-    ) {
-        self.moduleId = moduleId
-        self.type = type
-        super.init(surveyId: surveyId, submissionId: submissionId)
-    }
-
-    override var name: String {
-        return SDKEventsName.surveyExperienceDismissed.rawValue
-    }
-
-    /// Combines base event payload with custom parameters.
-    override var eventPayload: [String: Any] {
-        var basePayload = super.eventPayload
-        if moduleId != nil {
-            basePayload["module_id"] = moduleId
+    /// Nil fields are omitted, while explicit nulls and structured feedback retain their value.
+    var eventPayload: [String: Any] {
+        var payload: [String: Any] = ["survey_id": identity.surveyId, "submission_id": identity.submissionId]
+        switch self {
+        case let .dismissed(_, _, moduleId, type):
+            payload["module_id"] = moduleId
+            payload["type"] = type
+        case let .submitted(_, _, feedback):
+            payload["feedback"] = feedback
+        case .seen, .completed:
+            break
         }
-        if type != nil {
-            basePayload["type"] = type
-        }
-        return basePayload
-    }
-}
-
-/**
- Represents the 'completed' action event.
- */
-internal class ExperienceSurveyCompletedEvent: SurveyExperienceActionEvent {
-    override var name: String {
-        return SDKEventsName.surveyExperienceCompleted.rawValue
-    }
-}
-
-/**
- Represents the 'submitted' action event with extra custom parameters.
-*/
-internal class ExperienceSurveySubmittedEvent: SurveyExperienceActionEvent {
-
-    // Custom parameters for the Submitted event
-    let feedback: Any?
-
-    init(
-        surveyId: Int,
-        submissionId: Int64,
-        feedback: Any? = nil
-    ) {
-        self.feedback = feedback
-        super.init(surveyId: surveyId, submissionId: submissionId)
-    }
-
-    override var name: String {
-        return SDKEventsName.surveyExperienceSubmitted.rawValue
-    }
-
-    /// Combines base event payload with custom parameters.
-    override var eventPayload: [String: Any] {
-        var basePayload = super.eventPayload
-        if feedback != nil {
-            basePayload["feedback"] = feedback
-        }
-        return basePayload
+        return payload
     }
 }

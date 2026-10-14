@@ -33,7 +33,7 @@ final class DebugAnalyticsRecordingTests: XCTestCase {
         let publisher = AnalyticsPublisher(container: userpilot.container)
 
         publisher.publishInternalSDKEvent(
-            ExperienceFlowSeenEvent(flowId: 7)
+            FlowExperienceActionEvent.seen(flowId: 7)
         )
 
         let titles = userpilot.debugEventStore.events(for: .internalSDK).map(\.title)

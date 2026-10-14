@@ -87,7 +87,7 @@ final class DebugEventMapperTests: XCTestCase {
     }
 
     func testInternalSDKEvent_mapsToInternalChannel() {
-        let sdkEvent = ExperienceFlowSeenEvent(flowId: 42)
+        let sdkEvent = FlowExperienceActionEvent.seen(flowId: 42)
 
         let debugEvent = mapper.fromInternal(sdkEvent)
 
