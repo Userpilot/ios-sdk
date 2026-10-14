@@ -69,6 +69,7 @@ public class Userpilot: NSObject {
     private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
     private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
     private lazy var linkOpener = container.resolve(LinkOpening.self)
+    private var appReviewManager: AppReviewManaging { container.resolve(AppReviewManaging.self) }
     private lazy var logger = container.resolve(Userpilot.Config.self).logger
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
@@ -205,6 +206,7 @@ public class Userpilot: NSObject {
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinator.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
+        container.registerLazy(AppReviewManaging.self, initializer: AppReviewManager.init)
         container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
         container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateMachine.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
@@ -469,6 +471,19 @@ extension Userpilot {
         experiencesPublisher.endExperience(manualClose: true)
     }
 
+}
+
+// MARK: - App review
+
+extension Userpilot {
+
+    /// Requests the host app's native App Store review prompt. Safe to call from any thread.
+    /// Call after a meaningful interaction while the app is active. StoreKit controls whether
+    /// the prompt appears; this method does not report whether a review was submitted.
+    /// Requests require an active app and, on iOS 14+, a foreground scene; otherwise they are dropped.
+    @objc public func requestReview() {
+        appReviewManager.requestReview()
+    }
 }
 
 // MARK: - Theme
