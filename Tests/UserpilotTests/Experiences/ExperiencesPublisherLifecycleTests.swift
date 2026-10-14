@@ -44,8 +44,8 @@ extension ExperiencesPublisherTests {
     func testUncorrelatedCallbacksCannotReleaseOrPublishForCurrentRenderer() throws {
         let renderer = try presentFlow()
         publishedEvents.removeAll()
-        publisher.publishInternalSDKEvent(MockSDKEvent())
-        publisher.publishInternalSDKEvent(MockSDKEvent(), rendererID: UUID())
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77))
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: UUID())
         publisher.experienceDidFinishDismissing()
         publisher.experienceDidFinishDismissing(rendererID: UUID())
         settle()
@@ -56,9 +56,9 @@ extension ExperiencesPublisherTests {
     func testMatchingRendererForwardsAnalytics() throws {
         let renderer = try presentFlow()
         publishedEvents.removeAll()
-        publisher.publishInternalSDKEvent(MockSDKEvent(eventName: "test-event"), rendererID: renderer)
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: renderer)
         publisher.mockWaitForQueue()
-        XCTAssertEqual(publishedEvents.map(\.eventName), ["test-event"])
+        XCTAssertEqual(publishedEvents.map(\.eventName), ["seen_mobile_content"])
     }
 
     func testDeepLinkCloseDoesNotRequestReload() throws {
@@ -69,12 +69,44 @@ extension ExperiencesPublisherTests {
         XCTAssertEqual(reloadCount, 0)
     }
 
+    func testDismissedFlowRefreshKeepsItsTypedExperienceId() throws {
+        let renderer = try presentFlow()
+        var refreshed: (ExperienceType?, Int?)?
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { type, id, _ in
+            refreshed = (type, id)
+            return true
+        }
+        publisher.publishInternalSDKEvent(
+            FlowExperienceActionEvent.dismissed(flowId: 77, stepId: 3), rendererID: renderer
+        )
+        publisher.mockWaitForQueue()
+        XCTAssertNil(refreshed)
+        publisher.experienceDidFinishDismissing(rendererID: renderer)
+        settle()
+        XCTAssertEqual(refreshed?.0, .flow)
+        XCTAssertEqual(refreshed?.1, 77)
+    }
+
+    func testSeenFlowRecordsExperienceIdWithoutCountingStepImpressions() throws {
+        let renderer = try presentFlow()
+        var seenIds: [Int] = []
+        userpilot.analyticsPublisher.onExperiencePublished = { type, id in
+            XCTAssertEqual(type, .flow)
+            seenIds.append(id)
+        }
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: renderer)
+        publisher.publishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 77, stepId: 3), rendererID: renderer
+        )
+        publisher.mockWaitForQueue()
+        XCTAssertEqual(seenIds, [77])
+    }
+
     func testNPSCloseDoesNotRequestReload() throws {
         receiveScreen(MockContentFactory.makeNPSContentPayload())
         try presentScheduled()
         let renderer = try XCTUnwrap(publisher.activeRendererID)
-        let close = MockSDKEvent(eventName: "dismiss_nps")
-        close.isCloseNPSEvent = true
+        let close = NPSExperienceActionEvent.dismissed
         publisher.publishInternalSDKEvent(close, rendererID: renderer)
         publisher.mockWaitForQueue()
         publisher.experienceDidFinishDismissing(rendererID: renderer)
@@ -106,7 +138,7 @@ extension ExperiencesPublisherTests {
         publisher.logout()
         XCTAssertNil(publisher.activeRendererID)
         XCTAssertNil(publisher.getActiveExperience(rendererID: renderer))
-        publisher.publishInternalSDKEvent(MockSDKEvent(), rendererID: renderer)
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: renderer)
         settle()
         XCTAssertTrue(publishedEvents.isEmpty)
         XCTAssertEqual(reloadCount, 0)
@@ -127,7 +159,7 @@ extension ExperiencesPublisherTests {
         let current = try presentFlow()
         XCTAssertNotEqual(old, current)
         publisher.experienceDidFinishDismissing(rendererID: old)
-        publisher.publishInternalSDKEvent(MockSDKEvent(), rendererID: old)
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: old)
         settle()
         XCTAssertEqual(publisher.activeRendererID, current)
     }
@@ -220,7 +252,7 @@ extension ExperiencesPublisherTests {
         let renderer = try presentPreview()
         XCTAssertTrue(userpilot.analyticsPublisher.requests.isEmpty)
         publishedEvents.removeAll()
-        publisher.publishInternalSDKEvent(MockSDKEvent(), rendererID: renderer)
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: renderer)
         publisher.mockWaitForQueue()
         XCTAssertTrue(publishedEvents.isEmpty)
     }
@@ -296,8 +328,7 @@ extension ExperiencesPublisherTests {
     }
 
     private func sendClose(_ renderer: UUID, hasDeepLink: Bool = false) {
-        let close = MockSDKEvent(eventName: "dismissed_mobile_content", hasDeepLink: hasDeepLink)
-        close.isCloseEvent = true
+        let close = FlowExperienceActionEvent.completed(flowId: 77, hasDeepLink: hasDeepLink)
         publisher.publishInternalSDKEvent(close, rendererID: renderer)
         publisher.mockWaitForQueue()
     }

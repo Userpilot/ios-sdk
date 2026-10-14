@@ -113,6 +113,21 @@ final class EventTests: XCTestCase {
         XCTAssertEqual(user.company["name"] as? String, "Acme Inc.")
     }
 
+    func testEventTypeEncoding_preservesExistingOfflineRepresentation() throws {
+        let fixtures: [(EventType, String)] = [
+            (.event("Purchase"), #"{"type":"track","value":"Purchase"}"#),
+            (.autoCaptureEvent, #"{"type":"mobile_autocapture","value":""}"#),
+            (.screen("Home"), #"{"type":"screen","value":"Home"}"#),
+            (.identify("user-1"), #"{"type":"user_identify","value":"user-1"}"#)
+        ]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        for (type, json) in fixtures {
+            XCTAssertEqual(String(data: try encoder.encode(type), encoding: .utf8), json)
+            XCTAssertEqual(try JSONDecoder().decode(EventType.self, from: Data(json.utf8)), type)
+        }
+    }
+
     func testOfflineEncoding_preservesAllPayloadFieldsAndOmission() throws {
         let payload: [String: Any] = ["id": 9_007_199_254_740_993, "items": ["a", NSNull()]]
         let event = Event(

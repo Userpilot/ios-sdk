@@ -1,17 +1,14 @@
 //
-//  ThemeContentEvent.swift
+//  FetchThemeEvent.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This structure defines a theme content event used to fetch a theme by its ID, or the host app's
-//  theme by its title.
+//  Builds a theme request by ID or by the host app's theme title.
 //
 
-import Foundation
-
-internal struct ThemeContentEvent: SDKEvent {
+internal struct FetchThemeEvent: SDKEvent {
 
     // MARK: - Properties
 

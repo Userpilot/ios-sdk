@@ -19,22 +19,41 @@ internal struct Event {
     let type: EventType
 
     /// Event metadata.
-    var properties: Payload = nil
+    let properties: Payload
 
     /// Company metadata.
-    var company: Payload = nil
+    let company: Payload
 
     /// Screen metadata used by auto-capture.
-    var screen: Payload = nil
+    let screen: Payload
 
     /// Auto-capture interaction category sent as `InteractionEventName`.
-    var interactionEventName: String?
+    let interactionEventName: String?
 
-    /// Queue-only reload metadata for SDK-generated screens; nil for app screen events.
+    /// Queue-only screen intent: nil for app navigation, false for an SDK-generated
+    /// non-fake screen, and true for a fake reload. Excluded from offline encoding.
     var isFakeReload: Bool?
 
-    // MARK: - EventType helpers
+    init(
+        type: EventType,
+        properties: Payload = nil,
+        company: Payload = nil,
+        screen: Payload = nil,
+        interactionEventName: String? = nil,
+        isFakeReload: Bool? = nil
+    ) {
+        self.type = type
+        self.properties = properties
+        self.company = company
+        self.screen = screen
+        self.interactionEventName = interactionEventName
+        self.isFakeReload = isFakeReload
+    }
+}
 
+// MARK: - EventType helpers
+
+extension Event {
     var isIdentifyEvent: Bool {
         return type.isIdentifyEvent
     }
@@ -64,21 +83,14 @@ internal struct Event {
     }
 
     var userpilotAnalytic: UserpilotAnalytic {
-        switch type {
-        case .identify:
-            return .identify
-        case .screen:
-            return .screen
-        case .event, .autoCaptureEvent:
-            return .event
-        }
+        return type.userpilotAnalytic
     }
 }
 
 // MARK: - Codable Conformance
 
 extension Event: Codable {
-    enum CodingKeys: String, CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case type
         case properties
         case company
@@ -111,6 +123,8 @@ extension Event: Codable {
             String.self, forKey: .interactionEventName)
     }
 }
+
+// MARK: - Throttling
 
 extension Event {
     /**
@@ -171,7 +185,11 @@ extension Event {
         if let number = value as? NSNumber { return number.stringValue }
         return String(describing: value)
     }
+}
 
+// MARK: - Payload construction
+
+extension Event {
     func toUser() -> User {
         return User(userId: userId ?? "",
                     properties: properties ?? [:],

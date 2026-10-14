@@ -183,8 +183,8 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         return onGetActiveMobileContent?() ?? nil
     }
 
-    var onPublishInternalSDKEvent: ((SDKEvent) -> Void)?
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+    var onPublishInternalSDKEvent: ((ExperienceEvent) -> Void)?
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent) {
         onPublishInternalSDKEvent?(sdkEvent)
     }
 
@@ -681,27 +681,10 @@ class MockNavigationDelegate: UserpilotNavigationDelegate {
 class MockSDKEvent: SDKEvent {
     var eventName: String
     var eventPayload: [String: Any]
-    var hasDeepLink: Bool
 
-    var isCloseNPSEvent = false
-    var isCloseEvent = false
-
-    init(
-        eventName: String = "test-event",
-        eventPayload: [String: Any] = [:],
-        hasDeepLink: Bool = false
-    ) {
+    init(eventName: String = "test-event", eventPayload: [String: Any] = [:]) {
         self.eventName = eventName
         self.eventPayload = eventPayload
-        self.hasDeepLink = hasDeepLink
-    }
-
-    func isEventForCloseNPSExperience() -> Bool {
-        return isCloseNPSEvent
-    }
-
-    func isEventForCloseExperience() -> Bool {
-        return isCloseEvent
     }
 }
 

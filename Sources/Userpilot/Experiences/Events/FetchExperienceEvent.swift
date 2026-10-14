@@ -1,16 +1,15 @@
 //
-//  ExperienceContentEvent.swift
+//  FetchExperienceEvent.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 05/11/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This class encapsulates the data required to fetch experience associated with ID.
+//  Builds the backend content request for a manually triggered experience.
 //
 
-import Foundation
-
-internal struct ExperienceContentEvent: SDKEvent {
+/// Sent by ExperiencesPublisher.triggerExperience through the internal analytics request path.
+internal struct FetchExperienceEvent: SDKEvent {
 
     // MARK: - Properties
 

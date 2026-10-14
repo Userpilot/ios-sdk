@@ -69,7 +69,7 @@ final class ExperienceViewModelTests: XCTestCase {
 
     func testExperienceCompletionPublishesStepAndContentCompletionEvents() throws {
         let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 7, deepLink: "https://example.com")])
-        var events: [SDKEvent] = []
+        var events: [ExperienceEvent] = []
         userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
         userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
         viewModel.onStart()
@@ -87,7 +87,7 @@ final class ExperienceViewModelTests: XCTestCase {
 
     func testStepChangePublishesPreviousStepCompletedAndCurrentStepSeenOnce() {
         let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 1), Self.makeStep(id: 2)])
-        var events: [SDKEvent] = []
+        var events: [ExperienceEvent] = []
         userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
         userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
         viewModel.onStart()
@@ -105,7 +105,7 @@ final class ExperienceViewModelTests: XCTestCase {
 
     func testDismissPublishesDismissedEventForLastReachedStep() {
         let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 1), Self.makeStep(id: 2)])
-        var events: [SDKEvent] = []
+        var events: [ExperienceEvent] = []
         userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
         userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
         viewModel.onStart()
@@ -136,7 +136,7 @@ final class ExperienceViewModelTests: XCTestCase {
     func testStepChangeReportsOutgoingIDToDelegateAndBackend() {
         let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 101), Self.makeStep(id: 102)])
         let delegate = FlowStepDelegate()
-        var events: [SDKEvent] = []
+        var events: [ExperienceEvent] = []
         userpilot.experienceDelegate = delegate
         userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
         userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
@@ -152,7 +152,7 @@ final class ExperienceViewModelTests: XCTestCase {
 
     func testBackNavigationUpdatesVisibleStepWithoutReplayingEngagement() {
         let flow = Self.makeFlowContent(steps: [Self.makeStep(id: 101), Self.makeStep(id: 102)])
-        var events: [SDKEvent] = []
+        var events: [ExperienceEvent] = []
         userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
         userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
         viewModel.onStart()

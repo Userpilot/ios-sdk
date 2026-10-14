@@ -9,28 +9,28 @@ import XCTest
 final class SDKEventTests: XCTestCase {
 
     func testSDKEventCloseHelpersAndContentMetadata() {
-        let flowSeen = ExperienceFlowSeenEvent(flowId: 11)
-        let flowDismissed = ExperienceFlowDismissedEvent(flowId: 11, stepId: 4)
-        let surveySeen = ExperienceSurveySeenEvent(surveyId: 22, submissionId: 100)
-        let npsDismissed = ExperienceNPSDismissedEvent()
+        let flowSeen = FlowExperienceActionEvent.seen(flowId: 11)
+        let flowDismissed = FlowExperienceActionEvent.dismissed(flowId: 11, stepId: 4)
+        let surveySeen = SurveyExperienceActionEvent.seen(surveyId: 22, submissionId: 100)
+        let npsDismissed = NPSExperienceActionEvent.dismissed
 
         XCTAssertTrue(flowDismissed.isEventForCloseExperience())
         XCTAssertFalse(flowSeen.isEventForCloseExperience())
         XCTAssertTrue(npsDismissed.isEventForCloseNPSExperience())
-        XCTAssertEqual(flowSeen.getContentType(), .flow)
-        XCTAssertEqual(flowSeen.getContentId(), 11)
-        XCTAssertEqual(surveySeen.getContentType(), .survey)
-        XCTAssertEqual(surveySeen.getContentId(), 22)
+        XCTAssertEqual(flowSeen.experience?.type, .flow)
+        XCTAssertEqual(flowSeen.experience?.id, 11)
+        XCTAssertEqual(surveySeen.experience?.type, .survey)
+        XCTAssertEqual(surveySeen.experience?.id, 22)
         XCTAssertTrue(flowSeen.isSeenContentEvent())
         XCTAssertTrue(surveySeen.isSeenContentEvent())
     }
 
     func testFlowEventsExposeExpectedNamesPayloadsAndDeepLinkFlags() {
-        let seen = ExperienceFlowSeenEvent(flowId: 10)
-        let dismissed = ExperienceFlowDismissedEvent(flowId: 10, stepId: 3)
-        let completed = ExperienceFlowCompletedEvent(flowId: 10, hasDeepLinkContent: true)
-        let stepSeen = ExperienceFlowStepSeenEvent(flowId: 10, stepId: 2)
-        let stepCompleted = ExperienceFlowStepCompletedEvent(flowId: 10, stepId: 2)
+        let seen = FlowExperienceActionEvent.seen(flowId: 10)
+        let dismissed = FlowExperienceActionEvent.dismissed(flowId: 10, stepId: 3)
+        let completed = FlowExperienceActionEvent.completed(flowId: 10, hasDeepLink: true)
+        let stepSeen = FlowExperienceStepActionEvent.seen(flowId: 10, stepId: 2)
+        let stepCompleted = FlowExperienceStepActionEvent.completed(flowId: 10, stepId: 2)
 
         XCTAssertEqual(seen.eventName, SDKEventsName.flowExperienceSeen.rawValue)
         XCTAssertEqual(seen.eventPayload["mobile_content_id"] as? Int, 10)
@@ -44,36 +44,36 @@ final class SDKEventTests: XCTestCase {
     }
 
     func testSurveyEventsExposeExpectedNamesPayloadsAndDeepLinkFlags() {
-        let seen = ExperienceSurveySeenEvent(surveyId: 20, submissionId: 300)
-        let dismissed = ExperienceSurveyDismissedEvent(
+        let seen = SurveyExperienceActionEvent.seen(surveyId: 20, submissionId: 300)
+        let dismissed = SurveyExperienceActionEvent.dismissed(
             surveyId: 20,
             submissionId: 300,
             moduleId: 5,
             type: "open_text"
         )
-        let completed = ExperienceSurveyCompletedEvent(
+        let completed = SurveyExperienceActionEvent.completed(
             surveyId: 20,
             submissionId: 300,
-            hasDeepLinkContent: true
+            hasDeepLink: true
         )
-        let submitted = ExperienceSurveySubmittedEvent(
+        let submitted = SurveyExperienceActionEvent.submitted(
             surveyId: 20,
             submissionId: 300,
             feedback: [["value": "ok"]]
         )
-        let stepSeen = ExperienceSurveyStepSeenEvent(
+        let stepSeen = SurveyExperienceStepActionEvent.seen(
             surveyId: 20,
             submissionId: 300,
             moduleId: 5,
             type: "open_text"
         )
-        let stepSkipped = ExperienceSurveyStepSkippedEvent(
+        let stepSkipped = SurveyExperienceStepActionEvent.skipped(
             surveyId: 20,
             submissionId: 300,
             moduleId: 5,
             type: "open_text"
         )
-        let stepSubmitted = ExperienceSurveyStepSubmittedEvent(
+        let stepSubmitted = SurveyExperienceStepActionEvent.submitted(
             surveyId: 20,
             submissionId: 300,
             moduleId: 5,
@@ -96,9 +96,9 @@ final class SDKEventTests: XCTestCase {
     }
 
     func testNPSEventsExposeExpectedNamesAndPayloads() {
-        let seen = ExperienceNPSSeenEvent()
-        let dismissed = ExperienceNPSDismissedEvent()
-        let submitted = ExperienceNPSSubmittedEvent(
+        let seen = NPSExperienceActionEvent.seen
+        let dismissed = NPSExperienceActionEvent.dismissed
+        let submitted = NPSExperienceActionEvent.submitted(
             score: 9,
             npsKey: "score-key",
             feedback: "great",
@@ -116,8 +116,8 @@ final class SDKEventTests: XCTestCase {
     }
 
     func testFetchAndPushEventsExposeExpectedPayloads() {
-        let theme = ThemeContentEvent(key: .id(7), token: "app-token")
-        let content = ExperienceContentEvent(experienceId: "mobile:1")
+        let theme = FetchThemeEvent(key: .id(7), token: "app-token")
+        let content = FetchExperienceEvent(experienceId: "mobile:1")
         let pushToken = PushNotificationTokenEvent(appToken: "app-token", userId: "user-1", token: "device-token")
         let opened = PushNotificationOpenedEvent(payload: ["notification_id": "n1"])
         let logout = UserLogoutEvent(appToken: "app-token", userId: "user-1", token: "device-token")
@@ -136,7 +136,7 @@ final class SDKEventTests: XCTestCase {
     }
 
     func testAppThemeFetchSendsTitleInsteadOfId() {
-        let theme = ThemeContentEvent(key: .title("Brand Dark"), token: "app-token")
+        let theme = FetchThemeEvent(key: .title("Brand Dark"), token: "app-token")
 
         XCTAssertEqual(theme.eventName, SDKEventsName.fetchExperienceTheme.rawValue)
         XCTAssertEqual(theme.eventPayload["theme_title"] as? String, "Brand Dark")

@@ -46,8 +46,9 @@ class StoredOfflineEventTests: XCTestCase {
     }
 
     func testAnalyticsEnvelope_keepsWholeNumbersAsIntInsideProperties() throws {
-        var event = Event(type: .event("purchase"))
-        event.properties = ["count": 3, "price": 9.5, "nested": ["qty": 2]]
+        let event = Event(
+            type: .event("purchase"), properties: ["count": 3, "price": 9.5, "nested": ["qty": 2]]
+        )
 
         let restored = try encodeDecode(StoredOfflineEvent(event: event))
 

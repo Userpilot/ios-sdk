@@ -144,8 +144,8 @@ final class SurveyViewModel {
         guard let surveyContent else { return }
         notifyExperienceState(.started, surveyContent: surveyContent)
 
-        let eventExperienceSeen = ExperienceSurveySeenEvent(surveyId: surveyContent.id, submissionId: submissionId)
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen, rendererID: rendererID)
+        let event = SurveyExperienceActionEvent.seen(surveyId: surveyContent.id, submissionId: submissionId)
+        experiencesPublisher.publishInternalSDKEvent(event, rendererID: rendererID)
 
         if surveyContent.type == .step {
             onSurveyStepSeen()
@@ -161,10 +161,10 @@ final class SurveyViewModel {
     /// Shares completion reporting while callers distinguish a submitted action from a thank-you close.
     private func publishSurveyCompleted(_ surveyContent: SurveyContent, hasDeepLink: Bool) {
         notifyExperienceState(.completed, surveyContent: surveyContent)
-        let event = ExperienceSurveyCompletedEvent(
+        let event = SurveyExperienceActionEvent.completed(
             surveyId: surveyContent.id,
             submissionId: submissionId,
-            hasDeepLinkContent: hasDeepLink
+            hasDeepLink: hasDeepLink
         )
         experiencesPublisher.publishInternalSDKEvent(event, rendererID: rendererID)
     }
@@ -180,7 +180,7 @@ final class SurveyViewModel {
         } else {
             notifyExperienceState(.dismissed, surveyContent: surveyContent)
 
-            let eventExperienceDismissed = ExperienceSurveyDismissedEvent(
+            let eventExperienceDismissed = SurveyExperienceActionEvent.dismissed(
                 surveyId: surveyContent.id,
                 submissionId: submissionId,
                 moduleId: surveyContent.type == .list ? nil : surveyStep.id,
@@ -194,7 +194,7 @@ final class SurveyViewModel {
 
         notifyStepState(.started, surveyContent: surveyContent, surveyStep: surveyStep)
 
-        let eventStepSeen = ExperienceSurveyStepSeenEvent(
+        let eventStepSeen = SurveyExperienceStepActionEvent.seen(
             surveyId: surveyContent.id,
             submissionId: submissionId,
             moduleId: surveyStep.id,
@@ -208,7 +208,7 @@ final class SurveyViewModel {
         guard let surveyContent else { return }
         notifyExperienceState(.submitted, surveyContent: surveyContent)
 
-        let eventContentSubmitted = ExperienceSurveySubmittedEvent(
+        let eventContentSubmitted = SurveyExperienceActionEvent.submitted(
             surveyId: surveyContent.id,
             submissionId: submissionId,
             feedback: answersPayload
@@ -221,7 +221,7 @@ final class SurveyViewModel {
 
         notifyStepState(.submitted, surveyContent: surveyContent, surveyStep: surveyStep)
 
-        let eventStepSubmitted = ExperienceSurveyStepSubmittedEvent(
+        let eventStepSubmitted = SurveyExperienceStepActionEvent.submitted(
             surveyId: surveyContent.id,
             submissionId: submissionId,
             moduleId: surveyStep.id,
@@ -236,7 +236,7 @@ final class SurveyViewModel {
 
         notifyStepState(.skipped, surveyContent: surveyContent, surveyStep: surveyStep)
 
-        let eventStepSkipped = ExperienceSurveyStepSkippedEvent(
+        let eventStepSkipped = SurveyExperienceStepActionEvent.skipped(
             surveyId: surveyContent.id,
             submissionId: submissionId,
             moduleId: surveyStep.id,

@@ -5,93 +5,42 @@
 //  Created by Userpilot on 02/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  Builds the shared payload for survey step action events.
+//  Builds survey module engagement while preserving the submitted answer's JSON shape.
 //
 
-import Foundation
-
-// MARK: - SurveyExperienceStepActionEvent
-/**
- Base class representing various types of experience step action events for mobile content.
-
- - Parameters:
-   - mobileContentId: The Id of the mobile content associated with the event.
-   - stepId: The Id of the step associated with the event.
- */
-internal class SurveyExperienceStepActionEvent: SurveyExperienceActionEvent {
-    let moduleId: Int
-    let type: String
-
-    init(
-        surveyId: Int,
-        submissionId: Int64,
-        moduleId: Int,
-        type: String
-    ) {
-        self.moduleId = moduleId
-        self.type = type
-        super.init(surveyId: surveyId, submissionId: submissionId)
-    }
-
-    /// Creates a dictionary representation of the event data, including the step Id.
-    ///
-    /// - Returns: A dictionary containing the action type, mobile content Id, application token, user Id, and step Id.
-    override func toMap() -> [String: Any] {
-        var map = super.toMap()
-        map["module_id"] = moduleId
-        map["type"] = type
-        return map
-    }
+internal enum SurveyExperienceStepActionEvent: ExperienceEvent {
+    case seen(surveyId: Int, submissionId: Int64, moduleId: Int, type: String)
+    case skipped(surveyId: Int, submissionId: Int64, moduleId: Int, type: String)
+    case submitted(surveyId: Int, submissionId: Int64, moduleId: Int, type: String, feedback: Any? = nil)
 }
 
-// MARK: - FlowExperienceStepActionEvent Subclasses
-/**
- Represents the 'seen' step action event.
- */
-internal class ExperienceSurveyStepSeenEvent: SurveyExperienceStepActionEvent {
-    override var name: String {
-        return SDKEventsName.surveyExperienceStepSeen.rawValue
-    }
-}
-
-/**
- Represents the 'completed' step action event.
- */
-internal class ExperienceSurveyStepSkippedEvent: SurveyExperienceStepActionEvent {
-    override var name: String {
-        return SDKEventsName.surveyExperienceStepSkipped.rawValue
-    }
-}
-
-/**
- Represents the 'submitted' action event with extra custom parameters.
-*/
-internal class ExperienceSurveyStepSubmittedEvent: SurveyExperienceStepActionEvent {
-
-    // Custom parameters for the Submitted event
-    let feedback: Any?
-
-    init(
-        surveyId: Int,
-        submissionId: Int64,
-        moduleId: Int,
-        type: String,
-        feedback: Any? = nil
-    ) {
-        self.feedback = feedback
-        super.init(surveyId: surveyId, submissionId: submissionId, moduleId: moduleId, type: type)
-    }
-
-    override var name: String {
-        return SDKEventsName.surveyExperienceStepSubmitted.rawValue
-    }
-
-    /// Combines base event payload with custom parameters.
-    override var eventPayload: [String: Any] {
-        var basePayload = super.eventPayload
-        if feedback != nil {
-            basePayload["feedback"] = feedback
+extension SurveyExperienceStepActionEvent {
+    var name: SDKEventsName {
+        switch self {
+        case .seen: return .surveyExperienceStepSeen
+        case .skipped: return .surveyExperienceStepSkipped
+        case .submitted: return .surveyExperienceStepSubmitted
         }
-        return basePayload
+    }
+
+    var experience: (type: ExperienceType, id: Int)? {
+        switch self {
+        case .seen(let surveyId, _, _, _), .skipped(let surveyId, _, _, _), .submitted(let surveyId, _, _, _, _):
+            return (.survey, surveyId)
+        }
+    }
+
+    var eventPayload: [String: Any] {
+        var payload: [String: Any]
+        switch self {
+        case let .seen(surveyId, submissionId, moduleId, type),
+             let .skipped(surveyId, submissionId, moduleId, type),
+             let .submitted(surveyId, submissionId, moduleId, type, _):
+            payload = ["survey_id": surveyId, "submission_id": submissionId, "module_id": moduleId, "type": type]
+        }
+        if case .submitted(_, _, _, _, let feedback) = self {
+            payload["feedback"] = feedback
+        }
+        return payload
     }
 }
