@@ -5,17 +5,17 @@
 //  Created by Userpilot on 13/10/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  Circular **UP** button. No shadow. Gestures stay on this view so the panel fade cannot move it.
+//  Circular Userpilot logo button. Gestures stay on this view so the panel fade cannot move it.
 //
 
 import UIKit
 
-/// Circular **UP** button. No shadow. Gestures stay on this view so the panel fade cannot move it.
+/// Circular Userpilot logo button. Gestures stay on this view so the panel fade cannot move it.
 internal final class DebuggerFabView: UIView {
 
     weak var host: DebugOverlayView?
 
-    private let label = UILabel()
+    private let logoView = UIImageView(image: .userpilotImage(named: "userpilot_debugger_logo"))
     private var downPoint = CGPoint.zero
     private var dragging = false
     private let slop: CGFloat = 8
@@ -30,12 +30,9 @@ internal final class DebuggerFabView: UIView {
         isAccessibilityElement = true
         accessibilityTraits = .button
 
-        label.text = DebuggerStrings.fabLabel
-        label.textColor = .white
-        label.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        label.textAlignment = .center
-        label.isUserInteractionEnabled = false
-        addSubview(label)
+        logoView.contentMode = .scaleAspectFit
+        logoView.isUserInteractionEnabled = false
+        addSubview(logoView)
     }
 
     @available(*, unavailable)
@@ -45,7 +42,7 @@ internal final class DebuggerFabView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        label.frame = bounds
+        logoView.frame = bounds
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

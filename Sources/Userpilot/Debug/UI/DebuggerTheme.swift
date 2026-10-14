@@ -32,7 +32,6 @@ enum DebuggerTheme {
 
 enum DebuggerStrings {
     static let panelTitle = "Debugger"
-    static let fabLabel = "UP"
     static let fabAccessibility = "Open Userpilot debugger"
     static let closeAccessibility = "Close debugger panel"
     static let tabConfig = "Config"

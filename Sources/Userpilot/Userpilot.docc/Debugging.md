@@ -16,7 +16,7 @@ Objective-C:
 [userpilot debug];
 ```
 
-A floating **UP** button appears above the host UI and any in-app experiences. Drag it to either edge. Tap it to open or close the panel. Closing the panel keeps collection active. There is no public `stop()` API; `logout()` clears event buffers but leaves the overlay in place.
+A circular Userpilot logo button appears above the host UI and any in-app experiences. Drag it to either edge. Tap it to open or close the panel. Closing the panel keeps collection active. There is no public `stop()` API; `logout()` clears event buffers but leaves the overlay in place.
 
 Tap the top-right bug icon on each sample home screen. The samples expose the same one-liner: UIKit and SwiftUI call `UserpilotManager.shared.debug()`, and the Objective-C sample calls `[[Userpilot shared] debug]` on its host singleton.
 
