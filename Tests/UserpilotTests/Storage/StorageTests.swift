@@ -60,6 +60,27 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(storage.userId, "user-00000")
     }
 
+    func testClean_clearsOnlyUserIdAndPushToken() {
+        storage.userId = "user-00000"
+        storage.pushToken = "push-token"
+        storage.anonymousUserId = "anonymous-id"
+        storage.temporaryUser = "pending-identify"
+        storage.socketURL = "wss://socket.example.com"
+        let date = Date()
+        storage.sessionDate = date
+        storage.configurationDate = date
+
+        storage.clean()
+
+        XCTAssertEqual(storage.userId, "")
+        XCTAssertNil(storage.pushToken)
+        XCTAssertEqual(storage.anonymousUserId, "anonymous-id")
+        XCTAssertEqual(storage.temporaryUser, "pending-identify")
+        XCTAssertEqual(storage.socketURL, "wss://socket.example.com")
+        XCTAssertEqual(storage.sessionDate, date)
+        XCTAssertEqual(storage.configurationDate, date)
+    }
+
     func testInitializationRemovesObsoleteProfileButKeepsIdentityAndPendingIdentify() throws {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: Storage.suiteName(forToken: token)))
         defaults.set("obsolete-profile", forKey: Storage.legacyUserKey)

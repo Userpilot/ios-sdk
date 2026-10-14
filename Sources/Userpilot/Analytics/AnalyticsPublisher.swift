@@ -278,7 +278,7 @@ extension AnalyticsPublisher {
         }
 
         dropAllState()
-        userpilot?.clean()
+        storage.clean()
         storage.userId = id
         return true
     }

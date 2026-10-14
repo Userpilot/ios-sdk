@@ -441,6 +441,11 @@ class MockStorage: DataStoring {
     var temporaryUser: String?
     var sessionDate: Date?
     var configurationDate: Date?
+
+    func clean() {
+        pushToken = nil
+        userId = ""
+    }
 }
 
 // MARK: - Mock Session Monitor

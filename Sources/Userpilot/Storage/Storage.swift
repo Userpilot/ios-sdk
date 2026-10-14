@@ -35,6 +35,9 @@ internal protocol DataStoring: AnyObject {
 
     /// Push token for APNs
     var pushToken: String? { get set }
+
+    /// Clears the current user ID and push token during logout or a user switch.
+    func clean()
 }
 
 /**
@@ -152,6 +155,13 @@ internal class Storage: DataStoring {
         // live identity and pending identify data keep their existing keys and values.
         defaults?.removeObject(forKey: Storage.legacyUserKey)
         sessionDate = nil
+    }
+
+    // MARK: - Identity cleanup
+
+    internal func clean() {
+        pushToken = nil
+        userId = ""
     }
 
     // MARK: - Helper Methods

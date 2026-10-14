@@ -392,7 +392,7 @@ extension Userpilot {
     public func logout() {
         storage.temporaryUser = nil
         analyticsPublisher.logout()
-        clean()
+        storage.clean()
     }
 
     /**
@@ -428,19 +428,6 @@ extension Userpilot {
         ]
     }
 
-    // MARK: - SDK APIs
-
-    /**
-     Clear user session data.
-
-     This method should be called when the user logs out or when identify called with new userId.
-     It resets the session state, clears user-related data, and ensures no further tracking occurs for
-     the logged-out user.
-     */
-    internal func clean() {
-        storage.pushToken = nil
-        storage.userId = ""
-    }
 }
 
 // MARK: - Experiences
