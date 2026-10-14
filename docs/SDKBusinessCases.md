@@ -303,3 +303,21 @@ Android still requires both View and Compose Gradle instrumentation and the exis
 | Instance teardown | Stop recording, cancel pending presentation, remove native observation, and release UI resources. |
 
 The same store owns activation, mapping, IDs, buffers and reset. iOS uses a short `NSLock.withLock` transition and UI invalidation callbacks; Android uses `synchronized` and StateFlow snapshots. UI updates consume the latest history, so a delayed update cannot restore events from before logout. These diagnostic operations do not change analytics session flags, payloads, logs, retries, or ACK behavior.
+
+## Native app review
+
+The current development branch exposes `userpilot.requestReview()` on both native SDKs. It requests the host app's native store prompt; it does not submit a review or report whether one was submitted. There is no experience-action or wrapper-bridge integration yet.
+
+| Case | Expected behavior |
+| --- | --- |
+| AR-001: Call after an app interaction | Request the native App Store / Play Store prompt; identification is not required. |
+| AR-002: Call from a background thread | Dispatch native work to the main thread using the platform's existing concurrency mechanism. |
+| AR-003: No active app or usable presentation host | Drop the request; never replay it on a later launch or resume. |
+| AR-004: Store suppresses the prompt | Continue the host app's flow. No success/failure callback claims that a prompt appeared or a review was submitted. |
+| AR-005: Multiple Userpilot accounts | All requests concern the same host app listing. Do not route or forward them as captured analytics events. |
+| AR-006: Repeated requests | Let the store enforce eligibility and quotas. The SDK does not promise a dialog or introduce another persistent counter. |
+| AR-007: Android host changes during Play preparation | Drop the prepared request if the original Activity is no longer current, alive and not finishing, or the app is inactive. |
+| AR-008: Android instance removed during preparation | Cancel pending coroutine work; a later Play response cannot present it. |
+| AR-009: Native request fails | Keep the host app running; Android failures use the existing coroutine error logger. |
+
+Native differences: StoreKit uses a foreground window scene on iOS 14+ and its process-level API on iOS 13; it has no asynchronous review-preparation result. Play first prepares a `ReviewInfo`, then launches using the original Activity if it is still usable. Both APIs leave prompt visibility and eligibility to the store. No backend event or new storage field is added.
