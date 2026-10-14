@@ -291,6 +291,20 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(appProps?[AutoPropertyDecorator.appNameKey] as? String, Bundle.main.displayName)
     }
 
+    /// Settings keep the logger selected at first use, even if config is changed afterward.
+    func testSettings_preservesFirstUseLogger() {
+        let firstLogger = MockLogger()
+        let laterLogger = MockLogger()
+        userpilot.config.logger = firstLogger
+
+        _ = userpilot.settings()
+        userpilot.config.logger = laterLogger
+        _ = userpilot.settings()
+
+        XCTAssertEqual(firstLogger.loggedDebugs.count, 2)
+        XCTAssertTrue(laterLogger.loggedDebugs.isEmpty)
+    }
+
     // MARK: - Trigger Experience
 
     /// Verifies empty experience Id does not trigger any experience

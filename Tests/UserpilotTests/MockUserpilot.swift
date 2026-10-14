@@ -25,6 +25,7 @@ class MockUserpilot: Userpilot {
     override func initializeContainer() {
         container.owner = self
         container.register(Userpilot.Config.self, value: config)
+        container.registerLazy(Logging.self) { $0.resolve(Userpilot.Config.self).logger }
         // The real coordinator and native hooks use the process runtime that these instances
         // register into during initialization; share the same runtime services as production `initializeContainer()`.
         let runtime = UserpilotRuntime.shared

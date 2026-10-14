@@ -59,18 +59,20 @@ public class Userpilot: NSObject {
 
     internal let config: Config
 
-    // Resolve services only after the runtime registers this owner and configures its container.
-    private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-    private lazy var storage = container.resolve(DataStoring.self)
-    private lazy var socketManager = container.resolve(SocketManaging.self)
-    private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
-    private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-    private lazy var themeHandler = container.resolve(ThemeHandling.self)
-    private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
-    private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
-    private lazy var linkOpener = container.resolve(LinkOpening.self)
+    // Resolve after runtime registration; the container owns caching and concurrent first access.
+    private var analyticsPublisher: AnalyticsPublishing { container.resolve(AnalyticsPublishing.self) }
+    private var storage: DataStoring { container.resolve(DataStoring.self) }
+    private var socketManager: SocketManaging { container.resolve(SocketManaging.self) }
+    private var sessionMonitor: SessionMonitoring { container.resolve(SessionMonitoring.self) }
+    private var experiencesPublisher: ExperiencesPublishing { container.resolve(ExperiencesPublishing.self) }
+    private var themeHandler: ThemeHandling { container.resolve(ThemeHandling.self) }
+    private var autoPropertyDecorator: AutoPropertyDecoratoring { container.resolve(AutoPropertyDecoratoring.self) }
+    private var pushNotificationMonitor: PushNotificationMonitoring {
+        container.resolve(PushNotificationMonitoring.self)
+    }
+    private var linkOpener: LinkOpening { container.resolve(LinkOpening.self) }
     private var appReviewManager: AppReviewManaging { container.resolve(AppReviewManaging.self) }
-    private lazy var logger = container.resolve(Userpilot.Config.self).logger
+    private var logger: Logging { container.resolve(Logging.self) }
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
     ///
@@ -188,6 +190,8 @@ public class Userpilot: NSObject {
     internal func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
+        // Preserve the facade's first-use logger snapshot without an unsynchronized lazy property.
+        container.registerLazy(Logging.self) { $0.resolve(Config.self).logger }
         let runtime = UserpilotRuntime.shared
         container.register(InstanceRegistering.self, value: runtime.instanceRegistry)
         container.register(InstanceResolving.self, value: runtime.instanceResolver)
