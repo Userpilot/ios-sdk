@@ -44,7 +44,7 @@ final class DebugAnalyticsRecordingTests: XCTestCase {
         let first = MockUserpilot(config: Userpilot.Config(token: "NX-DEBUG-A").defaultInstance(false))
         let second = MockUserpilot(config: Userpilot.Config(token: "NX-DEBUG-B").defaultInstance(false))
         first.container.register(
-            UserpilotDebuggerManaging.self, value: UserpilotDebuggerManager(container: first.container)
+            DebuggerManaging.self, value: DebuggerManager(container: first.container)
         )
         first.sessionMonitor.isAppActive = false
         second.sessionMonitor.isAppActive = false
@@ -66,8 +66,8 @@ final class DebugAnalyticsRecordingTests: XCTestCase {
         let userpilot = Userpilot(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         )
-        let manager = userpilot.container.resolve(UserpilotDebuggerManaging.self)
-        XCTAssertTrue(manager is UserpilotDebuggerManager)
+        let manager = userpilot.container.resolve(DebuggerManaging.self)
+        XCTAssertTrue(manager is DebuggerManager)
     }
 }
 

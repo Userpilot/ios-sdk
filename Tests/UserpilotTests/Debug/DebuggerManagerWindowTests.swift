@@ -1,5 +1,5 @@
 //
-//  UserpilotDebuggerManagerWindowTests.swift
+//  DebuggerManagerWindowTests.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 13/10/2026.
@@ -11,14 +11,14 @@ import XCTest
 
 // swiftlint:disable all
 
-final class UserpilotDebuggerManagerWindowTests: XCTestCase {
+final class DebuggerManagerWindowTests: XCTestCase {
 
     func testShow_createsStatusBarWindowOnceWithoutBecomingKey() {
         let userpilot = Userpilot(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         )
-        let manager = userpilot.container.resolve(UserpilotDebuggerManaging.self)
-            as! UserpilotDebuggerManager
+        let manager = userpilot.container.resolve(DebuggerManaging.self)
+            as! DebuggerManager
 
         manager.show()
         let first = manager.debugWindow
@@ -36,7 +36,7 @@ final class UserpilotDebuggerManagerWindowTests: XCTestCase {
     }
     func testHideStopsRecordingAndSceneActivationCannotReopenTheWindow() {
         let userpilot = MockUserpilot(config: Userpilot.Config(token: "NX-DEBUG-HIDE").defaultInstance(false))
-        let manager = UserpilotDebuggerManager(container: userpilot.container)
+        let manager = DebuggerManager(container: userpilot.container)
         manager.show()
         userpilot.debugEventStore.record(Event(type: .event("old")))
 
@@ -54,7 +54,7 @@ final class UserpilotDebuggerManagerWindowTests: XCTestCase {
 
     func testResetClearsHistoryWithoutDisablingAnOpenDebugger() {
         let userpilot = MockUserpilot(config: Userpilot.Config(token: "NX-DEBUG-RESET").defaultInstance(false))
-        let manager = UserpilotDebuggerManager(container: userpilot.container)
+        let manager = DebuggerManager(container: userpilot.container)
         manager.show()
         userpilot.debugEventStore.record(Event(type: .event("old")))
         manager.reset()

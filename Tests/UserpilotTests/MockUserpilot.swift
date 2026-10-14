@@ -36,7 +36,7 @@ class MockUserpilot: Userpilot {
         container.register(DebugFontCataloging.self, value: debugFontCatalog)
         container.register(DebugConfigSnapshotMaking.self, value: debugConfigFactory)
         container.register(DebugUserSnapshotMaking.self, value: debugUserFactory)
-        container.register(UserpilotDebuggerManaging.self, value: debuggerManager)
+        container.register(DebuggerManaging.self, value: debuggerManager)
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
         container.register(NetworkMonitoring.self, value: networkMonitor)
@@ -84,7 +84,7 @@ class MockUserpilot: Userpilot {
         owner: self
     )
     lazy var debugUserFactory = DebugUserSnapshotFactory(storage: storage)
-    var debuggerManager = MockUserpilotDebuggerManager()
+    var debuggerManager = MockDebuggerManager()
 }
 
 // MARK: - Mock Image Loader
@@ -724,7 +724,7 @@ class MockUPExperienceDelegate: UIViewController, UPExperienceDelegate {
 
 // MARK: - Mock Debugger Manager
 
-class MockUserpilotDebuggerManager: UserpilotDebuggerManaging {
+class MockDebuggerManager: DebuggerManaging {
     var showCount = 0
     var resetCount = 0
     var hideCount = 0

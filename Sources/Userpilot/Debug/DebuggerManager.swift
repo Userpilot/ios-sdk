@@ -1,5 +1,5 @@
 //
-//  UserpilotDebuggerManager.swift
+//  DebuggerManager.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 13/10/2026.
@@ -12,13 +12,13 @@ import Foundation
 import UIKit
 
 /// The per-instance entry point; hiding the debugger ends recording and clears its history.
-internal protocol UserpilotDebuggerManaging: AnyObject {
+internal protocol DebuggerManaging: AnyObject {
     func show()
     func hide()
     func reset()
 }
 
-internal final class UserpilotDebuggerManager: UserpilotDebuggerManaging {
+internal final class DebuggerManager: DebuggerManaging {
 
     private let eventStore: DebugEventStoring
     private let windowHost: DebugWindowHost
