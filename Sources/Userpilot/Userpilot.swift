@@ -231,7 +231,7 @@ public class Userpilot: NSObject {
     }
 }
 
-// MARK: - Public Methods
+// MARK: - SDK version
 
 extension Userpilot {
 
@@ -255,7 +255,7 @@ extension Userpilot {
 
 }
 
-// MARK: - Tracking APIs
+// MARK: - Identity and session
 
 extension Userpilot {
 
@@ -327,6 +327,26 @@ extension Userpilot {
     }
 
     /**
+     Logs the user out and clears their session data.
+
+     This method should be called when the user logs out of the application.
+     Clears stored identity and closes the user socket.
+     */
+    @objc
+    public func logout() {
+        storage.temporaryUser = nil
+        analyticsPublisher.logout()
+        debuggerManager.reset()
+        storage.clean()
+    }
+
+}
+
+// MARK: - Tracking APIs
+
+extension Userpilot {
+
+    /**
      Tracks a screen view event when a user navigates to a specific screen in the app.
 
      This method records the screen title and sends it to the analytics service for tracking
@@ -388,19 +408,11 @@ extension Userpilot {
         )
     }
 
-    /**
-     Logs the user out and clears their session data.
+}
 
-     This method should be called when the user logs out of the application.
-     It calls clean method and close user socket.
-     */
-    @objc
-    public func logout() {
-        storage.temporaryUser = nil
-        analyticsPublisher.logout()
-        debuggerManager.reset()
-        storage.clean()
-    }
+// MARK: - Debugging and settings
+
+extension Userpilot {
 
     /// Shows this instance's in-app debugger with configuration, stored identity and live events.
     /// Events appear when submitted to the publisher; this is not a socket acknowledgment view.
@@ -440,7 +452,6 @@ extension Userpilot {
             "App properties": appProperties ?? [:]
         ]
     }
-
 }
 
 // MARK: - Experiences
