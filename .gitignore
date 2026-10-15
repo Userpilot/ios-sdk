@@ -82,3 +82,6 @@ plan/
 
 # Local private API audit helper
 /scripts/scan-private-api.sh
+
+# Local benchmark tools, measurements, builds, and profiler traces
+/benchmarks/
