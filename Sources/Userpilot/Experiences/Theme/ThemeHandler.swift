@@ -209,11 +209,15 @@ internal class ThemeHandler: ThemeHandling {
     /// Publisher preparation and view models share this instance cache across their own queues.
     private let cacheLock = NSLock()
     private var themes: [Int: ThemeData] = [:]
-    private var appThemeName: String?
+    private let storage: DataStoring
     private var appThemes: [String: ThemeData] = [:]
     private var unavailableAppThemes: Set<String> = []
     /// Keeps the previous app theme while a newly selected title is still being fetched.
     private var resolvedAppTheme: ThemeData?
+
+    init(container: DIContainer) {
+        storage = container.resolve(DataStoring.self)
+    }
 
     // MARK: - ThemeHandling Implementation
 
@@ -234,7 +238,7 @@ internal class ThemeHandler: ThemeHandling {
 
     func setAppTheme(name: String?) {
         cacheLock.withLock {
-            appThemeName = name
+            storage.appThemeName = name
             guard let name else {
                 resolvedAppTheme = nil
                 return
@@ -252,7 +256,8 @@ internal class ThemeHandler: ThemeHandling {
         guard content.asNPSContent() == nil else { return nil }
         let themeId = content.experienceThemeId()
         return cacheLock.withLock {
-            if let name = appThemeName, !unavailableAppThemes.contains(name) {
+            // Read the persisted selection when content needs it; fetched styles stay in memory.
+            if let name = storage.appThemeName, !unavailableAppThemes.contains(name) {
                 return appThemes[name] == nil ? .title(name) : nil
             }
             return themes[themeId] == nil ? .id(themeId) : nil
@@ -264,7 +269,7 @@ internal class ThemeHandler: ThemeHandling {
         cacheLock.withLock {
             appThemes[title] = themeData
             unavailableAppThemes.remove(title)
-            if appThemeName == title { resolvedAppTheme = themeData }
+            if storage.appThemeName == title { resolvedAppTheme = themeData }
         }
         return true
     }
@@ -272,7 +277,7 @@ internal class ThemeHandler: ThemeHandling {
     func markAppThemeUnavailable(_ title: String) {
         cacheLock.withLock {
             unavailableAppThemes.insert(title)
-            if appThemeName == title { resolvedAppTheme = nil }
+            if storage.appThemeName == title { resolvedAppTheme = nil }
         }
     }
 
@@ -286,7 +291,7 @@ internal class ThemeHandler: ThemeHandling {
 
     func clearAppTheme() {
         cacheLock.withLock {
-            appThemeName = nil
+            storage.appThemeName = nil
             resolvedAppTheme = nil
             appThemes.removeAll()
             unavailableAppThemes.removeAll()

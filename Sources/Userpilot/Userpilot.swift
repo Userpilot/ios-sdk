@@ -500,7 +500,8 @@ extension Userpilot {
      theme, including builder styling and placement. NPS keeps its own theme.
 
      The change applies from the next experience. If no single theme has this title, experiences keep
-     their own themes.
+     their own themes. The selected title persists across launches and logout for this SDK token;
+     the first flow or survey fetches its theme when needed.
 
      - Parameters:
        - name: the mobile theme's title as defined in Userpilot. Use `clearTheme()` to restore each
@@ -517,7 +518,7 @@ extension Userpilot {
 
     /**
      Stops applying the theme selected with `theme(_:)` and forgets every fetched app theme, so flows and
-     surveys use their own themes again from the next experience.
+     surveys use their own themes again from the next experience. Removes the saved selection too.
      */
     @objc
     public func clearTheme() {

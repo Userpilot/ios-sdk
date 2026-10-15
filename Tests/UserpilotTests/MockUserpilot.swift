@@ -440,6 +440,7 @@ class MockStorage: DataStoring {
     var userId: String = "user-id"
     var anonymousUserId: String = ""
     var temporaryUser: String?
+    var appThemeName: String?
     var sessionDate: Date?
     var configurationDate: Date?
 

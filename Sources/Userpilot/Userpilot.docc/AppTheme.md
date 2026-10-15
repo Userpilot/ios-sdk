@@ -10,7 +10,9 @@ By default each experience uses the theme it was built with. Call `theme(_:)` wi
 userpilot.theme("Brand Dark")
 ```
 
-Call `clearTheme()` to go back to each experience's own theme. It also forgets every fetched app theme, so a theme selected again is fetched fresh.
+The selected title is saved for this SDK token across app launches and logout. On the next launch, the first flow or survey fetches that theme when needed; you do not need to call the API again. Theme data itself is cached only in memory.
+
+Call `clearTheme()` to remove the saved selection and go back to each experience's own theme. It also forgets every fetched app theme, so a theme selected again is fetched fresh.
 
 ```swift
 userpilot.clearTheme()
