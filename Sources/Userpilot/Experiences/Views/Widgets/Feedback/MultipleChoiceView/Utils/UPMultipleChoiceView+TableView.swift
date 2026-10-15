@@ -48,7 +48,7 @@ extension UPMultipleChoiceView: UITableViewDelegate, UITableViewDataSource {
         didSelectRowAt indexPath: IndexPath
     ) {
         let lastIndex = choices.count - 1
-        let hasOtherChoice = choices.last?.id == ThemeHandler.DefaultValues.surveyOtherChoice
+        let hasOtherChoice = choices.last?.id == Constants.Theme.surveyOtherChoice
         let wasOtherSelected = hasOtherChoice && (choices[lastIndex].isSelected == true)
 
         // Handle the "Other" choice input if present: cache typed text before reloading.

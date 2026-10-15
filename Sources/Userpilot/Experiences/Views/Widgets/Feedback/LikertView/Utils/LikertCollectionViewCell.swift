@@ -81,7 +81,7 @@ internal class LikertCollectionViewCell: UICollectionViewCell {
         contentLabel.text = ratingItem.title
         contentLabel.font = UIFont.matching(
             fontName: fontFamily(surveyTheme, npsTheme), fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyTitleTextSize))
 
         // Show/hide the content image based on the rating item type
         contentImageView.isHidden = ratingItem.type == .numbers

@@ -28,14 +28,14 @@ extension UPSingleInputView {
             textField.placeholder = "dd/mm/yyyy"
             calendarIconButton.isHidden = false
             countryStackView.isHidden = true
-            calendarIconButton.tintColor = ThemeHandler.DefaultValues.grayColor
+            calendarIconButton.tintColor = Constants.Theme.grayColor
         case .phone:
             setDirectionalPadding(leading: 120, trailing: 10)
             textField.keyboardType = .phonePad
             countryStackView.isHidden = false
             calendarIconButton.isHidden = true
-            downArrowButton.tintColor = ThemeHandler.DefaultValues.grayColor
-            countrySelectorButton.config(with: "+1", and: ThemeHandler.DefaultValues.grayColor)
+            downArrowButton.tintColor = Constants.Theme.grayColor
+            countrySelectorButton.config(with: "+1", and: Constants.Theme.grayColor)
         case .email:
             textField.setPadding(start: 10, end: 10)
             textField.keyboardType = .emailAddress
@@ -87,7 +87,7 @@ extension UPSingleInputView {
         textField.borderStyle = .none
         textField.layer.borderWidth = 1
         textField.layer.cornerRadius = 8
-        textField.layer.borderColor = ThemeHandler.DefaultValues.grayColor.cgColor
+        textField.layer.borderColor = Constants.Theme.grayColor.cgColor
         textField.returnKeyType = .done
         textField.delegate = self
         textField.backgroundColor = .clear

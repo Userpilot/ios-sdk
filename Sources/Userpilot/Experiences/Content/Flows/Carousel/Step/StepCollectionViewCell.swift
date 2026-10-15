@@ -32,7 +32,7 @@ internal class StepCollectionViewCell: UICollectionViewCell {
         view.axis = .vertical
         view.alignment = .fill
         view.distribution = .fill
-        view.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        view.spacing = Constants.Theme.distanceBetweenSections
         return view
     }()
 
@@ -188,22 +188,22 @@ internal class StepCollectionViewCell: UICollectionViewCell {
             // Define layout constraints for the scroll view and its content
             storedConstraints.append(contentsOf: [
                 actionButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                  constant: ThemeHandler.DefaultValues.contentMargin + ThemeHandler.DefaultValues.leftRightMargin),
+                  constant: Constants.Theme.contentMargin + Constants.Theme.leftRightMargin),
                 actionButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative
-                                                       + ThemeHandler.DefaultValues.leftRightMargin.negative),
+                constant: Constants.Theme.contentMargin.negative
+                                                       + Constants.Theme.leftRightMargin.negative),
                 actionButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
                                                      constant:
-                  theme.isStepsProgressEnabled ? ThemeHandler.DefaultValues.buttonBottomMarginWithStepProgress.negative
-                    : ThemeHandler.DefaultValues.buttonBottomMarginWithoutStepProgress.negative),
+                  theme.isStepsProgressEnabled ? Constants.Theme.buttonBottomMarginWithStepProgress.negative
+                    : Constants.Theme.buttonBottomMarginWithoutStepProgress.negative),
                 theScrollView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
-                  constant: ThemeHandler.DefaultValues.carouselContentTopMargin),
+                  constant: Constants.Theme.carouselContentTopMargin),
                 theScrollView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
-                  constant: ThemeHandler.DefaultValues.leftRightMargin),
+                  constant: Constants.Theme.leftRightMargin),
                 theScrollView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
-                  constant: ThemeHandler.DefaultValues.leftRightMargin.negative),
+                  constant: Constants.Theme.leftRightMargin.negative),
                 theScrollView.bottomAnchor.constraint(equalTo: actionButton.topAnchor,
-                  constant: ThemeHandler.DefaultValues.distanceBetweenSections.negative),
+                  constant: Constants.Theme.distanceBetweenSections.negative),
                 contentContainerView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor,
                   constant: 0.0),
                 contentContainerView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor,
@@ -217,9 +217,9 @@ internal class StepCollectionViewCell: UICollectionViewCell {
                 stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentContainerView.bottomAnchor,
                   constant: -8.0),
                 stackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor,
-                  constant: ThemeHandler.DefaultValues.contentMargin),
+                  constant: Constants.Theme.contentMargin),
                 stackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor,
-                  constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                  constant: Constants.Theme.contentMargin.negative),
                 contentViewHeightConstraint
             ])
 

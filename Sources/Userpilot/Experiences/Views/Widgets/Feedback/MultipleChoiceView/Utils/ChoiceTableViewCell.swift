@@ -89,7 +89,7 @@ internal class ChoiceTableViewCell: UITableViewCell {
         textField.backgroundColor = .clear
         textField.returnKeyType = .done
         textField.delegate = self
-        textField.tag = ThemeHandler.DefaultValues.surveyOtherChoiceTag
+        textField.tag = Constants.Theme.surveyOtherChoiceTag
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 8),
             textField.centerYAnchor.constraint(equalTo: iconImageView.centerYAnchor),
@@ -109,14 +109,14 @@ internal class ChoiceTableViewCell: UITableViewCell {
         textField.setPlaceholder(text: choice.value ?? "", color: surveyTheme.textColor)
         textField.font = UIFont.matching(
             fontName: surveyTheme.fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyDescriptionTextSize))
 
         label.text = choice.value
         label.textColor = surveyTheme.textColor
         iconImageView.image = getIcon(for: choice, with: surveyStep)
         label.font = UIFont.matching(
             fontName: surveyTheme.fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyDescriptionTextSize))
         if isRTL {
             label.textAlignment = .right
         } else {
@@ -135,8 +135,8 @@ internal class ChoiceTableViewCell: UITableViewCell {
         }
 
         // Handle 'Other' option
-        if choice.id == ThemeHandler.DefaultValues.surveyOtherChoice {
-            textField.customTag = "\(ThemeHandler.DefaultValues.surveyOtherChoiceTag):\(indexPath.row)"
+        if choice.id == Constants.Theme.surveyOtherChoice {
+            textField.customTag = "\(Constants.Theme.surveyOtherChoiceTag):\(indexPath.row)"
             showTextField(true)
             if let otherText = choice.otherOptionText, !otherText.isEmpty {
                 textField.text = otherText

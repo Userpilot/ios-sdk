@@ -48,13 +48,13 @@ extension UPMultipleChoiceView: UPExperienceViewDelegate {
 
         // Handle "Other" option logic
         if let lastChoice = choices.last,
-           lastChoice.id == ThemeHandler.DefaultValues.surveyOtherChoice,
+           lastChoice.id == Constants.Theme.surveyOtherChoice,
            lastChoice.isSelected == true {
 
             if let otherChiceCell = tableView.cellForRow(
                 at: IndexPath(row: choices.count - 1, section: 0)) as? ChoiceTableViewCell {
                 selectedOptions = selectedOptions.dropLast() +
-                [ThemeHandler.DefaultValues.surveyOtherChoice + (otherChiceCell.getOtherOptionText() ?? "")]
+                [Constants.Theme.surveyOtherChoice + (otherChiceCell.getOtherOptionText() ?? "")]
             }
         }
 

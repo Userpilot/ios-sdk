@@ -28,7 +28,7 @@ internal struct RatingItem {
     /// - Parameter surveyStep: The survey step containing metadata about the Likert scale.
     /// - Returns: An array of `RatingItem` objects.
     static func fillList(surveyStep: SurveyStep) -> [RatingItem] {
-        let range = surveyStep.metadata?.range ?? ThemeHandler.DefaultValues.surveyDefaultLikertViewCount
+        let range = surveyStep.metadata?.range ?? Constants.Theme.surveyDefaultLikertViewCount
         return (0..<range).map { index in
             RatingItem(
                 type: surveyStep.metadata?.type ?? .numbers,
@@ -40,7 +40,7 @@ internal struct RatingItem {
     }
 
     static func fillList(_ answer: Int) -> [RatingItem] {
-        let range = ThemeHandler.DefaultValues.npsDefaultLikertViewCount
+        let range = Constants.Theme.npsDefaultLikertViewCount
         return (0..<range).map { index in
             RatingItem(
                 type: .numbers,

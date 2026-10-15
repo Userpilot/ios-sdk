@@ -46,7 +46,7 @@ internal class SurveyContainerView: UIView {
         let progressView = UPStepsBarProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
         progressView.heightAnchor.constraint(
-            equalToConstant: ThemeHandler.DefaultValues.stepsProgressBarHeight).isActive = true
+            equalToConstant: Constants.Theme.stepsProgressBarHeight).isActive = true
         return progressView
     }()
 
@@ -72,7 +72,7 @@ internal class SurveyContainerView: UIView {
             stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -96,7 +96,7 @@ internal class SurveyContainerView: UIView {
     private let stepSectionsStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -151,7 +151,7 @@ internal class SurveyContainerView: UIView {
             }
             scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
                 lessThanOrEqualToConstant:
-                    screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                    screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
@@ -269,7 +269,7 @@ internal class SurveyContainerView: UIView {
             buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+                constant: Constants.Theme.dismissButtonMargin),
             buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
             buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
         ])

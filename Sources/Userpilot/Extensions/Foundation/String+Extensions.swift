@@ -53,7 +53,7 @@ internal extension String {
         } else if let value = Int(self) {
             return CGFloat(value)
         } else {
-            return CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+            return CGFloat(Constants.Theme.normalTextSize)
         }
     }
 

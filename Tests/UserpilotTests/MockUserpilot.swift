@@ -98,7 +98,7 @@ class MockThemeHandler: ThemeHandling {
     var appTheme: ThemeData?
 
     var appThemeNames: [String?] = []
-    func setAppTheme(name: String?) {
+    func setAppTheme(name: String) {
         appThemeNames.append(name)
     }
 

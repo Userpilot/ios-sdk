@@ -51,7 +51,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
             [buttonDismissContainerView, thankYouView, spaceView, actionButton])
         stackView.axis = .vertical
         stackView.distribution = .fill
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -138,7 +138,7 @@ extension ThankYouBottomSheetViewController {
             buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+                constant: Constants.Theme.dismissButtonMargin),
             buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
             buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
         ])

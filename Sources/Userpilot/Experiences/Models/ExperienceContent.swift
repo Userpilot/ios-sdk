@@ -103,7 +103,7 @@ extension ExperienceContent {
     /// Survey/NPS configured delay, falling back to the default for flows and non-positive values.
     func resolvedDelay() -> TimeInterval {
         let configured = asSurveyContent()?.delayDuration ?? asNPSContent()?.delayDuration ?? 0
-        return configured > 0 ? configured : ThemeHandler.DefaultValues.delayTimeForExperience
+        return configured > 0 ? configured : Constants.Theme.delayTimeForExperience
     }
 }
 

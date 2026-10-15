@@ -22,7 +22,7 @@ internal class BottomSheetViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .white
-        view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
+        view.layer.cornerRadius = Constants.Theme.slideOutCornerRadius
         view.clipsToBounds = true
         return view
     }()
@@ -138,14 +138,14 @@ private extension BottomSheetViewController {
         NSLayoutConstraint.activate([
             contentView.leadingAnchor.constraint(
                 equalTo: mainContainerView.leadingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: Constants.Theme.contentMargin),
             contentView.trailingAnchor.constraint(
                 equalTo: mainContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                constant: Constants.Theme.contentMargin.negative),
             contentView.topAnchor.constraint(equalTo: mainContainerView.topAnchor),
             contentView.bottomAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
+                constant: Constants.Theme.contentBottomMargin.negative)
         ])
 
         /// prepare the view for slide in animation
