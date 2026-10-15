@@ -55,6 +55,17 @@ The same admission rule applies to unidentified track and autocapture analytics.
 3. Identify A again, or identify B.
 4. The next initial screen uses `true / false`, whether its title matches the retained screen or differs.
 
+**ID-002 cold-launch variant: logout, terminate, reopen, identify**
+
+1. Logout, terminate the app, then launch with the stored user ID empty and fresh runtime services.
+2. Report the current screen before identify, manually or through enabled screen autocapture. Keep its screen context; do not send, queue, or persist unidentified analytics events.
+3. Identify A or B. Wait for the identify ACK.
+4. If a track or autocapture event is queued behind identify, let it finish before the generated screen. Its successful ACK must still be able to resolve the known screen.
+5. If a real screen is queued, send that screen and do not generate another. Otherwise enqueue one request for the known screen with `is_session_start=true, fake_reload=false`.
+6. Acknowledge that screen. No duplicate screen is generated; session-start stays true until a session transition or live navigation changes it.
+
+The screen must be reported again after relaunch; screen context is not persisted across process termination. With no known screen, identify alone does not invent one. Verify this case with screen autocapture both off and on, and with and without a queued interaction. The same case applies to a first installation with no stored identity.
+
 **ID-003: switch directly to another user**
 
 1. Establish user A and acknowledge a screen.
