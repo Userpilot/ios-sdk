@@ -76,7 +76,7 @@ internal class UPOpenTextView: UIView {
 
         configureViews(placeholder: surveyStep.metadata?.placeholder,
                    textColor: surveyTheme.backgroundColorAsString.invertColor().color,
-                   secondaryTextColor: ThemeHandler.DefaultValues.grayColor,
+                   secondaryTextColor: Constants.Theme.grayColor,
                    fontFamily: surveyTheme.fontFamily,
                    isRTL: isRTL)
     }
@@ -107,7 +107,7 @@ internal class UPOpenTextView: UIView {
 
         configureViews(placeholder: placeholder,
                    textColor: npsTheme.backgroundColorAsString.invertColor().color,
-                   secondaryTextColor: ThemeHandler.DefaultValues.grayColor,
+                   secondaryTextColor: Constants.Theme.grayColor,
                    fontFamily: npsTheme.fontFamily,
                    isRTL: isRTL)
     }
@@ -131,17 +131,17 @@ internal class UPOpenTextView: UIView {
         placeholderLabel.textColor = secondaryTextColor
         placeholderLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyTextSize))
 
         textView.textColor = textColor
         textView.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyTextSize))
 
         counterLabel.textColor = secondaryTextColor
         counterLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyHighLowTextSize))
 
         if isRTL {
             counterLabel.textAlignment = .left

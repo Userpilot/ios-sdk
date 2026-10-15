@@ -12,15 +12,24 @@ import XCTest
 final class ThemeHandlerTests: XCTestCase {
 
     var themeHandler: ThemeHandler!
+    var storage: MockStorage!
 
     override func setUpWithError() throws {
         super.setUp()
-        themeHandler = ThemeHandler()
+        storage = MockStorage()
+        themeHandler = makeThemeHandler(storage: storage)
     }
 
     override func tearDown() {
         themeHandler = nil
+        storage = nil
         super.tearDown()
+    }
+
+    func makeThemeHandler(storage: DataStoring) -> ThemeHandler {
+        let container = DIContainer()
+        container.register(DataStoring.self, value: storage)
+        return ThemeHandler(container: container)
     }
 
     func testSaveTheme_savesThemeCorrectly_whenValidThemeProvided() {

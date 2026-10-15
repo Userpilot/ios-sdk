@@ -78,7 +78,7 @@ internal struct ExperienceTheme: Decodable {
     }
 
     var backgroundColorAsString: String {
-        colors?.backgroundColor ?? ThemeHandler.DefaultValues.whiteColor
+        colors?.backgroundColor ?? Constants.Theme.whiteColor
     }
 
     var isLightTheme: Bool {
@@ -108,7 +108,7 @@ internal struct ExperienceTheme: Decodable {
     }
 
     var buttonBorderRadius: CGFloat {
-        CGFloat(button?.borderRadius ?? ThemeHandler.StyleValues.borderRadius)
+        CGFloat(button?.borderRadius ?? Constants.Theme.borderRadius)
     }
 
     var buttonBorderWidth: CGFloat {
@@ -142,7 +142,7 @@ internal struct ExperienceTheme: Decodable {
     }
 
     var stepsProgressColorAsString: String {
-        progress?.color ?? ThemeHandler.DefaultValues.blackColor
+        progress?.color ?? Constants.Theme.blackColor
     }
 
     // Backdrop
@@ -155,7 +155,7 @@ internal struct ExperienceTheme: Decodable {
     }
 
     var backdropOpacity: CGFloat {
-        CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimSlideOutDegree) / 100
+        CGFloat(backdrop?.opacity ?? Constants.Theme.dimSlideOutDegree) / 100
     }
 
     var backdropBackground: UIColor {
@@ -322,7 +322,7 @@ internal struct SurveyTheme: Decodable {
     }
 
     var backdropOpacity: CGFloat {
-        CGFloat(backdrop?.opacity ?? ThemeHandler.DefaultValues.dimSlideOutDegree) / 100
+        CGFloat(backdrop?.opacity ?? Constants.Theme.dimSlideOutDegree) / 100
     }
 
     var backdropBackground: UIColor {
@@ -347,7 +347,7 @@ internal struct SurveyTheme: Decodable {
     }
 
     var stepsProgressColorAsString: String {
-        progress?.color ?? ThemeHandler.DefaultValues.blackColor
+        progress?.color ?? Constants.Theme.blackColor
     }
 
     // corner

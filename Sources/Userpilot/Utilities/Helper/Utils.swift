@@ -86,10 +86,10 @@ internal func delay(
  * @return A `CGSize` representing the calculated width and height of the image.
  */
 internal func getImageSize(for line: Line) -> CGSize {
-    let defaultSize = ThemeHandler.DefaultValues.imageSize
+    let defaultSize = Constants.Theme.imageSize
     let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
     let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
-    let screenWidth = screenWidth - (ThemeHandler.DefaultValues.contentMargin * 2)
+    let screenWidth = screenWidth - (Constants.Theme.contentMargin * 2)
 
     if line.attrs?.style?.width == "auto" && line.attrs?.style?.height == "auto" {
         if actualWidth > screenWidth {

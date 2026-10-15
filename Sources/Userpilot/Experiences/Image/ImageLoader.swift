@@ -58,7 +58,7 @@ internal class ImageLoader: ImageLoading {
     /// Placeholder decoding and caching stay on the caller's serial background queue.
     private func blurImage(for blurHash: String) -> UIImage? {
         if let image = blurCache[blurHash] { return image }
-        guard let image = UIImage(blurHash: blurHash, size: ThemeHandler.DefaultValues.blurImageSize) else {
+        guard let image = UIImage(blurHash: blurHash, size: Constants.Theme.blurImageSize) else {
             return nil
         }
         blurCache[blurHash] = image

@@ -27,6 +27,9 @@ internal protocol DataStoring: AnyObject {
     /// The pending identify payload retained until acknowledgement or offline restoration.
     var temporaryUser: String? { get set }
 
+    /// App-selected theme title, retained across launches and identity changes until cleared.
+    var appThemeName: String? { get set }
+
     /// The date for session when app enter background state.
     var sessionDate: Date? { get set }
 
@@ -60,6 +63,7 @@ internal class Storage: DataStoring {
         case userId
         case anonymousUserId
         case temporaryUser
+        case appThemeName
         case sessionDate
         case configurationDate
         case pushToken
@@ -110,6 +114,11 @@ internal class Storage: DataStoring {
         set {
             write(.temporaryUser, newValue: newValue)
         }
+    }
+
+    internal var appThemeName: String? {
+        get { read(.appThemeName, defaultValue: nil) }
+        set { write(.appThemeName, newValue: newValue) }
     }
 
     /// The session Date, which used for tracking app background duration.

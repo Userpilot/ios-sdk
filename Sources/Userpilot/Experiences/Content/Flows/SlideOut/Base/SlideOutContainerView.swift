@@ -48,7 +48,7 @@ internal class SlideOutContainerView: UIView {
         let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, scrollView, spaceView, actionButton])
         stackView.axis = .vertical
         stackView.distribution = .fill
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -71,7 +71,7 @@ internal class SlideOutContainerView: UIView {
     private let stepSectionsStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -104,7 +104,7 @@ internal class SlideOutContainerView: UIView {
         }
         scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
             lessThanOrEqualToConstant:
-                screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
         scrollViewHeightConstraint?.isActive = true
         self.layoutIfNeeded()
     }
@@ -124,7 +124,7 @@ internal class SlideOutContainerView: UIView {
             }
             scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
                 lessThanOrEqualToConstant:
-                    screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                    screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
@@ -226,7 +226,7 @@ internal class SlideOutContainerView: UIView {
                 buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
                 buttonDismiss.trailingAnchor.constraint(
                     equalTo: buttonDismissContainerView.trailingAnchor,
-                    constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+                    constant: Constants.Theme.dismissButtonMargin),
                 buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
                 buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
             ])

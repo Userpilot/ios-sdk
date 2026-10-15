@@ -144,6 +144,61 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
     }
 
+    func testLogoutThenColdLaunch_retainsManualScreenUntilIdentifySucceeds() {
+        assertScreenAfterLogoutAndColdLaunch(queuedInteraction: false)
+    }
+
+    func testLogoutThenColdLaunch_requestsKnownScreenAfterQueuedAutocaptureACK() {
+        assertScreenAfterLogoutAndColdLaunch(queuedInteraction: true)
+    }
+
+    private func assertScreenAfterLogoutAndColdLaunch(queuedInteraction: Bool) {
+        arrangeReloadableScreen(title: "Home", userId: "first-user")
+        analyticsPublisher.logout()
+        userpilot.storage.clean()
+        analyticsPublisher.testSettle()
+        let storedUserId = userpilot.storage.userId
+        XCTAssertTrue(storedUserId.isEmpty)
+
+        // Recreate all runtime services; only logout's empty persisted identity survives launch.
+        analyticsPublisher = nil
+        userpilot = nil
+        userpilot = MockUserpilot.make()
+        userpilot.storage.userId = storedUserId
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        let sent = recordPublishedEvents()
+        analyticsPublisher.testPublish(Event(type: .screen("Identify")))
+        XCTAssertTrue(sent().isEmpty)
+        XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
+
+        analyticsPublisher.testPublish(Event(type: .identify("first-user")))
+        if queuedInteraction {
+            analyticsPublisher.testPublish(makeAutoCaptureEvent(
+                screen: ["title": "Identify"], interactionEventName: "text_change"
+            ))
+        }
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        XCTAssertEqual(sent(), [Constants.Event.identifyEvent])
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        if queuedInteraction {
+            XCTAssertEqual(sent(), [Constants.Event.identifyEvent, Constants.Event.autoCaptureEvent])
+            acknowledge(Constants.Event.autoCaptureEvent, nil, Message(), true)
+        }
+
+        let expected = [Constants.Event.identifyEvent]
+            + (queuedInteraction ? [Constants.Event.autoCaptureEvent] : [])
+            + [Constants.Event.screenEvent]
+        XCTAssertEqual(sent(), expected)
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Identify")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertEqual(sent(), expected, "The screen ACK must not generate a duplicate screen")
+    }
+
     func testPublish_identifyEvent_shouldCacheEventAndUpdateStorage() {
         userpilot.storage.userId = ""
         userpilot.socketManager.isJoiningSocket = true

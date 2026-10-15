@@ -77,13 +77,13 @@ extension UPLikertView {
         lowScoreTextLabel.textColor = textColor
         lowScoreTextLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyHighLowTextSize))
 
         // Set high score text and properties
         highScoreTextLabel.text = highScore
         highScoreTextLabel.textColor = textColor
         highScoreTextLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyHighLowTextSize))
+            fontSize: CGFloat(Constants.Theme.surveyHighLowTextSize))
     }
 }

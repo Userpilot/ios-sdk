@@ -156,7 +156,7 @@ internal class UPButtonView: UIButton {
                 layer.cornerRadius = 12
                 layer.borderWidth = 1
                 layer.borderColor = isSecondaryButton ?
-                ThemeHandler.DefaultValues.grayColor.cgColor : UIColor.clear.cgColor
+                Constants.Theme.grayColor.cgColor : UIColor.clear.cgColor
             }
 
             self.callback = callback
@@ -168,21 +168,21 @@ internal class UPButtonView: UIButton {
         isDarkBackground: Bool
     ) -> CGFloat {
         if isDarkBackground {
-            return ThemeHandler.DefaultValues.npsDismissButtonLightenOpacity
+            return Constants.Theme.npsDismissButtonLightenOpacity
         }
         // A near white background only needs a light gray chip
-        if backgroundBrightness > ThemeHandler.DefaultValues.npsDismissLightBackgroundBrightness {
-            return ThemeHandler.DefaultValues.npsDismissButtonSoftDarkenOpacity
+        if backgroundBrightness > Constants.Theme.npsDismissLightBackgroundBrightness {
+            return Constants.Theme.npsDismissButtonSoftDarkenOpacity
         }
-        return ThemeHandler.DefaultValues.npsDismissButtonDarkenOpacity
+        return Constants.Theme.npsDismissButtonDarkenOpacity
     }
 
     /// The title font size of an NPS button, based on its role.
     private func npsFontSize(isSecondaryButton: Bool, isDismissButton: Bool) -> CGFloat {
         if isDismissButton {
-            return ThemeHandler.DefaultValues.npsDismissButtonTextSize
+            return Constants.Theme.npsDismissButtonTextSize
         }
-        return isSecondaryButton ? ThemeHandler.DefaultValues.surveyHighLowTextSize : 16
+        return isSecondaryButton ? Constants.Theme.surveyHighLowTextSize : 16
     }
 
     /**
@@ -198,7 +198,7 @@ internal class UPButtonView: UIButton {
     private func applyNPSDismissButtonStyle(with npsTheme: NPSTheme) {
         let backgroundBrightness = npsTheme.backgroundColor.perceivedBrightness()
         let isDarkBackground = backgroundBrightness
-        < ThemeHandler.DefaultValues.npsDismissDarkBackgroundBrightness
+        < Constants.Theme.npsDismissDarkBackgroundBrightness
         let overlayColor: UIColor = isDarkBackground ? .white : .black
         let overlayOpacity = npsDismissButtonOverlayOpacity(
             backgroundBrightness: backgroundBrightness,
@@ -213,7 +213,7 @@ internal class UPButtonView: UIButton {
         // Match the NPS bottom sheet corner radius, capped so the chip never goes past a pill
         layer.cornerRadius = min(
             npsTheme.borderRadius,
-            ThemeHandler.DefaultValues.npsDismissButtonHeight / 2)
+            Constants.Theme.npsDismissButtonHeight / 2)
         layer.borderWidth = 0
         layer.borderColor = UIColor.clear.cgColor
     }
@@ -224,16 +224,16 @@ internal class UPButtonView: UIButton {
         and theme: ExperienceTheme
     ) {
         let textStyleMark = line?.content?.first?.marks?.first(
-            where: { $0.type == ThemeHandler.StyleName.textStyle })
+            where: { $0.type == Constants.Theme.textStyle })
         let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize
-        ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+        ?? CGFloat(Constants.Theme.normalTextSize)
 
         var traits = [UIFontDescriptor.SymbolicTraits]()
         if let marks = line?.content?.first?.marks {
-            if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
+            if marks.first(where: { $0.type == Constants.Theme.textBold }) != nil {
                 traits.append(.traitBold)
             }
-            if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
+            if marks.first(where: { $0.type == Constants.Theme.textItalic }) != nil {
                 traits.append(.traitItalic)
             }
         }

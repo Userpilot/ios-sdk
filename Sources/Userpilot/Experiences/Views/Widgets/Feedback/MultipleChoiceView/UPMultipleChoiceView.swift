@@ -83,7 +83,7 @@ internal class UPMultipleChoiceView: UIView {
         // Add the "Other" choice if it is enabled in the metadata.
         if surveyStep.metadata?.otherChoice?.enabled == true {
             let otherChoice = Choice(
-                id: ThemeHandler.DefaultValues.surveyOtherChoice,
+                id: Constants.Theme.surveyOtherChoice,
                 value: surveyStep.metadata?.otherChoice?.placeholder,
                 isSelected: false
             )

@@ -77,12 +77,13 @@ extension ThemeHandlerTests {
         XCTAssertEqual(themeHandler.appTheme?.carousel?.button?.backgroundColor, "#DARK")
     }
 
-    func testSetAppTheme_nil_restoresContentThemes() throws {
+    func testClearAppTheme_removesPersistedSelection() throws {
         themeHandler.setAppTheme(name: "Dark")
         _ = themeHandler.saveAppTheme(try appThemeReply(title: "Dark"), title: "Dark")
 
-        themeHandler.setAppTheme(name: nil)
+        themeHandler.clearAppTheme()
 
+        XCTAssertNil(storage.appThemeName)
         XCTAssertNil(themeHandler.appTheme)
         XCTAssertEqual(themeHandler.requiredThemeKey(for: try flow()), .id(1))
     }

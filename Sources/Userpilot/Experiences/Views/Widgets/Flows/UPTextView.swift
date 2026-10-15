@@ -70,7 +70,7 @@ internal class UPTextView: UILabel {
             }
 
             // Apply additional marks (link, bold, italic)
-            if let linkMark = content.marks?.first(where: { $0.type == ThemeHandler.StyleName.textLink }) {
+            if let linkMark = content.marks?.first(where: { $0.type == Constants.Theme.textLink }) {
                 applyLinkStyle(to: attributedString, mark: linkMark, range: NSRange(start..<end))
             }
         }
@@ -90,15 +90,15 @@ internal class UPTextView: UILabel {
         range: NSRange
     ) {
         // Retrieve text style mark or use a default one
-        let textStyleMark = marks.first(where: { $0.type == ThemeHandler.StyleName.textStyle })
-        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize)
+        let textStyleMark = marks.first(where: { $0.type == Constants.Theme.textStyle })
+        let fontSize = textStyleMark?.attrs?.fontSize?.toFontSize ?? CGFloat(Constants.Theme.normalTextSize)
         let textColor = textStyleMark?.attrs?.color?.color ?? theme.textColor
 
         var traits = [UIFontDescriptor.SymbolicTraits]()
-        if marks.first(where: { $0.type == ThemeHandler.StyleName.textBold }) != nil {
+        if marks.first(where: { $0.type == Constants.Theme.textBold }) != nil {
             traits.append(.traitBold)
         }
-        if marks.first(where: { $0.type == ThemeHandler.StyleName.textItalic }) != nil {
+        if marks.first(where: { $0.type == Constants.Theme.textItalic }) != nil {
             traits.append(.traitItalic)
         }
         let font = UIFont.matching(fontName: theme.fontFamily, fontWeight: traits, fontSize: fontSize)
@@ -115,7 +115,7 @@ internal class UPTextView: UILabel {
         range: NSRange
     ) {
         let textColor = theme.titleTextColor
-        let headerFont = line.attrs?.level?.fontSize() ?? ThemeHandler.DefaultValues.headerTextSize
+        let headerFont = line.attrs?.level?.fontSize() ?? Constants.Theme.headerTextSize
         let font = UIFont.matching(fontName: theme.fontFamily, fontWeight: [.traitBold], fontSize: CGFloat(headerFont))
 
         attributedString.addAttribute(.foregroundColor, value: textColor, range: range)

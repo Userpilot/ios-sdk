@@ -126,9 +126,9 @@ internal struct Line: Decodable {
 
     var buttonTitle: String {
         if buttonAlignment == .left {
-            return "\(ThemeHandler.DefaultValues.defaultTextMargin)\(content?.first?.text ?? "")"
+            return "\(Constants.Theme.defaultTextMargin)\(content?.first?.text ?? "")"
         } else if buttonAlignment == .right {
-            return "\(content?.first?.text ?? "")\(ThemeHandler.DefaultValues.defaultTextMargin)"
+            return "\(content?.first?.text ?? "")\(Constants.Theme.defaultTextMargin)"
         } else {
             return content?.first?.text ?? ""
         }

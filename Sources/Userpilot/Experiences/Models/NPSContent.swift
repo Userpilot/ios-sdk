@@ -204,7 +204,7 @@ internal struct NPSTheme: Decodable {
     }
 
     var stepsProgressColorAsString: String {
-        progress?.color ?? ThemeHandler.DefaultValues.blackColor
+        progress?.color ?? Constants.Theme.blackColor
     }
 
     // radius

@@ -66,7 +66,7 @@ internal class UPImageView: UIView {
 
         // Determine the image source based on the line type.
         let imageUrl = (line.type == .image) ? attributes.src : attributes.icon
-        let imageSize = (line.type == .image) ? getImageSize(for: line) : ThemeHandler.DefaultValues.iconImageSize
+        let imageSize = (line.type == .image) ? getImageSize(for: line) : Constants.Theme.iconImageSize
 
         // Configure the layout and style.
         configureLayout(for: line, imageSize: imageSize)

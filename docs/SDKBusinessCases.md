@@ -55,6 +55,17 @@ The same admission rule applies to unidentified track and autocapture analytics.
 3. Identify A again, or identify B.
 4. The next initial screen uses `true / false`, whether its title matches the retained screen or differs.
 
+**ID-002 cold-launch variant: logout, terminate, reopen, identify**
+
+1. Logout, terminate the app, then launch with the stored user ID empty and fresh runtime services.
+2. Report the current screen before identify, manually or through enabled screen autocapture. Keep its screen context; do not send, queue, or persist unidentified analytics events.
+3. Identify A or B. Wait for the identify ACK.
+4. If a track or autocapture event is queued behind identify, let it finish before the generated screen. Its successful ACK must still be able to resolve the known screen.
+5. If a real screen is queued, send that screen and do not generate another. Otherwise enqueue one request for the known screen with `is_session_start=true, fake_reload=false`.
+6. Acknowledge that screen. No duplicate screen is generated; session-start stays true until a session transition or live navigation changes it.
+
+The screen must be reported again after relaunch; screen context is not persisted across process termination. With no known screen, identify alone does not invent one. Verify this case with screen autocapture both off and on, and with and without a queued interaction. The same case applies to a first installation with no stored identity.
+
 **ID-003: switch directly to another user**
 
 1. Establish user A and acknowledge a screen.
@@ -321,3 +332,24 @@ The current development branch exposes `userpilot.requestReview()` on both nativ
 | AR-009: Native request fails | Keep the host app running; Android failures use the existing coroutine error logger. |
 
 Native differences: StoreKit uses a foreground window scene on iOS 14+ and its process-level API on iOS 13; it has no asynchronous review-preparation result. Play first prepares a `ReviewInfo`, then launches using the original Activity if it is still usable. Both APIs leave prompt visibility and eligibility to the store. No backend event or new storage field is added.
+
+
+## Persisted app theme
+
+The current development branch stores the app-selected theme title per SDK token. Theme data remains
+an in-memory cache; the existing experience preparation path fetches it when needed.
+
+| Case | Expected behavior |
+| --- | --- |
+| THM-001: Set a valid theme title | Persist its exact text immediately, even before any content arrives. |
+| THM-002: Relaunch without calling `theme` again | The first flow or survey reads the saved title and fetches that theme before rendering. Initialization alone does not fetch it. |
+| THM-003: Set another title before the first experience | Replace the stored selection; the next experience requests the latest title. |
+| THM-004: Clear the theme | Remove the stored selection and in-memory app themes. Later launches use each experience's own theme. A late reply cannot restore the cleared selection. |
+| THM-005: Logout or switch user | Keep the app theme selection; it represents the app's appearance, not user identity. |
+| THM-006: Multiple SDK tokens | Each token has its own saved selection; setting or clearing one does not change another. |
+| THM-007: Theme unavailable | Keep the saved title but use the existing content-theme fallback. Retry after reconnect or relaunch. |
+| THM-008: NPS or already visible content | NPS keeps its embedded theme. Theme changes apply to subsequent experiences; visible content keeps its current appearance. |
+
+`ThemeHandler` owns selection, caches and merges through `DataStoring`. `Storage` owns native
+persistence. `ExperiencesPublisher` continues to own theme fetching and preparation; no new request
+path, restoration flag or startup task is introduced.

@@ -22,7 +22,7 @@ internal class DialogViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.layer.cornerRadius = ThemeHandler.DefaultValues.slideOutCornerRadius
+        view.layer.cornerRadius = Constants.Theme.slideOutCornerRadius
         view.clipsToBounds = true
         return view
     }()
@@ -130,16 +130,16 @@ internal class DialogViewController: UIViewController {
         NSLayoutConstraint.activate([
             contentView.leadingAnchor.constraint(
                 equalTo: mainContainerView.leadingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: Constants.Theme.contentMargin),
             contentView.trailingAnchor.constraint(
                 equalTo: mainContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin.negative),
+                constant: Constants.Theme.contentMargin.negative),
             contentView.topAnchor.constraint(
                 equalTo: mainContainerView.topAnchor,
-                constant: ThemeHandler.DefaultValues.contentMargin),
+                constant: Constants.Theme.contentMargin),
             contentView.bottomAnchor.constraint(
                 equalTo: mainContainerView.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.contentBottomMargin.negative)
+                constant: Constants.Theme.contentBottomMargin.negative)
         ])
 
         dimmedView.alpha = 0

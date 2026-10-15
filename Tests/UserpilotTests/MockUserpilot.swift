@@ -113,7 +113,7 @@ class MockThemeHandler: ThemeHandling {
     var appTheme: ThemeData?
 
     var appThemeNames: [String?] = []
-    func setAppTheme(name: String?) {
+    func setAppTheme(name: String) {
         appThemeNames.append(name)
     }
 
@@ -455,6 +455,7 @@ class MockStorage: DataStoring {
     var userId: String = "user-id"
     var anonymousUserId: String = ""
     var temporaryUser: String?
+    var appThemeName: String?
     var sessionDate: Date?
     var configurationDate: Date?
 

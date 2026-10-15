@@ -68,7 +68,7 @@ internal class UPDismissButton: UIButton {
         if !theme.isDismissButtonEnabled { return }
         tintColor = theme.isDismissButtonColorManual ?
         theme.dismissButtonColor : theme.backgroundColorAsString.invertColor().color.withAlphaComponent(
-            ThemeHandler.DefaultValues.closeButtonAlpha)
+            Constants.Theme.closeButtonAlpha)
     }
 
     /**
@@ -79,6 +79,6 @@ internal class UPDismissButton: UIButton {
      */
     func setupView(theme: SurveyTheme) {
         tintColor = theme.backgroundColorAsString.invertColor().color.withAlphaComponent(
-            ThemeHandler.DefaultValues.closeButtonAlpha)
+            Constants.Theme.closeButtonAlpha)
     }
 }

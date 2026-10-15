@@ -55,7 +55,7 @@ extension SurveyListViewController {
                 // Calculate the desired offset to make the field right above the keyboard
                 var offsetY = fieldFrameInScrollView.maxY - (view.frame.height - keyboardHeight) + 20 // 20 for padding
                 if let textField = activeField as? UITextField,
-                   activeField.tag == ThemeHandler.DefaultValues.surveyOtherChoiceTag,
+                   activeField.tag == Constants.Theme.surveyOtherChoiceTag,
                    let customTag = textField.customTag {
 
                     let components = customTag.split(separator: ":")

@@ -695,7 +695,7 @@ extension ExperiencesPublisher {
                       operation.experience?.asSurveyContent()?.id == survey.id else { return }
                 operation.needsThankYou = false
                 operation.presentation = nil
-                let interval = ThemeHandler.DefaultValues.delayTimeForExperience
+                let interval = Constants.Theme.delayTimeForExperience
                 publisher.schedule(operation, after: interval) { publisher, operation in
                     publisher.presentThankYou(operation, survey: survey, theme: theme, submissionID: submissionId)
                 }
@@ -719,7 +719,7 @@ extension ExperiencesPublisher {
                         surveyId: survey.id, submissionId: submissionID, hasDeepLink: deepLink != nil
                     )
                     publisher.publishEvent(completed, operation: operation)
-                    delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak publisher] in
+                    delay(Constants.Theme.delayTimeForExperience) { [weak publisher] in
                         guard let publisher, publisher.generation.value == expectedGeneration else { return }
                         if let deepLink, let url = URL(string: deepLink) { publisher.triggerDeepLink(url: url) }
                     }
@@ -981,7 +981,7 @@ extension ExperiencesPublisher {
     /// Keep the navigation delay on main; logout invalidates a deep link still waiting to run.
     func triggerDeepLink(url: URL) {
         let expectedGeneration = generation.value
-        delay(ThemeHandler.DefaultValues.delayTimeForDeepLink) { [weak self] in
+        delay(Constants.Theme.delayTimeForDeepLink) { [weak self] in
             guard let self, self.generation.value == expectedGeneration else { return }
             self.links.handleURL(url)
         }

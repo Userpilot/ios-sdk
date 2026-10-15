@@ -152,7 +152,7 @@ internal class UPTitleDescriptionView: UIView {
 
         titleLabel.font = UIFont.matching(
             fontName: fontFamily, fontWeight: [.traitBold],
-            fontSize: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize)
+            fontSize: CGFloat(Constants.Theme.surveyTitleTextSize)
         )
 
         // Check if description has text
@@ -163,7 +163,7 @@ internal class UPTitleDescriptionView: UIView {
             descriptionLabel.textColor = textColor
             descriptionLabel.font = UIFont.matching(
                 fontName: fontFamily, fontWeight: [],
-                fontSize: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize)
+                fontSize: CGFloat(Constants.Theme.surveyDescriptionTextSize)
             )
             descriptionLabel.isHidden = false
 
