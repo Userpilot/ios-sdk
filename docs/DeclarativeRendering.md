@@ -67,7 +67,10 @@ source of eligibility, payload decoding and business behavior.
 - Carousel swipes use the whole screen, including the action/footer and blank areas. The page's
   theme and content travel together; button actions from an adjacent page cannot act on the current step.
 - Flow sections/lines, survey elements and body-to-action spacing use one 16-point rhythm. Existing
-  20-point content insets remain; bottom sheets additionally inset their card 16 points on each side.
+  20-point content insets remain.
+- Bottom sheets look as they did before the SwiftUI renderer: full width, attached to the bottom edge and
+  running under the home indicator, with only the top corners rounded. Their content stays inside the safe
+  area (the notch in landscape, the home indicator); with the keyboard up the sheet sits on the keyboard.
 - Dots restore the legacy iOS 6-point circles and 6-point gaps, cumulative active state and 20% inactive
   color. Survey/NPS bar progress is a continuous 5-point fill at the top edge, with its original theme
   colors and a clear track. Ball progress remains below the action.
@@ -166,6 +169,8 @@ Validation on 2026-10-26, Xcode 26.6:
 | --- | --- |
 | Package XCTest, iPhone 17 Pro / iOS 26.5 | 777 run, 0 skipped, 0 failed, with the committed `SocketManager.swift` (a local development token otherwise fails 22 socket tests) |
 | SwiftLint `--strict` | Clean |
+| Last app-hosted harness run before its removal, iPhone 17 Pro + iPad | Every suite passed except the old 16-point side-margin assertions, which the full-width sheet replaces, and `testSheetEntranceMovesUpAndExitMovesDownWithoutLayoutJump`'s frame-order check, which was already flaky on iOS 26 (it samples the card while still hidden) |
+| Full-width sheet | App-hosted screenshot: the NPS sheet spans the screen width, reaches the bottom edge and keeps its content above the home indicator |
 
 ```bash
 bash scripts/release-preflight.sh

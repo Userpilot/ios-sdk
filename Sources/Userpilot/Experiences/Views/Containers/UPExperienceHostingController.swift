@@ -37,6 +37,8 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
     private var contentHeight: NSLayoutConstraint?
     private var cardHeight: NSLayoutConstraint?
     private var cardWidth: NSLayoutConstraint?
+    /// The width the SwiftUI roots lay out in; a sheet's card is wider, as it runs edge to edge.
+    private var contentWidth: CGFloat = 0
     private var keyboardHeight: CGFloat = 0
     private var hasFinishedDismissing = false
     private var dismissalCompletions: [() -> Void] = []
@@ -146,6 +148,10 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
             $0?.translatesAutoresizingMaskIntoConstraints = false
         }
         cardView.clipsToBounds = true
+        // Layout margins keep a sheet's content inside the safe area; updateSize sets them.
+        cardView.insetsLayoutMarginsFromSafeArea = false
+        cardView.preservesSuperviewLayoutMargins = false
+        cardView.layoutMargins = .zero
         scrollView.keyboardDismissMode = .interactive
         // Keyboard and safe-area space are handled in updateSize, not by automatic insets.
         scrollView.contentInsetAdjustmentBehavior = .never
@@ -159,18 +165,21 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         cardWidth = cardView.widthAnchor.constraint(equalToConstant: 1)
         let dimensions = [cardTop, contentTop, contentHeight, headerHeight, footerHeight, cardHeight, cardWidth]
         NSLayoutConstraint.activate(dimensions.compactMap { $0 })
+        let margins = cardView.layoutMarginsGuide
         NSLayoutConstraint.activate([
-            cardView.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            // A sheet spans the whole screen width; other cards center in the safe area.
+            cardView.centerXAnchor.constraint(
+                equalTo: style == .bottomSheet ? view.centerXAnchor : view.safeAreaLayoutGuide.centerXAnchor),
             header.view.topAnchor.constraint(equalTo: cardView.topAnchor),
-            header.view.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
-            header.view.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
+            header.view.leadingAnchor.constraint(equalTo: margins.leadingAnchor),
+            header.view.trailingAnchor.constraint(equalTo: margins.trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: header.view.bottomAnchor),
             scrollView.bottomAnchor.constraint(equalTo: footer.view.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
-            footer.view.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
-            footer.view.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
-            footer.view.bottomAnchor.constraint(equalTo: cardView.bottomAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: margins.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: margins.trailingAnchor),
+            footer.view.leadingAnchor.constraint(equalTo: margins.leadingAnchor),
+            footer.view.trailingAnchor.constraint(equalTo: margins.trailingAnchor),
+            footer.view.bottomAnchor.constraint(equalTo: margins.bottomAnchor),
             content.view.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
             content.view.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
             content.view.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
@@ -203,67 +212,16 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         return controller
     }
 
-    /// View bounds and safe area belong to this window/scene; never size against UIScreen.main.
-    private func updateSize(animated: Bool = true) {
-        guard !state.isClosing, let controller = contentController, view.bounds.width > 0 else { return }
-        let safe = view.bounds.inset(by: view.safeAreaInsets)
-        let width = cardContentWidth(safe)
-        let availableHeight = max(1, safe.height - keyboardHeight)
-        let widthChanged = abs((cardWidth?.constant ?? 0) - width) > 0.5
-        // A new width (rotation, split view) re-wraps text, so the SwiftUI roots get the new width.
-        if widthChanged {
-            cardWidth?.constant = width
-            controller.rootView = UPExperienceRootView(state: state, width: width, region: .content)
-            headerController?.rootView = UPExperienceRootView(state: state, width: width, region: .header)
-            footerController?.rootView = UPExperienceRootView(state: state, width: width, region: .footer)
-        }
-        let proposal = CGSize(width: width, height: .greatestFiniteMagnitude)
-        let contentSize = max(1, ceil(controller.sizeThatFits(in: proposal).height))
-        let headerSize = ceil(headerController?.sizeThatFits(in: proposal).height ?? 0)
-        let footerSize = ceil(footerController?.sizeThatFits(in: proposal).height ?? 0)
-        let total = contentSize + headerSize + footerSize
-        // Dialogs and sheets hug their content, up to 90% of the space; beyond that the body scrolls.
-        let height = style == .fullScreen ? availableHeight : min(total, availableHeight * 0.9)
-        setHeight(contentHeight, contentSize)
-        setHeight(headerHeight, headerSize)
-        setHeight(footerHeight, footerSize)
-        // Leftover space positions the body per the theme's vertical alignment.
-        let remaining = max(0, height - headerSize - footerSize - contentSize)
-        switch state.verticalAlignment {
-        case .middle, .center: setHeight(contentTop, remaining / 2)
-        case .bottom: setHeight(contentTop, remaining)
-        case .top: setHeight(contentTop, 0)
-        }
-        let top: CGFloat
-        switch style {
-        case .fullScreen: top = safe.minY
-        case .dialog: top = safe.minY + (availableHeight - height) / 2
-        case .bottomSheet: top = safe.minY + availableHeight - height
-        }
-        // The card's vertical position follows the keyboard without rebuilding its SwiftUI identity.
-        updateCardSize(height: height, top: top, animated: animated && !widthChanged)
-    }
-
-    private func cardContentWidth(_ safe: CGRect) -> CGFloat {
-        switch style {
-        // Dialogs are narrower in landscape.
-        case .dialog: return safe.width * (safe.width > safe.height ? 0.7 : 0.9)
-        case .bottomSheet: return max(1, safe.width - UPExperienceLayout.sheetMargin * 2)
-        case .fullScreen: return safe.width
-        }
-    }
-
-    private func setHeight(_ constraint: NSLayoutConstraint?, _ value: CGFloat) {
-        // Ignore sub-point changes so measuring can't trigger an endless layout loop.
-        if abs((constraint?.constant ?? 0) - value) > 0.5 { constraint?.constant = value }
-    }
-
     private func updateAppearance() {
         guard isViewLoaded else { return }
         view.backgroundColor = style == .fullScreen ? state.backgroundColor : .clear
         backdropView.backgroundColor = style == .fullScreen ? .clear : state.backdropColor
         cardView.backgroundColor = state.backgroundColor
         cardView.layer.cornerRadius = style == .fullScreen ? 0 : state.cornerRadius
+        // A sheet sits on the screen's bottom edge, so only its top corners are rounded.
+        cardView.layer.maskedCorners = style == .bottomSheet
+            ? [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+            : [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         view.semanticContentAttribute = state.isRTL ? .forceRightToLeft : .forceLeftToRight
         // System pickers, menus and the keyboard follow the experience's background, not the device setting.
         overrideUserInterfaceStyle = state.backgroundColor.isLightColor() ? .light : .dark
@@ -407,7 +365,7 @@ private extension UPExperienceHostingController {
         // The first render isn't a step change, so focus stays where viewDidAppear put it.
         let isStepChange = renderedSurveyStep != nil
         renderedSurveyStep = model.currentStep
-        let width = cardWidth?.constant ?? view.bounds.width
+        let width = contentWidth > 0 ? contentWidth : view.bounds.width
         controller.rootView = UPExperienceRootView(state: state, width: width, region: .content)
         headerController?.rootView = UPExperienceRootView(state: state, width: width, region: .header)
         footerController?.rootView = UPExperienceRootView(state: state, width: width, region: .footer)
@@ -462,5 +420,67 @@ private extension UPExperienceHostingController {
         setHeight(cardHeight, frame.height)
         setHeight(cardTop, frame.minY)
         UIView.performWithoutAnimation { [weak self] in self?.cardView.frame = frame }
+    }
+
+    /// View bounds and safe area belong to this window/scene; never size against UIScreen.main.
+    func updateSize(animated: Bool = true) {
+        guard !state.isClosing, let controller = contentController, view.bounds.width > 0 else { return }
+        let safe = view.bounds.inset(by: view.safeAreaInsets)
+        let width = cardContentWidth(safe)
+        let availableHeight = max(1, safe.height - keyboardHeight)
+        // A sheet runs edge to edge and under the home indicator, as it did before the SwiftUI renderer;
+        // its content stays in the safe area. Above a keyboard it sits on the keyboard instead.
+        let bottomInset = style == .bottomSheet && keyboardHeight == 0 ? view.safeAreaInsets.bottom : 0
+        if style == .bottomSheet {
+            cardView.layoutMargins = UIEdgeInsets(
+                top: 0, left: view.safeAreaInsets.left, bottom: bottomInset, right: view.safeAreaInsets.right)
+        }
+        setHeight(cardWidth, style == .bottomSheet ? view.bounds.width : width)
+        let widthChanged = abs(contentWidth - width) > 0.5
+        // A new width (rotation, split view) re-wraps text, so the SwiftUI roots get the new width.
+        if widthChanged {
+            contentWidth = width
+            controller.rootView = UPExperienceRootView(state: state, width: width, region: .content)
+            headerController?.rootView = UPExperienceRootView(state: state, width: width, region: .header)
+            footerController?.rootView = UPExperienceRootView(state: state, width: width, region: .footer)
+        }
+        let proposal = CGSize(width: width, height: .greatestFiniteMagnitude)
+        let contentSize = max(1, ceil(controller.sizeThatFits(in: proposal).height))
+        let headerSize = ceil(headerController?.sizeThatFits(in: proposal).height ?? 0)
+        let footerSize = ceil(footerController?.sizeThatFits(in: proposal).height ?? 0)
+        let total = contentSize + headerSize + footerSize
+        // Dialogs and sheets hug their content, up to 90% of the space; beyond that the body scrolls.
+        let height = style == .fullScreen ? availableHeight : min(total, availableHeight * 0.9)
+        setHeight(contentHeight, contentSize)
+        setHeight(headerHeight, headerSize)
+        setHeight(footerHeight, footerSize)
+        // Leftover space positions the body per the theme's vertical alignment.
+        let remaining = max(0, height - headerSize - footerSize - contentSize)
+        switch state.verticalAlignment {
+        case .middle, .center: setHeight(contentTop, remaining / 2)
+        case .bottom: setHeight(contentTop, remaining)
+        case .top: setHeight(contentTop, 0)
+        }
+        let top: CGFloat
+        switch style {
+        case .fullScreen: top = safe.minY
+        case .dialog: top = safe.minY + (availableHeight - height) / 2
+        case .bottomSheet: top = safe.minY + availableHeight - height
+        }
+        // The card's vertical position follows the keyboard without rebuilding its SwiftUI identity.
+        updateCardSize(height: height + bottomInset, top: top, animated: animated && !widthChanged)
+    }
+
+    func cardContentWidth(_ safe: CGRect) -> CGFloat {
+        switch style {
+        // Dialogs are narrower in landscape.
+        case .dialog: return safe.width * (safe.width > safe.height ? 0.7 : 0.9)
+        case .bottomSheet, .fullScreen: return safe.width
+        }
+    }
+
+    func setHeight(_ constraint: NSLayoutConstraint?, _ value: CGFloat) {
+        // Ignore sub-point changes so measuring can't trigger an endless layout loop.
+        if abs((constraint?.constant ?? 0) - value) > 0.5 { constraint?.constant = value }
     }
 }
