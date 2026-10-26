@@ -57,8 +57,7 @@ A dismissal request completes only after UIKit removes the native renderer.
 | `Sources/Userpilot/Experiences/Views/Widgets/` | SwiftUI components, one per file: `General/` (text, text area, image, button, dismiss, progress), `Flows/` (flow step, sections, rich text, link text), `Feedback/` (rating, question, survey, thank-you, NPS) |
 | `Sources/Userpilot/Experiences/Views/Style/` | `UPExperienceStyle` (one font resolver for SwiftUI and the UIKit text views, the opt-in text-size rule and cap), `UPExperienceButtonStyle`, `UPExperienceLayout` || `Sources/Userpilot/Extensions/Line+Rendering.swift`, `SurveyStep+Rating.swift` | Pure receiver helpers: flow text runs, the shared image size rule, rating cells |
 | `Sources/Userpilot/Extensions/UIImage+Extensions.swift` | Decoding that keeps each image's aspect ratio and downscales large images and GIF frames |
-| `Tests/UserpilotTests/Experiences/` | Rendering, answer, text-run, image-size, rating, style, host, resize, accessibility and VoiceOver tests, a keystroke probe, plus a native animation recorder and two updated publisher test files |
-| `scripts/test-declarative-rendering.sh`, `scripts/rendering-fixtures/` | Reproducible app-hosted screenshot, native lifecycle, gesture and VoiceOver harness |
+| `Tests/UserpilotTests/Experiences/` | Logic and model tests: render state, answers, text runs, image size, rating cells, style, image model and loader, plus the publisher tests |
 
 The renderer is 27 source files under `Experiences/Views/`, one main type per file. Existing engine and model files remain the
 source of eligibility, payload decoding and business behavior.
@@ -156,68 +155,21 @@ follow-up and completion content using the displayed score: 0–6, 7–8, 9–10
 
 ## Validation
 
-Final validation on 2026-10-09 used Xcode 26.6:
+Tests cover logic and models only: render state and NPS stages, answers and payloads, text runs, the image
+size rule, rating cells, style and text scaling, image model and loader cancellation, and the publisher.
+Rendered UI, animation, gestures and VoiceOver are reviewed manually on devices; there are no UI test suites
+or app-hosted fixture harnesses.
+
+Validation on 2026-10-26, Xcode 26.6:
 
 | Check | Result |
 | --- | --- |
-| Full release preflight | Passed environment checks, compile/tests, strict SwiftLint and XCFramework generation |
-| Package XCTest, iPhone 17 Pro Max / iOS 26.5 | 735 passed, 0 failed, 7 skipped |
-| App-hosted rendering tests, iPhone 16 Pro Max / iOS 18.3 | 10 passed, 0 failed; 13 rendered fixture states captured plus ten native animation traces |
-| Actual carousel gesture UI tests, iPhone 16 Pro Max / iOS 18.3 | 2 passed, 0 failed; horizontal drags from header/footer/empty space, long vertical scroll and button tap |
-| Release XCFramework | Device arm64 and simulator arm64/x86_64 slices; module interfaces verified; 8.4 MB |
-| Source diff whitespace | `git diff --check` passed |
-
-The package runner has no application window scene, so native presentation and animation tests explicitly
-skip there. The separate app-hosted harness runs them, including repeated dismissal requests,
-completion after native removal, strictly upward/downward sheet movement, and a dialog interrupted
-after three entrance frames with no center displacement. Fixture coverage includes carousel, slideout, dialog, step/list survey,
-survey thank-you and the NPS score/follow-up/completion states. Layout assertions also verify all three
-hosted regions, full-page carousel containment, long-page vertical extent and the full-screen background.
-The real ImageLoader fixture uses a URLProtocol PNG response and verifies a temporary 1-point display
-proposal does not reduce decoded pixels or change the authored 2:1 aspect ratio. These checks do not
-establish pixel parity with every
-dashboard configuration or live backend delivery.
-
-Local evidence: `/tmp/ios-survey-resize-verified.xcresult`, `/tmp/ios-survey-resize-verified.log`,
-`/tmp/ios-survey-resize-measurement.xcresult` and `/tmp/ios-survey-resize-measurement.log`.
-The final combined harness passed all twelve tests and exported attachments in
-`/tmp/ios-survey-resize-combined-final.log`. Its complete result bundle and attachments are under
-`/var/folders/g3/5fd7nwfj189frfq23qdxbb4h0000gn/T/userpilot-rendering.GP5qaz/`.
-The eight focused survey resize frame traces are also exported to `/tmp/ios-survey-resize-frames/`.
-Both styles grow from 280 to 662 points and shrink back with 14 distinct intermediate heights and
-fixed native anchors. Rapid step changes and dismissal interrupt the current resize without snapping
-through its abandoned destination; header/footer heights remain constant throughout resizing.
-The SDK version remains 1.4.1; this migration has not been committed, published or released.
-
-Validation on 2026-10-26 (native components, text scaling and accessibility), Xcode 26.6:
-
-| Check | Result |
-| --- | --- |
-| Package XCTest, iPhone 16 Pro Max / iOS 18.3 and iPhone 17 Pro Max / iOS 26.5 | 797 run, 12 skipped; the only failures are 22 `SocketManagerTests`/`SocketManagerStressTests` from an uncommitted development token in `SocketManager.swift`, unrelated to rendering |
-| App-hosted harness, iOS 18.3 + iPad Pro 13 / iOS 26.5 | All suites passed: hosting, accessibility, VoiceOver, survey resize, gestures (including link taps, a long press with no menu and swipes that start on a link), direction, the VoiceOver fixture with an accessibility audit at the largest text size, and the multi-scene overlay |
-| App-hosted harness, iPhone 17 Pro Max / iOS 26.5 | All suites passed except `testSheetEntranceMovesUpAndExitMovesDownWithoutLayoutJump`, which fails identically on the code before this change (an existing iOS 26 animation-timing issue) |
-| Live Text Size change | `simctl ui content_size` on a running survey: text, rating wrap and footer resized in place |
-| Keystroke probe (`SurveyTypingPerformanceTests`, run on demand) | 24 vs 4 questions: 1.61 vs 1.17 ms per key (1.38×); before: 4.12 vs 2.16 ms (1.9×) |
+| Package XCTest, iPhone 17 Pro / iOS 26.5 | 777 run, 0 skipped, 0 failed, with the committed `SocketManager.swift` (a local development token otherwise fails 22 socket tests) |
+| SwiftLint `--strict` | Clean |
 
 ```bash
 bash scripts/release-preflight.sh
-bash scripts/test-declarative-rendering.sh
-# Optionally select installed iPhone and iPad simulators by UDID:
-bash scripts/test-declarative-rendering.sh 01571169-CEA4-456F-944D-E4073E19EAE5 539C1236-8075-42BB-98B7-2855FFD31C74
 ```
-
-The fixture script generates a temporary UIKit host app, consumes this local SDK package, runs
-`ExperienceHostingTests`, `ExperienceAccessibilityHostingTests`, `ExperienceVoiceOverHostingTests`,
-`SurveyResizeHostingTests`, `CarouselGestureTests`, `CarouselDirectionTests` and `VoiceOverFixtureTests` and exports
-screenshot attachments. SwiftUI builds its accessibility tree only for an assistive client, so traits are
-checked through XCUITest (`VoiceOverFixtureTests`, including an accessibility audit at the largest text
-size); XCUITest also lists SwiftUI elements hidden from VoiceOver, so hidden elements and the header trait
-of SwiftUI headings remain part of the manual VoiceOver review. The gesture fixture uses three local pages; hosted image tests use deterministic image data. UI tests
-perform actual horizontal drags from the header, action/footer and empty page area, scroll long content vertically, and tap
-the action. `CarouselDirectionTests` swipes LTR and RTL content inside LTR and RTL host apps; content direction alone decides
-the forward swipe. On an iPad simulator the script also runs `ExperienceOverlaySceneTests`, which opens a second scene and
-checks the idle overlay follows the user to the foreground scene. It requires an installed iOS simulator
-and the `xcodeproj` Ruby gem, also installed with CocoaPods. It prints the artifact directory on exit.
 
 Required device review includes a VoiceOver pass (Headings and Links rotors, Z-gesture dismissal, focus
 after a page and a step change, no escape into the host app behind the overlay window), a live Text Size
