@@ -47,80 +47,9 @@ internal func delay(
         execute: closure)
 }
 
-/**
- * Image View Size Handling in SDK
- *
- * This function calculates the size of an image view dynamically based on the device type, screen dimensions,
- * and user-specified attributes. The goal is to ensure consistent rendering across various devices while
- * maintaining the original aspect ratio of the image.
- *
- * **Default Screen Width Calculation:**
- * - **Phones:** Default Screen Width = Device Screen Width × 0.8
- * - **Tablets:** Default Screen Width = Device Screen Width × 0.6
- *
- * **Behavior Based on User-Specified Dimensions:**
- *
- * 1. **When User Specifies "Auto" for Width and Height:**
- *    - Case 1: If the actual image width is less than or equal to the default screen width:
- *      - The image size is set to the actual width and height of the image.
- *    - Case 2: If the actual image width is greater than the default screen width:
- *      - The image width is set to the default screen width.
- *      - The image height is calculated to maintain the original aspect ratio using the formula:
- *        `New Image Height = (Actual Image Height / Actual Image Width) * Default Screen Width`
- *
- * 2. **When User Specifies Both Width and Height:**
- *    - Case 1: If the specified width is less than or equal to the default screen width:
- *      - The image size is directly set to the user-provided width and height.
- *    - Case 2: If the specified width is greater than the default screen width:
- *      - The image width is set to the default screen width.
- *      - The image height is recalculated using the same aspect ratio formula as above:
- *        `New Image Height = (Actual Image Height / Actual Image Width) * Default Screen Width`
- *
- * 3. **Fallback Behavior:**
- *    - If no specific size is provided (width or height is missing or `nil`), the image size defaults
- *      to a preconfigured value defined as `defaultSize`.
- *
- * @param actualWidth The actual width of the image provided by the user or derived from the image itself.
- * @param actualHeight The actual height of the image provided by the user or derived from the image itself.
- * @param screenWidth The calculated screen width based on the device type (phone or tablet).
- * @return A `CGSize` representing the calculated width and height of the image.
- */
-internal func getImageSize(for line: Line) -> CGSize {
-    let defaultSize = ThemeHandler.DefaultValues.imageSize
-    let actualWidth = CGFloat(line.attrs?.actualSize?.width ?? Int(defaultSize))
-    let actualHeight = CGFloat(line.attrs?.actualSize?.height ?? Int(defaultSize))
-    let screenWidth = screenWidth - (ThemeHandler.DefaultValues.contentMargin * 2)
-
-    if line.attrs?.style?.width == "auto" && line.attrs?.style?.height == "auto" {
-        if actualWidth > screenWidth {
-            let newHeight = (screenWidth * actualHeight) / actualWidth
-            return CGSize(width: screenWidth, height: newHeight)
-        } else {
-            return CGSize(width: actualWidth, height: actualHeight)
-        }
-    } else {
-        if let width = line.attrs?.style?.width?.toSize,
-           let height = line.attrs?.style?.height?.toSize {
-            if width > screenWidth {
-                let newHeight = (screenWidth * actualHeight) / actualWidth
-                return CGSize(width: screenWidth, height: newHeight)
-            } else {
-                return CGSize(width: width, height: height)
-            }
-        } else {
-            return CGSize(width: defaultSize, height: defaultSize)
-        }
-    }
-}
-
 /// Returns the width of the device's screen in points.
 internal var screenWidth: CGFloat {
     return UIScreen.main.bounds.width
-}
-
-/// Returns the height of the device's screen in points.
-internal var screenHeight: CGFloat {
-    return UIScreen.main.bounds.height
 }
 
 /// Returns the multiplier used to adjust the width of UI elements based on screen size.
@@ -129,13 +58,6 @@ internal var screenHeight: CGFloat {
 /// - Returns: A `CGFloat` representing the width multiplier.
 internal var screenWidthMultiplier: CGFloat {
     return screenWidth <= 800 ? 0.9 : 0.8
-}
-
-/// Returns a Boolean value indicating whether the device is currently in landscape orientation.
-/// - Returns: `true` if the device is in landscape mode
-/// (either `.landscapeLeft` or `.landscapeRight`), `false` otherwise.
-internal var isLandscape: Bool {
-    return UIScreen.main.bounds.width > UIScreen.main.bounds.height
 }
 
 /// Executes a block of code inside a `do-catch` block, catching and ignoring any errors or throwables.
@@ -183,16 +105,6 @@ internal func loadJSONFile<T: Decodable>(
     as type: T.Type
 ) -> T? {
     return Userpilot.resourceBundle.loadJSONFile(named: fileName, as: type)
-}
-
-/// Retrieves the current key `UIWindow` in the app that is part of an active foreground scene.
-/// - Returns: An optional `UIWindow`. Returns `nil` if no key window is found.
-internal func getWindow() -> UIWindow? {
-    return UIApplication.shared.connectedScenes
-        .filter({ $0.activationState == .foregroundActive })
-        .compactMap({ $0 as? UIWindowScene })
-        .first?.windows
-        .filter({ $0.isKeyWindow }).first
 }
 
 internal func print(

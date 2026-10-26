@@ -14,14 +14,6 @@ import UIKit
 
 /// Extension providing corner radius utilities for UIView
 internal extension UIView {
-    /// Sets corner radius only on top corners of the view
-    /// - Parameter radius: The corner radius to apply
-    func setTopCornerRadius(_ radius: CGFloat) {
-        self.clipsToBounds = true
-        self.layer.cornerRadius = radius
-        self.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-    }
-
     // MARK: First Responder
 
     /// Finds the first responder in the view hierarchy
@@ -35,11 +27,6 @@ internal extension UIView {
             }
         }
         return nil
-    }
-
-    /// Determines if the app is using right-to-left layout
-    var isAppRTL: Bool {
-        UIView.userInterfaceLayoutDirection(for: self.semanticContentAttribute) == .rightToLeft
     }
 
     // MARK: Label Extraction
@@ -225,17 +212,6 @@ internal extension UIView {
     }
 
     // MARK: Distance Helpers
-
-    /// Calculates distance from view bottom edge to screen bottom
-    /// - Parameter view: The UIView to measure from
-    /// - Returns: Distance in points, or nil if view not in window
-    func distanceFromViewToScreenBottom() -> CGFloat? {
-        guard let window = self.window else { return nil }
-        let viewFrameInWindow = self.convert(self.bounds, to: window)
-        let screenHeight = UIScreen.main.bounds.height
-        let distance = screenHeight - viewFrameInWindow.maxY
-        return distance
-    }
 
     // MARK: Private Helpers
 

@@ -17,6 +17,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
     private var carouselFixture: CarouselFixture?
+    private var experienceFixture: ExperienceFixture?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options: UIScene.ConnectionOptions) {
         guard let scene = scene as? UIWindowScene else { return }
@@ -25,10 +26,17 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController?.view.backgroundColor = .systemBackground
         window.makeKeyAndVisible()
         self.window = window
-        if ProcessInfo.processInfo.arguments.contains("-carousel-fixture") {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-carousel-fixture") {
             let fixture = CarouselFixture()
             window.rootViewController = fixture.makeController()
             carouselFixture = fixture
+        }
+        if let index = arguments.firstIndex(of: "-experience-fixture"), arguments.indices.contains(index + 1) {
+            let fixture = ExperienceFixture()
+            window.rootViewController = fixture.makeController(
+                kind: arguments[index + 1], textScaling: arguments.contains("-text-scaling"))
+            experienceFixture = fixture
         }
     }
 }

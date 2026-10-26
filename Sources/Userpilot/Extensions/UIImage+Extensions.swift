@@ -14,17 +14,6 @@ import ImageIO
 import UIKit
 import UniformTypeIdentifiers
 
-internal extension UIImageView {
-    // set image with fade in animation
-    func setImageWithCrossfade(_ image: UIImage) {
-        UIView.transition(with: self,
-                          duration: 0.3,
-                          options: .transitionCrossDissolve,
-                          animations: { self.image = image },
-                          completion: nil)
-    }
-}
-
 internal extension UIImage {
     /// Tries animation decoding first, then decodes the static image to cover `size` at its own aspect ratio.
     /// Larger sources are downscaled by ImageIO without a full-size intermediate; nothing is ever stretched.
@@ -47,13 +36,6 @@ internal extension UIImage {
         return renderer.image { _ in
             self.draw(in: CGRect(origin: .zero, size: size))
         }
-    }
-
-    /// A convenience method to load an image from the Userpilot resource bundle.
-    /// - Parameter imageName: The name of the image to be loaded.
-    /// - Returns: The image from the Userpilot resource bundle, or `nil` if not found.
-    static func userpilotImage(named imageName: String) -> UIImage? {
-        return UIImage(named: imageName, in: Userpilot.resourceBundle, compatibleWith: nil)
     }
 
     /// Keeps the existing ImageIO fallback on iOS 13, where UTType.gif is unavailable.

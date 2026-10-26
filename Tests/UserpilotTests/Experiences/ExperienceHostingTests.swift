@@ -25,8 +25,8 @@ final class ExperienceHostingTests: XCTestCase {
             ThemeData(carousel: theme ?? ExperienceTheme(), slideOut: theme ?? ExperienceTheme(), survey: nil)
         }
         userpilot.themeHandler.onMergeSurveyThemes = { _, theme in theme ?? MockContentFactory.makeSurveyTheme() }
-        userpilot.imageLoader.onLoadImage = { target, _, _, size in
-            target.image = UIGraphicsImageRenderer(size: size).image { context in
+        userpilot.imageLoader.onLoad = { _, _, size in
+            UIGraphicsImageRenderer(size: size).image { context in
                 UIColor.systemIndigo.setFill()
                 context.fill(CGRect(origin: .zero, size: size))
             }
@@ -178,23 +178,53 @@ final class ExperienceHostingTests: XCTestCase {
             URLProtocol.unregisterClass(URLProtocolStub.self)
             URLProtocolStub.reset()
         }
+        // The decode size comes from the authored size, never from SwiftUI's first tiny proposal.
         let loader = ImageLoader(container: userpilot.container)
-        let host = UIHostingController(rootView: UPExperienceImage(
-            url: url.absoluteString, loader: loader, size: CGSize(width: 1, height: 0.5), loadingSize: size))
+        let model = UPImageModel(url: url.absoluteString, blurHash: nil, size: size, loader: loader)
+        let host = UIHostingController(rootView: UPExperienceImage(model: model, size: CGSize(width: 1, height: 0.5)))
         window.rootViewController = host
         host.view.layoutIfNeeded()
-        let loaded = expectation(for: NSPredicate { _, _ in
-            self.allViews(in: host.view).compactMap { $0 as? UIImageView }.contains { $0.image != nil }
-        }, evaluatedWith: nil)
+        let loaded = expectation(for: NSPredicate { _, _ in model.image != nil }, evaluatedWith: nil)
         wait(for: [loaded], timeout: 5)
-        host.rootView = UPExperienceImage(url: url.absoluteString, loader: loader, size: size, loadingSize: size)
+        host.rootView = UPExperienceImage(model: model, size: size)
+        host.view.layoutIfNeeded()
+        let image = try XCTUnwrap(model.image)
+        XCTAssertEqual(image.size.width, 240)
+        XCTAssertEqual(image.size.height, 120)
+        // Measured outside the window, so safe-area insets don't pad the authored frame.
+        let frame = UIHostingController(rootView: UPExperienceImage(model: model, size: size))
+            .sizeThatFits(in: CGSize(width: 390, height: 844))
+        XCTAssertEqual(frame.width, 240, accuracy: 1)
+        XCTAssertEqual(frame.height, 120, accuracy: 1)
+        let settled = expectation(description: "crossfade settles")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { settled.fulfill() }
+        wait(for: [settled], timeout: 2)
+        attachWindow(name: "loaded-network-image-authored-aspect")
+    }
+
+    func testAnimatedImagePlaysInAPlainImageViewInsideItsFrame() throws {
+        let frames = (0..<3).map { index in
+            UIGraphicsImageRenderer(size: CGSize(width: 20, height: 10)).image { context in
+                UIColor(hue: CGFloat(index) / 3, saturation: 1, brightness: 1, alpha: 1).setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 20, height: 10))
+            }
+        }
+        let gif = try XCTUnwrap(UIImage.animatedImage(with: frames, duration: 0.3))
+        let loader = MockImageLoader()
+        loader.cachedImages["https://image-fixture.invalid/a.gif"] = gif
+        let model = UPImageModel(url: "https://image-fixture.invalid/a.gif", blurHash: nil,
+                                 size: CGSize(width: 200, height: 100), loader: loader)
+        let host = UIHostingController(rootView: UPExperienceImage(model: model, size: CGSize(width: 200, height: 100)))
+        window.rootViewController = host
         host.view.layoutIfNeeded()
         let imageView = try XCTUnwrap(allViews(in: host.view).compactMap { $0 as? UIImageView }.first)
-        XCTAssertEqual(imageView.image?.size.width, 240)
-        XCTAssertEqual(imageView.image?.size.height, 120)
-        XCTAssertEqual(imageView.bounds.width, 240, accuracy: 1)
-        XCTAssertEqual(imageView.bounds.height, 120, accuracy: 1)
-        attachWindow(name: "loaded-network-image-authored-aspect")
+        // An animated UIImage plays as a layer animation; `isAnimating` only reports `animationImages`.
+        let playing = expectation(for: NSPredicate { _, _ in
+            imageView.layer.animationKeys()?.isEmpty == false
+        }, evaluatedWith: nil)
+        wait(for: [playing], timeout: 3)
+        XCTAssertEqual(imageView.image?.images?.count, 3)
+        XCTAssertEqual(imageView.bounds.size, CGSize(width: 200, height: 100))
     }
 
     func testSheetEntranceMovesUpAndExitMovesDownWithoutLayoutJump() throws {
@@ -245,6 +275,15 @@ final class ExperienceHostingTests: XCTestCase {
 }
 
 extension ExperienceHostingTests {
+    func testRichTextFixtureProducesScreenshot() throws {
+        let flow = try XCTUnwrap(
+            MockContentFactory.makeRichTextFlowPayload().toJSONString()?.toFlowContent()?.flowContent)
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .flow(content: flow) }
+        try capture(
+            ExperienceRenderState(.flow(ExperienceViewModel(container: userpilot.container))),
+            style: .bottomSheet, name: "rich-text")
+    }
+
     func testDialogAnimationStaysCenteredAndDismissalDuringEntranceDoesNotJump() throws {
         try XCTSkipIf(UIApplication.shared.connectedScenes.isEmpty, "Animation requires an app-hosted UIWindowScene.")
         let survey = MockContentFactory.makeSurveyContent()
@@ -346,32 +385,6 @@ private extension ExperienceHostingTests {
     }
 
     private func surveyFixture(type: SurveyType) throws -> SurveyContent {
-        let modules: [[String: Any]] = [
-            [
-                "id": 1, "type": "likert_scale", "question": "How was your experience?", "is_required": true,
-                "metadata": ["type": "stars", "range": 5, "low_score": "Poor", "high_score": "Excellent"]
-            ],
-            [
-                "id": 2, "type": "multiple_choice", "question": "What matters most?", "is_required": false,
-                "metadata": [
-                    "choices": [["id": "speed", "value": "Speed"], ["id": "quality", "value": "Quality"]],
-                    "is_multi_select": true, "other_choice": ["enabled": true, "placeholder": "Tell us"]
-                ]
-            ],
-            ["id": 3, "type": "open_text", "question": "Anything else?", "metadata": ["placeholder": "Your feedback"]],
-            ["id": 4, "type": "single_input", "question": "Your email", "metadata": ["input_type": "email"]],
-            [
-                "id": 5, "type": "completed", "question": "Thank you!", "subheader": "Your feedback helps us improve.",
-                "button_label": "Done", "metadata": ["enabled": true]
-            ]
-        ]
-        let decoded = try JSONDecoder().decode(
-            [SurveyStep].self,
-            from: JSONSerialization.data(withJSONObject: modules))
-        return SurveyContent(
-            id: 200, type: type, modules: decoded,
-            metadata: SurveyContentMetaData(buttonLabel: "Send feedback"),
-            surveyTheme: MockContentFactory.makeSurveyMobileTheme(), screens: [],
-            screenType: .all, localeCode: "en", timeDelay: 0)
+        try MockContentFactory.makeQuestionSurvey(type: type)
     }
 }

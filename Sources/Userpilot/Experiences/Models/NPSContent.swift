@@ -203,10 +203,6 @@ internal struct NPSTheme: Decodable {
         progress?.color?.color ?? .black
     }
 
-    var stepsProgressColorAsString: String {
-        progress?.color ?? ThemeHandler.DefaultValues.blackColor
-    }
-
     // radius
     var borderRadius: CGFloat {
         CGFloat(box?.radius ?? 24)

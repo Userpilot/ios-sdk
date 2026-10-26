@@ -125,11 +125,6 @@ final class SurveyViewModel {
         experiencesPublisher.triggerDeepLink(url: url)
     }
 
-    func isAnyQuestionRequired() -> Bool {
-        guard let surveyContent else { return false }
-        return surveyContent.modules.contains { $0.isRequired == true }
-    }
-
     // MARK: - Experience Event Handling
 
     func onExperienceSeen() {

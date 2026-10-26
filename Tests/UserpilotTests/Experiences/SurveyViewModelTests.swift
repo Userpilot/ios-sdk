@@ -50,7 +50,6 @@ final class SurveyViewModelTests: XCTestCase {
 
         XCTAssertEqual(didBind, true)
         XCTAssertEqual(viewModel.surveyContent?.modules.count, 1)
-        XCTAssertTrue(viewModel.isAnyQuestionRequired())
         XCTAssertFalse(viewModel.isRTL)
     }
 

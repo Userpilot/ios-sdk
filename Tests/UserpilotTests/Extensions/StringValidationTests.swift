@@ -23,13 +23,4 @@ final class StringValidationTests: XCTestCase {
         XCTAssertTrue(" ".isValidAnswer(keyboardType: .default))
         XCTAssertFalse("".isValidAnswer(keyboardType: .default))
     }
-
-    func testFieldValidation_preservesMissingTextFallback() {
-        let field = UITextField()
-        field.keyboardType = .emailAddress
-        field.text = nil
-        XCTAssertFalse(field.isValidAnswer())
-        field.text = "a@example.com"
-        XCTAssertTrue(field.isValidAnswer())
-    }
 }

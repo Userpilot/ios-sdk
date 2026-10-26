@@ -25,6 +25,17 @@ final class URLProtocolStub: URLProtocol {
     /// Set this before initiating the request in your test.
     static var response: (data: Data?, response: URLResponse?, error: Error?)?
 
+    /// Holds the response back this long, so a test can cancel a request that is in flight.
+    static var responseDelay: TimeInterval = 0
+
+    /// How many requests were stopped (cancelled) before they finished.
+    static var stoppedCount: Int { lock.withLock { stopped } }
+
+    private static let lock = NSLock()
+    private static var stopped = 0
+    private var isStopped = false
+    private var didRespond = false
+
     // MARK: - URLProtocol Overrides
 
     /// Indicates whether this protocol can handle the given request.
@@ -38,8 +49,22 @@ final class URLProtocolStub: URLProtocol {
         return request
     }
 
-    /// Starts loading the request by sending the stubbed response.
+    /// Starts loading the request by sending the stubbed response, after `responseDelay` when set.
     override func startLoading() {
+        let delay = URLProtocolStub.responseDelay
+        guard delay > 0 else { respond(); return }
+        DispatchQueue.global().asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            let shouldRespond = URLProtocolStub.lock.withLock { () -> Bool in
+                guard !self.isStopped else { return false }
+                self.didRespond = true
+                return true
+            }
+            if shouldRespond { self.respond() }
+        }
+    }
+
+    private func respond() {
         guard let client = client else { return }
 
         if let response = URLProtocolStub.response {
@@ -61,12 +86,19 @@ final class URLProtocolStub: URLProtocol {
         }
     }
 
-    /// Stops loading. No cleanup needed.
-    override func stopLoading() {}
+    /// Called when the request finishes or is cancelled; a delayed response that hasn't been sent is dropped.
+    override func stopLoading() {
+        URLProtocolStub.lock.withLock {
+            if URLProtocolStub.responseDelay > 0, !isStopped, !didRespond { URLProtocolStub.stopped += 1 }
+            isStopped = true
+        }
+    }
 
     /// Resets the stored stubbed response. Call this in `tearDown()` between tests.
     static func reset() {
         response = nil
+        responseDelay = 0
+        lock.withLock { stopped = 0 }
     }
 }
 

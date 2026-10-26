@@ -15,9 +15,6 @@ import UIKit
 
 internal extension UIColor {
     // static let gray = UIColor(hexString: "#656567")
-    static let lightGray = UIColor(hex: "#EBEBEB")
-    static let grayCA = UIColor(hex: "#CACACE")
-    static let gray43 = UIColor(hex: "#434345")
     static let grayA8 = UIColor(hex: "#A8A8AC")
 }
 
@@ -96,28 +93,6 @@ internal extension UIColor {
     func isLightColor() -> Bool {
         // Return true if the color is light, false otherwise
         return perceivedBrightness() > 0.5
-    }
-
-    /// The opaque color that results from drawing `overlay` at `opacity` on top of this color.
-    func overlaying(_ overlay: UIColor, opacity: CGFloat) -> UIColor {
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-
-        var overlayRed: CGFloat = 0
-        var overlayGreen: CGFloat = 0
-        var overlayBlue: CGFloat = 0
-        var overlayAlpha: CGFloat = 0
-        overlay.getRed(&overlayRed, green: &overlayGreen, blue: &overlayBlue, alpha: &overlayAlpha)
-
-        return UIColor(
-            red: red + (overlayRed - red) * opacity,
-            green: green + (overlayGreen - green) * opacity,
-            blue: blue + (overlayBlue - blue) * opacity,
-            alpha: 1.0
-        )
     }
 
     func withOpacity(_ opacity: CGFloat) -> UIColor {

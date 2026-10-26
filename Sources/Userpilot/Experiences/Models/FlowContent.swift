@@ -150,10 +150,6 @@ internal struct Attributes: Decodable {
         case level, src, icon, alt, hash, style
     }
 
-    var imageScale: UIView.ContentMode {
-        style?.objectFit == "fill" ? .scaleToFill : .scaleAspectFit
-    }
-
     var imageRadius: CGFloat {
         CGFloat(style?.borderRadius ?? 0)
     }

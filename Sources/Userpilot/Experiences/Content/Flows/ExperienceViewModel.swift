@@ -38,9 +38,6 @@ internal class ExperienceViewModel {
 
     /// Flow content to display.
     private(set) var flowContent: FlowContent?
-    var slideOutContent: Step? {
-        flowContent?.steps.first
-    }
 
     /// Visible position may move backward; engagement advances only beyond the furthest step.
     private(set) var currentStep = 0

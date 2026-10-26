@@ -79,10 +79,6 @@ internal struct ExperienceTheme: Decodable {
         colors?.backgroundColor ?? ThemeHandler.DefaultValues.whiteColor
     }
 
-    var isLightTheme: Bool {
-        backgroundColor.isLightColor()
-    }
-
     // Text
     var textColor: UIColor {
         colors?.textColor?.color ?? .black
@@ -137,10 +133,6 @@ internal struct ExperienceTheme: Decodable {
 
     var stepsProgressColor: UIColor {
         progress?.color?.color ?? .black
-    }
-
-    var stepsProgressColorAsString: String {
-        progress?.color ?? ThemeHandler.DefaultValues.blackColor
     }
 
     // Backdrop
@@ -270,10 +262,6 @@ internal struct SurveyTheme: Decodable {
         general?.backgroundColor ?? "#ffffff"
     }
 
-    var isLightTheme: Bool {
-        backgroundColor.isLightColor()
-    }
-
     var primaryColor: UIColor {
         general?.primaryColor?.color ?? .black
     }
@@ -342,10 +330,6 @@ internal struct SurveyTheme: Decodable {
 
     var stepsProgressColor: UIColor {
         progress?.color?.color ?? .black
-    }
-
-    var stepsProgressColorAsString: String {
-        progress?.color ?? ThemeHandler.DefaultValues.blackColor
     }
 
     // corner

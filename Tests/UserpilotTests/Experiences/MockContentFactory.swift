@@ -178,8 +178,88 @@ internal enum MockContentFactory {
             "request_id": NSNull()
         ]
     }
-    
-    
+
+    static let privacyURL = "https://example.com/privacy"
+    static let termsURL = "https://example.com/terms"
+
+    /// A slideout whose single step covers every rich-text rule: links (one, two, beside plain text),
+    /// italic and colour marks, an icon bullet line, and every heading level.
+    static func makeRichTextFlowPayload() -> [String: Any] {
+        func text(_ value: String, _ marks: [[String: Any]] = []) -> [String: Any] {
+            ["text": value, "type": "text", "marks": marks]
+        }
+        func link(_ href: String) -> [String: Any] { ["type": "link", "attrs": ["href": href]] }
+        func line(_ type: String, align: String = "left", level: String? = nil, icon: String? = nil,
+                  _ content: [[String: Any]]) -> [String: Any] {
+            var attrs: [String: Any] = ["__type__": type, "text_align": align]
+            if let level { attrs["level"] = level }
+            if let icon {
+                attrs["icon"] = icon
+                attrs["alt"] = "Bullet icon"
+            }
+            return ["type": type, "attrs": attrs, "content": content]
+        }
+        let lines: [[String: Any]] = [
+            line("heading", level: "h1", [text("Heading one")]),
+            line("heading", level: "h2", [text("Heading two")]),
+            line("heading", level: "h3", [text("Heading three")]),
+            line("paragraph", [text("Read our "), text("privacy policy", [link(privacyURL)]), text(" before you start.")]),
+            line("paragraph", [text("Plain paragraph beside a link line, with no link at all.")]),
+            line("paragraph", align: "center", [
+                text("Accept the "), text("terms", [link(termsURL)]), text(" and the "),
+                text("privacy policy", [link(privacyURL)]), text(".")
+            ]),
+            line("paragraph", [
+                text("Italic red 20", [
+                    ["type": "italic", "attrs": NSNull()],
+                    ["type": "textStyle", "attrs": ["font_size": "20px", "color": "#D32F2F"]]
+                ]),
+                text(" then bold", [["type": "bold", "attrs": NSNull()]])
+            ]),
+            line("icon_bullet_list", icon: "https://image-fixture.invalid/bullet.png", [text("An icon bullet line")])
+        ]
+        var payload = makeFlowContentPayload()
+        guard var content = payload["mobile_contents"] as? [String: Any],
+              var step = (content["steps"] as? [[String: Any]])?.first,
+              let button = (step["sections"] as? [[String: Any]])?.last else { return payload }
+        step["sections"] = [["lines": lines], button]
+        content["steps"] = [step]
+        content["type"] = "slideout"
+        payload["mobile_contents"] = content
+        return payload
+    }
+
+    /// Every question type the renderer draws: stars, multiple choice with Other, open text, email, thank-you.
+    static func makeQuestionSurvey(type: SurveyType) throws -> SurveyContent {
+        let modules: [[String: Any]] = [
+            [
+                "id": 1, "type": "likert_scale", "question": "How was your experience?", "is_required": true,
+                "metadata": ["type": "stars", "range": 5, "low_score": "Poor", "high_score": "Excellent"]
+            ],
+            [
+                "id": 2, "type": "multiple_choice", "question": "What matters most?", "is_required": false,
+                "metadata": [
+                    "choices": [["id": "speed", "value": "Speed"], ["id": "quality", "value": "Quality"]],
+                    "is_multi_select": true, "other_choice": ["enabled": true, "placeholder": "Tell us"]
+                ]
+            ],
+            ["id": 3, "type": "open_text", "question": "Anything else?", "metadata": ["placeholder": "Your feedback"]],
+            ["id": 4, "type": "single_input", "question": "Your email", "metadata": ["input_type": "email"]],
+            [
+                "id": 5, "type": "completed", "question": "Thank you!", "subheader": "Your feedback helps us improve.",
+                "button_label": "Done", "metadata": ["enabled": true]
+            ]
+        ]
+        let decoded = try JSONDecoder().decode(
+            [SurveyStep].self,
+            from: JSONSerialization.data(withJSONObject: modules))
+        return SurveyContent(
+            id: 200, type: type, modules: decoded,
+            metadata: SurveyContentMetaData(buttonLabel: "Send feedback"),
+            surveyTheme: makeSurveyMobileTheme(), screens: [],
+            screenType: .all, localeCode: "en", timeDelay: 0)
+    }
+
     // MARK: – NEW: Survey ------------------------------------------------------------------
     
     static func makeSurveyContent(id: Int = 1) -> SurveyContent {

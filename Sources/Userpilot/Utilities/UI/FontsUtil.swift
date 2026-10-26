@@ -14,21 +14,17 @@ import UIKit
 @available(iOS 13.0, *)
 internal extension UIFont {
 
-    /// Resolves a system design, registered bundle font, then a system fallback, in that order.
-    /// A nil name returns an unscaled system font; named paths use the existing size-based metrics.
-    /// `textStyle` remains accepted for call-site compatibility; scaling is selected by `fontSize`.
-    static func matching(
+    /// Resolves a system design, registered bundle font, then a system fallback, in that order,
+    /// at exactly `fontSize` with no Dynamic Type scaling. The SwiftUI renderer scales the size itself.
+    static func lookup(
         fontName: String?,
         fontWeight: [UIFontDescriptor.SymbolicTraits],
-        fontSize: CGFloat,
-        textStyle: UIFont.TextStyle = .body
+        fontSize: CGFloat
     ) -> UIFont {
         guard let fontName else { return systemFont(for: fontWeight, size: fontSize) }
-        let font = getDefaultSystemFont(fontName: fontName, fontWeight: fontWeight, size: fontSize)
+        return getDefaultSystemFont(fontName: fontName, fontWeight: fontWeight, size: fontSize)
             ?? loadCustomFont(fontName: fontName, fontWeight: fontWeight, fontSize: fontSize)
             ?? systemFont(for: fontWeight, size: fontSize)
-
-        return UIFontMetrics.metricFor(size: fontSize).scaledFont(for: font)
     }
 
     /// Returns the system font with specified symbolic traits (bold, italic, etc.)
@@ -84,7 +80,7 @@ internal extension UIFont {
         }
     }
 
-    /// Legacy registration helper. `matching` intentionally only reads host-registered fonts.
+    /// Legacy registration helper. `lookup` intentionally only reads host-registered fonts.
     private static func isCustomFontAvailable(_ fontName: String) -> Bool {
         guard let fontURL = Bundle.main.url(forResource: fontName, withExtension: "ttf") ??
                 Bundle.main.url(forResource: fontName, withExtension: "otf") else {
@@ -162,19 +158,6 @@ internal extension UIFontDescriptor.SystemDesign {
         case "Rounded": self = .rounded
         case "Serif": self = .serif
         default: return nil
-        }
-    }
-}
-
-internal extension UIFontMetrics {
-    /// Match the existing design-size bands: caption through 15pt, title from 20pt, body between them.
-    static func metricFor(size: CGFloat) -> UIFontMetrics {
-        if size <= 15 {
-            return UIFontMetrics(forTextStyle: .caption1)
-        } else if size >= 20 {
-            return UIFontMetrics(forTextStyle: .title1)
-        } else {
-            return UIFontMetrics(forTextStyle: .body)
         }
     }
 }

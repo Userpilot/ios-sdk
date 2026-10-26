@@ -56,6 +56,38 @@ final class CarouselGestureTests: XCTestCase {
         assertPage(2)
     }
 
+    func testTappingTheLinkWordOpensTheBrowser() {
+        let link = app.links["privacy policy"]
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        link.tap()
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10), "The system browser takes over.")
+    }
+
+    func testTapBesideTheLinkAndLongPressOnItDoNothing() {
+        let link = app.links["privacy policy"]
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        // "Read our" sits on the same line, left of the link.
+        link.coordinate(withNormalizedOffset: CGVector(dx: -0.3, dy: 0.5)).tap()
+        link.press(forDuration: 1.5)
+        XCTAssertEqual(app.state, .runningForeground)
+        for title in ["Open Link", "Copy Link", "Add to Reading List", "Share…"] {
+            XCTAssertFalse(app.descendants(matching: .any)[title].exists, "\(title) menu must not appear")
+        }
+        screenshot("link-line-after-beside-tap-and-long-press")
+        assertPage(1)
+    }
+
+    func testSwipeStartingOnTheLinkChangesThePage() {
+        let link = app.links["privacy policy"]
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        // Start on the link's last letters so the slow drag covers more than half the page, like the other swipes.
+        let row = link.frame.midY / app.frame.height
+        link.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).press(
+            forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: row)))
+        assertPage(2)
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
     private func assertPage(_ index: Int, file: StaticString = #filePath, line: UInt = #line) {
         let visible = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "isHittable == true"), object: app.buttons["Next page \(index)"])

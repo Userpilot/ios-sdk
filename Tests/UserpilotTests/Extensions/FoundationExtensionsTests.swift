@@ -45,10 +45,6 @@ final class FoundationExtensionsTests: XCTestCase {
         value.increment(by: -5)
         XCTAssertEqual(value, 10)
 
-        XCTAssertEqual(CGFloat(12).negative, -12)
-        XCTAssertEqual(5.clamped(to: 1...10), 5)
-        XCTAssertEqual((-1).clamped(to: 1...10), 1)
-        XCTAssertEqual(11.clamped(to: 1...10), 10)
         XCTAssertEqual(["a", "b"][safe: 1], "b")
         XCTAssertNil(["a", "b"][safe: 2])
     }

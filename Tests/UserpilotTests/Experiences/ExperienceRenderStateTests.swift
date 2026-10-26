@@ -8,6 +8,7 @@
 //  Verifies render-state event identity, native teardown and retained form values.
 //
 
+import Combine
 import UIKit
 import XCTest
 
@@ -197,5 +198,71 @@ final class ExperienceRenderStateTests: XCTestCase {
         nps["content"] = content
         payload["nps"] = nps
         return try XCTUnwrap(payload.toJSONString()?.toNPSContent()?.npsContent)
+    }
+}
+
+// MARK: - Per-question answers
+
+extension ExperienceRenderStateTests {
+    func testEditingOneAnswerNotifiesOnlyThatQuestion() throws {
+        let (state, survey) = try startedListSurvey()
+        let openText = try XCTUnwrap(survey.modules.first { $0.type == .openText })
+        let email = try XCTUnwrap(survey.modules.first { $0.type == .singleInput })
+        var counts = (state: 0, own: 0, other: 0)
+        let subscriptions: [AnyCancellable] = [
+            state.objectWillChange.sink { counts.state += 1 },
+            state.answerModel(for: openText).objectWillChange.sink { counts.own += 1 },
+            state.answerModel(for: email).objectWillChange.sink { counts.other += 1 }
+        ]
+        var remeasures = 0
+        state.didChange = { remeasures += 1 }
+        state.updateText(for: openText) { $0.updateText("hello", for: openText) }
+        XCTAssertGreaterThan(counts.own, 0)
+        XCTAssertEqual(counts.other, 0)
+        XCTAssertEqual(counts.state, 0, "Typing doesn't redraw every question")
+        XCTAssertEqual(remeasures, 0, "Text inputs have fixed heights, so typing never re-measures the card")
+        XCTAssertEqual(state.answer(for: openText).text, "hello")
+        let choices = try XCTUnwrap(survey.modules.first { $0.type == .multipleChoice })
+        state.updateAnswer(for: choices) { $0.toggleChoice(2, for: choices) }
+        XCTAssertEqual(remeasures, 1, "A choice can reveal the Other field, so the host re-measures")
+        withExtendedLifetime(subscriptions) {}
+    }
+
+    func testCanSubmitPublishesOnlyWhenValidityChanges() throws {
+        let (state, survey) = try startedListSurvey()
+        let rating = try XCTUnwrap(survey.modules.first { $0.type == .likert })
+        XCTAssertFalse(state.canSubmit, "The rating is required")
+        var stateChanges = 0
+        let subscription = state.objectWillChange.sink { stateChanges += 1 }
+        state.updateAnswer(for: rating) { $0.rating = 4 }
+        XCTAssertTrue(state.canSubmit)
+        XCTAssertEqual(stateChanges, 1)
+        state.updateAnswer(for: rating) { $0.rating = 5 }
+        XCTAssertEqual(stateChanges, 1, "Still valid: nothing to publish")
+        withExtendedLifetime(subscription) {}
+    }
+
+    private func startedListSurvey() throws -> (ExperienceRenderState, SurveyContent) {
+        let survey = try MockContentFactory.makeQuestionSurvey(type: .list)
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .survey(content: survey) }
+        let state = ExperienceRenderState(.survey(SurveyViewModel(container: userpilot.container)))
+        state.start()
+        return (state, survey)
+    }
+}
+
+// MARK: - Image models
+
+extension ExperienceRenderStateTests {
+    /// Sizes come from payload numbers; an absurd natural size must not trap while keying the model.
+    func testImageModelKeyToleratesNonFiniteAndHugeSizes() {
+        let state = ExperienceRenderState(
+            .thankYou(MockContentFactory.makeSurveyContent(), MockContentFactory.makeSurveyTheme()))
+        let loader = MockImageLoader()
+        for size in [CGSize(width: 10, height: CGFloat.infinity), CGSize(width: 10, height: 1e30)] {
+            let model = state.imageModel(url: "https://example.com/a.png", blurHash: nil, size: size, loader: loader)
+            XCTAssertTrue(model === state.imageModel(
+                url: "https://example.com/a.png", blurHash: nil, size: size, loader: loader))
+        }
     }
 }

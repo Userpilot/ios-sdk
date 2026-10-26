@@ -525,6 +525,7 @@ extension ExperiencesPublisher {
     /// Picks the existing renderer and presentation style. UIKit work happens later on main.
     private func openExperience(_ operation: Operation) {
         guard let content = operation.content else { finish(operation); return }
+        let textScaling = config.enableTextScaling
         switch content {
         case .flow(let flow):
             openFlow(flow, operation)
@@ -533,49 +534,58 @@ extension ExperiencesPublisher {
         case .nps:
             showExperience(operation, makeViewModel: NPSViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.nps($0)), style: .bottomSheet)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.nps($0), textScaling: textScaling), style: .bottomSheet)
             }, style: .bottomSheet)
         }
     }
 
     /// Choose the flow's carousel or themed slideout renderer; creation remains on main.
     private func openFlow(_ flow: FlowContent, _ operation: Operation) {
+        let textScaling = config.enableTextScaling
         switch flow.type {
         case .carousel:
             showExperience(operation, makeViewModel: ExperienceViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.flow($0)), style: .fullScreen)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.flow($0), textScaling: textScaling), style: .fullScreen)
             }, style: .fullScreen)
         case .slideout where flow.isBottomSheet(using: themes):
             showExperience(operation, makeViewModel: ExperienceViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.flow($0)), style: .bottomSheet)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.flow($0), textScaling: textScaling), style: .bottomSheet)
             }, style: .bottomSheet)
         case .slideout:
             showExperience(operation, makeViewModel: ExperienceViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.flow($0)), style: .dialog)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.flow($0), textScaling: textScaling), style: .dialog)
             }, style: .dialog)
         }
     }
 
     /// Choose the list or themed survey renderer; showExperience reserves any thank-you continuation.
     private func openSurvey(_ survey: SurveyContent, _ operation: Operation) {
+        let textScaling = config.enableTextScaling
         switch survey.type {
         case .list:
             showExperience(operation, makeViewModel: SurveyViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.survey($0)), style: .fullScreen)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.survey($0), textScaling: textScaling), style: .fullScreen)
             }, style: .fullScreen)
         case .step where survey.isBottomSheet(using: themes):
             showExperience(operation, makeViewModel: SurveyViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.survey($0)), style: .bottomSheet)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.survey($0), textScaling: textScaling), style: .bottomSheet)
             }, style: .bottomSheet)
         case .step:
             showExperience(operation, makeViewModel: SurveyViewModel.init,
                            makeViewController: {
-                UPExperienceHostingController(state: ExperienceRenderState(.survey($0)), style: .dialog)
+                UPExperienceHostingController(
+                    state: ExperienceRenderState(.survey($0), textScaling: textScaling), style: .dialog)
             }, style: .dialog)
         }
     }
@@ -655,10 +665,10 @@ extension ExperiencesPublisher {
         case .fullScreen:
             controller.modalPresentationStyle = .fullScreen
             host.present(controller, animated: true)
-        case .dialog:
-            host.presentDialog(viewController: controller)
-        case .bottomSheet:
-            host.presentBottomSheet(viewController: controller)
+        case .dialog, .bottomSheet:
+            // The renderer animates its own card over a transparent full-screen presentation.
+            controller.modalPresentationStyle = .overFullScreen
+            host.present(controller, animated: false)
         }
     }
 
@@ -706,7 +716,8 @@ extension ExperiencesPublisher {
         submissionID: Int64
     ) {
         enqueuePresentation(operation, style: .bottomSheet) { publisher, shown in
-            let state = ExperienceRenderState(.thankYou(survey, theme))
+            let state = ExperienceRenderState(
+                .thankYou(survey, theme), textScaling: publisher.config.enableTextScaling)
             let controller = UPExperienceHostingController(state: state, style: .bottomSheet)
             state.actionButtonClicked = { [weak publisher] deepLink in
                 publisher?.onPresentation(shown) { publisher, operation in
@@ -788,8 +799,6 @@ extension ExperiencesPublisher {
         }
         if let experience = renderer as? UPExperience {
             experience.triggerCloseExperience(manualClose: manualClose, completion: completed)
-        } else if let sheet = renderer as? BottomSheetViewController {
-            sheet.dismissBottomSheet(completion: completed)
         } else {
             renderer.dismiss(animated: true, completion: completed)
         }

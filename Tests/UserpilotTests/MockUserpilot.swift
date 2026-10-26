@@ -75,10 +75,23 @@ class MockUserpilot: Userpilot {
 // MARK: - Mock Image Loader
 
 class MockImageLoader: ImageLoading {
-    var onLoadImage: ((UIImageView, String, String?, CGSize) -> Void)?
-    func loadImage(target: UIImageView, url: String, blurHash: String?, size: CGSize) {
-        onLoadImage?(target, url, blurHash, size)
+    /// Answers the closure API: return the image to deliver (as final) for a URL and decode size.
+    var onLoad: ((String, String?, CGSize) -> UIImage?)?
+    var cachedImages: [String: UIImage] = [:]
+    /// Every load started, in order, so tests can check what ran and what was cancelled.
+    private(set) var tasks: [ImageLoadTask] = []
+    @discardableResult
+    func loadImage(
+        url: String, blurHash: String?, size: CGSize, completion: @escaping (UIImage, Bool) -> Void
+    ) -> ImageLoadTask {
+        let task = ImageLoadTask()
+        tasks.append(task)
+        guard let image = onLoad?(url, blurHash, size) else { return task }
+        DispatchQueue.main.async { if !task.isCancelled { completion(image, true) } }
+        return task
     }
+
+    func cachedImage(url: String, size: CGSize) -> UIImage? { cachedImages[url] }
 }
 
 // MARK: - Mock Theme Handler

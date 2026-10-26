@@ -145,8 +145,6 @@ internal struct Metadata: Decodable {
 internal struct Choice: Decodable {
     let id: String?
     let value: String?
-    var isSelected: Bool? = false
-    var otherOptionText: String?
 }
 
 internal struct OtherChoice: Decodable {

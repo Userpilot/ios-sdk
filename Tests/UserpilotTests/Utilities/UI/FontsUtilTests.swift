@@ -32,51 +32,32 @@ final class FontsUtilTests: XCTestCase {
         XCTAssertNil(UIFontDescriptor.SystemDesign(string: nil))
     }
 
-    func testMatchingWithoutFontNameUsesSystemFontWithRequestedTraits() {
-        let font = UIFont.matching(
-            fontName: nil,
-            fontWeight: [.traitBold],
-            fontSize: 17
-        )
+    func testLookupWithoutFontNameUsesSystemFontWithRequestedTraits() {
+        let font = UIFont.lookup(fontName: nil, fontWeight: [.traitBold], fontSize: 17)
 
         XCTAssertGreaterThan(font.pointSize, 0)
         XCTAssertTrue(font.fontDescriptor.symbolicTraits.contains(.traitBold))
     }
 
-    func testMatchingUnknownFontFallsBackToUsableFont() {
-        let font = UIFont.matching(
-            fontName: "DefinitelyMissingFont",
-            fontWeight: [.traitItalic],
-            fontSize: 18
-        )
+    func testLookupUnknownFontFallsBackToUsableFont() {
+        let font = UIFont.lookup(fontName: "DefinitelyMissingFont", fontWeight: [.traitItalic], fontSize: 18)
 
         XCTAssertGreaterThan(font.pointSize, 0)
         XCTAssertTrue(font.fontDescriptor.symbolicTraits.contains(.traitItalic))
     }
 
-    func testNilFontNameKeepsTheRequestedSizeWithoutDynamicScaling() {
+    /// The renderer scales sizes itself, so a second scale here would double the text size.
+    func testLookupIgnoresTheSystemTextSize() {
         UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge).performAsCurrent {
-            let font = UIFont.matching(fontName: nil, fontWeight: [.traitBold], fontSize: 17)
-            XCTAssertEqual(font.pointSize, 17)
-            XCTAssertTrue(font.fontDescriptor.symbolicTraits.contains(.traitBold))
-        }
-    }
-
-    func testNamedFallbackUsesSizeBasedScalingWithTheRequestedTraits() {
-        UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge).performAsCurrent {
-            let traits: [UIFontDescriptor.SymbolicTraits] = [.traitBold, .traitItalic]
-            let baseFont = UIFont.matching(fontName: nil, fontWeight: traits, fontSize: 20)
-            let expected = UIFontMetrics(forTextStyle: .title1).scaledFont(for: baseFont)
-            let font = UIFont.matching(fontName: "Missing-Test-Font", fontWeight: traits, fontSize: 20)
-
-            XCTAssertEqual(font.fontName, expected.fontName)
-            XCTAssertEqual(font.pointSize, expected.pointSize)
+            XCTAssertEqual(UIFont.lookup(fontName: nil, fontWeight: [.traitBold], fontSize: 17).pointSize, 17)
+            XCTAssertEqual(UIFont.lookup(fontName: "Missing-Test-Font", fontWeight: [], fontSize: 20).pointSize, 20)
+            XCTAssertEqual(UIFont.lookup(fontName: "Monospaced", fontWeight: [], fontSize: 13).pointSize, 13)
         }
     }
 
     func testKnownUIKitFontWithoutBundleFileStillUsesSystemFallback() {
-        let font = UIFont.matching(fontName: "Courier", fontWeight: [], fontSize: 17)
-        let fallback = UIFont.matching(fontName: "Missing-Test-Font", fontWeight: [], fontSize: 17)
+        let font = UIFont.lookup(fontName: "Courier", fontWeight: [], fontSize: 17)
+        let fallback = UIFont.lookup(fontName: "Missing-Test-Font", fontWeight: [], fontSize: 17)
 
         XCTAssertEqual(font.fontName, fallback.fontName)
         XCTAssertEqual(font.pointSize, fallback.pointSize)
@@ -87,31 +68,10 @@ final class FontsUtilTests: XCTestCase {
             UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body).withDesign(.monospaced)
         )
         let boldDescriptor = descriptor.withSymbolicTraits(.traitBold) ?? descriptor
-        let expected = UIFontMetrics(forTextStyle: .body).scaledFont(
-            for: UIFont(descriptor: boldDescriptor, size: 17)
-        )
-        let font = UIFont.matching(fontName: "Monospaced", fontWeight: [.traitBold], fontSize: 17)
+        let expected = UIFont(descriptor: boldDescriptor, size: 17)
+        let font = UIFont.lookup(fontName: "Monospaced", fontWeight: [.traitBold], fontSize: 17)
 
         XCTAssertEqual(font.fontName, expected.fontName)
         XCTAssertEqual(font.pointSize, expected.pointSize)
-    }
-
-    func testTextStyleArgumentRetainsExistingSizeBasedBehavior() {
-        UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge).performAsCurrent {
-            let caption = UIFont.matching(fontName: "Default", fontWeight: [], fontSize: 17, textStyle: .caption1)
-            let title = UIFont.matching(fontName: "Default", fontWeight: [], fontSize: 17, textStyle: .title1)
-            XCTAssertEqual(caption.pointSize, title.pointSize)
-        }
-    }
-
-    func testMetricsPreserveCaptionBodyAndTitleBoundaries() {
-        let traits = UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge)
-        let cases: [(CGFloat, UIFont.TextStyle)] = [(15, .caption1), (16, .body), (19, .body), (20, .title1)]
-        for (size, style) in cases {
-            let baseFont = UIFont.systemFont(ofSize: size)
-            let actual = UIFontMetrics.metricFor(size: size).scaledFont(for: baseFont, compatibleWith: traits)
-            let expected = UIFontMetrics(forTextStyle: style).scaledFont(for: baseFont, compatibleWith: traits)
-            XCTAssertEqual(actual.pointSize, expected.pointSize, "Size \(size)")
-        }
     }
 }

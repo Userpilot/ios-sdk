@@ -22,18 +22,6 @@ internal extension Int {
     }
 }
 
-internal extension CGFloat {
-    var negative: CGFloat {
-        return -self
-    }
-}
-
-internal extension Comparable {
-    func clamped(to limits: ClosedRange<Self>) -> Self {
-        return min(max(self, limits.lowerBound), limits.upperBound)
-    }
-}
-
 internal extension Collection {
     subscript(safe index: Index) -> Element? {
         return indices.contains(index) ? self[index] : nil

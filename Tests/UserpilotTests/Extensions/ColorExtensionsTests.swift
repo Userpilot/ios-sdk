@@ -19,26 +19,11 @@ final class ColorExtensionsTests: XCTestCase {
         assertColor("#XYZXYZ".color, red: 0, green: 0, blue: 0)
     }
 
-    func testRGBAStringParsingAndClamping() {
-        assertColor("rgba(255, 128, 0, 0.25)".rgbaToColor(), red: 255, green: 128, blue: 0, alpha: 0.25)
-        assertColor("rgba(300, 999, 1, 2.0)".rgbaToColor(), red: 255, green: 255, blue: 1, alpha: 1.0)
-        XCTAssertEqual("rgb(255, 0, 0)".rgbaToColor(), UIColor.clear)
-        XCTAssertEqual("not-rgba".rgbaToColor(), UIColor.clear)
-    }
-
     func testColorStringTransformations() {
         XCTAssertEqual("#FFFFFF".invertColor(), "#000000")
         XCTAssertEqual("#000000".invertColor(), "#FFFFFF")
         XCTAssertEqual("#123456".invertColor(blackWhite: false), "#EDCBA9")
         XCTAssertEqual("#03F".invertColor(), "0033FF")
-        XCTAssertEqual("rgb(10, 20, 30)".updateRgbaOpacity(opacity: "0.4"), "rgba(10, 20, 30, 0.4)")
-        XCTAssertEqual("rgba(10, 20, 30, 1)".updateRgbaOpacity(opacity: "0.4"), "rgba(10, 20, 30, 0.4)")
-        XCTAssertNil("#FFFFFF".updateRgbaOpacity(opacity: "0.4"))
-        XCTAssertNil("hsl(120, 100%, 50%)".updateRgbaOpacity(opacity: "0.4"))
-        XCTAssertEqual("#FF0000".hexToRgb(), "rgb(255, 0, 0)")
-        XCTAssertEqual("00FF00".hexToRgb(), "rgb(0, 255, 0)")
-        XCTAssertEqual("#0000FF".hexToRgb(), "rgb(0, 0, 255)")
-        XCTAssertEqual("#336699".hexToRgb(), "rgb(51, 102, 153)")
     }
 
     func testUIColorHexInitializersAndHelpers() throws {

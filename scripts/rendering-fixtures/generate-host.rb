@@ -16,8 +16,10 @@ app.add_file_references([project.main_group.new_file(app_source)])
    Tests/UserpilotTests/Experiences/MockContentFactory.swift].each do |path|
   app.add_file_references([project.main_group.new_file(File.join(sdk_root, path))])
 end
-ui_tests.add_file_references([project.main_group.new_file(
-  File.join(sdk_root, 'scripts/rendering-fixtures/CarouselGestureTests.swift'))])
+%w[CarouselGestureTests.swift CarouselDirectionTests.swift VoiceOverFixtureTests.swift].each do |name|
+  ui_tests.add_file_references([project.main_group.new_file(
+    File.join(sdk_root, 'scripts/rendering-fixtures', name))])
+end
 Dir.glob(File.join(sdk_root, 'Tests/UserpilotTests/**/*.swift')).sort.each do |file|
   tests.add_file_references([project.main_group.new_file(file)])
 end
