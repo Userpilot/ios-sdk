@@ -193,11 +193,14 @@ If you have additional configuration needs, you can pass a custom configuration 
 
 Interaction value capture is disabled by default. Call `.enableInteractionValueCapture(true)` on the configuration to capture control values when interaction autocapture is enabled.
 
+Experience text keeps its authored size by default. Call `.enableTextScaling(true)` to let it follow the user's Dynamic Type (Text Size) setting, up to about twice the authored size.
+
 ```swift
 userpilot = Userpilot(
     config: Userpilot.Config(token: "APP_TOKEN")
         .logging(enabled: true) // Enable or disable logging.
         .enableUseInAppBrowser(true) // Enable Open external link In-app browser using SFSafariViewController.
+        .enableTextScaling(true) // Let experience text follow Dynamic Type, up to about 2x (default false).
         .disableRequestPushNotificationsPermission() // Disable SDK push permission request flow (default false).
 )
 userpilot.navigationDelegate = self

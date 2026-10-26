@@ -67,6 +67,9 @@ extension Userpilot {
         /// Open external link In-app browser using SFSafariViewController
         var useInAppBrowser: Bool = false
 
+        /// Whether experience text follows the user's Dynamic Type size. Defaults to false (authored sizes).
+        var enableTextScaling: Bool = false
+
         // MARK: - Autocapture Configuration Options
 
         /// Whether or not to enable screen autocapture. Defaults to false.
@@ -242,6 +245,19 @@ extension Userpilot {
         @objc
         public func enableUseInAppBrowser(_ enabled: Bool = true) -> Self {
             useInAppBrowser = enabled
+            return self
+        }
+
+        /// Lets experience text follow the user's Dynamic Type (Text Size) setting.
+        ///
+        /// By default, experience text keeps the size authored in Userpilot. When enabled, it scales
+        /// with the user's text size, live, up to about twice the authored size.
+        /// - Parameter enabled: A boolean indicating whether experience text scales with Dynamic Type.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableTextScaling(_ enabled: Bool = true) -> Self {
+            enableTextScaling = enabled
             return self
         }
 

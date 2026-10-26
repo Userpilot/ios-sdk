@@ -24,7 +24,14 @@ If a custom font is unavailable, the SDK gracefully falls back to a system font 
 The SDK interprets symbolic traits such as bold or italic to create the desired font weight. A helper method, systemFont(for:fontWeight:size:), ensures the appropriate weight is applied to system fonts when no custom font is available.
 
 ### Dynamic Type Support
-For a configured font name, `UIFontMetrics` scales the resolved font using size-based styles: `.caption1` at 15 points or less, `.title1` at 20 points or more, and `.body` between them. Without a configured name, the existing fallback returns the unscaled system font.
+Experience text keeps the size authored in Userpilot by default. To let it follow the user's Text Size setting, enable text scaling on the configuration:
+
+```swift
+userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
+    .enableTextScaling(true))
+```
+
+With ``Userpilot/Config/enableTextScaling(_:)`` enabled, every experience text scales by the same Dynamic Type factor (the body text style), so headings stay larger than body text. Text grows up to about twice its authored size (the accessibility Large setting) and updates live when the user changes the setting while an experience is on screen. Text scaling is **off by default**.
 
 ### Missing Custom Fonts
 
