@@ -47,14 +47,15 @@ internal struct UPExperienceSections: View {
         case .image:
             image(line)
         case .iconText:
-            HStack(alignment: .top, spacing: 12) {
+            // As on Android: the icon is centred beside the text, fills its square and shows the blur first.
+            HStack(alignment: .center, spacing: UPExperienceLayout.iconTextSpacing) {
                 if let icon = line.attrs?.icon {
-                    let size = ThemeHandler.DefaultValues.iconImageSize
+                    let size = CGSize(width: UPExperienceLayout.iconSize, height: UPExperienceLayout.iconSize)
                     UPExperienceImage(
-                        model: state.imageModel(url: icon, blurHash: nil, size: size, loader: loader),
-                        size: size, alt: line.attrs?.alt ?? "")
+                        model: state.imageModel(url: icon, blurHash: line.attrs?.hash, size: size, loader: loader),
+                        size: size, fills: true, alt: line.attrs?.alt ?? "")
                 }
-                richText(line, width: max(1, width - ThemeHandler.DefaultValues.iconImageSize.width - 12))
+                richText(line, width: max(1, width - UPExperienceLayout.iconSize - UPExperienceLayout.iconTextSpacing))
             }
         case .button:
             UPExperienceButton(

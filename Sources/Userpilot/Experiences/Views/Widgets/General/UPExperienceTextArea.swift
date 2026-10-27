@@ -20,7 +20,7 @@ internal struct UPExperienceTextArea: View {
     let placeholder: String
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .trailing, spacing: UPExperienceLayout.counterSpacing) {
             ZStack(alignment: .topLeading) {
                 UPExperienceTextView(
                     text: $text, color: textColor, placeholder: placeholder,
@@ -38,7 +38,7 @@ internal struct UPExperienceTextArea: View {
                 }
             }
             // Fixed height that grows only with text size, so typing never resizes the card.
-            .frame(height: UPExperienceStyle.scaledSize(120, for: sizeCategory))
+            .frame(height: UPExperienceStyle.scaledSize(UPExperienceLayout.textAreaHeight, for: sizeCategory))
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(
                 Color(ThemeHandler.DefaultValues.grayColor), lineWidth: 1))

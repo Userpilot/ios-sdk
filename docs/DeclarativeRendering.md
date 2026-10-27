@@ -66,8 +66,14 @@ source of eligibility, payload decoding and business behavior.
 
 - Carousel swipes use the whole screen, including the action/footer and blank areas. The page's
   theme and content travel together; button actions from an adjacent page cannot act on the current step.
-- Flow sections/lines, survey elements and body-to-action spacing use one 16-point rhythm. Existing
-  20-point content insets remain.
+- Flow sections/lines and body-to-action spacing use one 16-point rhythm. Existing 20-point content
+  insets remain. Survey and rating spacing comes from `UPExperienceLayout`, which Android mirrors value
+  for value: 32 between list questions, 4 from title to description, 8 to the answer control (field,
+  choices or scale) so each title reads with its own field, 8 between bordered choice rows and rating cells, 6 from a scale to its labels, an 80-point
+  open-text box with its counter 4 below, 38-point list icons (filling their square) 8 from the text,
+  and unfilled rating cells at 10% primary. Sheets and dialogs hug their content up to 80% of the space.
+- Every rating cell up to the chosen one fills, NPS included. List-line icons show the blur from their
+  `attrs.hash` while loading, as images do.
 - Bottom sheets look as they did before the SwiftUI renderer: full width, attached to the bottom edge and
   running under the home indicator, with only the top corners rounded. Their content stays inside the safe
   area (the notch in landscape, the home indicator); with the keyboard up the sheet sits on the keyboard.
@@ -110,11 +116,11 @@ source of eligibility, payload decoding and business behavior.
   control, so the same dismissal events are reported. It does nothing when the experience shows no
   close control (a flow with its dismiss button disabled).
 - **Reduce Motion** also shows a GIF's first frame; animated images ignore Smart Invert.
-- **Pickers open inline**, so they keep the experience's text size and style: the date field opens
-  Apple's inline calendar (graphical style) below it and picking a day fills it; the phone country code
-  is a SwiftUI `Menu` with a checkmarked `Picker`. iOS 13 has neither, so both fall back to Apple's
-  wheel below the field. These two picker styles are the only `#available` swaps in the renderer, and
-  they are cosmetic; there are no sheets.
+- **Pickers:** the calendar button inside the date field opens Apple's calendar (graphical style) in a
+  sheet with Cancel and OK, on the typed date when there is one; OK fills the field. Android opens
+  Material's date dialog the same way. The phone country code sits inside the field as a SwiftUI `Menu`
+  with a checkmarked `Picker`. iOS 13 has neither style, so the sheet shows Apple's wheel and the
+  country code opens a wheel below the field. These are the only `#available` swaps in the renderer.
 - **Light or dark follows the experience**, not the device: the host sets `overrideUserInterfaceStyle`
   from the experience background, so the calendar, the menu, the keyboard and system text-field
   backgrounds match the card.

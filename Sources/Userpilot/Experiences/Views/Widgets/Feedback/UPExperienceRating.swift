@@ -35,7 +35,7 @@ internal struct UPExperienceRating: View {
     /// The cell that was just chosen; it pulses once.
     @State private var pulsing: Int?
 
-    static let spacing: CGFloat = 8
+    static let spacing = UPExperienceLayout.ratingSpacing
 
     /// How many cells fit in a row, and how wide each one is, for `count` cells across `width`.
     /// As many columns as keep every cell at least `minimumCellWidth`; the rest wrap to new rows.
@@ -94,7 +94,7 @@ internal struct UPExperienceRating: View {
                 .frame(width: layout.cellWidth, height: UPExperienceStyle.scaledSize(44, for: sizeCategory))
                 // Filled cells use black or white, whichever reads on the primary color.
                 .foregroundColor(Color(filled ? (primary.isLightColor() ? .black : .white) : textColor))
-                .background(Color(primary).opacity(filled ? 1 : 0.2))
+                .background(Color(primary).opacity(filled ? 1 : UPExperienceLayout.ratingUnfilledOpacity))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(primary), lineWidth: chosen ? 1 : 0))
             }

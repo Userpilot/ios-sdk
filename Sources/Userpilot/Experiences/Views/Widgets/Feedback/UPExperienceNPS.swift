@@ -73,17 +73,19 @@ internal struct UPExperienceNPS: View {
                     size: size)
             }
             title(content.content.survey.question ?? "", theme)
-            UPExperienceRating(
-                items: UPRatingItem.npsScale, selected: state.npsScore,
-                primary: theme.primaryColor, textColor: theme.textColor,
-                fontFamily: theme.fontFamily, width: width, onSelect: state.selectNPSScore)
-            HStack(alignment: .top) {
-                UPExperienceText(
-                    text: content.content.survey.lowScore ?? "", color: theme.textColor,
-                    fontFamily: theme.fontFamily, size: UPExperienceLayout.footnoteSize)
-                UPExperienceText(
-                    text: content.content.survey.highScore ?? "", color: theme.textColor,
-                    fontFamily: theme.fontFamily, size: UPExperienceLayout.footnoteSize, alignment: .trailing)
+            VStack(spacing: UPExperienceLayout.scaleLabelSpacing) {
+                UPExperienceRating(
+                    items: UPRatingItem.npsScale, selected: state.npsScore,
+                    primary: theme.primaryColor, textColor: theme.textColor,
+                    fontFamily: theme.fontFamily, width: width, onSelect: state.selectNPSScore)
+                HStack(alignment: .top) {
+                    UPExperienceText(
+                        text: content.content.survey.lowScore ?? "", color: theme.textColor,
+                        fontFamily: theme.fontFamily, size: UPExperienceLayout.footnoteSize)
+                    UPExperienceText(
+                        text: content.content.survey.highScore ?? "", color: theme.textColor,
+                        fontFamily: theme.fontFamily, size: UPExperienceLayout.footnoteSize, alignment: .trailing)
+                }
             }
         }
     }

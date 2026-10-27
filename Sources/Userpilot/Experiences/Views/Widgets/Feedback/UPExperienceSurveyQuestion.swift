@@ -39,18 +39,22 @@ internal struct UPExperienceSurveyQuestion: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: UPExperienceLayout.spacing) {
-            // Required questions are marked with an asterisk.
+        // Spaced as on Android: title, description just under it, then the answer control.
+        VStack(alignment: .leading, spacing: 0) {
+            // Required questions are marked with a red asterisk.
             UPExperienceText(
-                text: (step.question ?? "") + (step.isRequired == true ? " *" : ""),
+                text: step.question ?? "",
                 color: theme.textColor, fontFamily: theme.fontFamily,
-                size: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize), bold: true)
+                size: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize), bold: true,
+                suffix: step.isRequired == true ? " *" : "")
             if let subtitle = step.subheader, !subtitle.isEmpty {
                 UPExperienceText(
                     text: subtitle, color: theme.textColor, fontFamily: theme.fontFamily,
                     size: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
+                    .padding(.top, UPExperienceLayout.titleSpacing)
             }
             control
+                .padding(.top, UPExperienceLayout.controlSpacing)
         }
     }
 
@@ -58,21 +62,23 @@ internal struct UPExperienceSurveyQuestion: View {
     private var control: some View {
         switch step.type {
         case .likert:
-            UPExperienceRating(
-                items: step.ratingItems, selected: answer.rating,
-                primary: theme.primaryColor, textColor: theme.textColor,
-                fontFamily: theme.fontFamily, width: width
-            ) { rating in
-                state.updateAnswer(for: step) { $0.rating = rating }
-            }
-            // Low and high score labels under the scale's two ends.
-            HStack(alignment: .top) {
-                UPExperienceText(
-                    text: step.metadata?.lowScore ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
-                    size: UPExperienceLayout.footnoteSize)
-                UPExperienceText(
-                    text: step.metadata?.highScore ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
-                    size: UPExperienceLayout.footnoteSize, alignment: .trailing)
+            VStack(spacing: UPExperienceLayout.scaleLabelSpacing) {
+                UPExperienceRating(
+                    items: step.ratingItems, selected: answer.rating,
+                    primary: theme.primaryColor, textColor: theme.textColor,
+                    fontFamily: theme.fontFamily, width: width
+                ) { rating in
+                    state.updateAnswer(for: step) { $0.rating = rating }
+                }
+                // Low and high score labels under the scale's two ends.
+                HStack(alignment: .top) {
+                    UPExperienceText(
+                        text: step.metadata?.lowScore ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
+                        size: UPExperienceLayout.footnoteSize)
+                    UPExperienceText(
+                        text: step.metadata?.highScore ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
+                        size: UPExperienceLayout.footnoteSize, alignment: .trailing)
+                }
             }
         case .multipleChoice: choices
         case .openText:
@@ -85,7 +91,7 @@ internal struct UPExperienceSurveyQuestion: View {
     }
 
     private var choices: some View {
-        VStack(spacing: UPExperienceLayout.spacing) {
+        VStack(spacing: UPExperienceLayout.choiceSpacing) {
             ForEach((step.metadata?.choices ?? []).indices, id: \.self) { index in
                 choiceButton(index, title: step.metadata?.choices?[index].value ?? "")
             }
@@ -140,23 +146,22 @@ internal struct UPExperienceSurveyQuestion: View {
     @ViewBuilder
     private var singleInput: some View {
         if step.metadata?.inputType == .date {
-            VStack(spacing: 8) {
-                HStack {
-                    TextField("dd/mm/yyyy", text: text)
-                        .keyboardType(.numberPad)
-                        .experienceFont(theme.fontFamily, size: UPExperienceLayout.bodySize)
-                        .foregroundColor(Color(theme.textColor))
-                    Button(action: toggleDatePicker, label: {
-                        Image(systemName: "calendar").foregroundColor(Color(theme.textColor))
-                    }).accessibility(label: Text("Choose date"))
-                }
-                .padding(12)
-                .frame(minHeight: 50)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(theme.textSecondaryColor), lineWidth: 1))
-                if showsDatePicker { inlineDatePicker }
+            HStack {
+                TextField("dd/mm/yyyy", text: text)
+                    .keyboardType(.numberPad)
+                    .experienceFont(theme.fontFamily, size: UPExperienceLayout.bodySize)
+                    .foregroundColor(Color(theme.textColor))
+                Button(action: openDatePicker, label: {
+                    Image(systemName: "calendar").foregroundColor(Color(theme.textColor))
+                }).accessibility(label: Text("Choose date"))
             }
+            .padding(12)
+            .frame(minHeight: 50)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(theme.textSecondaryColor), lineWidth: 1))
+            // Apple's calendar in a sheet with Cancel and OK, as Android opens Material's date dialog.
+            .sheet(isPresented: $showsDatePicker) { datePickerSheet }
         } else {
-            VStack(spacing: 8) {
+            VStack(spacing: UPExperienceLayout.fieldSpacing) {
                 HStack {
                     if step.metadata?.inputType == .phone { countryCodeButton }
                     TextField(step.metadata?.placeholder ?? "", text: text)
@@ -174,37 +179,37 @@ internal struct UPExperienceSurveyQuestion: View {
         }
     }
 
-    private func toggleDatePicker() {
+    private func openDatePicker() {
         // Open on the typed date when there is one.
-        if !showsDatePicker, let date = Self.dateFormatter.date(from: answer.text) { selectedDate = date }
-        showsDatePicker.toggle()
-        // The inline picker changes the card's height.
-        state.remeasure()
+        selectedDate = Self.dateFormatter.date(from: answer.text) ?? Date()
+        showsDatePicker = true
     }
 
-    /// Apple's inline calendar on iOS 14+; iOS 13 has only the wheel. Picking a day fills the field.
+    /// OK writes the picked day; Cancel leaves the answer as it was.
+    private var datePickerSheet: some View {
+        NavigationView {
+            datePicker
+                .padding()
+                .navigationBarItems(
+                    leading: Button("Cancel") { showsDatePicker = false },
+                    trailing: Button("OK") {
+                        state.updateAnswer(for: step) { $0.text = Self.dateFormatter.string(from: selectedDate) }
+                        showsDatePicker = false
+                    })
+        }
+        .accentColor(Color(theme.primaryColor))
+    }
+
+    /// Apple's calendar on iOS 14+; iOS 13 has only the wheel.
     @ViewBuilder
-    private var inlineDatePicker: some View {
-        let date = SwiftUI.Binding<Date>(
-            get: { selectedDate },
-            set: { value in
-                selectedDate = value
-                state.updateAnswer(for: step) { $0.text = Self.dateFormatter.string(from: value) }
-                // The calendar closes after a pick; the iOS 13 wheel stays open while it spins.
-                if #available(iOS 14.0, *) {
-                    showsDatePicker = false
-                    state.remeasure()
-                }
-            })
+    private var datePicker: some View {
         if #available(iOS 14.0, *) {
-            DatePicker("", selection: date, displayedComponents: .date)
+            DatePicker("", selection: $selectedDate, displayedComponents: .date)
                 .datePickerStyle(GraphicalDatePickerStyle())
                 .labelsHidden()
-                .accentColor(Color(theme.primaryColor))
         } else {
-            DatePicker("", selection: date, displayedComponents: .date)
+            DatePicker("", selection: $selectedDate, displayedComponents: .date)
                 .labelsHidden()
-                .accentColor(Color(theme.primaryColor))
         }
     }
 

@@ -19,6 +19,8 @@ internal struct UPExperienceImage: View {
     var size = CGSize(width: 100, height: 100)
     /// `object_fit: fill` stretches to the box, as `scaleToFill` did; anything else fits.
     var stretches = false
+    /// Fills the box at the image's own aspect and crops the rest, as list-line icons do on Android.
+    var fills = false
     var radius: CGFloat = 0
     var alt = ""
 
@@ -47,9 +49,12 @@ internal struct UPExperienceImage: View {
     @ViewBuilder
     private func pixels(_ image: UIImage) -> some View {
         if let frames = image.images, frames.count > 1 {
-            UPAnimatedImageView(image: reduceMotion ? frames[0] : image, stretches: stretches)
+            UPAnimatedImageView(image: reduceMotion ? frames[0] : image, stretches: stretches, fills: fills)
         } else if stretches {
             Image(uiImage: image).resizable()
+        } else if fills {
+            Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                .frame(width: size.width, height: size.height)
         } else {
             Image(uiImage: image).resizable().aspectRatio(contentMode: .fit)
         }
@@ -60,6 +65,7 @@ internal struct UPExperienceImage: View {
 private struct UPAnimatedImageView: UIViewRepresentable {
     let image: UIImage
     let stretches: Bool
+    let fills: Bool
 
     func makeUIView(context: Context) -> ImageView {
         let view = ImageView()
@@ -70,7 +76,7 @@ private struct UPAnimatedImageView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: ImageView, context: Context) {
-        view.contentMode = stretches ? .scaleToFill : .scaleAspectFit
+        view.contentMode = stretches ? .scaleToFill : fills ? .scaleAspectFill : .scaleAspectFit
         if view.image !== image { view.image = image }
     }
 

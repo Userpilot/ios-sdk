@@ -449,8 +449,9 @@ private extension UPExperienceHostingController {
         let headerSize = ceil(headerController?.sizeThatFits(in: proposal).height ?? 0)
         let footerSize = ceil(footerController?.sizeThatFits(in: proposal).height ?? 0)
         let total = contentSize + headerSize + footerSize
-        // Dialogs and sheets hug their content, up to 90% of the space; beyond that the body scrolls.
-        let height = style == .fullScreen ? availableHeight : min(total, availableHeight * 0.9)
+        // Dialogs and sheets hug their content, up to 80% of the space; beyond that the body scrolls.
+        let height = style == .fullScreen
+            ? availableHeight : min(total, availableHeight * UPExperienceLayout.cardMaxHeightFraction)
         setHeight(contentHeight, contentSize)
         setHeight(headerHeight, headerSize)
         setHeight(footerHeight, footerSize)

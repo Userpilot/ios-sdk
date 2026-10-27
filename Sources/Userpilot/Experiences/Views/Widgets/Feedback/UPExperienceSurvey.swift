@@ -19,7 +19,8 @@ internal struct UPExperienceSurvey: View {
     var body: some View {
         Group {
             if let survey = model.surveyContent, let theme = model.surveyTheme {
-                VStack(spacing: UPExperienceLayout.spacing) {
+                // The body holds only questions, so its spacing is the gap between list questions.
+                VStack(spacing: region == .content ? UPExperienceLayout.questionSpacing : UPExperienceLayout.spacing) {
                     if region == .header {
                         UPExperienceDismiss(color: theme.textColor, action: state.userClose)
                     }
