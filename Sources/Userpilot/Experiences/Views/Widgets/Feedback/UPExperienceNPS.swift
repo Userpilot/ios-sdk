@@ -24,14 +24,7 @@ internal struct UPExperienceNPS: View {
                     if region == .header {
                         HStack {
                             Spacer()
-                            Button(action: state.userClose) {
-                                Text(closeTitle(content))
-                                    .experienceFont(theme.fontFamily, size: UPExperienceLayout.bodySize)
-                            }
-                            .foregroundColor(Color(theme.textColor))
-                            .padding(12)
-                            .background(Color(theme.textColor).opacity(0.08))
-                            .clipShape(Capsule())
+                            dismissChip(closeTitle(content), theme)
                         }
                     }
                     // Stage 0 scores, 1 asks for feedback, 2 thanks. Only the score stage has no footer.
@@ -64,6 +57,37 @@ internal struct UPExperienceNPS: View {
         }
     }
 
+    /// The chip, shaded against the card as in the previous release and on Android.
+    private func dismissChip(_ title: String, _ theme: NPSTheme) -> some View {
+        let height = ThemeHandler.DefaultValues.npsDismissButtonHeight
+        let overlay = Self.dismissChipOverlay(brightness: theme.backgroundColor.perceivedBrightness())
+        let radius = min(theme.borderRadius, ThemeHandler.DefaultValues.npsDismissButtonMaxCornerRadius)
+        return Button(action: state.userClose) {
+            Text(title)
+                .experienceFont(theme.fontFamily, size: ThemeHandler.DefaultValues.npsDismissButtonTextSize)
+                .foregroundColor(Color(overlay.withAlphaComponent(1)))
+                .padding(.horizontal, ThemeHandler.DefaultValues.npsDismissButtonPadding)
+                // A minimum height, so scaled text grows the chip instead of clipping.
+                .frame(minHeight: height)
+                .background(Color(overlay))
+                .clipShape(RoundedRectangle(cornerRadius: radius))
+                // Taps reach 5 pt past the chip's top and bottom: Apple's 44 pt target, same layout.
+                .contentShape(Rectangle().inset(by: (height - UPExperienceLayout.touchTargetSize) / 2))
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    /// The chip over a background of this perceived `brightness` (0 to 1): light over dark, dark otherwise.
+    static func dismissChipOverlay(brightness: CGFloat) -> UIColor {
+        if brightness < ThemeHandler.DefaultValues.npsDismissDarkBackgroundBrightness {
+            return UIColor.white.withAlphaComponent(ThemeHandler.DefaultValues.npsDismissButtonLightenOpacity)
+        }
+        return UIColor.black.withAlphaComponent(
+            brightness > ThemeHandler.DefaultValues.npsDismissLightBackgroundBrightness
+                ? ThemeHandler.DefaultValues.npsDismissButtonSoftDarkenOpacity
+                : ThemeHandler.DefaultValues.npsDismissButtonDarkenOpacity)
+    }
+
     private func score(_ content: NPSContent, _ theme: NPSTheme) -> some View {
         VStack(spacing: UPExperienceLayout.spacing) {
             if let logo = theme.logo, !logo.isEmpty {
@@ -76,15 +100,16 @@ internal struct UPExperienceNPS: View {
             VStack(spacing: UPExperienceLayout.scaleLabelSpacing) {
                 UPExperienceRating(
                     items: UPRatingItem.npsScale, selected: state.npsScore,
-                    primary: theme.primaryColor, textColor: theme.textColor,
-                    fontFamily: theme.fontFamily, width: width, onSelect: state.selectNPSScore)
+                    primary: theme.primaryColor, filledContent: theme.primaryColorAsString.invertColor().color,
+                    textColor: theme.textColor, fontFamily: theme.fontFamily, width: width,
+                    onSelect: state.selectNPSScore)
                 HStack(alignment: .top) {
                     UPExperienceText(
                         text: content.content.survey.lowScore ?? "", color: theme.textColor,
-                        fontFamily: theme.fontFamily, size: UPExperienceLayout.footnoteSize)
+                        fontFamily: theme.fontFamily, size: UPExperienceLayout.scaleLabelSize)
                     UPExperienceText(
                         text: content.content.survey.highScore ?? "", color: theme.textColor,
-                        fontFamily: theme.fontFamily, size: UPExperienceLayout.footnoteSize, alignment: .trailing)
+                        fontFamily: theme.fontFamily, size: UPExperienceLayout.scaleLabelSize, alignment: .trailing)
                 }
             }
         }

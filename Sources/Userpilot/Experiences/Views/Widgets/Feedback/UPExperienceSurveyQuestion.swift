@@ -65,8 +65,8 @@ internal struct UPExperienceSurveyQuestion: View {
             VStack(spacing: UPExperienceLayout.scaleLabelSpacing) {
                 UPExperienceRating(
                     items: step.ratingItems, selected: answer.rating,
-                    primary: theme.primaryColor, textColor: theme.textColor,
-                    fontFamily: theme.fontFamily, width: width
+                    primary: theme.primaryColor, filledContent: theme.primaryColorAsString.invertColor().color,
+                    textColor: theme.textColor, fontFamily: theme.fontFamily, width: width
                 ) { rating in
                     state.updateAnswer(for: step) { $0.rating = rating }
                 }
@@ -74,10 +74,10 @@ internal struct UPExperienceSurveyQuestion: View {
                 HStack(alignment: .top) {
                     UPExperienceText(
                         text: step.metadata?.lowScore ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
-                        size: UPExperienceLayout.footnoteSize)
+                        size: UPExperienceLayout.scaleLabelSize)
                     UPExperienceText(
                         text: step.metadata?.highScore ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
-                        size: UPExperienceLayout.footnoteSize, alignment: .trailing)
+                        size: UPExperienceLayout.scaleLabelSize, alignment: .trailing)
                 }
             }
         case .multipleChoice: choices

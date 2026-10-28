@@ -130,10 +130,12 @@ private struct UPExperienceCarouselPage: View {
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                // The header only holds the close button.
+                // The header only holds the close button; its symbol sits as far below the top as the
+                // last item sits above the bottom, as on sheets and dialogs.
                 if theme.isDismissButtonEnabled {
                     region(.header, width: geometry.size.width)
-                        .padding(.vertical, UPExperienceLayout.spacing)
+                        .padding(.top, UPExperienceLayout.closeTopPadding)
+                        .padding(.bottom, UPExperienceLayout.spacing)
                 }
                 // Body scrolls on its own and sits at the theme's alignment in the space left over.
                 GeometryReader { contentGeometry in

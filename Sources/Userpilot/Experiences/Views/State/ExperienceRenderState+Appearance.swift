@@ -15,6 +15,13 @@ extension ExperienceRenderState {
     /// The header region holds the close control.
     var hasHeader: Bool { showsCloseControl }
 
+    /// Above the header: the close symbol sits `spacing` below the card edge, as the last item sits above it.
+    /// The NPS chip is a visible box, so its own edge takes that space.
+    var headerTopPadding: CGFloat {
+        if case .nps = content { return UPExperienceLayout.spacing }
+        return UPExperienceLayout.closeTopPadding
+    }
+
     /// Flows show one when their theme enables it; surveys, NPS and thank-you screens always do.
     var showsCloseControl: Bool {
         if case .flow(let model) = content { return flowTheme(model).isDismissButtonEnabled }

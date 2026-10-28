@@ -71,7 +71,18 @@ source of eligibility, payload decoding and business behavior.
   for value: 32 between list questions, 4 from title to description, 8 to the answer control (field,
   choices or scale) so each title reads with its own field, 8 between bordered choice rows and rating cells, 6 from a scale to its labels, an 80-point
   open-text box with its counter 4 below, 38-point list icons (filling their square) 8 from the text,
-  and unfilled rating cells at 10% primary. Sheets and dialogs hug their content up to 80% of the space.
+  and unfilled rating cells at 20% primary (the theme's secondary color, as before). Sheets and dialogs
+  hug their content up to 80% of the space.
+- On sheets, dialogs and carousels the close symbol (or the NPS chip) sits 16 below the card's top edge,
+  the same space as below the last item: a close header's top padding (`headerTopPadding`, from
+  `closeTopPadding`) takes away the spare room the 44-point target (`touchTargetSize`) leaves above the
+  16-point symbol (`closeGlyphSize`, its point size; the drawn xmark is a little smaller). Android uses
+  the same rule.
+- Rating scales keep one row up to five cells and split longer ones over two rows, the fuller one on top
+  (NPS: 6 + 5); numbers are regular 16 and the low/high labels 12. Cells are 44 points tall and share the
+  row's width, so on phones up to 375 points wide an NPS cell is narrower than 44 (about 35 on a
+  320-point phone). The NPS chip (`ThemeHandler.DefaultValues`) is 34 high with 20 side padding and
+  14-point text, shaded by the card's brightness; its tap area reaches 5 points above and below it, to 44.
 - Every rating cell up to the chosen one fills, NPS included. List-line icons show the blur from their
   `attrs.hash` while loading, as images do.
 - Bottom sheets look as they did before the SwiftUI renderer: full width, attached to the bottom edge and
@@ -165,7 +176,7 @@ follow-up and completion content using the displayed score: 0–6, 7–8, 9–10
 ## Validation
 
 Tests cover logic and models only: render state and NPS stages, answers and payloads, text runs, the image
-size rule, rating cells, style and text scaling, image model and loader cancellation, and the publisher.
+size rule, rating cells and rows, the NPS chip shade, the header top padding, style and text scaling, image model and loader cancellation, and the publisher.
 Rendered UI, animation, gestures and VoiceOver are reviewed manually on devices; there are no UI test suites
 or app-hosted fixture harnesses.
 

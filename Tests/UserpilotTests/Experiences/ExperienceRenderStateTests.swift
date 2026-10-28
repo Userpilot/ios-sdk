@@ -266,3 +266,16 @@ extension ExperienceRenderStateTests {
         }
     }
 }
+
+// MARK: - Header spacing
+
+extension ExperienceRenderStateTests {
+    /// The close symbol (16 pt in a 44 pt target) or the NPS chip's own edge sits 16 pt below the card edge.
+    func testHeaderTopPaddingPutsTheCloseSymbolOrNPSChipSixteenBelowTheEdge() {
+        let thankYou = ExperienceRenderState(
+            .thankYou(MockContentFactory.makeSurveyContent(), MockContentFactory.makeSurveyTheme()))
+        XCTAssertEqual(thankYou.headerTopPadding, 2)
+        let nps = ExperienceRenderState(.nps(NPSViewModel(container: userpilot.container)))
+        XCTAssertEqual(nps.headerTopPadding, 16)
+    }
+}

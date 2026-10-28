@@ -28,6 +28,8 @@ internal struct UPExperienceRating: View {
     let items: [UPRatingItem]
     let selected: Int?
     let primary: UIColor
+    /// Numbers and icons on a filled cell: the primary color's black or white inverse, as on buttons.
+    let filledContent: UIColor
     let textColor: UIColor
     let fontFamily: String?
     let width: CGFloat
@@ -37,19 +39,15 @@ internal struct UPExperienceRating: View {
 
     static let spacing = UPExperienceLayout.ratingSpacing
 
-    /// How many cells fit in a row, and how wide each one is, for `count` cells across `width`.
-    /// As many columns as keep every cell at least `minimumCellWidth`; the rest wrap to new rows.
-    static func grid(count: Int, width: CGFloat, minimumCellWidth: CGFloat) -> (columns: Int, cellWidth: CGFloat) {
-        let columns = max(1, min(count, Int((width + spacing) / (minimumCellWidth + spacing))))
-        return (columns, (width - CGFloat(columns - 1) * spacing) / CGFloat(columns))
+    /// Cells per row and their width, as on Android: one row up to five cells, otherwise two rows with the
+    /// fuller one on top. The cells share `width` evenly, so the scale lines up with the text on both sides;
+    /// a shorter second row is centred under the first.
+    static func grid(count: Int, width: CGFloat) -> (columns: Int, cellWidth: CGFloat) {
+        let columns = count <= UPExperienceLayout.ratingSingleRowMax ? max(1, count) : (count + 1) / 2
+        return (columns, max(1, (width - CGFloat(columns - 1) * spacing) / CGFloat(columns)))
     }
 
-    /// Cells keep Apple's 44 pt minimum tap target and grow with the text size; extra cells wrap
-    /// into more rows (the card measures its content, so it grows with them).
-    private var layout: (columns: Int, cellWidth: CGFloat) {
-        Self.grid(count: items.count, width: width,
-                  minimumCellWidth: max(44, UPExperienceStyle.scaledSize(44, for: sizeCategory)))
-    }
+    private var layout: (columns: Int, cellWidth: CGFloat) { Self.grid(count: items.count, width: width) }
     private var columns: Int { layout.columns }
     private var rowCount: Int { (items.count + columns - 1) / columns }
 
@@ -70,6 +68,9 @@ internal struct UPExperienceRating: View {
         // Ratings are 1-based; every cell up to the chosen one is filled.
         let chosen = selected == index + 1
         let filled = (selected ?? 0) > index
+        // Unfilled cells use the theme's secondary color, primary at 20%, as before and as on Android.
+        let content = filled ? filledContent : textColor
+        let fill = filled ? primary : primary.withAlphaComponent(UPExperienceLayout.ratingUnfilledOpacity)
         return Button(
             action: {
                 onSelect(index + 1)
@@ -81,8 +82,9 @@ internal struct UPExperienceRating: View {
             label: {
                 Group {
                     if item.type == .numbers {
+                        // Regular body size, as the previous release drew the numbers.
                         Text(verbatim: item.title)
-                            .experienceFont(fontFamily, size: 16, bold: true)
+                            .experienceFont(fontFamily, size: UPExperienceLayout.bodySize)
                     } else if let name = item.imageName {
                         // Emojis keep their colors; stars and hearts are tinted like the text.
                         Image(name, bundle: Userpilot.resourceBundle)
@@ -92,11 +94,9 @@ internal struct UPExperienceRating: View {
                 }
                 // Cells share the row width evenly.
                 .frame(width: layout.cellWidth, height: UPExperienceStyle.scaledSize(44, for: sizeCategory))
-                // Filled cells use black or white, whichever reads on the primary color.
-                .foregroundColor(Color(filled ? (primary.isLightColor() ? .black : .white) : textColor))
-                .background(Color(primary).opacity(filled ? 1 : UPExperienceLayout.ratingUnfilledOpacity))
+                .foregroundColor(Color(content))
+                .background(Color(fill))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(primary), lineWidth: chosen ? 1 : 0))
             }
         )
         .buttonStyle(UPRatingButtonStyle(reduceMotion: reduceMotion))

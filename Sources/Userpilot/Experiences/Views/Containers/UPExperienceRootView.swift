@@ -27,7 +27,8 @@ internal struct UPExperienceRootView: View {
                 }
                 content
                     .padding(.horizontal, ThemeHandler.DefaultValues.contentMargin)
-                    .padding(.vertical, verticalPadding)
+                    .padding(.top, topPadding)
+                    .padding(.bottom, verticalPadding)
             }
         }
         .frame(width: width)
@@ -41,6 +42,10 @@ internal struct UPExperienceRootView: View {
     // An empty header collapses to zero height instead of leaving a padded gap.
     private var verticalPadding: CGFloat {
         region == .content || (region == .header && !state.hasHeader) ? 0 : UPExperienceLayout.spacing
+    }
+
+    private var topPadding: CGFloat {
+        region == .header && state.hasHeader ? state.headerTopPadding : verticalPadding
     }
 
     @ViewBuilder

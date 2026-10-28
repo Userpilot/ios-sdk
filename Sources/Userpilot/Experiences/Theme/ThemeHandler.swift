@@ -80,6 +80,20 @@ internal class ThemeHandler: ThemeHandling {
         static let surveySingleTextDefaultCountryCode: String = "+1"
         static let surveySingleTextMaxLength: Int = 50
         static let surveyOtherChoice: String = "other"
+
+        /// NPS dismiss chip, as on Android. The chip is a translucent overlay on the NPS background: it darkens
+        /// that background — more softly on near white backgrounds (perceived brightness above 217 of 255) —
+        /// and lightens it instead when it is too dark to darken further (below 64 of 255). The title takes
+        /// the overlay's color, fully opaque.
+        static let npsDismissButtonDarkenOpacity = CGFloat(0.35)
+        static let npsDismissButtonSoftDarkenOpacity = CGFloat(0.16)
+        static let npsDismissButtonLightenOpacity = CGFloat(0.15)
+        static let npsDismissDarkBackgroundBrightness = CGFloat(64) / 255
+        static let npsDismissLightBackgroundBrightness = CGFloat(217) / 255
+        static let npsDismissButtonHeight = CGFloat(34)
+        static let npsDismissButtonMaxCornerRadius = npsDismissButtonHeight / 2
+        static let npsDismissButtonPadding = CGFloat(20)
+        static let npsDismissButtonTextSize = CGFloat(14)
     }
 
     /// Style names used for text formatting in themes.

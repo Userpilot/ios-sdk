@@ -20,9 +20,9 @@ internal struct UPExperienceDismiss: View {
             Spacer()
             Button(action: action) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: UPExperienceLayout.closeGlyphSize, weight: .semibold))
                     .foregroundColor(Color(color))
-                    .frame(width: 44, height: 44)
+                    .frame(width: UPExperienceLayout.touchTargetSize, height: UPExperienceLayout.touchTargetSize)
                     // A transparent frame isn't tappable on its own; the whole 44 pt square is the target.
                     .contentShape(Rectangle())
             }
