@@ -213,7 +213,7 @@ internal final class SocketManager: SocketManaging {
 
     /// Validate admission and inbound callbacks against the selected identity. Outbound sends bind their destination.
     private func matchesIdentity(_ connection: Connection) -> Bool {
-        storage.userId == connection.userID && config.token == connection.token
+        storage.userId == connection.userID && Environment.getClientToken(config: config) == connection.token
     }
 
     // MARK: - Settings and connection admission
@@ -221,8 +221,9 @@ internal final class SocketManager: SocketManaging {
     /// Reserve current before starting settings, so another connect cannot create a second attempt.
     private func beginConnection() {
         Self.assertOnMain()
-        guard current == nil, config.token.isNotEmpty, storage.userId.isNotEmpty else { return }
-        let connection = Connection(userID: storage.userId, token: config.token)
+        let token = Environment.getClientToken(config: config)
+        guard current == nil, token.isNotEmpty, storage.userId.isNotEmpty else { return }
+        let connection = Connection(userID: storage.userId, token: token)
         current = connection
         phase = .fetchingSettings
         let id = connection.id
@@ -255,7 +256,8 @@ internal final class SocketManager: SocketManaging {
     /// Creates exactly one socket/channel pair. The channel's join timeout covers initial opening.
     private func openConnection(_ connection: Connection) {
         Self.assertOnMain()
-        guard storage.socketURL.isNotEmpty,
+        let url = Environment.getSocketURL(storage: storage)
+        guard url.isNotEmpty,
               let deviceJSON = autoProperties.autoProperties.toJSONString(),
               let appJSON = autoProperties.appProperties.toJSONString() else {
             logger.error("Socket connection parameters are unavailable")
@@ -269,7 +271,7 @@ internal final class SocketManager: SocketManaging {
             Constants.Socket.autoPropertiesKey: deviceJSON,
             Constants.Socket.appPropertiesKey: appJSON
         ]
-        let socket = socketFactory(Environment.getSocketURL(storage: storage), parameters)
+        let socket = socketFactory(url, parameters)
         let channel = socket.channel(Constants.Socket.channelTopic)
         connection.socket = socket
         connection.channel = channel
