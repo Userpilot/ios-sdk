@@ -44,6 +44,9 @@ internal enum UPExperienceLayout {
     /// Height of the open-text box, and the gap above its character counter.
     static let textAreaHeight: CGFloat = 80
     static let counterSpacing: CGFloat = 4
+    /// The box around a single-line input: its padding and smallest height.
+    static let inputPadding: CGFloat = 12
+    static let inputMinHeight: CGFloat = 50
     /// The smallest touch target: Apple's 44 pt (Android: Material's 48 dp).
     static let touchTargetSize: CGFloat = 44
     /// The close xmark symbol's point size (Android draws a cross of the same size).

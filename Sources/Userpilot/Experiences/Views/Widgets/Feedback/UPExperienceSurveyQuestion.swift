@@ -155,8 +155,8 @@ internal struct UPExperienceSurveyQuestion: View {
                     Image(systemName: "calendar").foregroundColor(Color(theme.textColor))
                 }).accessibility(label: Text("Choose date"))
             }
-            .padding(12)
-            .frame(minHeight: 50)
+            .padding(UPExperienceLayout.inputPadding)
+            .frame(minHeight: UPExperienceLayout.inputMinHeight)
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(theme.textSecondaryColor), lineWidth: 1))
             // Apple's calendar in a sheet with Cancel and OK, as Android opens Material's date dialog.
             .sheet(isPresented: $showsDatePicker) { datePickerSheet }
@@ -171,8 +171,8 @@ internal struct UPExperienceSurveyQuestion: View {
                         .experienceFont(theme.fontFamily, size: UPExperienceLayout.bodySize)
                         .foregroundColor(Color(theme.textColor))
                 }
-                .padding(12)
-                .frame(minHeight: 50)
+                .padding(UPExperienceLayout.inputPadding)
+                .frame(minHeight: UPExperienceLayout.inputMinHeight)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(theme.textSecondaryColor), lineWidth: 1))
                 if showsCountryWheel { countryPicker }
             }

@@ -39,7 +39,8 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
     private var cardWidth: NSLayoutConstraint?
     /// The width the SwiftUI roots lay out in; a sheet's card is wider, as it runs edge to edge.
     private var contentWidth: CGFloat = 0
-    private var keyboardHeight: CGFloat = 0
+    /// How far the card sits above its place while the keyboard is up (see `keyboardChanged`).
+    private var keyboardMove: CGFloat = 0
     private var hasFinishedDismissing = false
     private var dismissalCompletions: [() -> Void] = []
 
@@ -236,22 +237,73 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         }
     }
 
+    /// The body scrolls the focused field above the keyboard, or the whole card moves up onto it
+    /// (`keyboardAvoidance`), animated with the keyboard; both go back when it hides.
     @objc private func keyboardChanged(_ notification: Notification) {
         stopResizeAtCurrentPosition()
-        if notification.name == UIResponder.keyboardWillHideNotification {
-            keyboardHeight = 0
-        } else if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-            // Only the part of the keyboard covering this view, above the home-indicator inset.
-            let local = view.convert(frame, from: nil)
-            keyboardHeight = max(0, view.bounds.intersection(local).height - view.safeAreaInsets.bottom)
+        let responder = view.firstResponder as? UIView
+        var avoidance = KeyboardAvoidance.scroll(bottomInset: 0)
+        if notification.name != UIResponder.keyboardWillHideNotification, let responder,
+           let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+            let keyboard = view.convert(frame, from: nil)
+            // Measured where the card sits without the keyboard.
+            let body = scrollView.convert(scrollView.bounds, to: view).offsetBy(dx: 0, dy: keyboardMove)
+            avoidance = Self.keyboardAvoidance(
+                bodyHeight: body.height, covered: body.intersection(keyboard).height,
+                fieldHeight: fieldBox(responder).height,
+                cardBottom: cardView.frame.maxY - cardView.layoutMargins.bottom + keyboardMove,
+                keyboardTop: keyboard.minY)
         }
+        switch avoidance {
+        case .scroll(let bottomInset):
+            keyboardMove = 0
+            scrollView.contentInset.bottom = bottomInset
+        case .move(let distance):
+            keyboardMove = distance
+            scrollView.contentInset.bottom = 0
+        }
+        scrollView.verticalScrollIndicatorInsets.bottom = scrollView.contentInset.bottom
         updateSize(animated: false)
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        // Keep the focused field visible above the keyboard.
-        if let responder = view.firstResponder as? UIView {
-            scrollView.scrollRectToVisible(responder.convert(responder.bounds, to: scrollView), animated: false)
+        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0
+        let curve = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int ?? 0
+        let options = UIView.AnimationOptions(rawValue: UInt(curve << 16))
+        UIView.animate(withDuration: duration, delay: 0, options: options) { [weak self] in
+            self?.view.layoutIfNeeded()
         }
+        if let responder { scrollToVisible(fieldBox(responder)) }
+    }
+
+    /// The focused input's box in this view.
+    private func fieldBox(_ responder: UIView) -> CGRect {
+        Self.fieldBox(around: responder.convert(responder.bounds, to: view), singleLine: responder is UITextField)
+    }
+
+    private func scrollToVisible(_ box: CGRect) {
+        scrollView.scrollRectToVisible(view.convert(box, to: scrollView), animated: false)
+    }
+
+    enum KeyboardAvoidance: Equatable {
+        /// The body scrolls the field into view, with the part the keyboard covers added under its content.
+        case scroll(bottomInset: CGFloat)
+        /// The whole card moves up this far, so its content ends on the keyboard.
+        case move(distance: CGFloat)
+    }
+
+    /// Scroll while the body's uncovered part holds the focused field with the usual spacing to spare;
+    /// otherwise move the whole card up until its content's bottom (`cardBottom`) meets the keyboard.
+    static func keyboardAvoidance(
+        bodyHeight: CGFloat, covered: CGFloat, fieldHeight: CGFloat, cardBottom: CGFloat, keyboardTop: CGFloat
+    ) -> KeyboardAvoidance {
+        if covered + fieldHeight + UPExperienceLayout.spacing <= bodyHeight { return .scroll(bottomInset: covered) }
+        return .move(distance: max(0, cardBottom - keyboardTop))
+    }
+
+    /// A single-line field's text sits inside a padded box at least `inputMinHeight` tall; that box is what has
+    /// to clear the keyboard. A multiline field is its own box.
+    static func fieldBox(around frame: CGRect, singleLine: Bool) -> CGRect {
+        guard singleLine else { return frame }
+        let height = max(UPExperienceLayout.inputMinHeight, frame.height + 2 * UPExperienceLayout.inputPadding)
+        return frame.insetBy(dx: 0, dy: -(height - frame.height) / 2)
     }
 
     /// Multiple close requests share one UIKit completion; callers are never told dismissal finished early.
@@ -427,10 +479,10 @@ private extension UPExperienceHostingController {
         guard !state.isClosing, let controller = contentController, view.bounds.width > 0 else { return }
         let safe = view.bounds.inset(by: view.safeAreaInsets)
         let width = cardContentWidth(safe)
-        let availableHeight = max(1, safe.height - keyboardHeight)
+        let availableHeight = max(1, safe.height)
         // A sheet runs edge to edge and under the home indicator, as it did before the SwiftUI renderer;
-        // its content stays in the safe area. Above a keyboard it sits on the keyboard instead.
-        let bottomInset = style == .bottomSheet && keyboardHeight == 0 ? view.safeAreaInsets.bottom : 0
+        // its content stays in the safe area.
+        let bottomInset = style == .bottomSheet ? view.safeAreaInsets.bottom : 0
         if style == .bottomSheet {
             cardView.layoutMargins = UIEdgeInsets(
                 top: 0, left: view.safeAreaInsets.left, bottom: bottomInset, right: view.safeAreaInsets.right)
@@ -469,7 +521,7 @@ private extension UPExperienceHostingController {
         case .bottomSheet: top = safe.minY + availableHeight - height
         }
         // The card's vertical position follows the keyboard without rebuilding its SwiftUI identity.
-        updateCardSize(height: height + bottomInset, top: top, animated: animated && !widthChanged)
+        updateCardSize(height: height + bottomInset, top: top - keyboardMove, animated: animated && !widthChanged)
     }
 
     func cardContentWidth(_ safe: CGRect) -> CGFloat {

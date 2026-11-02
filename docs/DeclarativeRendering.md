@@ -87,7 +87,14 @@ source of eligibility, payload decoding and business behavior.
   `attrs.hash` while loading, as images do.
 - Bottom sheets look as they did before the SwiftUI renderer: full width, attached to the bottom edge and
   running under the home indicator, with only the top corners rounded. Their content stays inside the safe
-  area (the notch in landscape, the home indicator); with the keyboard up the sheet sits on the keyboard.
+  area (the notch in landscape, the home indicator).
+- The keyboard follows `keyboardAvoidance`. On each keyboard change, when the part of
+  the body left uncovered still holds the focused field with 16 pt to spare, the body gets the covered part
+  added under its content and scrolls the field above the keyboard. Otherwise, typically in landscape where the
+  close row and action button leave the body little height, the whole card moves up until its content ends on
+  the keyboard; for a sheet that is the keyboard's height. Both animate with the keyboard and go back when it
+  hides. A single-line field is measured by its padded box (`fieldBox`). Android applies the same rule
+  (`ExperienceKeyboardAvoidance`); `UPExperienceKeyboardTests` covers it.
 - Dots restore the legacy iOS 6-point circles and 6-point gaps, cumulative active state and 20% inactive
   color. Survey/NPS bar progress is a continuous 5-point fill at the top edge, with its original theme
   colors and a clear track. Ball progress remains below the action.
