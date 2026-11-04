@@ -16,6 +16,8 @@ internal struct UPExperienceRootView: View {
     @ObservedObject var state: ExperienceRenderState
     let width: CGFloat
     var region: ExperienceRenderRegion = .content
+    /// Room above the close symbol and below the footer; dialogs and sheets keep more than full-screen content.
+    var edgeSpacing: CGFloat = UPExperienceLayout.spacing
 
     var body: some View {
         // The host mounts this view three times (header, body, footer); each draws only its own region.
@@ -28,7 +30,7 @@ internal struct UPExperienceRootView: View {
                 content
                     .padding(.horizontal, ThemeHandler.DefaultValues.contentMargin)
                     .padding(.top, topPadding)
-                    .padding(.bottom, verticalPadding)
+                    .padding(.bottom, region == .footer ? edgeSpacing : verticalPadding)
             }
         }
         .frame(width: width)
@@ -45,7 +47,7 @@ internal struct UPExperienceRootView: View {
     }
 
     private var topPadding: CGFloat {
-        region == .header && state.hasHeader ? state.headerTopPadding : verticalPadding
+        region == .header && state.hasHeader ? state.headerTopPadding(edge: edgeSpacing) : verticalPadding
     }
 
     @ViewBuilder

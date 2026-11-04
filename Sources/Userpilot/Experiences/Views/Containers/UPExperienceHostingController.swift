@@ -203,8 +203,7 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
     }
 
     private func makeContentController(_ region: ExperienceRenderRegion) -> UIHostingController<UPExperienceRootView> {
-        let controller = UIHostingController(
-            rootView: UPExperienceRootView(state: state, width: max(1, view.bounds.width), region: region))
+        let controller = UIHostingController(rootView: rootView(region, width: max(1, view.bounds.width)))
         objc_setAssociatedObject(controller, &ScreenNameTracker.untrackedScreenKey, true, .OBJC_ASSOCIATION_RETAIN)
         controller.view.backgroundColor = .clear
         // iOS 16+ reports its own size changes; older versions rely on the layout pass re-measuring.
@@ -418,10 +417,17 @@ private extension UPExperienceHostingController {
         let isStepChange = renderedSurveyStep != nil
         renderedSurveyStep = model.currentStep
         let width = contentWidth > 0 ? contentWidth : view.bounds.width
-        controller.rootView = UPExperienceRootView(state: state, width: width, region: .content)
-        headerController?.rootView = UPExperienceRootView(state: state, width: width, region: .header)
-        footerController?.rootView = UPExperienceRootView(state: state, width: width, region: .footer)
+        controller.rootView = rootView(.content, width: width)
+        headerController?.rootView = rootView(.header, width: width)
+        footerController?.rootView = rootView(.footer, width: width)
         if isStepChange { focusContent() }
+    }
+
+    /// Dialogs and sheets keep more room at their top and bottom edges than full-screen content.
+    func rootView(_ region: ExperienceRenderRegion, width: CGFloat) -> UPExperienceRootView {
+        UPExperienceRootView(
+            state: state, width: width, region: region,
+            edgeSpacing: style == .fullScreen ? UPExperienceLayout.spacing : UPExperienceLayout.cardEdgeSpacing)
     }
 
     func focusNewNPSStage() {
@@ -492,9 +498,9 @@ private extension UPExperienceHostingController {
         // A new width (rotation, split view) re-wraps text, so the SwiftUI roots get the new width.
         if widthChanged {
             contentWidth = width
-            controller.rootView = UPExperienceRootView(state: state, width: width, region: .content)
-            headerController?.rootView = UPExperienceRootView(state: state, width: width, region: .header)
-            footerController?.rootView = UPExperienceRootView(state: state, width: width, region: .footer)
+            controller.rootView = rootView(.content, width: width)
+            headerController?.rootView = rootView(.header, width: width)
+            footerController?.rootView = rootView(.footer, width: width)
         }
         let proposal = CGSize(width: width, height: .greatestFiniteMagnitude)
         let contentSize = max(1, ceil(controller.sizeThatFits(in: proposal).height))

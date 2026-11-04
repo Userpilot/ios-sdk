@@ -54,10 +54,11 @@ internal enum UPExperienceLayout {
     /// The room the target leaves around the close symbol on each side. The target reaches this far into the
     /// side margin, so the symbol's trailing edge lines up with the content edge below it.
     static let closeTargetInset: CGFloat = (touchTargetSize - closeGlyphSize) / 2
-    /// Top padding of a header holding the close button. The target already holds the symbol half its spare
-    /// room below its top, so the symbol sits `spacing` below the card edge: the same space as below the last
-    /// item, as on Android.
+    /// Top padding of a full-screen header holding the close button: the symbol sits `spacing` below the edge.
     static let closeTopPadding: CGFloat = spacing - closeTargetInset
+    /// Dialogs and sheets keep more room at their edges: the close symbol sits this far below the top (where
+    /// Android draws its cross) and the action this far above the bottom.
+    static let cardEdgeSpacing: CGFloat = 24
     /// The icon beside a flow list line, and its gap to the text.
     static let iconSize: CGFloat = 38
     static let iconTextSpacing: CGFloat = 8

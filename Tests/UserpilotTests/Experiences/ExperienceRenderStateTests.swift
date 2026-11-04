@@ -270,12 +270,15 @@ extension ExperienceRenderStateTests {
 // MARK: - Header spacing
 
 extension ExperienceRenderStateTests {
-    /// The close symbol (16 pt in a 44 pt target) or the NPS chip's own edge sits 16 pt below the card edge.
-    func testHeaderTopPaddingPutsTheCloseSymbolOrNPSChipSixteenBelowTheEdge() {
+    /// The close symbol (16 pt in a 44 pt target) or the NPS chip's own edge sits the edge spacing below the
+    /// card edge: 24 pt on dialogs and sheets, 16 pt on full-screen content.
+    func testHeaderTopPaddingPutsTheCloseSymbolOrNPSChipTheEdgeSpacingBelowTheEdge() {
         let thankYou = ExperienceRenderState(
             .thankYou(MockContentFactory.makeSurveyContent(), MockContentFactory.makeSurveyTheme()))
-        XCTAssertEqual(thankYou.headerTopPadding, 2)
+        XCTAssertEqual(thankYou.headerTopPadding(edge: UPExperienceLayout.cardEdgeSpacing), 10)
+        XCTAssertEqual(thankYou.headerTopPadding(edge: UPExperienceLayout.spacing), 2)
         let nps = ExperienceRenderState(.nps(NPSViewModel(container: userpilot.container)))
-        XCTAssertEqual(nps.headerTopPadding, 16)
+        XCTAssertEqual(nps.headerTopPadding(edge: UPExperienceLayout.cardEdgeSpacing), 24)
+        XCTAssertEqual(nps.headerTopPadding(edge: UPExperienceLayout.spacing), 16)
     }
 }

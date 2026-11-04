@@ -73,11 +73,12 @@ source of eligibility, payload decoding and business behavior.
   open-text box with its counter 4 below, 38-point list icons (filling their square) 8 from the text,
   and unfilled rating cells at 20% primary (the theme's secondary color, as before). Sheets and dialogs
   hug their content up to 80% of the space.
-- On sheets, dialogs and carousels the close symbol (or the NPS chip) sits 16 below the card's top edge,
-  the same space as below the last item: a close header's top padding (`headerTopPadding`, from
-  `closeTopPadding`) takes away the spare room the 44-point target (`touchTargetSize`) leaves above the
-  16-point symbol (`closeGlyphSize`, its point size; the drawn xmark is a little smaller). Android uses
-  the same rule.
+- On sheets and dialogs the close symbol (or the NPS chip) sits 24 below the card's top edge, where
+  Android draws its cross, and the footer keeps the same 24 below its action (`cardEdgeSpacing`, passed
+  to `UPExperienceRootView` as `edgeSpacing`). Full-screen content keeps 16 (`spacing`; the carousel
+  header uses `closeTopPadding`). A close header's top padding (`headerTopPadding(edge:)`) takes away
+  the room the 44-point target (`touchTargetSize`) leaves above the 16-point symbol (`closeGlyphSize`,
+  its point size; the drawn xmark is a little smaller), `closeTargetInset`.
 - The close target reaches `closeTargetInset` into the side margin, so the symbol's trailing edge lines
   up with the content edge below it while the whole 44-point target stays tappable.
 - Rating scales keep one row up to five cells and split longer ones over two rows, the fuller one on top
