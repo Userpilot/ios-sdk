@@ -345,7 +345,8 @@ private extension UPExperienceHostingController {
         // Establish the offscreen pose before revealing the card. Layout stays at its final position.
         cardView.transform = hiddenTransform
         cardView.alpha = style == .dialog ? 0 : 1
-        let animator = UIViewPropertyAnimator(duration: 0.3, curve: .easeOut) { [weak self] in
+        // A dialog takes the previous release's 0.4 seconds to rise.
+        let animator = UIViewPropertyAnimator(duration: style == .dialog ? 0.4 : 0.3, curve: .easeOut) { [weak self] in
             self?.backdropView.alpha = 1
             self?.cardView.alpha = 1
             self?.cardView.transform = .identity
@@ -355,11 +356,12 @@ private extension UPExperienceHostingController {
     }
 
     private var hiddenTransform: CGAffineTransform {
-        // Sheets slide from just below the screen edge; dialogs scale up slightly as they fade.
+        // Sheets slide from just below the screen edge; dialogs rise 50 points as they fade in and drop as
+        // they fade out, as in the previous release.
         if style == .bottomSheet {
             return CGAffineTransform(translationX: 0, y: view.bounds.height - (cardTop?.constant ?? 0))
         }
-        return CGAffineTransform(scaleX: 0.96, y: 0.96)
+        return CGAffineTransform(translationX: 0, y: 50)
     }
 
     private func dismissExperience(completion: @escaping () -> Void) {

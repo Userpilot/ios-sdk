@@ -108,8 +108,10 @@ source of eligibility, payload decoding and business behavior.
   than the screen. Decoding keeps the image's own aspect ratio (it covers the box, so `fit` letterboxes
   and nothing stretches unless authored as `fill`) and downscales large images and GIF frames with ImageIO.
   The render state owns one `UPImageModel` per image, so SwiftUI re-evaluation never restarts a download.
-- Sheets start hidden until their final layout is measured, then animate upward from below the screen.
-  Dialogs fade/scale in place. One property animator owns each transition; closing stops any entrance
+- Sheets start hidden until their final layout is measured, then animate upward from below the screen
+  and slide back down off it. Dialogs rise 50 points while fading in (0.4 seconds) and drop 50 points
+  while fading out (0.2 seconds), as in the previous release. Full-screen content uses UIKit's
+  full-screen modal slide up and down. One property animator owns each transition; closing stops any entrance
   at its current position and freezes keyboard-driven card layout until native removal.
 - Step surveys animate container height changes over 0.2 seconds with ease-in/ease-out, matching the
   legacy native transition. Sheets keep their bottom edge fixed; dialogs stay centered. The header
