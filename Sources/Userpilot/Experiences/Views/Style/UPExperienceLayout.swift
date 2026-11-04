@@ -51,10 +51,13 @@ internal enum UPExperienceLayout {
     static let touchTargetSize: CGFloat = 44
     /// The close xmark symbol's point size (Android draws a cross of the same size).
     static let closeGlyphSize: CGFloat = 16
+    /// The room the target leaves around the close symbol on each side. The target reaches this far into the
+    /// side margin, so the symbol's trailing edge lines up with the content edge below it.
+    static let closeTargetInset: CGFloat = (touchTargetSize - closeGlyphSize) / 2
     /// Top padding of a header holding the close button. The target already holds the symbol half its spare
     /// room below its top, so the symbol sits `spacing` below the card edge: the same space as below the last
     /// item, as on Android.
-    static let closeTopPadding: CGFloat = spacing - (touchTargetSize - closeGlyphSize) / 2
+    static let closeTopPadding: CGFloat = spacing - closeTargetInset
     /// The icon beside a flow list line, and its gap to the text.
     static let iconSize: CGFloat = 38
     static let iconTextSpacing: CGFloat = 8

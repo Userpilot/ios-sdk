@@ -28,6 +28,8 @@ internal struct UPExperienceDismiss: View {
             }
             .buttonStyle(PlainButtonStyle())
             .accessibility(label: Text("Close"))
+            // The symbol, not its target, lines up with the content edge.
+            .padding(.trailing, -UPExperienceLayout.closeTargetInset)
         }
     }
 }

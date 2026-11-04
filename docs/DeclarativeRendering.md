@@ -78,6 +78,8 @@ source of eligibility, payload decoding and business behavior.
   `closeTopPadding`) takes away the spare room the 44-point target (`touchTargetSize`) leaves above the
   16-point symbol (`closeGlyphSize`, its point size; the drawn xmark is a little smaller). Android uses
   the same rule.
+- The close target reaches `closeTargetInset` into the side margin, so the symbol's trailing edge lines
+  up with the content edge below it while the whole 44-point target stays tappable.
 - Rating scales keep one row up to five cells and split longer ones over two rows, the fuller one on top
   (NPS: 6 + 5); numbers are regular 16 and the low/high labels 12. Cells are 44 points tall and share the
   row's width, so on phones up to 375 points wide an NPS cell is narrower than 44 (about 35 on a
