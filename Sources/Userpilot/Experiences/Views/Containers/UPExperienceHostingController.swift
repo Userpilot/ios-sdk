@@ -236,8 +236,8 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         }
     }
 
-    /// The body scrolls the focused field above the keyboard, or the whole card moves up onto it
-    /// (`keyboardAvoidance`), animated with the keyboard; both go back when it hides.
+    /// The body scrolls the focused field above the keyboard, and where that leaves too little room the card moves
+    /// up (`keyboardAvoidance`), animated with the keyboard; both go back when it hides.
     @objc private func keyboardChanged(_ notification: Notification) {
         stopResizeAtCurrentPosition()
         let responder = view.firstResponder as? UIView
@@ -247,19 +247,23 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
             let keyboard = view.convert(frame, from: nil)
             // Measured where the card sits without the keyboard.
             let body = scrollView.convert(scrollView.bounds, to: view).offsetBy(dx: 0, dy: keyboardMove)
+            let field = fieldBox(responder).offsetBy(dx: 0, dy: keyboardMove)
             avoidance = Self.keyboardAvoidance(
                 bodyHeight: body.height, covered: body.intersection(keyboard).height,
-                fieldHeight: fieldBox(responder).height,
+                fieldHeight: field.height,
                 cardBottom: cardView.frame.maxY - cardView.layoutMargins.bottom + keyboardMove,
-                keyboardTop: keyboard.minY)
+                keyboardTop: keyboard.minY,
+                fieldRoom: Self.fieldRoom(
+                    field: field, body: body, safeTop: view.safeAreaInsets.top, fullScreen: style == .fullScreen),
+                fullScreen: style == .fullScreen)
         }
         switch avoidance {
         case .scroll(let bottomInset):
             keyboardMove = 0
             scrollView.contentInset.bottom = bottomInset
-        case .move(let distance):
+        case .move(let distance, let bottomInset):
             keyboardMove = distance
-            scrollView.contentInset.bottom = 0
+            scrollView.contentInset.bottom = bottomInset
         }
         scrollView.verticalScrollIndicatorInsets.bottom = scrollView.contentInset.bottom
         updateSize(animated: false)
@@ -269,7 +273,12 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         UIView.animate(withDuration: duration, delay: 0, options: options) { [weak self] in
             self?.view.layoutIfNeeded()
         }
-        if let responder { scrollToVisible(fieldBox(responder)) }
+        guard let responder else { return }
+        if case .move(_, let bottomInset) = avoidance, bottomInset > 0 {
+            scrollToTop(fieldBox(responder))
+        } else {
+            scrollToVisible(fieldBox(responder))
+        }
     }
 
     /// The focused input's box in this view.
@@ -281,28 +290,12 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         scrollView.scrollRectToVisible(view.convert(box, to: scrollView), animated: false)
     }
 
-    enum KeyboardAvoidance: Equatable {
-        /// The body scrolls the field into view, with the part the keyboard covers added under its content.
-        case scroll(bottomInset: CGFloat)
-        /// The whole card moves up this far, so its content ends on the keyboard.
-        case move(distance: CGFloat)
-    }
-
-    /// Scroll while the body's uncovered part holds the focused field with the usual spacing to spare;
-    /// otherwise move the whole card up until its content's bottom (`cardBottom`) meets the keyboard.
-    static func keyboardAvoidance(
-        bodyHeight: CGFloat, covered: CGFloat, fieldHeight: CGFloat, cardBottom: CGFloat, keyboardTop: CGFloat
-    ) -> KeyboardAvoidance {
-        if covered + fieldHeight + UPExperienceLayout.spacing <= bodyHeight { return .scroll(bottomInset: covered) }
-        return .move(distance: max(0, cardBottom - keyboardTop))
-    }
-
-    /// A single-line field's text sits inside a padded box at least `inputMinHeight` tall; that box is what has
-    /// to clear the keyboard. A multiline field is its own box.
-    static func fieldBox(around frame: CGRect, singleLine: Bool) -> CGRect {
-        guard singleLine else { return frame }
-        let height = max(UPExperienceLayout.inputMinHeight, frame.height + 2 * UPExperienceLayout.inputPadding)
-        return frame.insetBy(dx: 0, dy: -(height - frame.height) / 2)
+    /// Full-screen content that rose for the keyboard keeps the field at the body's top, where
+    /// `keyboardAvoidance` counted it.
+    private func scrollToTop(_ box: CGRect) {
+        let top = view.convert(box, to: scrollView).minY
+        let lowest = scrollView.contentSize.height + scrollView.contentInset.bottom - scrollView.bounds.height
+        scrollView.setContentOffset(CGPoint(x: 0, y: min(max(0, top), max(0, lowest))), animated: false)
     }
 
     /// Multiple close requests share one UIKit completion; callers are never told dismissal finished early.
@@ -543,5 +536,51 @@ private extension UPExperienceHostingController {
     func setHeight(_ constraint: NSLayoutConstraint?, _ value: CGFloat) {
         // Ignore sub-point changes so measuring can't trigger an endless layout loop.
         if abs((constraint?.constant ?? 0) - value) > 0.5 { constraint?.constant = value }
+    }
+}
+
+// MARK: - Keyboard avoidance
+
+extension UPExperienceHostingController {
+    enum KeyboardAvoidance: Equatable {
+        /// The body scrolls the field into view, with the part the keyboard covers added under its content.
+        case scroll(bottomInset: CGFloat)
+        /// The whole card moves up this far, the field staying below the top bars. A card's content ends on the
+        /// keyboard; full-screen content keeps scrolling with `bottomInset` added and rises only by what is missing.
+        case move(distance: CGFloat, bottomInset: CGFloat)
+    }
+
+    // swiftlint:disable function_parameter_count
+    /// Scroll while the body's uncovered part holds the focused field with the usual spacing to spare. Otherwise
+    /// full-screen content keeps its footer under the keyboard, as when it scrolls: the body scrolls the field to its
+    /// top and the content rises by the space still missing. A card moves up until its content's bottom
+    /// (`cardBottom`) meets the keyboard. Neither rises further than `fieldRoom`, which leaves the field the usual
+    /// spacing below the top bars.
+    static func keyboardAvoidance(
+        bodyHeight: CGFloat, covered: CGFloat, fieldHeight: CGFloat, cardBottom: CGFloat, keyboardTop: CGFloat,
+        fieldRoom: CGFloat, fullScreen: Bool
+    ) -> KeyboardAvoidance {
+        let missing = covered + fieldHeight + UPExperienceLayout.spacing - bodyHeight
+        if missing <= 0 { return .scroll(bottomInset: covered) }
+        if fullScreen { return .move(distance: max(0, min(missing, fieldRoom)), bottomInset: covered) }
+        return .move(distance: max(0, min(cardBottom - keyboardTop, fieldRoom)), bottomInset: 0)
+    }
+    // swiftlint:enable function_parameter_count
+
+    /// How far the card can rise before the field, once the body has scrolled it into view, comes within the usual
+    /// spacing of the top bars. A full-screen body scrolls the field to its top; a card's body scrolls a field partly
+    /// out of view back in.
+    static func fieldRoom(field: CGRect, body: CGRect, safeTop: CGFloat, fullScreen: Bool) -> CGFloat {
+        let settledTop = fullScreen
+            ? body.minY : min(max(field.minY, body.minY), max(body.minY, body.maxY - field.height))
+        return settledTop - safeTop - UPExperienceLayout.spacing
+    }
+
+    /// A single-line field's text sits inside a padded box at least `inputMinHeight` tall; that box is what has
+    /// to clear the keyboard. A multiline field is its own box.
+    static func fieldBox(around frame: CGRect, singleLine: Bool) -> CGRect {
+        guard singleLine else { return frame }
+        let height = max(UPExperienceLayout.inputMinHeight, frame.height + 2 * UPExperienceLayout.inputPadding)
+        return frame.insetBy(dx: 0, dy: -(height - frame.height) / 2)
     }
 }

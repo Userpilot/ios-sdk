@@ -3,7 +3,8 @@
 //  Userpilot SDK
 //
 //  The body scrolls the focused field above the keyboard when the part left uncovered still holds the field
-//  with the usual spacing to spare; otherwise the whole card moves up onto the keyboard.
+//  with the usual spacing to spare. Otherwise a card moves up onto the keyboard, and full-screen content keeps
+//  scrolling and rises only by what is missing; neither rises so far that the field passes under the top bars.
 //
 
 import UIKit
@@ -24,7 +25,44 @@ final class UPExperienceKeyboardTests: XCTestCase {
     }
 
     func testABodyTooShortMovesTheWholeCardOntoTheKeyboard() {
-        XCTAssertEqual(avoidance(bodyHeight: 120, covered: 70, fieldHeight: 50), .move(distance: 110))
+        XCTAssertEqual(avoidance(bodyHeight: 120, covered: 70, fieldHeight: 50), .move(distance: 110, bottomInset: 0))
+    }
+
+    func testAMoveStopsBeforeTheFocusedFieldPassesUnderTheTopBars() {
+        XCTAssertEqual(avoidance(bodyHeight: 120, covered: 70, fieldHeight: 50, fieldRoom: 60),
+                       .move(distance: 60, bottomInset: 0))
+    }
+
+    func testAFieldAlreadyAtTheTopBarsKeepsTheCardInPlace() {
+        XCTAssertEqual(avoidance(bodyHeight: 120, covered: 70, fieldHeight: 50, fieldRoom: -10),
+                       .move(distance: 0, bottomInset: 0))
+    }
+
+    func testFullScreenContentScrollsTheFieldToTheBodysTopAndRisesOnlyByWhatIsMissing() {
+        XCTAssertEqual(avoidance(bodyHeight: 120, covered: 70, fieldHeight: 50, fieldRoom: 60, fullScreen: true),
+                       .move(distance: 70 + 50 + 16 - 120, bottomInset: 70))
+    }
+
+    func testFullScreenContentStopsRisingBeforeTheFieldPassesUnderTheTopBars() {
+        XCTAssertEqual(avoidance(bodyHeight: 120, covered: 70, fieldHeight: 50, fieldRoom: 10, fullScreen: true),
+                       .move(distance: 10, bottomInset: 70))
+    }
+
+    /// A body from 258 to 888 under a status bar ending at 84, as on a phone in landscape.
+    func testAFullScreenBodyCountsTheFieldFromItsTop() {
+        XCTAssertEqual(fieldRoom(fieldTop: 548, fullScreen: true), 258 - 84 - 16)
+    }
+
+    func testACardCountsAFieldInViewFromWhereItIs() {
+        XCTAssertEqual(fieldRoom(fieldTop: 548, fullScreen: false), 548 - 84 - 16)
+    }
+
+    func testACardCountsAFieldScrolledUnderItsHeaderFromTheBodysTop() {
+        XCTAssertEqual(fieldRoom(fieldTop: 100, fullScreen: false), 258 - 84 - 16)
+    }
+
+    func testACardCountsAFieldHiddenUnderItsFooterFromWhereTheBodyScrollsIt() {
+        XCTAssertEqual(fieldRoom(fieldTop: 900, fullScreen: false), 888 - 240 - 84 - 16)
     }
 
     func testASingleLineFieldIsMeasuredByItsPaddedBox() {
@@ -42,9 +80,20 @@ final class UPExperienceKeyboardTests: XCTestCase {
     }
 
     /// A card whose content ends at 260, over a keyboard whose top is at 150.
-    private func avoidance(bodyHeight: CGFloat, covered: CGFloat, fieldHeight: CGFloat)
-        -> UPExperienceHostingController.KeyboardAvoidance {
+    private func avoidance(
+        bodyHeight: CGFloat, covered: CGFloat, fieldHeight: CGFloat,
+        fieldRoom: CGFloat = .greatestFiniteMagnitude, fullScreen: Bool = false
+    ) -> UPExperienceHostingController.KeyboardAvoidance {
         UPExperienceHostingController.keyboardAvoidance(
-            bodyHeight: bodyHeight, covered: covered, fieldHeight: fieldHeight, cardBottom: 260, keyboardTop: 150)
+            bodyHeight: bodyHeight, covered: covered, fieldHeight: fieldHeight, cardBottom: 260, keyboardTop: 150,
+            fieldRoom: fieldRoom, fullScreen: fullScreen)
+    }
+
+    /// A 240-point field at `fieldTop`, in a body from 258 to 888 under a status bar ending at 84.
+    private func fieldRoom(fieldTop: CGFloat, fullScreen: Bool) -> CGFloat {
+        UPExperienceHostingController.fieldRoom(
+            field: CGRect(x: 0, y: fieldTop, width: 300, height: 240),
+            body: CGRect(x: 0, y: 258, width: 300, height: 630),
+            safeTop: 84, fullScreen: fullScreen)
     }
 }

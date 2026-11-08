@@ -94,9 +94,11 @@ source of eligibility, payload decoding and business behavior.
 - The keyboard follows `keyboardAvoidance`. On each keyboard change, when the part of
   the body left uncovered still holds the focused field with 16 pt to spare, the body gets the covered part
   added under its content and scrolls the field above the keyboard. Otherwise, typically in landscape where the
-  close row and action button leave the body little height, the whole card moves up until its content ends on
-  the keyboard; for a sheet that is the keyboard's height. Both animate with the keyboard and go back when it
-  hides. A single-line field is measured by its padded box (`fieldBox`). Android applies the same rule
+  close row and action button leave the body little height, a dialog or sheet moves up until its content ends
+  on the keyboard, and full-screen content keeps scrolling as above with the field at the body's top and rises
+  only by the space still missing, so its action stays under the keyboard as in portrait. Neither rises so far
+  that the field comes within 16 pt of the status bar (`fieldRoom`). Both animate with the keyboard and go back
+  when it hides. A single-line field is measured by its padded box (`fieldBox`). Android applies the same rule
   (`ExperienceKeyboardAvoidance`); `UPExperienceKeyboardTests` covers it.
 - Dots restore the legacy iOS 6-point circles and 6-point gaps, cumulative active state and 20% inactive
   color. Survey/NPS bar progress is a continuous 5-point fill at the top edge, with its original theme
