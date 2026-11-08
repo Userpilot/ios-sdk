@@ -19,7 +19,8 @@ body scroll area. The native host
 owns safe-area sizing, keyboard avoidance, accessibility modal scope and completed dismissal.
 
 Shared components render flow sections, text, images, buttons, close controls, progress, ratings,
-choice groups, input fields and thank-you content. `SurveyAnswerState` retains answers independently
+choice groups, input fields and thank-you content. A chosen Other row becomes the field its answer is typed
+in and takes focus (`UPExperienceOtherField`, a `UITextField` so it can on iOS 13). `SurveyAnswerState` retains answers independently
 of SwiftUI body evaluation, size changes or question-view identity; each question observes only its
 own `SurveyAnswerModel`, so typing redraws one question.
 
