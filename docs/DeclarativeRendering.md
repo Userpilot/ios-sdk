@@ -102,7 +102,8 @@ source of eligibility, payload decoding and business behavior.
   (`ExperienceKeyboardAvoidance`); `UPExperienceKeyboardTests` covers it.
 - Dots restore the legacy iOS 6-point circles and 6-point gaps, cumulative active state and 20% inactive
   color. Survey/NPS bar progress is a continuous 5-point fill at the top edge, with its original theme
-  colors and a clear track. Ball progress remains below the action.
+  colors and a clear track; on a sheet it runs across the safe-area sides the content keeps clear of.
+  Ball progress remains below the action.
 - Images load/decode at the authored size independently of an initial narrow display proposal, so a
   temporary 1-point layout can't create a tiny image cached for that URL. The size rule is the one
   Android uses (both `auto` → natural size; both numeric → that size; wider than the space → the width

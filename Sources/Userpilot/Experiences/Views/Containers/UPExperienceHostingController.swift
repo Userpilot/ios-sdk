@@ -422,7 +422,12 @@ private extension UPExperienceHostingController {
     func rootView(_ region: ExperienceRenderRegion, width: CGFloat) -> UPExperienceRootView {
         UPExperienceRootView(
             state: state, width: width, region: region,
-            edgeSpacing: style == .fullScreen ? UPExperienceLayout.spacing : UPExperienceLayout.cardEdgeSpacing)
+            edgeSpacing: style == .fullScreen ? UPExperienceLayout.spacing : UPExperienceLayout.cardEdgeSpacing,
+            // A sheet keeps its content inside the safe area (`updateSize`); its width changes with these, so a new
+            // root picks them up.
+            sideInsets: style == .bottomSheet
+                ? UIEdgeInsets(top: 0, left: view.safeAreaInsets.left, bottom: 0, right: view.safeAreaInsets.right)
+                : .zero)
     }
 
     func focusNewNPSStage() {

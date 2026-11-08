@@ -18,14 +18,19 @@ internal struct UPExperienceRootView: View {
     var region: ExperienceRenderRegion = .content
     /// Room above the close symbol and below the footer; dialogs and sheets keep more than full-screen content.
     var edgeSpacing: CGFloat = UPExperienceLayout.spacing
+    /// The screen sides a sheet's content keeps clear of (cutout, rounded corners); the bar progress runs across them.
+    var sideInsets: UIEdgeInsets = .zero
 
     var body: some View {
         // The host mounts this view three times (header, body, footer); each draws only its own region.
         VStack(spacing: 0) {
             if state.isReady {
-                // The bar-style progress sits flush at the top of the card, above the header padding.
+                // The bar-style progress sits flush at the top of the card, above the header padding, and runs
+                // from one edge of the card to the other. Screen sides, so mirrored for right-to-left content.
                 if region == .header, let progress = state.topProgress {
                     progress
+                        .padding(.leading, -(state.isRTL ? sideInsets.right : sideInsets.left))
+                        .padding(.trailing, -(state.isRTL ? sideInsets.left : sideInsets.right))
                 }
                 content
                     .padding(.horizontal, ThemeHandler.DefaultValues.contentMargin)
