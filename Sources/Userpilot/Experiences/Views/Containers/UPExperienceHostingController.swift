@@ -438,7 +438,21 @@ private extension UPExperienceHostingController {
         guard case .nps = state.content, renderedNPSStep != state.npsStep else { return }
         let isStageChange = renderedNPSStep != nil
         renderedNPSStep = state.npsStep
-        if isStageChange { focusContent() }
+        guard isStageChange else { return }
+        if state.npsStep == 2, canAnimateResize { revealNPSThankYou() } else { focusContent() }
+    }
+
+    /// The stage NPS leaves goes at once, the card resizes to the thank-you (`canAnimateResize`), and the
+    /// thank-you then fades in, as NPS stages did in the previous release. VoiceOver moves to it once it shows.
+    func revealNPSThankYou() {
+        let regions = [headerController?.view, contentController?.view, footerController?.view].compactMap { $0 }
+        // Called before SwiftUI draws the thank-you, so it never shows before the fade.
+        regions.forEach { $0.alpha = 0 }
+        UIView.animate(withDuration: 0.3, delay: 0.2, options: .curveEaseOut, animations: {
+            regions.forEach { $0.alpha = 1 }
+        }, completion: { [weak self] _ in
+            self?.focusContent()
+        })
     }
 
     /// After SwiftUI draws the new step, VoiceOver moves to it instead of staying on an element that has gone.
@@ -449,11 +463,12 @@ private extension UPExperienceHostingController {
         }
     }
 
-    /// Survey steps retain their native 0.2-second height transition, anchored at bottom or center.
+    /// Survey steps and the NPS thank-you retain their native 0.2-second height transition, anchored at bottom or
+    /// center.
     func updateCardSize(height: CGFloat, top: CGFloat, animated: Bool) {
         let heightChanged = abs((cardHeight?.constant ?? 0) - height) > 0.5
         guard heightChanged || abs((cardTop?.constant ?? 0) - top) > 0.5 else { return }
-        let shouldAnimate = animated && heightChanged && canAnimateSurveyResize
+        let shouldAnimate = animated && heightChanged && canAnimateResize
         stopResizeAtCurrentPosition()
         setHeight(cardHeight, height)
         setHeight(cardTop, top)
@@ -465,11 +480,16 @@ private extension UPExperienceHostingController {
         animator.startAnimation()
     }
 
-    var canAnimateSurveyResize: Bool {
+    var canAnimateResize: Bool {
         guard style != .fullScreen, hasAnimatedEntrance, state.hasAppeared,
-            transitionAnimator?.state != .active, !UIAccessibility.isReduceMotionEnabled,
-            case .survey(let model) = state.content else { return false }
-        return model.surveyContent?.type == .step
+            transitionAnimator?.state != .active, !UIAccessibility.isReduceMotionEnabled, !state.isClosing
+        else { return false }
+        switch state.content {
+        case .survey(let model): return model.surveyContent?.type == .step
+        // NPS animates only its move to the thank-you, its last stage: later rotation passes `animated: false`.
+        case .nps: return state.npsStep == 2
+        default: return false
+        }
     }
 
     /// Retarget from rendered geometry, not the previous destination, including cancellation mid-resize.

@@ -135,6 +135,10 @@ source of eligibility, payload decoding and business behavior.
   this survey resize animation. The host refreshes its root value only when the survey step changes
   and observes child preferred-size changes, ensuring measurement uses the new SwiftUI content
   without rebuilding the renderer or resetting answer state on each keystroke.
+- NPS moving to its thank-you resizes the card the same way (`canAnimateResize`), as NPS stages did in
+  the previous release: the stage it leaves goes at once, and once the card has its size the thank-you
+  fades in over 0.3 seconds (`revealNPSThankYou`). The score and follow-up stages swap at once; with
+  Reduce Motion the thank-you replaces the stage at once.
 
 ## Text scaling and accessibility
 
@@ -148,7 +152,8 @@ source of eligibility, payload decoding and business behavior.
   links are reachable in the link text view; the chosen survey option and the chosen rating carry the
   selected trait (a filled star is not selected); images with alt text are images, without it they are
   hidden; the multiline placeholder and the checkbox symbols are hidden; the Close control is a
-  44-point target. A page, survey step or NPS stage change moves focus to the new content.
+  44-point target. A page, survey step or NPS stage change moves focus to the new content; the NPS
+  thank-you takes focus once it has faded in.
 - **Escape**: VoiceOver's two-finger Z calls `state.userClose()`, the same path as the visible close
   control, so the same dismissal events are reported. It does nothing when the experience shows no
   close control (a flow with its dismiss button disabled).
