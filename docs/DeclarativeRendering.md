@@ -78,6 +78,8 @@ source of eligibility, payload decoding and business behavior.
   open-text box with its counter 4 below, 38-point list icons (filling their square) 8 from the text,
   and unfilled rating cells at 20% primary (the theme's secondary color, as before). Sheets and dialogs
   hug their content up to 80% of the space.
+- A centre dialog takes 90% of the safe area's width, 70% in landscape, up to 600 points (`dialogWidthFraction`,
+  `dialogLandscapeWidthFraction`, `dialogMaxWidth`), the same rule as Android.
 - On sheets and dialogs the close symbol (or the NPS chip) sits 24 below the card's top edge, where
   Android draws its cross, and the footer keeps the same 24 below its action (`cardEdgeSpacing`, passed
   to `UPExperienceRootView` as `edgeSpacing`). Full-screen content keeps 16 (`spacing`; the carousel

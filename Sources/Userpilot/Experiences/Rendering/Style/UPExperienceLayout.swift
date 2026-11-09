@@ -71,6 +71,10 @@ internal enum UPExperienceLayout {
     /// The icon beside a flow list line, and its gap to the text.
     static let iconSize: CGFloat = 38
     static let iconTextSpacing: CGFloat = 8
+    /// A centre dialog's width: this share of the safe area's width (less in landscape), up to `dialogMaxWidth`.
+    static let dialogWidthFraction: CGFloat = 0.9
+    static let dialogLandscapeWidthFraction: CGFloat = 0.7
+    static let dialogMaxWidth: CGFloat = 600
     /// Cards other than full screen hug their content, up to this share of the space between the bars.
     static let cardMaxHeightFraction: CGFloat = 0.8
 }

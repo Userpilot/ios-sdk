@@ -557,8 +557,11 @@ private extension UPExperienceHostingController {
 
     func cardContentWidth(_ safe: CGRect) -> CGFloat {
         switch style {
-        // Dialogs are narrower in landscape.
-        case .dialog: return safe.width * (safe.width > safe.height ? 0.7 : 0.9)
+        // Dialogs are narrower in landscape, and stop at `dialogMaxWidth` on large screens, as on Android.
+        case .dialog:
+            let fraction = safe.width > safe.height
+                ? UPExperienceLayout.dialogLandscapeWidthFraction : UPExperienceLayout.dialogWidthFraction
+            return min(safe.width * fraction, UPExperienceLayout.dialogMaxWidth)
         case .bottomSheet, .fullScreen: return safe.width
         }
     }
