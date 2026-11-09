@@ -25,12 +25,14 @@ of SwiftUI body evaluation, size changes or question-view identity; each questio
 own `SurveyAnswerModel`, so typing redraws one question.
 
 Each component has **one SwiftUI implementation on every iOS version** (a UIKit shell around SwiftUI
-content). UIKit appears inside the content only as a plain Apple view, in exactly three places,
+content). UIKit appears inside the content only as a plain Apple view, in four places,
 chosen by content and never by iOS version:
 
 - a flow line that contains a link draws in a plain `UITextView` (`UPExperienceLinkText`), because iOS 13
   SwiftUI can't tap one word of a `Text`; touches away from link glyphs fall through to the carousel;
 - multiline input is a plain `UITextView` (iOS 13 has no multiline SwiftUI input);
+- a chosen Other option's answer is typed in a plain `UITextField` (`UPExperienceOtherField`), so it takes
+  focus and opens the keyboard as soon as Other is picked (iOS 13 has no SwiftUI focus API);
 - an animated image plays in a plain `UIImageView` (SwiftUI can't animate an image on any version).
 
 Plain flow text is SwiftUI `Text` built from the same `Line.textRuns(theme:)` as the link text view, and
@@ -47,20 +49,22 @@ A dismissal request completes only after UIKit removes the native renderer.
 | File or directory | Responsibility |
 | --- | --- |
 | `Sources/Userpilot/Experiences/ExperiencesPublisher.swift` | Routes every existing family and survey continuation to the new renderer |
-| `Sources/Userpilot/Experiences/Views/State/ExperienceRenderState.swift` | Observes existing ViewModels, retains presentation state and preserves callback ordering |
-| `Sources/Userpilot/Experiences/Views/State/ExperienceRenderState+NPS.swift` | NPS stage transitions, category mapping and submit/close behavior |
-| `Sources/Userpilot/Experiences/Views/State/SurveyAnswerState.swift` | Answer retention, validation, branching values and submission payloads |
-| `Sources/Userpilot/Experiences/Views/State/ExperienceRenderState+Appearance.swift`, `UPImageModel.swift` | Theme-derived colors, direction and progress; per-image pixels that survive redraws |
-| `Sources/Userpilot/Experiences/Views/Containers/UPExperienceRootView.swift` | Selects SwiftUI family content and maps themes into header/content/footer regions |
-| `Sources/Userpilot/Experiences/Views/Containers/UPExperienceCarouselController.swift` | Pages complete SwiftUI carousel screens with native horizontal gestures and a vertical scroll per page |
-| `Sources/Userpilot/Experiences/Views/Containers/UPExperienceHostingController.swift` | Contains SwiftUI hosts and manages scrolling, sizing, keyboard, animation and actual dismissal |
-| `Sources/Userpilot/Experiences/Views/Containers/ExperienceOverlayWindow.swift` | The scene-attached overlay window that holds the hosts above the app |
-| `Sources/Userpilot/Experiences/Views/Widgets/` | SwiftUI components, one per file: `General/` (text, text area, image, button, dismiss, progress), `Flows/` (flow step, sections, rich text, link text), `Feedback/` (rating, question, survey, thank-you, NPS) |
-| `Sources/Userpilot/Experiences/Views/Style/` | `UPExperienceStyle` (one font resolver for SwiftUI and the UIKit text views, the opt-in text-size rule and cap), `UPExperienceButtonStyle`, `UPExperienceLayout` || `Sources/Userpilot/Extensions/Line+Rendering.swift`, `SurveyStep+Rating.swift` | Pure receiver helpers: flow text runs, the shared image size rule, rating cells |
+| `Sources/Userpilot/Experiences/Rendering/State/ExperienceRenderState.swift` | Observes existing ViewModels, retains presentation state and preserves callback ordering |
+| `Sources/Userpilot/Experiences/Rendering/State/ExperienceRenderState+NPS.swift` | NPS stage transitions, category mapping and submit/close behavior |
+| `Sources/Userpilot/Experiences/Rendering/State/SurveyAnswerState.swift` | Answer retention, validation, branching values and submission payloads |
+| `Sources/Userpilot/Experiences/Rendering/State/ExperienceRenderState+Appearance.swift`, `UPImageModel.swift` | Theme-derived colors, direction and progress; per-image pixels that survive redraws |
+| `Sources/Userpilot/Experiences/Rendering/Host/UPExperienceRootView.swift` | Selects SwiftUI family content and maps themes into header/content/footer regions |
+| `Sources/Userpilot/Experiences/Rendering/Host/UPExperienceCarouselController.swift` | Pages complete SwiftUI carousel screens with native horizontal gestures and a vertical scroll per page |
+| `Sources/Userpilot/Experiences/Rendering/Host/UPExperienceHostingController.swift` | Contains SwiftUI hosts and manages scrolling, sizing, keyboard, animation and actual dismissal |
+| `Sources/Userpilot/Experiences/Rendering/Host/ExperienceOverlayWindow.swift` | The scene-attached overlay window that holds the hosts above the app |
+| `Sources/Userpilot/Experiences/Rendering/Widgets/` | SwiftUI components, one per file: `General/` (text, text area, image, button, close, dismiss action, progress), `Flows/` (flow step, sections, rich text, link text), `Feedback/` (rating and its labels, survey question, multiple choice, question input, country selector, survey, thank-you, NPS) |
+| `Sources/Userpilot/Experiences/Rendering/Style/` | `ExperienceFonts` (one font resolver for SwiftUI and the UIKit text views, the opt-in text-size rule and cap), `UPExperienceButtonStyle`, `UPExperienceLayout`, `Line+Rendering` (flow text runs and the shared image size rule) |
+| `Sources/Userpilot/Experiences/Theme/Models/ThemeContent.swift`, `Models/NPSContent.swift` | Theme colors the widgets share, each in one place: `buttonTextColor`, `progressColor`, `inactiveProgressColor`, `closeColor` |
+| `Sources/Userpilot/Extensions/ContentSizeCategory+Extensions.swift`, `View+ExperienceText.swift` | The SwiftUI text size and font modifiers (`experienceTextSize`, `experienceFont`) and the size category conversion |
 | `Sources/Userpilot/Extensions/UIImage+Extensions.swift` | Decoding that keeps each image's aspect ratio and downscales large images and GIF frames |
 | `Tests/UserpilotTests/Experiences/` | Logic and model tests: render state, answers, text runs, image size, rating cells, style, image model and loader, plus the publisher tests |
 
-The renderer is 27 source files under `Experiences/Views/`, one main type per file. Existing engine and model files remain the
+The renderer is 33 source files under `Experiences/Rendering/`, one main type per file. Existing engine and model files remain the
 source of eligibility, payload decoding and business behavior.
 
 ## Design corrections
@@ -146,7 +150,7 @@ source of eligibility, payload decoding and business behavior.
 - **Text scaling is opt-in**: `Config.enableTextScaling(true)`. Off (the default), both
   SwiftUI roots pin `\.sizeCategory` to `.large`, so every surface keeps its authored size. On, they cap it
   at `.accessibilityLarge` (about 2×). Every size scales by the body text style, so headings stay larger
-  than body text at every setting. `UPExperienceStyle.font` resolves one `UIFont` that SwiftUI wraps in
+  than body text at every setting. `ExperienceFonts.font` resolves one `UIFont` that SwiftUI wraps in
   `Font(_:)` and the UIKit text views use as-is, so nothing scales twice; the host re-measures on
   `UIContentSizeCategory.didChangeNotification`.
 - **VoiceOver**: h1–h3 lines carry the header trait (including a heading drawn by the link text view);

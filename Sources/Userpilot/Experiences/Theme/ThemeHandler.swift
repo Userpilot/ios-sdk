@@ -53,7 +53,6 @@ internal class ThemeHandler: ThemeHandling {
         static let dimSlideOutDegree = 40
         static let whiteColor = "#FFFFFF"
         static let grayColor = "#ACB5BD".color
-        static let contentMargin = CGFloat(20)
 
         static let blurImageSize = CGSize(width: 64, height: 64)
         static let defaultTextMargin = "   "

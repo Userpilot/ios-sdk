@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import UIKit
 
 internal struct SurveyContentData: Decodable {
     // A response can contain another content type; absence is not a decoding failure.
@@ -54,6 +55,18 @@ internal struct SurveyContent: Decodable {
         return TimeInterval(timeDelay)
     }
 
+}
+
+internal extension SurveyStep {
+    /// The keyboard for the question's input type; answers are validated against it too.
+    var inputKeyboardType: UIKeyboardType {
+        switch metadata?.inputType {
+        case .phone: return .phonePad
+        case .number, .date: return .numberPad
+        case .email: return .emailAddress
+        default: return .default
+        }
+    }
 }
 
 internal extension SurveyContent {
@@ -197,6 +210,13 @@ internal extension String {
 }
 
 internal extension SurveyContent {
+    /// A branching survey has no fixed remaining question count to display.
+    var hasBranchingLogic: Bool {
+        modules.contains { step in
+            step.logic?.contains { $0.action == .goToModule || $0.action == .endSurvey } == true
+        }
+    }
+
     /// Returns the final thank-you action's link; URL validation stays with the navigation caller.
     var thankYouDeepLink: String? {
         guard let module = modules.last,

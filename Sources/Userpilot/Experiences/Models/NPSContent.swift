@@ -45,6 +45,29 @@ internal struct NPSContent: Decodable {
     var delayDuration: TimeInterval {
         return TimeInterval(timeDelay)
     }
+
+    /// The follow-up question for a score as chosen on screen (1–11 for the shown 0–10): one question for everyone,
+    /// or one per category, 0–6 detractors, 7–8 passives and 9–10 promoters.
+    func followUp(forSelection selection: Int) -> FollowUpQuestion? {
+        let followUp = content.followUp
+        if followUp.type == .universal, let all = followUp.all { return all }
+        switch selection {
+        case 1...7: return followUp.detractors
+        case 8...9: return followUp.passives
+        default: return followUp.promoters
+        }
+    }
+
+    /// The closing message for a score, by the same categories as the follow-up question.
+    func completed(forSelection selection: Int) -> CompletedData? {
+        let completed = content.completed
+        if completed.type == .universal, let all = completed.all { return all }
+        switch selection {
+        case 1...7: return completed.detractors
+        case 8...9: return completed.passives
+        default: return completed.promoters
+        }
+    }
 }
 
 // MARK: - NPSStep
@@ -201,6 +224,19 @@ internal struct NPSTheme: Decodable {
 
     var stepsProgressColor: UIColor {
         progress?.color?.color ?? .black
+    }
+
+    /// Button text and filled rating cells: the opposite of the primary color.
+    var buttonTextColor: UIColor { primaryColorAsString.invertColor().color }
+
+    /// The current dot and the bar: the authored color, or the primary.
+    var progressColor: UIColor {
+        isStepsProgressColorManual ? stepsProgressColor : primaryColor
+    }
+
+    /// Dots not reached yet: the authored color, or the background's opposite.
+    var inactiveProgressColor: UIColor {
+        isStepsProgressColorManual ? stepsProgressColor : backgroundColorAsString.invertColor().color
     }
 
     // radius

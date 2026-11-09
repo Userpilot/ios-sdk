@@ -104,7 +104,7 @@ final class LineTextRunsTests: XCTestCase {
         for category in [ContentSizeCategory.large, .accessibilityLarge] {
             let string = runs.attributedString(family: nil, category: category, alignment: .right)
             let plainFont = try XCTUnwrap(string.attribute(.font, at: 0, effectiveRange: nil) as? UIFont)
-            XCTAssertEqual(plainFont.pointSize, UPExperienceStyle.scaledSize(16, for: category), accuracy: 0.01)
+            XCTAssertEqual(plainFont.pointSize, ExperienceFonts.scaledSize(16, for: category), accuracy: 0.01)
             let linkIndex = ("Read " as NSString).length
             XCTAssertEqual(string.attribute(.link, at: linkIndex, effectiveRange: nil) as? URL,
                            URL(string: "https://example.com/a"))
