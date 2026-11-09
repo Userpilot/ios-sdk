@@ -106,6 +106,11 @@ source of eligibility, payload decoding and business behavior.
   Only this host reacts to the keyboard: on iOS 16.4 and later the SwiftUI hosts keep no keyboard safe area
   (`safeAreaRegions = .container`), since a host that overlaps the keyboard, as mid-rotation, would otherwise
   measure that much taller and squeeze the body to nothing.
+- In every experience, a tap anywhere but on a text input closes the keyboard: the backdrop, the card, its
+  content or empty space (`addKeyboardDismissTap`). The tap still reaches what it landed on, so a choice, button
+  or link also works, and a tap on another field moves the keyboard to it (`isTextInput`; read-only link text
+  is not an input). A tap inside the focused field's padded box (`fieldBox`) keeps the keyboard. Dragging the
+  body closes it too (`keyboardDismissMode = .interactive`).
 - Dots restore the legacy iOS 6-point circles and 6-point gaps, cumulative active state and 20% inactive
   color. Survey/NPS bar progress is a continuous 5-point fill at the top edge, with its original theme
   colors and a clear track; on a sheet it runs across the safe-area sides the content keeps clear of.

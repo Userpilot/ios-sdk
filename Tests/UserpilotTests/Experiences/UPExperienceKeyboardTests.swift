@@ -5,6 +5,7 @@
 //  The body scrolls the focused field above the keyboard when the part left uncovered still holds the field
 //  with the usual spacing to spare. Otherwise a card moves up onto the keyboard, and full-screen content keeps
 //  scrolling and rises only by what is missing; neither rises so far that the field passes under the top bars.
+//  A tap anywhere but on a text input closes the keyboard.
 //
 
 import UIKit
@@ -77,6 +78,33 @@ final class UPExperienceKeyboardTests: XCTestCase {
     func testAMultilineFieldIsItsOwnBox() {
         let area = CGRect(x: 0, y: 100, width: 200, height: 80)
         XCTAssertEqual(UPExperienceHostingController.fieldBox(around: area, singleLine: false), area)
+    }
+
+    func testATapInsideATextFieldKeepsTheKeyboard() {
+        let field = UITextField()
+        let inner = UIView()
+        field.addSubview(inner)
+        XCTAssertTrue(UPExperienceHostingController.isTextInput(field))
+        XCTAssertTrue(UPExperienceHostingController.isTextInput(inner))
+    }
+
+    func testATapOnTheOpenTextBoxKeepsTheKeyboard() {
+        XCTAssertTrue(UPExperienceHostingController.isTextInput(UITextView()))
+    }
+
+    func testATapOnReadOnlyTextClosesTheKeyboard() {
+        let links = UITextView()
+        links.isEditable = false
+        XCTAssertFalse(UPExperienceHostingController.isTextInput(links))
+    }
+
+    func testATapOnAnythingElseClosesTheKeyboard() {
+        let card = UIView()
+        let button = UIButton()
+        card.addSubview(button)
+        XCTAssertFalse(UPExperienceHostingController.isTextInput(button))
+        XCTAssertFalse(UPExperienceHostingController.isTextInput(card))
+        XCTAssertFalse(UPExperienceHostingController.isTextInput(nil))
     }
 
     /// A card whose content ends at 260, over a keyboard whose top is at 150.

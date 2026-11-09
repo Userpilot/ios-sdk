@@ -84,6 +84,7 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         NotificationCenter.default.addObserver(
             self, selector: #selector(contentSizeCategoryChanged),
             name: UIContentSizeCategory.didChangeNotification, object: nil)
+        addKeyboardDismissTap()
         // A host app's IQKeyboardManager would fight the keyboard handling below.
         ExternalKeyboardManagerCompat.disableIQKeyboardManager(for: [UPExperienceHostingController.self])
     }
@@ -591,5 +592,46 @@ extension UPExperienceHostingController {
         guard singleLine else { return frame }
         let height = max(UPExperienceLayout.inputMinHeight, frame.height + 2 * UPExperienceLayout.inputPadding)
         return frame.insetBy(dx: 0, dy: -(height - frame.height) / 2)
+    }
+}
+
+// MARK: - Closing the keyboard
+
+extension UPExperienceHostingController: UIGestureRecognizerDelegate {
+    /// A tap outside a text input closes the keyboard: on the backdrop, the card, its content or empty space, in
+    /// every experience. The tap still reaches what it landed on.
+    func addKeyboardDismissTap() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapOutsideTextInput))
+        tap.cancelsTouchesInView = false
+        tap.delaysTouchesEnded = false
+        tap.delegate = self
+        view.addGestureRecognizer(tap)
+    }
+
+    @objc func tapOutsideTextInput() { view.endEditing(true) }
+
+    /// Only while something in the experience is being edited.
+    func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool { view.firstResponder != nil }
+
+    /// A tap on a text input focuses it as usual, without closing the keyboard first. The focused field's padded box
+    /// (`fieldBox`) counts as the field.
+    func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if Self.isTextInput(touch.view) { return false }
+        guard let responder = view.firstResponder as? UIView else { return true }
+        return !fieldBox(responder).contains(touch.location(in: view))
+    }
+
+    /// Buttons, choices, links, menus and scrolling keep their own gestures.
+    func gestureRecognizer(
+        _ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool { true }
+
+    /// A text field, or an editable text view such as the open-text box, or a view inside one. Read-only link text
+    /// is not an input.
+    static func isTextInput(_ view: UIView?) -> Bool {
+        guard let view else { return false }
+        return sequence(first: view, next: { $0.superview }).contains {
+            $0 is UITextField || ($0 as? UITextView)?.isEditable == true
+        }
     }
 }
