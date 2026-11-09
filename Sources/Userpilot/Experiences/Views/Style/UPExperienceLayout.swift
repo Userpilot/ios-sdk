@@ -49,7 +49,8 @@ internal enum UPExperienceLayout {
     static let inputMinHeight: CGFloat = 50
     /// The smallest touch target: Apple's 44 pt (Android: Material's 48 dp).
     static let touchTargetSize: CGFloat = 44
-    /// The close xmark symbol's point size (Android draws a cross of the same size).
+    /// The close xmark symbol's point size. It draws about 13 pt across, the size Android draws its cross (Android
+    /// keeps that drawn size under this name).
     static let closeGlyphSize: CGFloat = 16
     /// The room the target leaves around the close symbol on each side. The target reaches this far into the
     /// side margin, so the symbol's trailing edge lines up with the content edge below it.

@@ -79,7 +79,8 @@ source of eligibility, payload decoding and business behavior.
   to `UPExperienceRootView` as `edgeSpacing`). Full-screen content keeps 16 (`spacing`; the carousel
   header uses `closeTopPadding`). A close header's top padding (`headerTopPadding(edge:)`) takes away
   the room the 44-point target (`touchTargetSize`) leaves above the 16-point symbol (`closeGlyphSize`,
-  its point size; the drawn xmark is a little smaller), `closeTargetInset`.
+  its point size; the drawn xmark is about 13 points across, the size Android draws its cross),
+  `closeTargetInset`.
 - The close target reaches `closeTargetInset` into the side margin, so the symbol's trailing edge lines
   up with the content edge below it while the whole 44-point target stays tappable.
 - Rating scales keep one row up to five cells and split longer ones over two rows, the fuller one on top
