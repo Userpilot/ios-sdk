@@ -99,7 +99,9 @@ source of eligibility, payload decoding and business behavior.
   on the keyboard, and full-screen content keeps scrolling as above with the field at the body's top and rises
   only by the space still missing, so its action stays under the keyboard as in portrait. Neither rises so far
   that the field comes within 16 pt of the status bar (`fieldRoom`). Both animate with the keyboard and go back
-  when it hides. A single-line field is measured by its padded box (`fieldBox`). Android applies the same rule
+  when it hides. A sheet that moves grows by the same distance, so its background still reaches the screen's
+  bottom edge behind the keyboard and nothing behind the experience shows, as in the previous release.
+  A single-line field is measured by its padded box (`fieldBox`). Android applies the same rule
   (`ExperienceKeyboardAvoidance`); `UPExperienceKeyboardTests` covers it.
   Only this host reacts to the keyboard: on iOS 16.4 and later the SwiftUI hosts keep no keyboard safe area
   (`safeAreaRegions = .container`), since a host that overlaps the keyboard, as mid-rotation, would otherwise

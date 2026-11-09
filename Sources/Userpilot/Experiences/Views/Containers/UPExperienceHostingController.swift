@@ -490,8 +490,9 @@ private extension UPExperienceHostingController {
         let width = cardContentWidth(safe)
         let availableHeight = max(1, safe.height)
         // A sheet runs edge to edge and under the home indicator, as it did before the SwiftUI renderer;
-        // its content stays in the safe area.
-        let bottomInset = style == .bottomSheet ? view.safeAreaInsets.bottom : 0
+        // its content stays in the safe area. Moved up for the keyboard, it grows by that distance, so its
+        // background still reaches the screen's bottom edge behind the keyboard, as in the previous release.
+        let bottomInset = style == .bottomSheet ? view.safeAreaInsets.bottom + keyboardMove : 0
         if style == .bottomSheet {
             cardView.layoutMargins = UIEdgeInsets(
                 top: 0, left: view.safeAreaInsets.left, bottom: bottomInset, right: view.safeAreaInsets.right)
