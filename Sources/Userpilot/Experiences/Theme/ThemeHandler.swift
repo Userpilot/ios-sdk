@@ -54,7 +54,6 @@ internal class ThemeHandler: ThemeHandling {
         static let whiteColor = "#FFFFFF"
         static let grayColor = "#ACB5BD".color
         static let contentMargin = CGFloat(20)
-        static let contentTopMargin = CGFloat(10)
 
         static let blurImageSize = CGSize(width: 64, height: 64)
         static let defaultTextMargin = "   "
@@ -62,23 +61,11 @@ internal class ThemeHandler: ThemeHandling {
         /// The height of the bar-style steps progress (`UPExperienceProgress`), drawn as a capsule.
         static let stepsProgressBarHeight = CGFloat(5)
 
-        /// Survey
-        static let surveyItemRatingMinWidth: Int = 80
-        static let surveyContentTopMargin: Int = 16
         static let surveyTitleTextSize: CGFloat = 16
         static let surveyDescriptionTextSize: CGFloat = 13
-        static let surveyPromptButtonTextSize: CGFloat = 12
-        static let surveyDescriptionTextTopMargin: Int = 10
         static let surveyDefaultLikertViewCount: Int = 10
         static let npsDefaultLikertViewCount: Int = 11
-        static let surveyMaxTextFieldCharCount: Int = 500
-        static let surveyPromptViewButtonMargin: Int = 50
-        static let surveyContentTopMargin24: Int = 24
-        static let surveyLikertViewMaxCount: Int = 10
-        static let surveyOpenTextEditTextHeight: Int = 80
 
-        static let surveySingleTextDefaultCountryCode: String = "+1"
-        static let surveySingleTextMaxLength: Int = 50
         static let surveyOtherChoice: String = "other"
 
         /// NPS dismiss chip, as on Android. The chip is a translucent overlay on the NPS background: it darkens
