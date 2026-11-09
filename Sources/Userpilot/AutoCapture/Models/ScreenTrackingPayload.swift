@@ -5,6 +5,8 @@
 //  Created by Motasem Hamed on 28/03/2026.
 //
 
+import Foundation
+
 /// Payload containing comprehensive screen tracking information for auto capture events.
 internal struct ScreenTrackingPayload: Equatable {
     // MARK: - Properties
@@ -49,6 +51,10 @@ internal struct ScreenTrackingPayload: Equatable {
     /// fallback, which is wrong when multiple instances coexist.
     var appFramework: Userpilot.AppFramework?
 
+    /// Live navigation stack and container ancestry, captured separately at screen appearance.
+    var screenHierarchy: [String]?
+    var screenContainerHierarchy: [String]?
+
     // MARK: - Conversion
 
     /// Converts the payload to a dictionary for event properties
@@ -81,6 +87,12 @@ internal struct ScreenTrackingPayload: Equatable {
         if let appFramework = appFramework {
             dict[Constants.AutoCapture.uiFramework] = appFramework.rawValue
         }
+        if let screenHierarchy, !screenHierarchy.isEmpty {
+            dict[Constants.AutoCapture.screenHierarchy] = screenHierarchy
+        }
+        if let screenContainerHierarchy, !screenContainerHierarchy.isEmpty {
+            dict[Constants.AutoCapture.screenContainerHierarchy] = screenContainerHierarchy
+        }
         return dict
     }
 }
@@ -88,7 +100,11 @@ internal struct ScreenTrackingPayload: Equatable {
 // MARK: - Manual screen tracking
 
 extension ScreenTrackingPayload {
-    init(screenTitle: String, appFramework: Userpilot.AppFramework? = nil) {
+    init(
+        screenTitle: String,
+        appFramework: Userpilot.AppFramework? = nil,
+        screenHierarchy: [String]? = nil
+    ) {
         self.init(
             currentScreen: screenTitle,
             screenClass: screenTitle,
@@ -99,5 +115,21 @@ extension ScreenTrackingPayload {
             vcAccessibilityLabel: nil
         )
         self.appFramework = appFramework
+        if let screenHierarchy, !screenHierarchy.isEmpty, screenHierarchy.count <= 64,
+           screenHierarchy.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            self.screenHierarchy = screenHierarchy
+        }
+    }
+}
+
+// MARK: - Wrapper screens
+
+extension ScreenTrackingPayload {
+    func toWrapperScreenProperties() -> [String: Any] {
+        var properties: [String: Any] = [Constants.AutoCapture.source: Constants.AutoCapture.autoCaptureSourceValue]
+        if let screenHierarchy {
+            properties[Constants.AutoCapture.screenHierarchy] = screenHierarchy
+        }
+        return properties
     }
 }

@@ -41,6 +41,9 @@ internal protocol AutoCaptureCoordinating: AnyObject {
     /// Auto capture screen events from wrappers
     func trackExternalAutoCaptureScreen(_ screen: String)
 
+    /// Records an optional live navigation stack supplied by a wrapper.
+    func trackExternalAutoCaptureScreen(_ screen: String, screenHierarchy: [String])
+
     /// Auto capture interactions events from wrappers
     func trackExternalAutoCaptureEvent(_ eventName: String, _ properties: Payload)
 
@@ -724,12 +727,20 @@ private extension AutoCaptureCoordinater {
 extension AutoCaptureCoordinater {
     /// Auto capture screen events from wrappers
     func trackExternalAutoCaptureScreen(_ title: String) {
+        publishWrapperScreen(title, screenHierarchy: nil)
+    }
+
+    func trackExternalAutoCaptureScreen(_ title: String, screenHierarchy: [String]) {
+        publishWrapperScreen(title, screenHierarchy: screenHierarchy)
+    }
+
+    private func publishWrapperScreen(_ title: String, screenHierarchy: [String]?) {
         guard config.isWrapperSDK else { return }
-        let screenPayload = ScreenTrackingPayload(screenTitle: title)
+        let screenPayload = ScreenTrackingPayload(screenTitle: title, screenHierarchy: screenHierarchy)
         screenNameTracker.updateScreen(with: screenPayload)
         let event = Event(
             type: .screen(title),
-            properties: [Constants.AutoCapture.source: Constants.AutoCapture.autoCaptureSourceValue]
+            properties: screenPayload.toWrapperScreenProperties()
         )
         analyticsPublisher.publish(event)
 

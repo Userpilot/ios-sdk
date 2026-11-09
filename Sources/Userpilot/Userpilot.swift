@@ -608,6 +608,13 @@ extension Userpilot {
         autoCaptureCoordinator.trackExternalAutoCaptureScreen(title)
     }
 
+    /// Records an automatic wrapper screen with its live stack, root to current.
+    /// Empty, incomplete or oversized stacks are omitted. The title-only API is unchanged.
+    @objc
+    public func trackExternalAutoCaptureScreen(_ title: String, screenHierarchy: [String]) {
+        autoCaptureCoordinator.trackExternalAutoCaptureScreen(title, screenHierarchy: screenHierarchy)
+    }
+
     /// Auto capture interactions events from wrappers
     @objc
     public func trackExternalAutoCaptureEvent(eventName: String, properties: Payload) {

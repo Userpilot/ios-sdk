@@ -36,6 +36,8 @@ When **screen autocapture** is enabled, the SDK publishes a screen event the fir
 |---|---|---|---|
 | `screen_name` | string | yes | Resolved screen name (`userpilotScreenName` override, SwiftUI `userpilotScreenName(_:)` modifier, or the VC class name). |
 | `screen_class` | string | yes | The view controller's class name. |
+| `screen_hierarchy` | string array | optional | Live UIKit navigation stack, root to current (unreleased). |
+| `screen_container_hierarchy` | string array | optional | Controller containment and presentation ancestry (unreleased). |
 | `screen_type` | string | yes | E.g. `"UIViewController"` or `"NavigationController"`. |
 | `is_userpilot_container_class` | bool | yes | `true` for built-in container VCs and any custom container that overrides `isUserpilotContainerClass`. |
 | `source` | string | yes | Always `"auto-capture"` for autocaptured screens. |
@@ -46,6 +48,45 @@ When **screen autocapture** is enabled, the SDK publishes a screen event the fir
 | `ui_framework` | string | optional | `"UIKit"` or `"SwiftUI"`, set from `Config.appFramework`. |
 
 `UIAlertController` is **not** tracked as a screen. Its presentation is rerouted to the dialog autocapture path and emitted as a `mobile_autocapture` interaction with `interaction_type = "view_presented"` carrying the alert's title and message.
+
+### Screen hierarchy (unreleased)
+
+`metadata.screen_hierarchy` contains the live `UINavigationController.viewControllers`
+stack as controller class names, root to current. Popped screens and inactive tabs are absent.
+The current automatic SwiftUI collector cannot read the app's `NavigationPath`, so it omits this field.
+
+`metadata.screen_container_hierarchy` separately records controller containment, walking
+`parent` and then `presentingViewController`. It is available for UIKit and SwiftUI:
+
+```json
+{
+  "screen_hierarchy": ["MainViewController", "ProfileViewController", "SettingsViewController"],
+  "screen_container_hierarchy": ["UITabBarController", "UINavigationController", "SettingsViewController"]
+}
+```
+
+Both are immutable string snapshots read during existing screen callbacks on main. There are
+no polling timers or full view-tree scans. Missing, cyclic or more-than-64-entry paths are omitted
+entirely. A single entry is sent only for a known single-screen stack. Container paths do not
+expose the business route hidden behind an erased SwiftUI hosting controller.
+
+These additive fields require screen autocapture.
+They do not change screen names, existing class fields, duplicate suppression, visit identity,
+or dashboard targeting. Queued screens, identify-generated screens and reloads retain the
+captured hierarchy. Manual `screen` calls do not acquire a hierarchy automatically.
+
+Wrapper maintainers can adopt the new native overload:
+
+```swift
+userpilot.trackExternalAutoCaptureScreen("Cart", screenHierarchy: ["Root", "Checkout", "Cart"])
+```
+
+Objective-C selector: `trackExternalAutoCaptureScreen:screenHierarchy:` (`NSArray<NSString *> *`).
+The original one-argument selector remains supported and omits this field. Wrapper navigation
+adapters must supply their actual live navigation stack; the native SDK cannot read a Flutter,
+React Native, Cordova or Capacitor navigation tree. Those wrapper adapters are a separate update.
+Incomplete stacks are omitted; an empty array omits the field. Paths should contain stable
+class or route names, without user data or navigation arguments.
 
 ### Interaction events
 

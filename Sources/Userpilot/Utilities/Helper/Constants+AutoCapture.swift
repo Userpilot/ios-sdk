@@ -27,6 +27,8 @@ extension Constants {
         static let screen = "screen"
         static let screenName = "screen_name"
         static let screenClass = "screen_class"
+        static let screenHierarchy = "screen_hierarchy"
+        static let screenContainerHierarchy = "screen_container_hierarchy"
         static let screenTitle = "title"
         static let screenType = "screen_type"
         static let navigationTitle = "navigation_title"

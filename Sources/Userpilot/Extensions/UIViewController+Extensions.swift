@@ -176,6 +176,10 @@ internal extension UIViewController {
             vcAccessibilityLabel: view.accessibilityLabel
         )
         payload.appFramework = config.appFramework
+        payload.screenContainerHierarchy = captureScreenContainerHierarchy()
+        if config.appFramework == .UIKit {
+            payload.screenHierarchy = captureScreenHierarchy()
+        }
         return payload
     }
 }

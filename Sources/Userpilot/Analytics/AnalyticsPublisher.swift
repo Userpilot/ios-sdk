@@ -1332,9 +1332,16 @@ extension AnalyticsPublisher {
             !currentScreen.isEmpty
         else { return }
 
+        let captured = screenNameTracker.getCurrentPayload()
+        let identity = config.appFramework == .SwiftUI ? captured?.currentScreen : captured?.screenClass
+        let hierarchyKeys = [Constants.AutoCapture.screenHierarchy, Constants.AutoCapture.screenContainerHierarchy]
+        let hierarchy = identity == currentScreen
+            ? captured?.toDictionary().filter { hierarchyKeys.contains($0.key) } : nil
+        let properties: Payload = hierarchy?.isEmpty == false ? hierarchy : nil
+
         // Initialize the screen session state machine.
         screenSessionStateMachine = ScreenSessionStateMachine(
-            event: Event(type: .screen(currentScreen)),
+            event: Event(type: .screen(currentScreen), properties: properties),
             seenExperiences: Set(),
             seenSurveys: Set()
         )
