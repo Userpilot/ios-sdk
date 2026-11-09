@@ -208,6 +208,9 @@ internal final class UPExperienceHostingController: UIViewController, UPExperien
         controller.view.backgroundColor = .clear
         // iOS 16+ reports its own size changes; older versions rely on the layout pass re-measuring.
         if #available(iOS 16.0, *) { controller.sizingOptions = .preferredContentSize }
+        // The keyboard is handled here (`keyboardChanged`). SwiftUI's own keyboard safe area would also grow a
+        // region that overlaps the keyboard, mid-rotation for example, and the card would be measured that tall.
+        if #available(iOS 16.4, *) { controller.safeAreaRegions = .container }
         addChild(controller)
         return controller
     }
