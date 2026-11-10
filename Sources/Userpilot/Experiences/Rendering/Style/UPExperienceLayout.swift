@@ -45,6 +45,14 @@ internal enum UPExperienceLayout {
     static let ratingSpacing: CGFloat = 8
     /// Background opacity of a rating cell that is not filled: the theme's secondary color, primary at 20%.
     static let ratingUnfilledOpacity: CGFloat = 0.2
+    /// Step progress: dots and their gap, the bar's thickness, and the opacity of dots not reached yet.
+    static let dotSize: CGFloat = 6
+    static let dotSpacing: CGFloat = 6
+    static let progressBarHeight: CGFloat = 5
+    static let progressInactiveOpacity: CGFloat = 0.2
+    /// Placeholder text, and field borders and unchosen marks: the text color at these opacities.
+    static let placeholderOpacity: CGFloat = 0.8
+    static let secondaryTextOpacity: CGFloat = 0.2
     /// A rating scale keeps one row up to this many cells; more split evenly over two rows.
     static let ratingSingleRowMax = 5
     /// The low and high labels under a rating scale.

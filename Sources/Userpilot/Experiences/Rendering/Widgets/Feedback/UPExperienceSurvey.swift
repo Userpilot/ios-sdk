@@ -24,27 +24,23 @@ internal struct UPExperienceSurvey: View {
                 // The body holds only questions, so its spacing is the gap between list questions.
                 VStack(spacing: region == .content ? UPExperienceLayout.questionSpacing : UPExperienceLayout.spacing) {
                     if region == .header {
-                        UPExperienceClose(color: theme.textColor, action: state.userClose)
+                        UPExperienceClose(action: state.userClose)
                     }
                     // A list survey shows every question at once; a step survey shows the current one.
                     if region == .content, survey.type == .list {
                         ForEach(survey.modules.filter { $0.type != .completed }, id: \.id) { step in
                             UPExperienceSurveyQuestion(
-                                state: state, answerModel: state.answerModel(for: step), step: step, theme: theme,
-                                width: width)
+                                state: state, answerModel: state.answerModel(for: step), step: step, width: width)
                         }
                     } else if region == .content, let step = survey.modules[safe: model.currentStep] {
                         UPExperienceSurveyQuestion(
-                            state: state, answerModel: state.answerModel(for: step), step: step, theme: theme,
-                            width: width
+                            state: state, answerModel: state.answerModel(for: step), step: step, width: width
                         // A new question is a new view, so pickers and focus don't carry over.
                         ).id(step.id)
                     }
                     if region == .footer {
                         UPExperienceButton(
                             title: buttonTitle(survey),
-                            foreground: theme.buttonTextColor,
-                            background: theme.primaryColor, fontFamily: theme.fontFamily,
                             enabled: state.canSubmit, action: state.submitSurvey)
                     }
                     // Dot progress sits under the button; the bar style is drawn at the top of the card.
@@ -53,9 +49,7 @@ internal struct UPExperienceSurvey: View {
                         !survey.hasBranchingLogic,
                         survey.modules[safe: model.currentStep]?.type != .completed {
                         UPExperienceProgress(
-                            count: survey.modules.count, current: model.currentStep,
-                            color: theme.stepsProgressColor,
-                            inactiveColor: theme.inactiveProgressColor)
+                            count: survey.modules.count, current: model.currentStep)
                     }
                 }
             }

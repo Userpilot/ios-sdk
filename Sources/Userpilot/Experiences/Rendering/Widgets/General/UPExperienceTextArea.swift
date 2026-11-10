@@ -13,25 +13,20 @@ import SwiftUI
 /// A visible placeholder does not become the answer or overwrite a focused text view.
 internal struct UPExperienceTextArea: View {
     @SwiftUI.Environment(\.sizeCategory) private var sizeCategory
+    @SwiftUI.Environment(\.experienceStyle) private var style
     @SwiftUI.Binding var text: String
-    let textColor: UIColor
-    let placeholderColor: UIColor
-    let fontFamily: String?
     let placeholder: String
 
     var body: some View {
         VStack(alignment: .trailing, spacing: UPExperienceLayout.counterSpacing) {
             ZStack(alignment: .topLeading) {
                 UPExperienceTextView(
-                    text: $text, color: textColor, placeholder: placeholder,
+                    text: $text, color: style.text, placeholder: placeholder,
                     font: ExperienceFonts.font(
-                        family: fontFamily, size: UPExperienceLayout.bodySize, category: sizeCategory))
+                        family: style.fontName, size: UPExperienceLayout.bodySize, category: sizeCategory))
                 if text.isEmpty {
                     // The text view's own label already carries the placeholder.
-                    UPExperienceText(
-                        text: placeholder, color: placeholderColor, fontFamily: fontFamily,
-                        size: UPExperienceLayout.bodySize
-                    )
+                    UPExperienceText(text: placeholder, color: style.placeholder, size: UPExperienceLayout.bodySize)
                     .accessibility(hidden: true)
                     // Taps pass through to the text view underneath.
                     .padding(12).allowsHitTesting(false)
@@ -43,8 +38,8 @@ internal struct UPExperienceTextArea: View {
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(
                 Color(ThemeHandler.DefaultValues.grayColor), lineWidth: 1))
             Text("\(text.count)/500")
-                .experienceFont(fontFamily, size: UPExperienceLayout.footnoteSize)
-                .foregroundColor(Color(placeholderColor))
+                .experienceFont(style.fontName, size: UPExperienceLayout.footnoteSize)
+                .foregroundColor(Color(style.placeholder))
         }
     }
 }

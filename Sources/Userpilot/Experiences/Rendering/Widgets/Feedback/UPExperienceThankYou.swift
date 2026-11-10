@@ -20,21 +20,19 @@ internal struct UPExperienceThankYou: View {
     var body: some View {
         VStack(spacing: UPExperienceLayout.spacing) {
             if region == .header {
-                UPExperienceClose(color: theme.textColor, action: state.userClose)
+                UPExperienceClose(action: state.userClose)
             }
             // The survey's final "completed" module holds the thank-you text and button.
             if let step = survey.modules.last {
                 if region == .content {
                     UPExperienceText(
-                        text: step.question ?? "", color: theme.textColor, fontFamily: theme.fontFamily,
+                        text: step.question ?? "",
                         size: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize), bold: true)
-                    UPExperienceText(text: step.subheader ?? "", color: theme.textColor, fontFamily: theme.fontFamily)
+                    UPExperienceText(text: step.subheader ?? "")
                 }
                 if region == .footer {
                     UPExperienceButton(
                         title: step.buttonLabel ?? "Next",
-                        foreground: theme.buttonTextColor,
-                        background: theme.primaryColor, fontFamily: theme.fontFamily,
                         action: state.finishThankYou)
                 }
             }

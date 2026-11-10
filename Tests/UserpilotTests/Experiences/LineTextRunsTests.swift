@@ -11,6 +11,7 @@ import XCTest
 
 final class LineTextRunsTests: XCTestCase {
     // Distinct title and body colours so each rule's colour is observable.
+    private var style: UPExperienceStyle { theme.experienceStyle }
     // swiftlint:disable:next force_try
     private let theme = try! JSONDecoder().decode(ExperienceTheme.self, from: JSONSerialization.data(
         withJSONObject: ["colors": ["text_color": "#112233", "title_color": "#445566"]]))
@@ -21,12 +22,12 @@ final class LineTextRunsTests: XCTestCase {
 
     func testHeadingLevelsUseTheirSizeBoldAndTitleColor() throws {
         for (level, size) in [("h1", 28), ("h2", 24), ("h3", 20)] {
-            let run = try XCTUnwrap(line(type: "heading", level: level, [text("Title")]).textRuns(theme: theme).first)
+            let run = try XCTUnwrap(line(type: "heading", level: level, [text("Title")]).textRuns(style: style).first)
             XCTAssertEqual(run.size, CGFloat(size), level)
             XCTAssertTrue(run.bold)
             XCTAssertEqual(run.color, theme.titleTextColor)
         }
-        let unleveled = try XCTUnwrap(line(type: "heading", [text("Title")]).textRuns(theme: theme).first)
+        let unleveled = try XCTUnwrap(line(type: "heading", [text("Title")]).textRuns(style: style).first)
         XCTAssertEqual(unleveled.size, CGFloat(ThemeHandler.DefaultValues.headerTextSize))
     }
 
@@ -36,7 +37,7 @@ final class LineTextRunsTests: XCTestCase {
                 ["type": "italic"], ["type": "textStyle", "attrs": ["font_size": "40px", "color": "#FF0000"]]
             ]),
             text("Linked", [["type": "link", "attrs": ["href": "https://example.com"]]])
-        ]).textRuns(theme: theme)
+        ]).textRuns(style: style)
         XCTAssertEqual(runs[0].size, 24)
         XCTAssertFalse(runs[0].italic)
         XCTAssertEqual(runs[0].color, theme.titleTextColor)
@@ -45,7 +46,7 @@ final class LineTextRunsTests: XCTestCase {
     }
 
     func testParagraphDefaultsToSixteenAndThemeTextColor() throws {
-        let run = try XCTUnwrap(line(type: "paragraph", [text("Body")]).textRuns(theme: theme).first)
+        let run = try XCTUnwrap(line(type: "paragraph", [text("Body")]).textRuns(style: style).first)
         XCTAssertEqual(run.size, 16)
         XCTAssertFalse(run.bold)
         XCTAssertFalse(run.italic)
@@ -56,7 +57,7 @@ final class LineTextRunsTests: XCTestCase {
     func testParagraphTextStyleMarkSetsSizeAndColor() throws {
         let run = try XCTUnwrap(line(type: "paragraph", [
             text("Body", [["type": "textStyle", "attrs": ["font_size": "20px", "color": "#D32F2F"]]])
-        ]).textRuns(theme: theme).first)
+        ]).textRuns(style: style).first)
         XCTAssertEqual(run.size, 20)
         XCTAssertEqual(run.color, "#D32F2F".color)
     }
@@ -65,7 +66,7 @@ final class LineTextRunsTests: XCTestCase {
         let runs = line(type: "paragraph", [
             text("Bold", [["type": "bold"]]), text("Italic", [["type": "italic"]]),
             text("Both", [["type": "bold"], ["type": "italic"]])
-        ]).textRuns(theme: theme)
+        ]).textRuns(style: style)
         XCTAssertEqual(runs.map(\.bold), [true, false, true])
         XCTAssertEqual(runs.map(\.italic), [false, true, true])
     }
@@ -74,7 +75,7 @@ final class LineTextRunsTests: XCTestCase {
         for type in ["paragraph", "icon_bullet_list"] {
             let runs = line(type: type, [
                 text("Read "), text("this", [["type": "link", "attrs": ["href": "https://example.com/a"]]])
-            ]).textRuns(theme: theme)
+            ]).textRuns(style: style)
             XCTAssertNil(runs[0].link)
             XCTAssertEqual(runs[1].link, URL(string: "https://example.com/a"))
             XCTAssertEqual(runs[1].color, UIColor.blue)
@@ -84,7 +85,7 @@ final class LineTextRunsTests: XCTestCase {
     func testEmptyLinkHrefStaysPlainText() throws {
         let run = try XCTUnwrap(line(type: "paragraph", [
             text("Nowhere", [["type": "link", "attrs": ["href": ""]]])
-        ]).textRuns(theme: theme).first)
+        ]).textRuns(style: style).first)
         XCTAssertNil(run.link)
         XCTAssertEqual(run.color, theme.textColor)
     }
@@ -99,7 +100,7 @@ final class LineTextRunsTests: XCTestCase {
         let runs = line(type: "paragraph", align: "right", [
             text("Read "),
             text("this", [["type": "link", "attrs": ["href": "https://example.com/a"]], ["type": "bold"]])
-        ]).textRuns(theme: theme)
+        ]).textRuns(style: style)
         XCTAssertTrue(runs.hasLink)
         for category in [ContentSizeCategory.large, .accessibilityLarge] {
             let string = runs.attributedString(family: nil, category: category, alignment: .right)
@@ -115,7 +116,7 @@ final class LineTextRunsTests: XCTestCase {
             let paragraph = string.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
             XCTAssertEqual(paragraph?.alignment, .right)
         }
-        XCTAssertFalse(line(type: "paragraph", [text("Plain")]).textRuns(theme: theme).hasLink)
+        XCTAssertFalse(line(type: "paragraph", [text("Plain")]).textRuns(style: style).hasLink)
     }
 }
 

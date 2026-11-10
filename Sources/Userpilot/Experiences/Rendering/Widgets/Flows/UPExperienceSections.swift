@@ -59,10 +59,7 @@ internal struct UPExperienceSections: View {
             }
         case .button:
             UPExperienceButton(
-                title: line.content?.first?.text ?? "", foreground: theme.buttonTextColor,
-                background: theme.buttonBackgroundColor, fontFamily: theme.fontFamily,
-                radius: theme.buttonBorderRadius, borderColor: theme.buttonBorderColor,
-                borderWidth: theme.buttonBorderWidth, fontSize: buttonFontSize(line),
+                title: line.content?.first?.text ?? "", fontSize: buttonFontSize(line),
                 bold: line.content?.first?.marks?.contains { $0.type == "bold" } == true,
                 italic: line.content?.first?.marks?.contains { $0.type == "italic" } == true,
                 textAlignment: buttonTextAlignment(line),
@@ -71,7 +68,7 @@ internal struct UPExperienceSections: View {
     }
 
     private func richText(_ line: Line, width: CGFloat) -> some View {
-        UPExperienceRichText(line: line, theme: theme, width: width)
+        UPExperienceRichText(line: line, width: width)
     }
 
     @ViewBuilder

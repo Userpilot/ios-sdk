@@ -15,7 +15,7 @@ internal struct UPExperienceMultipleChoice: View {
     let state: ExperienceRenderState
     @ObservedObject var answerModel: SurveyAnswerModel
     let step: SurveyStep
-    let theme: SurveyTheme
+    @SwiftUI.Environment(\.experienceStyle) private var style
 
     private var answer: SurveyAnswerState { answerModel.value }
 
@@ -45,11 +45,9 @@ internal struct UPExperienceMultipleChoice: View {
                 choiceRow(selected) {
                     // Decorative: VoiceOver gets the selected trait instead.
                     Image(systemName: choiceIcon(selected))
-                        .foregroundColor(Color(selected ? theme.primaryColor : theme.textSecondaryColor))
+                        .foregroundColor(Color(selected ? style.primary : style.secondaryText))
                         .accessibility(hidden: true)
-                    UPExperienceText(
-                        text: title, color: theme.textColor, fontFamily: theme.fontFamily,
-                        size: UPExperienceLayout.bodySize)
+                    UPExperienceText(text: title, size: UPExperienceLayout.bodySize)
                 }
             }
         )
@@ -61,7 +59,7 @@ internal struct UPExperienceMultipleChoice: View {
     private func otherField(_ index: Int) -> some View {
         choiceRow(true) {
             Button(action: { toggleChoice(index) }, label: {
-                Image(systemName: choiceIcon(true)).foregroundColor(Color(theme.primaryColor))
+                Image(systemName: choiceIcon(true)).foregroundColor(Color(style.primary))
             })
             .buttonStyle(PlainButtonStyle())
             .accessibility(label: Text("Other"))
@@ -71,8 +69,7 @@ internal struct UPExperienceMultipleChoice: View {
                     get: { answerModel.value.otherText },
                     set: { value in state.updateText(for: step) { $0.otherText = value } }),
                 placeholder: step.metadata?.otherChoice?.placeholder ?? "",
-                color: theme.textColor, placeholderColor: theme.textSecondaryColorAlpha80,
-                fontFamily: theme.fontFamily)
+                color: style.text, placeholderColor: style.placeholder, fontFamily: style.fontName)
         }
     }
 
@@ -85,10 +82,10 @@ internal struct UPExperienceMultipleChoice: View {
         HStack(spacing: UPExperienceLayout.inputPadding, content: content)
             .padding(UPExperienceLayout.inputPadding)
             .frame(maxWidth: .infinity, minHeight: UPExperienceLayout.choiceMinHeight)
-            .background(Color(theme.primaryColor).opacity(selected ? 0.1 : 0))
+            .background(Color(style.primary).opacity(selected ? 0.1 : 0))
             .overlay(
                 RoundedRectangle(cornerRadius: UPExperienceLayout.fieldCornerRadius)
-                    .stroke(Color(selected ? theme.primaryColor : theme.textSecondaryColor), lineWidth: 1))
+                    .stroke(Color(selected ? style.primary : style.secondaryText), lineWidth: 1))
     }
 
     /// Checkboxes for multi-select, radio buttons for single-select.

@@ -48,8 +48,7 @@ internal struct UPExperienceFlow: View {
             }
             if region == .footer, theme.isStepsProgressEnabled, model.carouselStepsCount > 1 {
                 UPExperienceProgress(
-                    count: model.carouselStepsCount, current: index,
-                    color: theme.progressColor)
+                    count: model.carouselStepsCount, current: index)
             }
         }
     }

@@ -43,6 +43,7 @@ internal struct UPExperienceRootView: View {
             }
         }
         .frame(width: width)
+        .environment(\.experienceStyle, state.currentStyle)
         // Direction comes from the experience content, not the host app.
         .environment(\.layoutDirection, state.isRTL ? .rightToLeft : .leftToRight)
         .experienceTextSize(scalingEnabled: state.textScaling)

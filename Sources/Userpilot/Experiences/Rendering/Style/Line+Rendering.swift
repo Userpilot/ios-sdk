@@ -24,7 +24,7 @@ internal struct UPTextRun: Equatable {
 internal extension Line {
     /// The legacy text rules: headings are bold, titled and sized by level; paragraphs take the
     /// `textStyle` mark's size and colour; a link mark on any line is blue, underlined and tappable.
-    func textRuns(theme: ExperienceTheme) -> [UPTextRun] {
+    func textRuns(style: UPExperienceStyle) -> [UPTextRun] {
         (content ?? []).compactMap { content in
             guard let text = content.text else { return nil }
             let marks = content.marks ?? []
@@ -36,15 +36,15 @@ internal extension Line {
                     text: text,
                     size: CGFloat(attrs?.level?.fontSize() ?? ThemeHandler.DefaultValues.headerTextSize),
                     bold: true, italic: false,
-                    color: link == nil ? theme.titleTextColor : .blue, link: link)
+                    color: link == nil ? style.title : .blue, link: link)
             }
-            let style = marks.first { $0.type == ThemeHandler.StyleName.textStyle }?.attrs
+            let attrs = marks.first { $0.type == ThemeHandler.StyleName.textStyle }?.attrs
             return UPTextRun(
                 text: text,
-                size: style?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize),
+                size: attrs?.fontSize?.toFontSize ?? CGFloat(ThemeHandler.DefaultValues.normalTextSize),
                 bold: marks.contains { $0.type == ThemeHandler.StyleName.textBold },
                 italic: marks.contains { $0.type == ThemeHandler.StyleName.textItalic },
-                color: link == nil ? style?.color?.color ?? theme.textColor : .blue, link: link)
+                color: link == nil ? attrs?.color?.color ?? style.text : .blue, link: link)
         }
     }
 

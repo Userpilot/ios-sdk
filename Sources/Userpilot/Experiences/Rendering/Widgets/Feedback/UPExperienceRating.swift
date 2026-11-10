@@ -10,41 +10,21 @@
 
 import SwiftUI
 
-/// One rating cell: its label, its bundled icon (none for numbers) and the scale type that tints it.
-internal struct UPRatingItem: Equatable {
-    let title: String
-    let imageName: String?
-    let type: LikertViewType
-
-    /// NPS: eleven numeric cells, zero to ten.
-    static let npsScale = (0..<ThemeHandler.DefaultValues.npsDefaultLikertViewCount).map {
-        UPRatingItem(title: "\($0)", imageName: nil, type: .numbers)
-    }
-}
-
-/// The rating cells a survey Likert step draws, with the established icon assets.
-internal extension SurveyStep {
-    /// One cell per point of the range, titled from one; icons follow the step's scale type.
-    var ratingItems: [UPRatingItem] {
-        let range = metadata?.range ?? ThemeHandler.DefaultValues.surveyDefaultLikertViewCount
-        let type = metadata?.type ?? .numbers
-        return (0..<range).map { index in
-            UPRatingItem(title: "\(index + 1)", imageName: ratingIconName(type: type, index: index), type: type)
-        }
-    }
-
-    private func ratingIconName(type: LikertViewType, index: Int) -> String? {
-        switch type {
+/// A rating cell's icon asset: stars and hearts repeat, faces spread over the scale, numbers have none. Android
+/// keeps the same table under the same name (`ratingIcon`).
+extension LikertViewType {
+    func ratingIcon(index: Int, range: Int) -> String? {
+        switch self {
         case .numbers: return nil
         case .stars: return "userpilot_icon_star"
         case .hearts: return "userpilot_icon_heart"
-        // Unsupported ranges past ten get no icon rather than crashing.
-        case .emojis: return smileIconNames(range: metadata?.range ?? 10)[safe: index]
+        // Scales past ten get no face rather than a wrong one.
+        case .emojis: return Self.smileIconNames(range: range)[safe: index]
         }
     }
 
     /// The native asset mapping; the ten-point scale runs one to ten, as on Android.
-    private func smileIconNames(range: Int) -> [String] {
+    private static func smileIconNames(range: Int) -> [String] {
         // Shorter scales use a spread of the ten faces, from sad to happy.
         switch range {
         case 3:
@@ -72,13 +52,13 @@ internal extension SurveyStep {
 internal struct UPExperienceRating: View {
     @SwiftUI.Environment(\.sizeCategory) private var sizeCategory
     @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let items: [UPRatingItem]
+    @SwiftUI.Environment(\.experienceStyle) private var style
+    let count: Int
+    /// The chosen cell, counted from one.
     let selected: Int?
-    let primary: UIColor
-    /// Numbers and icons on a filled cell: the primary color's black or white inverse, as on buttons.
-    let filledContent: UIColor
-    let textColor: UIColor
-    let fontFamily: String?
+    let type: LikertViewType
+    /// NPS labels its cells from zero.
+    var zeroBasedLabels = false
     let width: CGFloat
     let onSelect: (Int) -> Void
     /// The cell that was just chosen; it pulses once.
@@ -94,15 +74,15 @@ internal struct UPExperienceRating: View {
         return (columns, max(1, (width - CGFloat(columns - 1) * spacing) / CGFloat(columns)))
     }
 
-    private var layout: (columns: Int, cellWidth: CGFloat) { Self.grid(count: items.count, width: width) }
+    private var layout: (columns: Int, cellWidth: CGFloat) { Self.grid(count: count, width: width) }
     private var columns: Int { layout.columns }
-    private var rowCount: Int { (items.count + columns - 1) / columns }
+    private var rowCount: Int { (count + columns - 1) / columns }
 
     var body: some View {
         VStack(spacing: Self.spacing) {
             ForEach(0..<rowCount, id: \.self) { row in
                 HStack(spacing: Self.spacing) {
-                    ForEach((row * columns)..<min(items.count, (row + 1) * columns), id: \.self) { index in
+                    ForEach((row * columns)..<min(count, (row + 1) * columns), id: \.self) { index in
                         ratingButton(index)
                     }
                 }
@@ -111,13 +91,15 @@ internal struct UPExperienceRating: View {
     }
 
     private func ratingButton(_ index: Int) -> some View {
-        let item = items[index]
+        let title = "\(zeroBasedLabels ? index : index + 1)"
+        let icon = type.ratingIcon(index: index, range: count)
         // Ratings are 1-based; every cell up to the chosen one is filled.
         let chosen = selected == index + 1
         let filled = (selected ?? 0) > index
         // Unfilled cells use the theme's secondary color, primary at 20%, as before and as on Android.
-        let content = filled ? filledContent : textColor
-        let fill = filled ? primary : primary.withAlphaComponent(UPExperienceLayout.ratingUnfilledOpacity)
+        // Numbers and icons on a filled cell take the button text color, the primary's black or white opposite.
+        let content = filled ? style.buttonText : style.text
+        let fill = filled ? style.primary : style.primary.withAlphaComponent(UPExperienceLayout.ratingUnfilledOpacity)
         return Button(
             action: {
                 onSelect(index + 1)
@@ -128,14 +110,14 @@ internal struct UPExperienceRating: View {
             },
             label: {
                 Group {
-                    if item.type == .numbers {
+                    if type == .numbers {
                         // Regular body size, as the previous release drew the numbers.
-                        Text(verbatim: item.title)
-                            .experienceFont(fontFamily, size: UPExperienceLayout.bodySize)
-                    } else if let name = item.imageName {
+                        Text(verbatim: title)
+                            .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
+                    } else if let name = icon {
                         // Emojis keep their colors; stars and hearts are tinted like the text.
                         Image(name, bundle: Userpilot.resourceBundle)
-                            .renderingMode(item.type == .emojis ? .original : .template)
+                            .renderingMode(type == .emojis ? .original : .template)
                             .resizable().scaledToFit().padding(8)
                     }
                 }
@@ -150,7 +132,7 @@ internal struct UPExperienceRating: View {
         .scaleEffect(pulsing == index ? 1.12 : 1)
         // Only the pulse (and the fill change it comes with) springs; layout changes such as rotation don't.
         .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.5), value: pulsing)
-        .accessibility(label: Text(verbatim: item.title))
+        .accessibility(label: Text(verbatim: title))
         .accessibility(addTraits: chosen ? .isSelected : [])
     }
 }

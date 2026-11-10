@@ -16,7 +16,7 @@ internal struct UPExperienceQuestionInput: View {
     let state: ExperienceRenderState
     @ObservedObject var answerModel: SurveyAnswerModel
     let step: SurveyStep
-    let theme: SurveyTheme
+    @SwiftUI.Environment(\.experienceStyle) private var style
     /// Pickers open inline, so they inherit the experience's text size and light or dark style.
     @State private var showsDatePicker = false
     @State private var showsCountryWheel = false
@@ -39,9 +39,7 @@ internal struct UPExperienceQuestionInput: View {
     @ViewBuilder
     var body: some View {
         if step.type == .openText {
-            UPExperienceTextArea(
-                text: text, textColor: theme.textColor, placeholderColor: theme.textSecondaryColorAlpha80,
-                fontFamily: theme.fontFamily, placeholder: step.metadata?.placeholder ?? "")
+            UPExperienceTextArea(text: text, placeholder: step.metadata?.placeholder ?? "")
         } else if step.metadata?.inputType == .date {
             dateField
         } else {
@@ -49,15 +47,14 @@ internal struct UPExperienceQuestionInput: View {
                 field {
                     if step.metadata?.inputType == .phone {
                         UPExperienceCountrySelector(
-                            code: answer.countryCode, color: theme.textColor, fontFamily: theme.fontFamily,
-                            onSelect: selectCountryCode, onToggleWheel: toggleCountryWheel)
+                            code: answer.countryCode, onSelect: selectCountryCode, onToggleWheel: toggleCountryWheel)
                     }
                     TextField(step.metadata?.placeholder ?? "", text: text)
                         .keyboardType(step.inputKeyboardType)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .experienceFont(theme.fontFamily, size: UPExperienceLayout.bodySize)
-                        .foregroundColor(Color(theme.textColor))
+                        .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
+                        .foregroundColor(Color(style.text))
                 }
                 if showsCountryWheel {
                     UPExperienceCountrySelector.wheel(code: answer.countryCode, onSelect: selectCountryCode)
@@ -70,10 +67,10 @@ internal struct UPExperienceQuestionInput: View {
         field {
             TextField("dd/mm/yyyy", text: text)
                 .keyboardType(.numberPad)
-                .experienceFont(theme.fontFamily, size: UPExperienceLayout.bodySize)
-                .foregroundColor(Color(theme.textColor))
+                .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
+                .foregroundColor(Color(style.text))
             Button(action: openDatePicker, label: {
-                Image(systemName: "calendar").foregroundColor(Color(theme.textColor))
+                Image(systemName: "calendar").foregroundColor(Color(style.text))
             }).accessibility(label: Text("Choose date"))
         }
         // Apple's calendar in a sheet with Cancel and OK, as Android opens Material's date dialog.
@@ -87,7 +84,7 @@ internal struct UPExperienceQuestionInput: View {
             .frame(minHeight: UPExperienceLayout.inputMinHeight)
             .overlay(
                 RoundedRectangle(cornerRadius: UPExperienceLayout.fieldCornerRadius)
-                    .stroke(Color(theme.textSecondaryColor), lineWidth: 1))
+                    .stroke(Color(style.secondaryText), lineWidth: 1))
     }
 
     private func selectCountryCode(_ code: String) {
@@ -118,7 +115,7 @@ internal struct UPExperienceQuestionInput: View {
                         showsDatePicker = false
                     })
         }
-        .accentColor(Color(theme.primaryColor))
+        .accentColor(Color(style.primary))
     }
 
     /// Apple's calendar on iOS 14+; iOS 13 has only the wheel.

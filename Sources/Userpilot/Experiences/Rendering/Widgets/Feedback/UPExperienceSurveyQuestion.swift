@@ -16,7 +16,6 @@ internal struct UPExperienceSurveyQuestion: View {
     let state: ExperienceRenderState
     @ObservedObject var answerModel: SurveyAnswerModel
     let step: SurveyStep
-    let theme: SurveyTheme
     let width: CGFloat
 
     var body: some View {
@@ -24,14 +23,10 @@ internal struct UPExperienceSurveyQuestion: View {
         VStack(alignment: .leading, spacing: 0) {
             // Required questions are marked with a red asterisk.
             UPExperienceText(
-                text: step.question ?? "",
-                color: theme.textColor, fontFamily: theme.fontFamily,
-                size: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize), bold: true,
+                text: step.question ?? "", size: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize), bold: true,
                 suffix: step.isRequired == true ? " *" : "")
             if let subtitle = step.subheader, !subtitle.isEmpty {
-                UPExperienceText(
-                    text: subtitle, color: theme.textColor, fontFamily: theme.fontFamily,
-                    size: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
+                UPExperienceText(text: subtitle, size: CGFloat(ThemeHandler.DefaultValues.surveyDescriptionTextSize))
                     .padding(.top, UPExperienceLayout.titleSpacing)
             }
             control
@@ -45,20 +40,17 @@ internal struct UPExperienceSurveyQuestion: View {
         case .likert:
             VStack(spacing: UPExperienceLayout.scaleLabelSpacing) {
                 UPExperienceRating(
-                    items: step.ratingItems, selected: answerModel.value.rating,
-                    primary: theme.primaryColor, filledContent: theme.buttonTextColor,
-                    textColor: theme.textColor, fontFamily: theme.fontFamily, width: width
+                    count: step.metadata?.range ?? ThemeHandler.DefaultValues.surveyDefaultLikertViewCount,
+                    selected: answerModel.value.rating, type: step.metadata?.type ?? .numbers, width: width
                 ) { rating in
                     state.updateAnswer(for: step) { $0.rating = rating }
                 }
-                UPExperienceRatingLabels(
-                    low: step.metadata?.lowScore, high: step.metadata?.highScore,
-                    color: theme.textColor, fontFamily: theme.fontFamily)
+                UPExperienceRatingLabels(low: step.metadata?.lowScore, high: step.metadata?.highScore)
             }
         case .multipleChoice:
-            UPExperienceMultipleChoice(state: state, answerModel: answerModel, step: step, theme: theme)
+            UPExperienceMultipleChoice(state: state, answerModel: answerModel, step: step)
         case .openText, .singleInput:
-            UPExperienceQuestionInput(state: state, answerModel: answerModel, step: step, theme: theme)
+            UPExperienceQuestionInput(state: state, answerModel: answerModel, step: step)
         case .completed:
             EmptyView()
         }

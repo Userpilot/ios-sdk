@@ -13,14 +13,14 @@ import SwiftUI
 /// Flow text. Plain lines are SwiftUI `Text`; only a line with a link uses a plain `UITextView`,
 /// because iOS 13 SwiftUI can't tap one word inside a `Text`. Both draw the same runs.
 internal struct UPExperienceRichText: View {
+    @SwiftUI.Environment(\.experienceStyle) private var style
     @SwiftUI.Environment(\.sizeCategory) private var sizeCategory
     @SwiftUI.Environment(\.layoutDirection) private var layoutDirection
     let line: Line
-    let theme: ExperienceTheme
     let width: CGFloat
 
     var body: some View {
-        let runs = line.textRuns(theme: theme)
+        let runs = line.textRuns(style: style)
         return Group {
             if runs.hasLink {
                 linkText(runs)
@@ -35,7 +35,7 @@ internal struct UPExperienceRichText: View {
         runs.reduce(Text(verbatim: "")) { text, run in
             text + Text(verbatim: run.text)
                 .font(Font(ExperienceFonts.font(
-                    family: theme.fontFamily, size: run.size, bold: run.bold, italic: run.italic,
+                    family: style.fontName, size: run.size, bold: run.bold, italic: run.italic,
                     category: sizeCategory)))
                 .foregroundColor(Color(run.color))
         }
@@ -48,7 +48,7 @@ internal struct UPExperienceRichText: View {
 
     private func linkText(_ runs: [UPTextRun]) -> some View {
         let string = runs.attributedString(
-            family: theme.fontFamily, category: sizeCategory, alignment: line.runAlignment)
+            family: style.fontName, category: sizeCategory, alignment: line.runAlignment)
         return UPExperienceLinkText(string: string, isHeading: line.type == .heading)
             .frame(width: width, height: UPExperienceLinkText.height(of: string, width: width))
     }

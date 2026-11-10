@@ -201,10 +201,6 @@ internal struct NPSTheme: Decodable {
         }
     }
 
-    var textSecondaryColorAlpha80: UIColor {
-        textColor.withAlphaComponent(0.8)
-    }
-
     var fontFamily: String? {
         font?.fontFamily
     }
@@ -224,19 +220,6 @@ internal struct NPSTheme: Decodable {
 
     var stepsProgressColor: UIColor {
         progress?.color?.color ?? .black
-    }
-
-    /// Button text and filled rating cells: the opposite of the primary color.
-    var buttonTextColor: UIColor { primaryColorAsString.invertColor().color }
-
-    /// The current dot and the bar: the authored color, or the primary.
-    var progressColor: UIColor {
-        isStepsProgressColorManual ? stepsProgressColor : primaryColor
-    }
-
-    /// Dots not reached yet: the authored color, or the background's opposite.
-    var inactiveProgressColor: UIColor {
-        isStepsProgressColorManual ? stepsProgressColor : backgroundColorAsString.invertColor().color
     }
 
     // radius

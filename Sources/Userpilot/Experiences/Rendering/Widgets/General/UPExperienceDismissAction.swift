@@ -13,24 +13,22 @@ import SwiftUI
 /// The dismiss chip, shaded against the card as in the previous release and on Android. Scaled text grows the chip
 /// instead of clipping, and taps reach Apple's 44 pt target around it without changing the layout.
 internal struct UPExperienceDismissAction: View {
+    @SwiftUI.Environment(\.experienceStyle) private var style
     let title: String
-    let background: UIColor
-    let cardRadius: CGFloat
-    let fontFamily: String?
     let action: () -> Void
 
     var body: some View {
         let height = ThemeHandler.DefaultValues.npsDismissButtonHeight
-        let overlay = Self.dismissChipOverlay(brightness: background.perceivedBrightness())
+        let overlay = Self.dismissChipOverlay(brightness: style.background.perceivedBrightness())
         return Button(action: action) {
             Text(title)
-                .experienceFont(fontFamily, size: ThemeHandler.DefaultValues.npsDismissButtonTextSize)
+                .experienceFont(style.fontName, size: ThemeHandler.DefaultValues.npsDismissButtonTextSize)
                 .foregroundColor(Color(overlay.withAlphaComponent(1)))
                 .padding(.horizontal, ThemeHandler.DefaultValues.npsDismissButtonPadding)
                 .frame(minHeight: height)
                 .background(Color(overlay))
                 .clipShape(RoundedRectangle(
-                    cornerRadius: min(cardRadius, ThemeHandler.DefaultValues.npsDismissButtonMaxCornerRadius)))
+                    cornerRadius: min(style.cardRadius, ThemeHandler.DefaultValues.npsDismissButtonMaxCornerRadius)))
                 // Taps reach 5 pt past the chip's top and bottom.
                 .contentShape(Rectangle().inset(by: (height - UPExperienceLayout.touchTargetSize) / 2))
         }

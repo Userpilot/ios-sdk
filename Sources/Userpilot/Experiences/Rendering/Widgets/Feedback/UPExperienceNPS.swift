@@ -27,9 +27,7 @@ internal struct UPExperienceNPS: View {
                         HStack {
                             Spacer()
                             UPExperienceDismissAction(
-                                title: closeTitle(content), background: theme.backgroundColor,
-                                cardRadius: theme.borderRadius, fontFamily: theme.fontFamily,
-                                action: state.userClose)
+                                title: closeTitle(content), action: state.userClose)
                         }
                     }
                     // Stage 0 scores, 1 asks for feedback, 2 thanks. Only the score stage has no footer.
@@ -43,9 +41,7 @@ internal struct UPExperienceNPS: View {
                     if region == .footer, theme.isStepsProgressEnabled,
                         theme.isStepsProgressBallType, state.npsStep < 2 {
                         UPExperienceProgress(
-                            count: 2, current: state.npsStep,
-                            color: theme.progressColor,
-                            inactiveColor: theme.inactiveProgressColor)
+                            count: 2, current: state.npsStep)
                     }
                 }
             }
@@ -71,13 +67,11 @@ internal struct UPExperienceNPS: View {
             title(content.content.survey.question ?? "", theme)
             VStack(spacing: UPExperienceLayout.scaleLabelSpacing) {
                 UPExperienceRating(
-                    items: UPRatingItem.npsScale, selected: state.npsScore,
-                    primary: theme.primaryColor, filledContent: theme.buttonTextColor,
-                    textColor: theme.textColor, fontFamily: theme.fontFamily, width: width,
+                    count: ThemeHandler.DefaultValues.npsDefaultLikertViewCount, selected: state.npsScore,
+                    type: .numbers, zeroBasedLabels: true, width: width,
                     onSelect: state.selectNPSScore)
                 UPExperienceRatingLabels(
-                    low: content.content.survey.lowScore, high: content.content.survey.highScore,
-                    color: theme.textColor, fontFamily: theme.fontFamily)
+                    low: content.content.survey.lowScore, high: content.content.survey.highScore)
             }
         }
     }
@@ -89,20 +83,16 @@ internal struct UPExperienceNPS: View {
                 UPExperienceTextArea(
                     // The state trims the feedback to 500 characters as it's typed.
                     text: SwiftUI.Binding(get: { state.npsFeedback }, set: { state.npsFeedback = $0 }),
-                    textColor: theme.textColor, placeholderColor: theme.textSecondaryColorAlpha80,
-                    fontFamily: theme.fontFamily, placeholder: content.content.followUp.placeholder ?? "")
+                    placeholder: content.content.followUp.placeholder ?? "")
             }
             if region == .footer {
                 HStack(spacing: 12) {
                     UPExperienceButton(
                         title: content.content.followUp.updateScore ?? "Update score",
-                        foreground: theme.textColor, background: .clear, fontFamily: theme.fontFamily,
-                        borderColor: ThemeHandler.DefaultValues.grayColor, borderWidth: 1,
+                        secondary: true,
                         action: state.updateNPSScore)
                     UPExperienceButton(
-                        title: content.content.followUp.submit ?? "Submit",
-                        foreground: theme.buttonTextColor,
-                        background: theme.primaryColor, fontFamily: theme.fontFamily
+                        title: content.content.followUp.submit ?? "Submit"
                     ) {
                         state.submitNPS()
                     }
@@ -115,14 +105,12 @@ internal struct UPExperienceNPS: View {
         VStack(spacing: UPExperienceLayout.spacing) {
             if region == .content {
                 title(completed.header ?? "", theme)
-                UPExperienceText(text: completed.subheader ?? "", color: theme.textColor, fontFamily: theme.fontFamily)
+                UPExperienceText(text: completed.subheader ?? "")
             }
             // The thank-you button is optional; without it the user closes with the chip.
             if region == .footer, completed.button.enabled {
                 UPExperienceButton(
                     title: completed.button.buttonText ?? "Done",
-                    foreground: theme.buttonTextColor,
-                    background: theme.primaryColor, fontFamily: theme.fontFamily,
                     action: state.finishNPS)
             }
         }
@@ -130,7 +118,7 @@ internal struct UPExperienceNPS: View {
 
     private func title(_ text: String, _ theme: NPSTheme) -> some View {
         UPExperienceText(
-            text: text, color: theme.textColor, fontFamily: theme.fontFamily,
+            text: text,
             size: CGFloat(ThemeHandler.DefaultValues.surveyTitleTextSize), bold: true)
     }
 }

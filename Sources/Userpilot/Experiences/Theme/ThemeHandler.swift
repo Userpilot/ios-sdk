@@ -57,8 +57,6 @@ internal class ThemeHandler: ThemeHandling {
         static let blurImageSize = CGSize(width: 64, height: 64)
         static let defaultTextMargin = "   "
         static let imageSize = CGFloat(300)
-        /// The height of the bar-style steps progress (`UPExperienceProgress`), drawn as a capsule.
-        static let stepsProgressBarHeight = CGFloat(5)
 
         static let surveyTitleTextSize: CGFloat = 16
         static let surveyDescriptionTextSize: CGFloat = 13

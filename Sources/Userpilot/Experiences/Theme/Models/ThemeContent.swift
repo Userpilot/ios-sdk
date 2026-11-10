@@ -13,7 +13,6 @@ import UIKit
 
 // MARK: - ThemeResponse
 
-// swiftlint:disable file_length
 internal struct ThemeContent: Decodable {
     let id: Int?
     let themeData: ThemeData?
@@ -133,11 +132,6 @@ internal struct ExperienceTheme: Decodable {
 
     var stepsProgressColor: UIColor {
         progress?.color?.color ?? .black
-    }
-
-    /// The dots and bar: the authored color, or the background's opposite.
-    var progressColor: UIColor {
-        isStepsProgressColorManual ? stepsProgressColor : backgroundColorAsString.invertColor().color
     }
 
     /// The close cross: the authored color, or the background's opposite.
@@ -296,14 +290,6 @@ internal struct SurveyTheme: Decodable {
         }
     }
 
-    var textSecondaryColorAlpha80: UIColor {
-        textColor.withAlphaComponent(0.8)
-    }
-
-    var textSecondaryColor: UIColor {
-        textColor.withAlphaComponent(0.2)
-    }
-
     var fontFamily: String? {
         font?.fontFamily
     }
@@ -340,14 +326,6 @@ internal struct SurveyTheme: Decodable {
 
     var stepsProgressColor: UIColor {
         progress?.color?.color ?? .black
-    }
-
-    /// Button text and filled rating cells: the opposite of the primary color.
-    var buttonTextColor: UIColor { primaryColorAsString.invertColor().color }
-
-    /// Dots not reached yet: the authored color, or the background's opposite.
-    var inactiveProgressColor: UIColor {
-        isStepsProgressColorManual ? stepsProgressColor : backgroundColorAsString.invertColor().color
     }
 
     // corner

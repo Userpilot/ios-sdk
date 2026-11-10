@@ -14,16 +14,11 @@ import SwiftUI
 internal struct UPExperienceRatingLabels: View {
     let low: String?
     let high: String?
-    let color: UIColor
-    let fontFamily: String?
 
     var body: some View {
         HStack(alignment: .top) {
-            UPExperienceText(
-                text: low ?? "", color: color, fontFamily: fontFamily, size: UPExperienceLayout.scaleLabelSize)
-            UPExperienceText(
-                text: high ?? "", color: color, fontFamily: fontFamily, size: UPExperienceLayout.scaleLabelSize,
-                alignment: .trailing)
+            UPExperienceText(text: low ?? "", size: UPExperienceLayout.scaleLabelSize)
+            UPExperienceText(text: high ?? "", size: UPExperienceLayout.scaleLabelSize, alignment: .trailing)
         }
     }
 }

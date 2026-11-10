@@ -13,7 +13,9 @@ import SwiftUI
 /// The close (×) control in an experience's header: an SF Symbol in a 44 pt target that reaches into the side
 /// margin, so the symbol ends on the content edge.
 internal struct UPExperienceClose: View {
-    let color: UIColor
+    @SwiftUI.Environment(\.experienceStyle) private var style
+    /// The style's text color unless given, such as a flow's authored close color.
+    var color: UIColor?
     let action: () -> Void
 
     var body: some View {
@@ -23,7 +25,7 @@ internal struct UPExperienceClose: View {
             Button(action: action) {
                 Image(systemName: "xmark")
                     .font(.system(size: UPExperienceLayout.closeGlyphSize, weight: .semibold))
-                    .foregroundColor(Color(color))
+                    .foregroundColor(Color(color ?? style.text))
                     .frame(width: UPExperienceLayout.touchTargetSize, height: UPExperienceLayout.touchTargetSize)
                     // A transparent frame isn't tappable on its own; the whole 44 pt square is the target.
                     .contentShape(Rectangle())

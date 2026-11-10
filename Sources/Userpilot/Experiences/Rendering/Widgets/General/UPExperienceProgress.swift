@@ -12,32 +12,31 @@ import SwiftUI
 
 /// Step progress for carousels, step surveys and NPS, drawn as dots or as a bar.
 internal struct UPExperienceProgress: View {
+    @SwiftUI.Environment(\.experienceStyle) private var style
     let count: Int
     let current: Int
-    let color: UIColor
-    var showsDots = true
-    var inactiveColor: UIColor?
 
     var body: some View {
         Group {
-            if showsDots {
+            if style.dots {
                 // Dots fill up to and including the current step; the rest fade to 20%.
-                HStack(spacing: 6) {
+                HStack(spacing: UPExperienceLayout.dotSpacing) {
                     ForEach(0..<max(0, count), id: \.self) { index in
                         Circle()
-                            .fill(Color(index <= current ? color : (inactiveColor ?? color).withAlphaComponent(0.2)))
-                            .frame(width: 6, height: 6)
+                            .fill(Color(index <= current ? style.progressColor : style.inactiveProgressColor
+                                .withAlphaComponent(UPExperienceLayout.progressInactiveOpacity)))
+                            .frame(width: UPExperienceLayout.dotSize, height: UPExperienceLayout.dotSize)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 20)
             } else {
                 // The bar's filled share is the steps reached so far.
                 GeometryReader { geometry in
-                    Capsule().fill(Color(color))
+                    Capsule().fill(Color(style.progressColor))
                         .frame(width: geometry.size.width * CGFloat(min(current + 1, count)) / CGFloat(max(1, count)))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(height: ThemeHandler.DefaultValues.stepsProgressBarHeight)
+                .frame(height: UPExperienceLayout.progressBarHeight)
             }
         }
         .contentShape(Rectangle())

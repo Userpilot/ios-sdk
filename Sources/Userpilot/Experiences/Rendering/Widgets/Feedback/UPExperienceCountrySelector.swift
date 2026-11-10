@@ -13,20 +13,19 @@ import SwiftUI
 /// The dial-code control inside the start of a phone field: a dropdown of countries on iOS 14+ (`Menu` with a
 /// checkmarked `Picker`); on iOS 13, a button that shows the country wheel (`wheel`) under the field.
 internal struct UPExperienceCountrySelector: View {
+    @SwiftUI.Environment(\.experienceStyle) private var style
     let code: String
-    let color: UIColor
-    let fontFamily: String?
     let onSelect: (String) -> Void
     /// iOS 13 only: shows or hides the wheel under the field.
     let onToggleWheel: () -> Void
 
     var body: some View {
         let label = Text(code + " ▾")
-            .experienceFont(fontFamily, size: UPExperienceLayout.bodySize)
-            .foregroundColor(Color(color))
+            .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
+            .foregroundColor(Color(style.text))
         if #available(iOS 14.0, *) {
             Menu(content: { UPCountryList(code: code, onSelect: onSelect) }, label: { label })
-                .accentColor(Color(color))
+                .accentColor(Color(style.text))
                 .accessibility(label: Text("Country code"))
         } else {
             Button(action: onToggleWheel, label: { label })

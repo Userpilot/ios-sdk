@@ -12,9 +12,10 @@ import SwiftUI
 
 /// Themed text in the theme family at the resolved size.
 internal struct UPExperienceText: View {
+    @SwiftUI.Environment(\.experienceStyle) private var style
     let text: String
-    let color: UIColor
-    let fontFamily: String?
+    /// The style's text color unless given, such as a heading's title color.
+    var color: UIColor?
     var size: CGFloat = CGFloat(ThemeHandler.DefaultValues.normalTextSize)
     var bold = false
     var alignment: TextAlignment = .leading
@@ -23,8 +24,8 @@ internal struct UPExperienceText: View {
     var suffixColor: UIColor = .red
 
     var body: some View {
-        (Text(text).foregroundColor(Color(color)) + Text(suffix).foregroundColor(Color(suffixColor)))
-            .experienceFont(fontFamily, size: size, bold: bold)
+        (Text(text).foregroundColor(Color(color ?? style.text)) + Text(suffix).foregroundColor(Color(suffixColor)))
+            .experienceFont(style.fontName, size: size, bold: bold)
             .multilineTextAlignment(alignment)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: frameAlignment)

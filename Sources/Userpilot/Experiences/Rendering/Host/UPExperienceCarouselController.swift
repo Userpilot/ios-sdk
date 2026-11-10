@@ -149,6 +149,8 @@ private struct UPExperienceCarouselPage: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .background(Color(theme.backgroundColor))
+            // Each page draws with its own theme, so a swipe never mixes two pages' colors.
+            .environment(\.experienceStyle, theme.experienceStyle)
         }
         // Direction comes from the experience content, not the host app.
         .environment(\.layoutDirection, model.isRTL ? .rightToLeft : .leftToRight)

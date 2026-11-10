@@ -59,7 +59,7 @@ A dismissal request completes only after UIKit removes the native renderer.
 | `Sources/Userpilot/Experiences/Rendering/Host/ExperienceOverlayWindow.swift` | The scene-attached overlay window that holds the hosts above the app |
 | `Sources/Userpilot/Experiences/Rendering/Widgets/` | SwiftUI components, one per file: `General/` (text, text area, image, button, close, dismiss action, progress), `Flows/` (flow step, sections, rich text, link text), `Feedback/` (rating and its labels, survey question, multiple choice, question input, country selector, survey, thank-you, NPS) |
 | `Sources/Userpilot/Experiences/Rendering/Style/` | `ExperienceFonts` (one font resolver for SwiftUI and the UIKit text views, the opt-in text-size rule and cap), `UPExperienceButtonStyle`, `UPExperienceLayout`, `Line+Rendering` (flow text runs and the shared image size rule) |
-| `Sources/Userpilot/Experiences/Theme/Models/ThemeContent.swift`, `Models/NPSContent.swift` | Theme colors the widgets share, each in one place: `buttonTextColor`, `progressColor`, `inactiveProgressColor`, `closeColor` |
+| `Sources/Userpilot/Experiences/Rendering/Style/UPExperienceStyle.swift`, `Extensions/EnvironmentValues+ExperienceStyle.swift` | The theme of what is on screen, resolved once into `UPExperienceStyle` (Android's fields and rules) and carried in the SwiftUI environment (`\.experienceStyle`): the root view sets it for each region and each carousel page for itself, and widgets read it instead of taking colors and fonts. Values for one experience type (NPS logo, flow `closeColor`, backdrop) stay on its theme |
 | `Sources/Userpilot/Extensions/ContentSizeCategory+Extensions.swift`, `View+ExperienceText.swift` | The SwiftUI text size and font modifiers (`experienceTextSize`, `experienceFont`) and the size category conversion |
 | `Sources/Userpilot/Extensions/UIImage+Extensions.swift` | Decoding that keeps each image's aspect ratio and downscales large images and GIF frames |
 | `Tests/UserpilotTests/Experiences/` | Logic and model tests: render state, answers, text runs, image size, rating cells, style, image model and loader, plus the publisher tests |
@@ -118,10 +118,12 @@ source of eligibility, payload decoding and business behavior.
   or link also works, and a tap on another field moves the keyboard to it (`isTextInput`; read-only link text
   is not an input). A tap inside the focused field's padded box (`fieldBox`) keeps the keyboard. Dragging the
   body closes it too (`keyboardDismissMode = .interactive`).
-- Dots restore the legacy iOS 6-point circles and 6-point gaps, cumulative active state and 20% inactive
-  color. Survey/NPS bar progress is a continuous 5-point fill at the top edge, with its original theme
-  colors and a clear track; on a sheet it runs across the safe-area sides the content keeps clear of.
-  Ball progress remains below the action.
+- Dots are 6-point circles with 6-point gaps (`dotSize`, `dotSpacing`), filled in `progressColor` up to the
+  current step; the rest use `inactiveProgressColor` (the authored progress color, or the background's
+  opposite) at 20% (`progressInactiveOpacity`). Survey/NPS bar progress is a continuous 5-point fill
+  (`progressBarHeight`) at the top edge in `progressColor` (for NPS, the authored color or the primary), with a
+  clear track; on a sheet it runs across the safe-area sides the content keeps clear of. Ball progress
+  remains below the action. Android uses the same colors and sizes.
 - Images load/decode at the authored size independently of an initial narrow display proposal, so a
   temporary 1-point layout can't create a tiny image cached for that URL. The size rule is the one
   Android uses (both `auto` → natural size; both numeric → that size; wider than the space → the width

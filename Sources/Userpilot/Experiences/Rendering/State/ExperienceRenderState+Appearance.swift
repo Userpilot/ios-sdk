@@ -28,6 +28,17 @@ extension ExperienceRenderState {
         return true
     }
 
+    /// The theme of what is on screen, resolved once; the root view puts it in the SwiftUI environment for its
+    /// widgets (Android: `currentStyle`). Each carousel page puts its own page's style there instead.
+    var currentStyle: UPExperienceStyle {
+        switch content {
+        case .flow(let model): return flowTheme(model).experienceStyle
+        case .survey(let model): return model.surveyTheme?.experienceStyle ?? UPExperienceStyle()
+        case .nps(let model): return model.npsTheme?.experienceStyle ?? UPExperienceStyle()
+        case .thankYou(_, let theme): return theme.experienceStyle
+        }
+    }
+
     var topProgress: UPExperienceProgress? {
         switch content {
         // Bar progress only; dots are drawn in the footer. Branching surveys have no fixed step count.
@@ -36,14 +47,12 @@ extension ExperienceRenderState {
                 survey.type == .step, !survey.hasBranchingLogic, theme.isStepsProgressEnabled,
                 !theme.isStepsProgressBallType, survey.modules[safe: model.currentStep]?.type != .completed
             else { return nil }
-            return UPExperienceProgress(count: survey.modules.count, current: model.currentStep,
-                                        color: theme.stepsProgressColor, showsDots: false)
+            return UPExperienceProgress(count: survey.modules.count, current: model.currentStep)
         // NPS has two stages (score, feedback); the bar hides on the thank-you stage.
         case .nps(let model):
             guard let theme = model.npsTheme, theme.isStepsProgressEnabled,
                 !theme.isStepsProgressBallType, npsStep < 2 else { return nil }
-            return UPExperienceProgress(count: 2, current: npsStep,
-                                        color: theme.progressColor, showsDots: false)
+            return UPExperienceProgress(count: 2, current: npsStep)
         default: return nil
         }
     }
