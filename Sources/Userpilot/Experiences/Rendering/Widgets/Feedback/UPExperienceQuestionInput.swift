@@ -49,12 +49,10 @@ internal struct UPExperienceQuestionInput: View {
                         UPExperienceCountrySelector(
                             code: answer.countryCode, onSelect: selectCountryCode, onToggleWheel: toggleCountryWheel)
                     }
-                    TextField(step.metadata?.placeholder ?? "", text: text)
+                    textField(placeholder: step.metadata?.placeholder ?? "")
                         .keyboardType(step.inputKeyboardType)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
-                        .foregroundColor(Color(style.text))
                 }
                 if showsCountryWheel {
                     UPExperienceCountrySelector.wheel(code: answer.countryCode, onSelect: selectCountryCode)
@@ -65,16 +63,31 @@ internal struct UPExperienceQuestionInput: View {
 
     private var dateField: some View {
         field {
-            TextField("dd/mm/yyyy", text: text)
+            textField(placeholder: "dd/mm/yyyy")
                 .keyboardType(.numberPad)
-                .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
-                .foregroundColor(Color(style.text))
             Button(action: openDatePicker, label: {
                 Image(systemName: "calendar").foregroundColor(Color(style.text))
             }).accessibility(label: Text("Choose date"))
         }
         // Apple's calendar in a sheet with Cancel and OK, as Android opens Material's date dialog.
         .sheet(isPresented: $showsDatePicker) { datePickerSheet }
+    }
+
+    /// A one-line text field whose placeholder is the text color at 80%, as in every input; SwiftUI's own
+    /// placeholder can't be colored before iOS 15.
+    private func textField(placeholder: String) -> some View {
+        ZStack(alignment: .leading) {
+            if answer.text.isEmpty {
+                UPExperienceText(text: placeholder, color: style.placeholder, size: UPExperienceLayout.bodySize)
+                    .accessibility(hidden: true)
+                    .allowsHitTesting(false)
+            }
+            TextField("", text: text)
+                .experienceFont(style.fontName, size: UPExperienceLayout.bodySize)
+                .foregroundColor(Color(style.text))
+                // VoiceOver reads the placeholder as the field's name.
+                .accessibility(label: Text(placeholder))
+        }
     }
 
     /// The bordered one-line field around `content`.

@@ -124,6 +124,9 @@ source of eligibility, payload decoding and business behavior.
   (`progressBarHeight`) at the top edge in `progressColor` (for NPS, the authored color or the primary), with a
   clear track; on a sheet it runs across the safe-area sides the content keeps clear of. Ball progress
   remains below the action. Android uses the same colors and sizes.
+- Every input's placeholder is the text color at 80% (`UPExperienceStyle.placeholder`); field borders and
+  unchosen marks are the text color at 20% (`secondaryText`). The one-line fields draw their own placeholder,
+  since SwiftUI's can't be colored before iOS 15.
 - Images load/decode at the authored size independently of an initial narrow display proposal, so a
   temporary 1-point layout can't create a tiny image cached for that URL. The size rule is the one
   Android uses (both `auto` → natural size; both numeric → that size; wider than the space → the width
