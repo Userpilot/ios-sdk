@@ -13,7 +13,9 @@ import UIKit
 /// The theme of what is on screen, resolved once from its flow, survey or NPS theme, so every widget draws with the
 /// same values and no default color leaks into customer content. The SwiftUI environment carries it
 /// (`\.experienceStyle`); Android resolves the same fields under the same names (`LocalExperienceStyle`).
-internal struct UPExperienceStyle {
+/// Equatable by value: a style rebuilt from an unchanged theme holds new color objects, and widgets reading it
+/// redraw only when it is unequal.
+internal struct UPExperienceStyle: Equatable {
     var background: UIColor = .white
     var text: UIColor = .black
     var title: UIColor = .black

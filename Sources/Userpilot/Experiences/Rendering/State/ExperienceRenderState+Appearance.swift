@@ -28,8 +28,8 @@ extension ExperienceRenderState {
         return true
     }
 
-    /// The theme of what is on screen, resolved once; the root view puts it in the SwiftUI environment for its
-    /// widgets (Android: `currentStyle`). Each carousel page puts its own page's style there instead.
+    /// The theme of what is on screen, rebuilt on each redraw; the root view puts it in the SwiftUI environment for
+    /// its widgets (Android: `currentStyle`). Each carousel page puts its own page's style there instead.
     var currentStyle: UPExperienceStyle {
         switch content {
         case .flow(let model): return flowTheme(model).experienceStyle

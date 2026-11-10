@@ -36,6 +36,14 @@ final class UPExperienceStyleTests: XCTestCase {
         XCTAssertEqual(style.secondaryText, UIColor.red.withAlphaComponent(0.2))
     }
 
+    func testAStyleRebuiltFromTheSameThemeIsEqual() {
+        // Each rebuild reads new color objects from the theme; widgets redraw only when the style is unequal.
+        XCTAssertEqual(MockContentFactory.makeSurveyTheme().experienceStyle,
+                       MockContentFactory.makeSurveyTheme().experienceStyle)
+        XCTAssertNotEqual(MockContentFactory.makeSurveyTheme().experienceStyle,
+                          surveyTheme(progressColorType: .automatic).experienceStyle)
+    }
+
     private func surveyTheme(progressColorType: ColorType) -> SurveyTheme {
         let base = MockContentFactory.makeSurveyTheme()
         return SurveyTheme(
