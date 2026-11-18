@@ -57,15 +57,17 @@ internal extension String {
         }
     }
 
-    // Function to return size
-    var toSize: CGFloat? {
-        if self.contains("px"), let value = Int(self.dropLast(2)) {
-            return CGFloat(value)
-        } else if let value = Int(self) {
-            return CGFloat(value)
+    /// A CSS length in points: `"120"`, `"120.5px"`, or a percentage of `whole` (`"50%"`). Nil for `auto`,
+    /// a percentage with nothing to take it of, and anything unreadable or not positive.
+    func cssLength(percentOf whole: CGFloat?) -> CGFloat? {
+        let points: CGFloat?
+        if hasSuffix("%") {
+            points = whole.flatMap { whole in Double(dropLast()).map { CGFloat($0) / 100 * whole } }
         } else {
-            return nil
+            points = Double(hasSuffix("px") ? String(dropLast(2)) : self).map { CGFloat($0) }
         }
+        guard let points, points.isFinite, points > 0 else { return nil }
+        return points
     }
 
     // Function to return RTL language

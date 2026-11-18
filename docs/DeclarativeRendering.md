@@ -128,11 +128,18 @@ source of eligibility, payload decoding and business behavior.
   unchosen marks are the text color at 20% (`secondaryText`). The one-line fields draw their own placeholder,
   since SwiftUI's can't be colored before iOS 15.
 - Images load/decode at the authored size independently of an initial narrow display proposal, so a
-  temporary 1-point layout can't create a tiny image cached for that URL. The size rule is the one
-  Android uses (both `auto` → natural size; both numeric → that size; wider than the space → the width
-  at the natural aspect; anything else → 300 × 300), applied to the width the parent passes in rather
-  than the screen. Decoding keeps the image's own aspect ratio (it covers the box, so `fit` letterboxes
-  and nothing stretches unless authored as `fill`) and downscales large images and GIF frames with ImageIO.
+  temporary 1-point layout can't create a tiny image cached for that URL. The size rule is Android's and
+  comes from the payload alone, before anything loads. `style.width` and `style.height` are CSS lengths:
+  points (`"120"`, `"120.5px"`), or for the width a percentage of the available width (`"100%"`); anything
+  else, a percentage height and a missing `style` included, is `auto`. Both set → that size; one set →
+  that side, the other at the `actual_size` aspect; both `auto` → `actual_size`; both set and wider than
+  the space → the width at the `actual_size` aspect. A missing `actual_size` is a backend fault and counts
+  as 300 × 300. The rule applies to the width the parent passes in rather than the screen. Decoding keeps
+  the image's own aspect ratio and downscales large images and GIF frames with ImageIO.
+  The blur and the downloaded image draw in one box, so loading and loaded share a shape. With `contain`
+  (the default) the box is the largest one of the `actual_size` aspect inside the frame, centred, and
+  `border_radius` rounds it, so the corners fall on the picture rather than in the empty bands a frame of
+  another aspect leaves. `fill` stretches and `cover` crops over the whole frame. Android matches.
   The render state owns one `UPImageModel` per image, so SwiftUI re-evaluation never restarts a download.
 - Sheets start hidden until their final layout is measured, then animate upward from below the screen
   and slide back down off it. Dialogs rise 50 points while fading in (0.4 seconds) and drop 50 points

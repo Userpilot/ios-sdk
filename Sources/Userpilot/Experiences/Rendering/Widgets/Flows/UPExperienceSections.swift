@@ -79,6 +79,7 @@ internal struct UPExperienceSections: View {
             UPExperienceImage(
                 model: state.imageModel(url: url, blurHash: line.attrs?.hash, size: size, loader: loader),
                 size: size, stretches: line.attrs?.style?.objectFit == "fill",
+                fills: line.attrs?.style?.objectFit == "cover", picture: line.pictureSize(in: size),
                 radius: line.attrs?.imageRadius ?? 0, alt: line.attrs?.alt ?? "")
         }
     }

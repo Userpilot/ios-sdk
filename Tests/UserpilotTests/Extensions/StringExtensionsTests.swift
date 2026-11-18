@@ -27,14 +27,29 @@ final class StringExtensionsTests: XCTestCase {
         XCTAssertFalse("en".isRTL)
     }
 
+    func testCSSLengthParsesPointsWithOrWithoutPx() {
+        XCTAssertEqual("120".cssLength(percentOf: nil), 120)
+        XCTAssertEqual("80px".cssLength(percentOf: nil), 80)
+        XCTAssertEqual("120.5".cssLength(percentOf: nil), 120.5)
+    }
+
+    func testCSSLengthTakesAPercentageOfTheWholeItIsGiven() {
+        XCTAssertEqual("100%".cssLength(percentOf: 335), 335)
+        XCTAssertEqual("50%".cssLength(percentOf: 335), 167.5)
+        XCTAssertNil("50%".cssLength(percentOf: nil))
+    }
+
+    func testCSSLengthIsNilForLengthsItCannotUse() {
+        for value in ["auto", "", "px", "%", "0", "-10", "NaN", "abc"] {
+            XCTAssertNil(value.cssLength(percentOf: 335), value)
+        }
+    }
+
     func testValidationAndParsingHelpers() {
         XCTAssertEqual("16px".toFontSize, 16)
         XCTAssertEqual("24".toFontSize, 24)
-        XCTAssertEqual("18".toSize, 18)
         XCTAssertEqual("bad-value".toFontSize, CGFloat(ThemeHandler.DefaultValues.normalTextSize))
         XCTAssertEqual("".toFontSize, CGFloat(ThemeHandler.DefaultValues.normalTextSize))
-        XCTAssertNil("auto".toSize)
-        XCTAssertNil("".toSize)
         XCTAssertEqual("https://example.com/image.png".getImageNameWithoutExtension(), "image")
         XCTAssertEqual(
             "https://example.com/assets/image.name.png?size=large".getImageNameWithoutExtension(),

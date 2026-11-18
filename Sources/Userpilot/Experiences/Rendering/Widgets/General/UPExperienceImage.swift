@@ -17,10 +17,13 @@ internal struct UPExperienceImage: View {
     @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var model: UPImageModel
     var size = CGSize(width: 100, height: 100)
-    /// `object_fit: fill` stretches to the box, as `scaleToFill` did; anything else fits.
+    /// `object_fit: fill` stretches to the box, as `scaleToFill` did; without this or `fills`, the image fits.
     var stretches = false
-    /// Fills the box at the image's own aspect and crops the rest, as list-line icons do on Android.
+    /// Fills the box at the image's own aspect and crops the rest: `object_fit: cover`, and list-line icons
+    /// as on Android.
     var fills = false
+    /// Where the blur and the image draw, centred in the frame; the whole frame when nil.
+    var picture: CGSize?
     var radius: CGFloat = 0
     var alt = ""
 
@@ -28,14 +31,15 @@ internal struct UPExperienceImage: View {
         ZStack {
             // Keeps the frame a real view before any pixels arrive, so it appears and starts the download.
             Color.clear
+            // The blur and the image share one box, so loading and loaded have the same shape and corners.
             if let image = model.image {
-                pixels(image).transition(.opacity)
+                rounded(pixels(image)).transition(.opacity)
             } else if let placeholder = model.placeholder {
-                pixels(placeholder).transition(.opacity)
+                // Decoded square, so it covers the box instead of fitting it.
+                rounded(Image(uiImage: placeholder).resizable().aspectRatio(contentMode: .fill)).transition(.opacity)
             }
         }
         .frame(width: size.width, height: size.height)
-        .clipShape(RoundedRectangle(cornerRadius: radius))
         // The download runs while the image is on screen (`.task` needs iOS 15).
         .onAppear { model.viewAppeared() }
         .onDisappear { model.viewDisappeared() }
@@ -58,6 +62,13 @@ internal struct UPExperienceImage: View {
         } else {
             Image(uiImage: image).resizable().aspectRatio(contentMode: .fit)
         }
+    }
+
+    private func rounded<Content: View>(_ content: Content) -> some View {
+        let box = picture ?? size
+        return content
+            .frame(width: box.width, height: box.height)
+            .clipShape(RoundedRectangle(cornerRadius: radius))
     }
 }
 

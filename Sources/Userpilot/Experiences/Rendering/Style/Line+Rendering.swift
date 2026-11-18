@@ -53,26 +53,49 @@ internal extension Line {
         attrs?.textAlign?.textAlignment() ?? .center
     }
 
-    /// The shared iOS/Android rule, applied to the width the parent passes in (never the screen):
-    /// both `auto` → natural size; both numeric → that size; either way, wider than `width` takes
-    /// `width` at the natural aspect. Anything else → 300 × 300. The result is then shrunk to fit.
+    /// The shared iOS/Android rule for the frame an image line takes, from the payload alone, applied to the
+    /// width the parent passes in (never the screen). `style.width` and `style.height` are CSS lengths: points
+    /// (`"120"`, `"120px"`), or for the width a percentage of `width` (`"100%"`). Anything else, a percentage
+    /// height and a missing `style` included, is `auto`: that side follows the `actual_size` aspect, and both
+    /// `auto` is the `actual_size` itself. Both set and wider than `width` → `width` at the `actual_size`
+    /// aspect. Without `actual_size`, a backend fault, the image is taken as 300 × 300. The result is then
+    /// shrunk to fit.
     func imageSize(fitting width: CGFloat) -> CGSize {
         let fallback = ThemeHandler.DefaultValues.imageSize
-        let natural = CGSize(width: CGFloat(attrs?.actualSize?.width ?? Int(fallback)),
-                             height: CGFloat(attrs?.actualSize?.height ?? Int(fallback)))
-        let atWidthWithNaturalAspect = CGSize(width: width, height: width * natural.height / max(1, natural.width))
+        let natural = attrs?.naturalSize ?? CGSize(width: fallback, height: fallback)
         let size: CGSize
-        if attrs?.style?.width == "auto" && attrs?.style?.height == "auto" {
-            size = natural.width > width ? atWidthWithNaturalAspect : natural
-        } else if let authoredWidth = attrs?.style?.width?.toSize, let authoredHeight = attrs?.style?.height?.toSize {
+        switch (attrs?.style?.width?.cssLength(percentOf: width), attrs?.style?.height?.cssLength(percentOf: nil)) {
+        case let (authoredWidth?, authoredHeight?):
             size = authoredWidth > width
-                ? atWidthWithNaturalAspect : CGSize(width: authoredWidth, height: authoredHeight)
-        } else {
-            size = CGSize(width: fallback, height: fallback)
+                ? natural.scaled(toWidth: width) : CGSize(width: authoredWidth, height: authoredHeight)
+        case let (authoredWidth?, nil):
+            size = natural.scaled(toWidth: authoredWidth)
+        case let (nil, authoredHeight?):
+            size = natural.scaled(toHeight: authoredHeight)
+        case (nil, nil):
+            size = natural
         }
         // Anything still wider than the space shrinks to it, keeping its own aspect.
-        guard size.width > width, size.width > 0 else { return size }
-        return CGSize(width: width, height: width * size.height / size.width)
+        return size.width > width ? size.scaled(toWidth: width) : size
+    }
+
+    /// Where the blur and the image draw inside `frame`. A contained picture is the largest box of the
+    /// `actual_size` aspect that fits, centred, so `border_radius` rounds the picture rather than the empty
+    /// bands a frame of another aspect leaves beside it. `fill`, `cover`, and a missing `actual_size` take
+    /// the whole frame.
+    func pictureSize(in frame: CGSize) -> CGSize {
+        let fit = attrs?.style?.objectFit
+        guard let natural = attrs?.naturalSize, fit != "fill", fit != "cover" else { return frame }
+        let scale = min(frame.width / natural.width, frame.height / natural.height)
+        return CGSize(width: natural.width * scale, height: natural.height * scale)
+    }
+}
+
+private extension Attributes {
+    /// The image's own size from the payload; nil when the backend sent none it could measure.
+    var naturalSize: CGSize? {
+        guard let width = actualSize?.width, let height = actualSize?.height, width > 0, height > 0 else { return nil }
+        return CGSize(width: width, height: height)
     }
 }
 
