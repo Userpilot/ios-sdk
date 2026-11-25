@@ -34,6 +34,22 @@ final class TooltipLayoutObserverTests: XCTestCase {
         XCTAssertEqual(recorder.moves, 0)
     }
 
+    func testAnIdleWindow_isNotSampledAgainAndAgain() {
+        let root = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        var samples = 0
+        let observer = TooltipLayoutObserver(root: {
+            samples += 1
+            return root
+        })
+        observer.start()
+        addTeardownBlock { observer.stop() }
+
+        DispatchQueue.main.async {}
+        CFRunLoopRunInMode(.defaultMode, 0.6, false)
+
+        XCTAssertLessThanOrEqual(samples, 3, "The start, then at most one trailing look and one stray wake")
+    }
+
     func testAnUnchangedWindow_orAStoppedObserver_neverSettles() {
         let unchanged = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         let changed = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))

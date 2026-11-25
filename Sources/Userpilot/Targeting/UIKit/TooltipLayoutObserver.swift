@@ -5,7 +5,7 @@
 //  Created by Userpilot on 22/11/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  Tells a waiting tooltip when its host window's layout changes, so a target that is added,
+//  Tells a tooltip when its host window's layout changes, so a target that is added,
 //  shown, moved or faded in without a scroll is searched for again once the screen is quiet.
 //
 
@@ -46,6 +46,10 @@ internal final class TooltipLayoutObserver {
     /// Whether the next idle run loop must sample, because the trailing look is due.
     private var isSampleDue = false
 
+    /// Whether the last idle run loop sampled. Reading the layer tree wakes the run loop once more, and a
+    /// trailing look scheduled from that wake would keep an idle app sampling forever.
+    private var didSampleLastTurn = false
+
     // MARK: Initialization
 
     /// - Parameter root: the view whose layer tree is compared, read at each sample.
@@ -78,6 +82,7 @@ internal final class TooltipLayoutObserver {
         trailingSample?.cancel()
         trailingSample = nil
         isSampleDue = false
+        didSampleLastTurn = false
         guard let observer = runLoopObserver else { return }
         CFRunLoopObserverInvalidate(observer)
         runLoopObserver = nil
@@ -90,6 +95,10 @@ internal final class TooltipLayoutObserver {
         let sinceLastSample = CACurrentMediaTime() - lastSampledAt
         if isSampleDue || sinceLastSample >= Constants.sampleInterval {
             sample()
+            return
+        }
+        guard !didSampleLastTurn else {
+            didSampleLastTurn = false
             return
         }
         guard trailingSample == nil else { return }
@@ -107,6 +116,7 @@ internal final class TooltipLayoutObserver {
 
     private func sample() {
         isSampleDue = false
+        didSampleLastTurn = true
         trailingSample?.cancel()
         trailingSample = nil
         lastSampledAt = CACurrentMediaTime()
