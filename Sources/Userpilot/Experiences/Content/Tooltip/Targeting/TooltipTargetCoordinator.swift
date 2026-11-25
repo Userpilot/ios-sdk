@@ -18,11 +18,14 @@ import UIKit
 
 /// Resolves a tooltip's target on main for the life of its presentation.
 /// The renderer supplies a resolver bound to its admitted host; retries never select another host.
-/// Recovery owns timed attempts before reveal; geometry changes drive re-resolution after reveal.
+/// Recovery owns timed attempts before reveal; geometry changes and host settles drive re-resolution after reveal.
 internal final class TooltipTargetCoordinator {
 
     /// Consecutive failed re-resolutions a visible tooltip tolerates before its target counts as lost.
     static let postRevealFailureBudget = 1
+
+    /// Wait before a visible target that one re-match missed is checked again.
+    static let postRevealRecheckDelay: TimeInterval = 1
 
     /// Re-reads a found target may take to hold still before it reveals at its latest position.
     private static let stillnessChecks =
@@ -66,6 +69,9 @@ internal final class TooltipTargetCoordinator {
     /// Re-places a visible card when the presentation's geometry changes.
     private let geometryTracker = TargetGeometryTracker()
 
+    /// Re-matches a visible card once its host window settles after a scroll or layout change.
+    private var postRevealObserver: TooltipScrollObserver?
+
     /// Whether the card is on screen. Switches the failure rules above.
     private var isRevealed = false
 
@@ -80,7 +86,8 @@ internal final class TooltipTargetCoordinator {
     /// Attempts made so far, exposed so the reveal can report a retry count.
     private(set) var attemptCount = 0
 
-    /// Runs a stillness re-read after its delay, on main. Tests replace it to re-read at once.
+    /// Runs a stillness re-read, or a visible target's recheck, after its delay, on main.
+    /// Tests replace it to re-read at once.
     var scheduleStillnessCheck: (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
@@ -164,7 +171,7 @@ internal final class TooltipTargetCoordinator {
         recovery?.attemptNow()
     }
 
-    /// Records that the card is now visible, and starts watching its geometry.
+    /// Records that the card is now visible, and starts watching its geometry and its host window.
     ///
     /// - Parameter container: the tooltip's backdrop, whose bounds changes are
     ///   the signal that the card needs re-placing.
@@ -179,6 +186,11 @@ internal final class TooltipTargetCoordinator {
             self?.handlePostRevealChange()
         }
         geometryTracker.start(in: container)
+
+        let observer = TooltipScrollObserver(scrollViews: scrollViews, layoutRoot: layoutRoot)
+        observer.delegate = self
+        observer.start()
+        postRevealObserver = observer
     }
 
     /// Stops all target work. Idempotent, and required on every terminal path —
@@ -188,6 +200,8 @@ internal final class TooltipTargetCoordinator {
         resolutionRevision += 1
         recovery?.cancel()
         geometryTracker.stop()
+        postRevealObserver?.stop()
+        postRevealObserver = nil
         isTrackingGeometry = false
     }
 
@@ -256,7 +270,8 @@ internal final class TooltipTargetCoordinator {
         }
     }
 
-    /// Re-match after a size change; a delayed reply cannot reposition a stopped or retargeted card.
+    /// Re-match after a size change or a host settle; a delayed reply cannot reposition a stopped or
+    /// retargeted card. A miss within the budget is checked once more, so a removed target is lost.
     private func handlePostRevealChange() {
         resolve { [weak self] error in
             guard let self else { return }
@@ -265,9 +280,31 @@ internal final class TooltipTargetCoordinator {
                 return
             }
             self.consecutivePostRevealFailures += 1
-            guard self.consecutivePostRevealFailures > Self.postRevealFailureBudget else { return }
+            guard self.consecutivePostRevealFailures > Self.postRevealFailureBudget else {
+                self.recheckAfterMiss()
+                return
+            }
             self.stop()
             self.onTargetLost?()
         }
+    }
+
+    /// A newer re-match, a stop or a retarget makes the recheck stale.
+    private func recheckAfterMiss() {
+        let revision = resolutionRevision
+        scheduleStillnessCheck(Self.postRevealRecheckDelay) { [weak self] in
+            guard let self, self.resolutionRevision == revision else { return }
+            self.handlePostRevealChange()
+        }
+    }
+}
+
+// MARK: - TooltipScrollDelegate
+
+extension TooltipTargetCoordinator: TooltipScrollDelegate {
+
+    /// The host settled while the card is visible, so its target may have moved, changed or gone.
+    func scrollDidSettle() {
+        handlePostRevealChange()
     }
 }

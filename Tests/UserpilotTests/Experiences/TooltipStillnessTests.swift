@@ -118,6 +118,34 @@ final class TooltipStillnessTests: XCTestCase {
         XCTAssertEqual(reveals, 2)
     }
 
+    func testAVisibleTarget_reMatchesWhenTheHostSettles_andAMissIsCheckedOnceMoreBeforeItIsLost() {
+        var isFound = true
+        var reveals = 0
+        var lost = 0
+        let clock = StillnessClock()
+        let coordinator = TooltipTargetCoordinator(
+            resolveTarget: { $0(isFound ? Self.found(top: 0) : .failure(.notFound)) },
+            isScreenAtEnd: { $0(true) }
+        )
+        coordinator.scheduleStillnessCheck = clock.schedule
+        coordinator.onResolved = { _ in reveals += 1 }
+        coordinator.onTargetLost = { lost += 1 }
+        addTeardownBlock { coordinator.stop() }
+        coordinator.start(retryIntervals: [])
+        clock.tick()
+        coordinator.beginTracking(in: UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100)))
+
+        coordinator.scrollDidSettle()
+        isFound = false
+        coordinator.scrollDidSettle()
+        let lostAfterOneMiss = lost
+        clock.tick()
+
+        XCTAssertEqual(reveals, 2)
+        XCTAssertEqual(lostAfterOneMiss, 0)
+        XCTAssertEqual(lost, 1)
+    }
+
     // MARK: Scrolling pauses the ladder
 
     func testAScroll_cancelsThePendingRetry_andTheLadderResumesAfterTheSettle() {

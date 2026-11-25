@@ -5,8 +5,8 @@
 //  Created by Userpilot on 15/10/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  Tells one waiting tooltip when the user scrolls its host window, and when the window settles.
-//  Observes `contentOffset` on that window's scroll views, and its layout, only while the tooltip waits.
+//  Tells one tooltip when the user scrolls its host window, and when the window settles.
+//  Observes `contentOffset` on that window's scroll views, and its layout, while the tooltip waits or shows.
 //
 
 import UIKit
