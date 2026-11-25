@@ -44,9 +44,9 @@ extension ExperiencesPublisherTests {
     func testUncorrelatedCallbacksCannotReleaseOrPublishForCurrentRenderer() throws {
         let renderer = try presentFlow()
         publishedEvents.removeAll()
-        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77))
+        publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: nil)
         publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: UUID())
-        publisher.experienceDidFinishDismissing()
+        publisher.experienceDidFinishDismissing(rendererID: nil)
         publisher.experienceDidFinishDismissing(rendererID: UUID())
         settle()
         XCTAssertEqual(publisher.activeRendererID, renderer)
@@ -69,31 +69,42 @@ extension ExperiencesPublisherTests {
         XCTAssertEqual(reloadCount, 0)
     }
 
-    func testDismissedFlowRefreshKeepsItsTypedExperienceId() throws {
+    /// The fake reload carries no content: the Flow was recorded as seen when it showed.
+    func testAShownFlowIsRecordedAsSeen_andItsDismissalReloadRecordsNothingMore() throws {
+        var seen: [(type: ExperienceType, id: Int)] = []
+        userpilot.analyticsPublisher.onExperiencePublished = { seen.append(($0, $1)) }
         let renderer = try presentFlow()
-        var refreshed: (ExperienceType?, Int?)?
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { type, id, _ in
-            refreshed = (type, id)
-            return true
-        }
+        XCTAssertEqual(seen.map(\.id), [77])
+        XCTAssertEqual(seen.first?.type, .flow)
         publisher.publishInternalSDKEvent(
             FlowExperienceActionEvent.dismissed(flowId: 77, stepId: 3), rendererID: renderer
         )
         publisher.mockWaitForQueue()
-        XCTAssertNil(refreshed)
+        XCTAssertEqual(reloadCount, 0)
         publisher.experienceDidFinishDismissing(rendererID: renderer)
         settle()
-        XCTAssertEqual(refreshed?.0, .flow)
-        XCTAssertEqual(refreshed?.1, 77)
+        XCTAssertEqual(reloadCount, 1)
+        XCTAssertEqual(seen.map(\.id), [77])
     }
 
-    func testSeenFlowRecordsExperienceIdWithoutCountingStepImpressions() throws {
-        let renderer = try presentFlow()
+    func testNeitherAnNPSNorAPreview_isRecordedAsSeen() throws {
+        var seenIds: [Int] = []
+        userpilot.analyticsPublisher.onExperiencePublished = { seenIds.append($1) }
+        receiveScreen(MockContentFactory.makeNPSContentPayload())
+        try presentScheduled()
+        publisher.experienceDidFinishDismissing(rendererID: publisher.activeRendererID)
+        settle()
+        _ = try presentPreview()
+        XCTAssertEqual(seenIds, [])
+    }
+
+    func testSeenEventsRecordNothing_theShowAlreadyRecordedTheFlow() throws {
         var seenIds: [Int] = []
         userpilot.analyticsPublisher.onExperiencePublished = { type, id in
             XCTAssertEqual(type, .flow)
             seenIds.append(id)
         }
+        let renderer = try presentFlow()
         publisher.publishInternalSDKEvent(FlowExperienceActionEvent.seen(flowId: 77), rendererID: renderer)
         publisher.publishInternalSDKEvent(
             FlowExperienceStepActionEvent.seen(flowId: 77, stepId: 3), rendererID: renderer
@@ -169,22 +180,37 @@ extension ExperiencesPublisherTests {
         try presentScheduled()
         publisher.experienceDidFinishDismissing(rendererID: publisher.activeRendererID)
         settle()
+        publisher.updateScreen("Home")
+        publisher.updateScreen(Event(type: .screen("Home"), isFakeReload: true))
+        publisher.mockWaitForQueue()
         receiveScreen(MockContentFactory.makeNPSContentPayload())
         XCTAssertFalse(displayDelay.hasAction)
         XCTAssertNil(publisher.activeRendererID)
     }
 
-    func testNPSBecomesEligibleOnNewScreenVisit() throws {
+    func testNPSBecomesEligibleWhenReturningToPreviousScreen() throws {
         receiveScreen(MockContentFactory.makeNPSContentPayload())
         try presentScheduled()
+        let firstVisitRenderer = try XCTUnwrap(publisher.activeRendererID)
         publisher.experienceDidFinishDismissing(rendererID: publisher.activeRendererID)
         settle()
         publisher.updateScreen("Next")
         publisher.mockWaitForQueue()
+        receiveScreen(MockContentFactory.makeNPSContentPayload(), screen: "Next")
+        try presentScheduled()
+        publisher.experienceDidFinishDismissing(rendererID: publisher.activeRendererID)
+        settle()
         publisher.updateScreen("Home")
         publisher.mockWaitForQueue()
         receiveScreen(MockContentFactory.makeNPSContentPayload())
         XCTAssertTrue(displayDelay.hasAction)
+        try presentScheduled()
+        XCTAssertNotEqual(publisher.activeRendererID, firstVisitRenderer)
+        publisher.experienceDidFinishDismissing(rendererID: publisher.activeRendererID)
+        settle()
+        receiveScreen(MockContentFactory.makeNPSContentPayload())
+        XCTAssertFalse(displayDelay.hasAction)
+        XCTAssertNil(publisher.activeRendererID)
     }
 
     func testLogoutResetsNPSSuppression() throws {
@@ -257,6 +283,21 @@ extension ExperiencesPublisherTests {
         XCTAssertTrue(publishedEvents.isEmpty)
     }
 
+    func testPreviewEventIsRecordedInTheDebuggerWithoutAnswers() throws {
+        userpilot.debugEventStore.start()
+        let renderer = try presentPreview()
+        let submitted = NPSExperienceActionEvent.submitted(
+            score: 9, npsKey: "nps", feedback: "Great", feedbackKey: "why"
+        )
+        publisher.publishInternalSDKEvent(submitted, rendererID: renderer)
+        publisher.mockWaitForQueue()
+
+        let row = try XCTUnwrap(userpilot.debugEventStore.events(for: .internalSDK).last)
+        XCTAssertEqual(row.title, submitted.eventName)
+        XCTAssertEqual(row.properties.map(\.key), ["follow_up_question_key", "survey_question_key"])
+        XCTAssertTrue(publishedEvents.isEmpty)
+    }
+
     func testPreviewFlowCloseReloadsOnlyAfterFinalDismissal() throws {
         let renderer = try presentPreview()
         sendClose(renderer)
@@ -303,7 +344,7 @@ extension ExperiencesPublisherTests {
         receiveScreen(response)
         try presentScheduled()
         let original = try XCTUnwrap(publisher.activeRendererID)
-        let survey = try XCTUnwrap(publisher.getActiveExperience()?.asSurveyContent())
+        let survey = try XCTUnwrap(publisher.activeExperience?.asSurveyContent())
         XCTAssertTrue(publisher.hasNextFlowStep(rendererID: original))
         publisher.showThankYouMessage(survey, MockContentFactory.makeSurveyTheme(), 10, rendererID: original)
         publisher.mockWaitForQueue()
@@ -343,7 +384,7 @@ extension ExperiencesPublisherTests {
         return try XCTUnwrap(publisher.activeRendererID)
     }
 
-    private func makePreview() throws -> PreviewExperience {
+    func makePreview() throws -> PreviewExperience {
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload().toJSONString()?.toFlowContent()?.flowContent
         )

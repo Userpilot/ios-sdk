@@ -25,7 +25,9 @@ import UIKit
 /// Multi-instance behaviour: each registered instance gets its own overlay at a
 /// deterministic `windowLevel`, so two experiences may be visible simultaneously
 /// (the higher level draws on top), and each remains independently interactive.
-internal final class ExperienceOverlayWindow: UIWindow {
+internal final class ExperienceOverlayWindow: UIWindow, LifecycleDelegate {
+
+    private let lifecycleMonitor: LifecycleMonitoring
 
     // MARK: - State
 
@@ -47,6 +49,7 @@ internal final class ExperienceOverlayWindow: UIWindow {
     /// `activeWindowScenes.first` is briefly empty.
     init(owningInstance: Userpilot) {
         self.owningInstance = owningInstance
+        self.lifecycleMonitor = owningInstance.container.resolve(LifecycleMonitoring.self)
 
         if let scene = Self.resolveScene() {
             super.init(windowScene: scene)
@@ -78,19 +81,14 @@ internal final class ExperienceOverlayWindow: UIWindow {
         // closes an iPad window or the app drops a split-view scene) is detected
         // and the overlay collapses instead of presenting onto an invalid scene.
         // Recovery happens lazily in `prepareForPresentation()`.
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(sceneDidDisconnect(_:)),
-            name: UIScene.didDisconnectNotification,
-            object: nil
-        )
+        lifecycleMonitor.addDelegate(self, replayCurrentState: false)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        lifecycleMonitor.removeDelegate(self)
     }
 
     // MARK: - Hit Testing (passthrough)
@@ -99,6 +97,9 @@ internal final class ExperienceOverlayWindow: UIWindow {
     /// to the underlying window. Without this, a fully-covered overlay window
     /// would steal every touch even when no experience is being presented.
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // A tooltip stays hidden while resolving its target. UIKit's modal container
+        // must not intercept the scrolling that can bring that target into view.
+        if rootViewController?.presentedViewController?.view.isHidden == true { return nil }
         guard let result = super.hitTest(point, with: event) else { return nil }
 
         // The overlay's root view itself never claims touches — only its
@@ -110,6 +111,17 @@ internal final class ExperienceOverlayWindow: UIWindow {
     }
 
     // MARK: - Presentation
+
+    /// A root controller alone does not mean UIKit can present: scene-based apps need an active
+    /// scene. Apps without a scene delegate can present once their ordinary app window is visible.
+    func isReadyForPresentation(in appWindows: [UIWindow]) -> Bool {
+        if let scene = windowScene {
+            return scene.activationState == .foregroundActive
+        }
+        return appWindows.contains {
+            !$0.isUserpilotWindow && !$0.isHidden && $0.windowScene == nil && $0.rootViewController != nil
+        }
+    }
 
     /// Prepares the overlay for a new presentation.
     ///
@@ -123,8 +135,14 @@ internal final class ExperienceOverlayWindow: UIWindow {
     /// split-view transition, or a scene that was briefly unavailable at launch).
     /// Presenting onto a dead scene makes UIKit silently drop the present, so we
     /// migrate the window to a live scene before surfacing.
-    func prepareForPresentation() {
-        reattachToActiveSceneIfNeeded()
+    func prepareForPresentation(in hostWindow: UIWindow? = nil) {
+        if let hostWindow {
+            // Anchored content uses its admitted host; another active scene must not steal it.
+            windowScene = hostWindow.windowScene
+            frame = hostWindow.frame
+        } else {
+            reattachToActiveSceneIfNeeded()
+        }
         if let owner = owningInstance {
             windowLevel = Self.computeWindowLevel(for: owner)
         }
@@ -170,9 +188,8 @@ internal final class ExperienceOverlayWindow: UIWindow {
     /// its `windowScene` is now dead. We only hide here; the next
     /// `prepareForPresentation()` re-resolves a live scene via
     /// `reattachToActiveSceneIfNeeded()` before the overlay is shown again.
-    @objc private func sceneDidDisconnect(_ note: Notification) {
-        guard let disconnected = note.object as? UIWindowScene,
-              disconnected === windowScene else { return }
+    func onSceneDisconnected(_ scene: UIScene) {
+        guard scene === windowScene else { return }
         isHidden = true
     }
 

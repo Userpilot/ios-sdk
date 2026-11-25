@@ -22,18 +22,6 @@ extension ExperiencesPublisherTests {
         XCTAssertFalse(publisher.canRequestScreenEvent())
     }
 
-    func testDeepLinkForwardsToLinkOpenerOnMain() throws {
-        let url = try XCTUnwrap(URL(string: "https://example.com"))
-        let forwarded = expectation(description: "deep link forwarded")
-        userpilot.linkOpener.onHandleURL = { received in
-            XCTAssertTrue(Thread.isMainThread)
-            XCTAssertEqual(received, url)
-            forwarded.fulfill()
-        }
-        publisher.triggerDeepLink(url: url)
-        wait(for: [forwarded], timeout: 2)
-    }
-
     func testLogoutFromBackgroundDoesNotConstructOverlay() {
         restoreFacadeOwner()
         XCTAssertNil(userpilot.existingExperienceOverlayWindow)
@@ -48,6 +36,33 @@ extension ExperiencesPublisherTests {
         XCTAssertFalse(overlay.isHidden)
         logoutOnBackground()
         XCTAssertTrue(overlay.isHidden)
+    }
+
+    func testLogoutBeforeQueuedClosePreservesItsDismissalWaiter() {
+        receiveScreen(MockContentFactory.makeFlowContentPayload())
+        var completions = 0
+        publisher.mockWaitForQueue {
+            publisher.endExperience(manualClose: true) {
+                XCTAssertTrue(Thread.isMainThread)
+                completions += 1
+            }
+            publisher.logout()
+        }
+        settle()
+        XCTAssertEqual(completions, 1)
+        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertFalse(displayDelay.hasAction)
+        XCTAssertEqual(reloadCount, 0)
+    }
+
+    func testDismissalWaiterCompletesWhenNoExperienceExists() {
+        let completed = expectation(description: "idle dismissal completed")
+        publisher.endExperience(manualClose: true) {
+            XCTAssertTrue(Thread.isMainThread)
+            completed.fulfill()
+        }
+        wait(for: [completed], timeout: 2)
+        XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
     private func restoreFacadeOwner() {

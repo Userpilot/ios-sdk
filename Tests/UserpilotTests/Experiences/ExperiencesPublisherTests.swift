@@ -16,6 +16,7 @@ final class ExperiencesPublisherTests: XCTestCase {
     var userpilot: MockUserpilot!
     var host: MockExperiencePresentationHost!
     var displayDelay: MockExperienceDisplayDelay!
+    var lifecycleCenter: NotificationCenter!
     var callbackRegistered = false
     var publishedEvents: [SDKEvent] = []
     var reloadCount = 0
@@ -24,13 +25,17 @@ final class ExperiencesPublisherTests: XCTestCase {
         super.setUp()
         userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false))
-        // Resolve real renderer ViewModels against the real publisher, but keep the presentation host
-        // independent from the facade's UIKit overlay so no window or animation enters these tests.
+        // Real renderer ViewModels use the real publisher; the host stays off the facade's UIKit overlay.
         userpilot.container.owner = nil
+        userpilot.config.logger = userpilot.mockLogger
+        lifecycleCenter = NotificationCenter()
+        userpilot.container.register(LifecycleMonitoring.self, value: LifecycleMonitor(
+            notificationCenter: lifecycleCenter, applicationState: { .inactive }
+        ))
         userpilot.socketManager.onRegisterCallback = { [weak self] _ in self?.callbackRegistered = true }
         userpilot.themeHandler.onGetThemeById = { _ in ThemeData(carousel: nil, slideOut: nil, survey: nil) }
         userpilot.analyticsPublisher.onPublishInternalSDKEvent = { [weak self] in self?.publishedEvents.append($0) }
-        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { [weak self] _, _, _ in
+        userpilot.analyticsPublisher.onPublishFakeReloadScreenEvent = { [weak self] _ in
             self?.reloadCount += 1
             return true
         }
@@ -50,6 +55,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         publisher = nil
         host = nil
         displayDelay = nil
+        lifecycleCenter = nil
         userpilot = nil
         publishedEvents.removeAll()
         reloadCount = 0
@@ -60,7 +66,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertTrue(callbackRegistered)
         XCTAssertTrue(publisher.canRequestScreenEvent())
         XCTAssertNil(publisher.activeRendererID)
-        XCTAssertNil(publisher.getActiveExperience())
+        XCTAssertNil(publisher.activeExperience)
     }
 
     func testManualRequestOwnsAdmissionWhileFetchingContent() throws {
@@ -100,7 +106,7 @@ final class ExperiencesPublisherTests: XCTestCase {
         XCTAssertNil(host.presentedExperience)
         try presentScheduled()
         XCTAssertTrue(host.presentedExperience is CarouselExperienceViewController)
-        XCTAssertEqual(publisher.getActiveExperience()?.experienceId(), 77)
+        XCTAssertEqual(publisher.activeExperience?.experienceId(), 77)
     }
 
     func testMissingThemeRequestsThemeBeforeDisplay() throws {
@@ -157,13 +163,6 @@ final class ExperiencesPublisherTests: XCTestCase {
 }
 
 extension ExperiencesPublisherTests {
-    func testScreenResponseForPreviousScreenIsDropped() {
-        publisher.updateScreen("Settings")
-        publisher.mockWaitForQueue()
-        receiveScreen(MockContentFactory.makeFlowContentPayload(), screen: "Home")
-        XCTAssertTrue(publisher.canRequestScreenEvent())
-    }
-
     func testFailedScreenResponseIsDropped() {
         publisher.onSocketEventSent(Constants.Event.screenEvent, nil,
                                     Message(payload: MockContentFactory.makeFlowContentPayload()), false)
@@ -201,21 +200,18 @@ extension ExperiencesPublisherTests {
         XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testTrackMessageWithoutRequestIDIsIgnored() {
+    func testTrackMessageWithoutRequestIDStartsContent() {
         var response = MockContentFactory.makeFlowContentPayload()
         response.removeValue(forKey: "request_id")
         publisher.onNewMessage(Message(payload: ["payload": response]))
         publisher.mockWaitForQueue()
-        XCTAssertTrue(publisher.canRequestScreenEvent())
+        XCTAssertTrue(displayDelay.hasAction)
     }
 
-    func testBusyPublisherDropsScreenAndTrackContent() throws {
+    /// A screen reply arriving while busy is dropped; only a server push is held.
+    func testBusyPublisherDropsScreenContent() throws {
         let request = try beginManual()
         receiveScreen(MockContentFactory.makeFlowContentPayload())
-        var response = MockContentFactory.makeFlowContentPayload()
-        response["request_id"] = NSNull()
-        publisher.onNewMessage(Message(payload: ["payload": response]))
-        publisher.mockWaitForQueue()
         request.completion?(Message(), false)
         publisher.mockWaitForQueue()
         XCTAssertTrue(publisher.canRequestScreenEvent())
@@ -291,6 +287,17 @@ extension ExperiencesPublisherTests {
         XCTAssertTrue(displayDelay.hasAction)
     }
 
+    func testFlowWithATooltipStep_reachesTheTooltipRenderer() throws {
+        userpilot.container.register(ElementTargeting.self, value: MockTooltipTargeting(owner: userpilot))
+        receiveScreen(MockContentFactory.makeFlowContractPayload())
+
+        try presentScheduled()
+
+        XCTAssertTrue(host.presentedExperience is TooltipViewController)
+        XCTAssertEqual(publisher.activeExperience?.asFlowContent()?.steps.map(\.id), [9001])
+        XCTAssertNotNil(publisher.activeExperience?.flowSegment())
+    }
+
     func beginManual() throws -> MockAnalyticsPublisher.Request {
         publisher.triggerExperience("flow-a")
         publisher.mockWaitForQueue()
@@ -326,9 +333,25 @@ extension ExperiencesPublisherTests {
 final class MockExperiencePresentationHost: UIViewController {
     var presentedExperience: UIViewController?
     var onPresent: (() -> Void)?
+    /// Presents through UIKit in its own window so a publisher close reaches `triggerCloseExperience`; the
+    /// runner never finishes that transition. Turn it off in teardown: the window retains this host.
+    var presentsNatively = false {
+        didSet {
+            hostWindow?.isHidden = true
+            hostWindow?.rootViewController = nil
+            hostWindow = nil
+            guard presentsNatively else { return }
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+            window.rootViewController = self
+            window.isHidden = false
+            hostWindow = window
+        }
+    }
+    private var hostWindow: UIWindow?
 
     override func present(_ controller: UIViewController, animated: Bool, completion: (() -> Void)? = nil) {
         presentedExperience = controller
+        if presentsNatively { super.present(controller, animated: false) }
         onPresent?()
         completion?()
     }
@@ -336,9 +359,12 @@ final class MockExperiencePresentationHost: UIViewController {
 
 final class MockExperienceDisplayDelay: DelayUtils {
     private let pendingAction = AtomicReference<(() -> Void)?>(nil)
+    private let scheduledCount = AtomicReference(0)
     var hasAction: Bool { pendingAction.value != nil }
+    var scheduleCount: Int { scheduledCount.value }
 
     override func delayAction(delayTime: TimeInterval, action: @escaping () -> Void) {
+        scheduledCount.update { $0 + 1 }
         pendingAction.value = action
     }
 
@@ -349,4 +375,9 @@ final class MockExperienceDisplayDelay: DelayUtils {
     func fire() throws {
         try XCTUnwrap(pendingAction.getAndSet(nil))()
     }
+}
+
+extension ExperiencesPublisher {
+    /// What a renderer built now would read: the current presentation's experience.
+    var activeExperience: ExperienceContent? { getActiveExperience(rendererID: activeRendererID) }
 }
