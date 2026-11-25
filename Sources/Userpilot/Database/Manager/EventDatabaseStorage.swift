@@ -254,13 +254,20 @@ internal class EventDatabaseStorage: EventStoring {
                 }
 
                 let events = self.performRead()
-                // Undecodable rows go too, or `hasEvents()` stays true and every restore reads nothing.
-                if self.performGetRecordCount() > 0 {
+                // Rows go even when undecodable or unread: any left behind keep `hasEvents()` true,
+                // and every restore would then re-run on nothing.
+                let count = self.performGetRecordCount()
+                if count > 0 {
                     self.performDeleteAll()
-                    self.logger.info(
-                        "✅ Retrieved and deleted %{public}d events from storage", events.count)
+                    if let events {
+                        self.logger.info(
+                            "✅ Retrieved and deleted %{public}d events from storage", events.count)
+                    } else {
+                        self.logger.error(
+                            "❗ Deleted %{public}d unread events after a failed read", count)
+                    }
                 }
-                completion(events)
+                completion(events ?? [])
             }
         }
     }
@@ -431,8 +438,9 @@ internal class EventDatabaseStorage: EventStoring {
         return true
     }
 
-    private func performRead() -> [EventStorage] {
-        guard let database else { return [] }
+    /// Returns `nil` when the query fails, so a failed read is not mistaken for an empty table.
+    private func performRead() -> [EventStorage]? {
+        guard let database else { return nil }
 
         let query = "SELECT data FROM Events ORDER BY created_at, rowid;"
         var stmt: OpaquePointer?
@@ -442,10 +450,11 @@ internal class EventDatabaseStorage: EventStoring {
 
         guard sqlite3_prepare_v2(database, query, -1, &stmt, nil) == SQLITE_OK else {
             logger.error("❗ Failed to prepare read statement")
-            return []
+            return nil
         }
 
-        while sqlite3_step(stmt) == SQLITE_ROW {
+        var stepResult = sqlite3_step(stmt)
+        while stepResult == SQLITE_ROW {
             if let cString = sqlite3_column_text(stmt, 0),
                 let data = String(cString: cString).data(using: .utf8),
                 let activity = tryCatch(code: {
@@ -453,6 +462,13 @@ internal class EventDatabaseStorage: EventStoring {
                 }) {
                 activities.append(activity)
             }
+            stepResult = sqlite3_step(stmt)
+        }
+
+        guard stepResult == SQLITE_DONE else {
+            let error = String(cString: sqlite3_errmsg(database))
+            logger.error("❗ Event read failed: %{public}@", error)
+            return nil
         }
 
         return activities
