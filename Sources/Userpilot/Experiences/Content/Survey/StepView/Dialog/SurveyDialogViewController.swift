@@ -154,6 +154,9 @@ extension SurveyDialogViewController: UPExperienceDelegate {
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        if manualClose, !isClosing {
+            surveyViewModel.onSurveyDismissed()
+        }
         isClosing = true
         dismissDialog { [weak self] in
             if let completion {

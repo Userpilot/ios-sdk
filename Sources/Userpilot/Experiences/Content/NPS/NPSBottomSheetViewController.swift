@@ -139,6 +139,9 @@ extension NPSBottomSheetViewController: UPExperienceDelegate {
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        if manualClose, !isClosing {
+            npsViewModel.onNPSDismissed()
+        }
         isClosing = true
         dismissBottomSheet { [weak self] in
             if let completion {

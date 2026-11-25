@@ -159,6 +159,9 @@ extension SurveyBottomSheetViewController: UPExperienceDelegate {
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        if manualClose, !isClosing {
+            surveyViewModel.onSurveyDismissed()
+        }
         isClosing = true
         dismissBottomSheet { [weak self] in
             if let completion {
