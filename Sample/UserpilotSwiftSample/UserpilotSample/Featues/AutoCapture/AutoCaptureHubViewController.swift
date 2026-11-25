@@ -59,7 +59,12 @@ extension AutoCaptureHubViewController: UITableViewDataSource, UITableViewDelega
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row].title
+        let item = items[indexPath.row]
+        var config = cell.defaultContentConfiguration()
+        config.text = item.title
+        config.image = UIImage(systemName: item.symbolName)
+        config.imageProperties.tintColor = SampleAppearance.accentColor
+        cell.contentConfiguration = config
         cell.accessoryType = .disclosureIndicator
         return cell
     }
@@ -110,6 +115,25 @@ enum AutoCaptureContent {
             return "Tabs test"
         case .ignoredScreen:
             return "Ignored screen demo"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .controls:
+            return "slider.horizontal.3"
+        case .pickerView:
+            return "line.3.horizontal.decrease"
+        case .tableView:
+            return "list.bullet"
+        case .collectionView:
+            return "square.grid.3x3"
+        case .textConfig:
+            return "textformat"
+        case .tabs:
+            return "rectangle.split.3x1"
+        case .ignoredScreen:
+            return "eye.slash"
         }
     }
 }

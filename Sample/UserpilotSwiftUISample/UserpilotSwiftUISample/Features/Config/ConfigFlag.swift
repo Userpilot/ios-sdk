@@ -15,10 +15,13 @@ enum ConfigFlag: String, CaseIterable, Identifiable {
     case useInAppBrowser
     case defaultInstance
     case allowReceiveEventsFromExternalSource
+    // swiftlint:disable:next identifier_name
     case disableRequestPushNotificationsPermission
     case enableScreenAutoCapture
+    case enableScreenClassIdentity
     case enableInteractionAutoCapture
     case enableInteractionTextCapture
+    // swiftlint:disable:next identifier_name
     case enableInteractionAccessibilityLabelCapture
     case enableInteractionValueCapture
     case enableScreenTitleCapture
@@ -34,6 +37,7 @@ enum ConfigFlag: String, CaseIterable, Identifiable {
         case .allowReceiveEventsFromExternalSource: return "Receive external events"
         case .disableRequestPushNotificationsPermission: return "Manage push permission in the app"
         case .enableScreenAutoCapture: return "Screen autocapture"
+        case .enableScreenClassIdentity: return "Distinguish screens by class"
         case .enableInteractionAutoCapture: return "Interaction autocapture"
         case .enableInteractionTextCapture: return "Capture visible text"
         case .enableInteractionAccessibilityLabelCapture: return "Capture accessibility labels"
@@ -48,9 +52,11 @@ enum ConfigFlag: String, CaseIterable, Identifiable {
         case .loggingEnabled: return "Show SDK diagnostic logs while testing."
         case .useInAppBrowser: return "Open experience links inside the app."
         case .defaultInstance: return "Capture screens without an explicit owner."
-        case .allowReceiveEventsFromExternalSource: return "Forward events from embedded SDK instances to the default instance."
+        case .allowReceiveEventsFromExternalSource:
+            return "Forward events from embedded SDK instances to the default instance."
         case .disableRequestPushNotificationsPermission: return "Prevent the SDK from requesting push permission."
         case .enableScreenAutoCapture: return "Capture screen changes automatically."
+        case .enableScreenClassIdentity: return "Treat different SwiftUI controller classes as separate screen visits."
         case .enableInteractionAutoCapture: return "Capture taps and value changes automatically."
         case .enableInteractionTextCapture: return "Include visible text in interaction events."
         case .enableInteractionAccessibilityLabelCapture: return "Include accessibility labels in interaction events."
@@ -61,6 +67,13 @@ enum ConfigFlag: String, CaseIterable, Identifiable {
     }
 
     var defaultValue: Bool {
-        self != .allowReceiveEventsFromExternalSource && self != .disableRequestPushNotificationsPermission
+        switch self {
+        case .allowReceiveEventsFromExternalSource,
+             .enableScreenClassIdentity,
+             .disableRequestPushNotificationsPermission:
+            return false
+        default:
+            return true
+        }
     }
 }

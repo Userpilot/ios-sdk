@@ -32,8 +32,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // Handle Userpilot deep links.
         let unhandledURLContexts = UserpilotManager.shared.filterAndHandle(connectionOptions.urlContexts)
-        // Handle app-specific deep links.
-        print(unhandledURLContexts)
+        handleSampleDeepLinks(unhandledURLContexts)
 
         guard (scene as? UIWindowScene) != nil else { return }
     }
@@ -71,8 +70,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         // Handle Userpilot deep links.
         let unhandledURLContexts = UserpilotManager.shared.filterAndHandle(URLContexts)
-        // Handle app-specific deep links.
-        print(unhandledURLContexts)
+        handleSampleDeepLinks(unhandledURLContexts)
+    }
+
+    private func handleSampleDeepLinks(_ contexts: Set<UIOpenURLContext>) {
+        for context in contexts {
+            DispatchQueue.main.async {
+                UserpilotManager.shared.navigate(to: context.url)
+            }
+        }
     }
 
 }

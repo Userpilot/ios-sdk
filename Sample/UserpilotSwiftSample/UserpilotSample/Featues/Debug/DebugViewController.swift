@@ -55,7 +55,12 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row].title
+        let item = items[indexPath.row]
+        var config = cell.defaultContentConfiguration()
+        config.text = item.title
+        config.image = UIImage(systemName: item.symbolName)
+        config.imageProperties.tintColor = SampleAppearance.accentColor
+        cell.contentConfiguration = config
         cell.accessoryType = .disclosureIndicator
         return cell
     }
@@ -86,6 +91,17 @@ enum DebugContent {
             return "Offline events"
         case .theme:
             return "Theme"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .onlineQueue:
+            return "arrow.up.circle"
+        case .theme:
+            return "paintpalette"
+        case .offlineEvents:
+            return "icloud.slash"
         }
     }
 }

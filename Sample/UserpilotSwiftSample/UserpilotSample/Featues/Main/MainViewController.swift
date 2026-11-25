@@ -18,7 +18,8 @@ final class MainViewController: BaseViewController {
         .events,
         .eventsLog,
         .debug,
-        .autoCapture
+        .autoCapture,
+        .builder
     ]
 
     init() {
@@ -95,7 +96,12 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row].title
+        let item = items[indexPath.row]
+        var config = cell.defaultContentConfiguration()
+        config.text = item.title
+        config.image = UIImage(systemName: item.symbolName)
+        config.imageProperties.tintColor = SampleAppearance.accentColor
+        cell.contentConfiguration = config
         cell.accessoryType = .disclosureIndicator
         return cell
     }
@@ -115,6 +121,10 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
             FlowRoutingManager.shared.openViewController(SDKEventsViewController.newInstance())
         case .debug:
             FlowRoutingManager.shared.openViewController(DebugViewController.newInstance())
+        case .builder:
+            FlowRoutingManager.shared.openViewController(BuilderHubViewController())
+        case .tooltips:
+            FlowRoutingManager.shared.openViewController(TooltipsHubViewController.newInstance())
         case .autoCapture:
             FlowRoutingManager.shared.openViewController(AutoCaptureHubViewController.newInstance())
         }

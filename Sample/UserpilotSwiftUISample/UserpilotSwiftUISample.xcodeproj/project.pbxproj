@@ -18,19 +18,11 @@
 			remoteGlobalIDString = ABC28A012F13815100172B19;
 			remoteInfo = UserpilotSwiftUISample;
 		};
-		ABC28A1A2F13815200172B19 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = ABC289FA2F13815100172B19 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = ABC28A012F13815100172B19;
-			remoteInfo = UserpilotSwiftUISample;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		ABC28A022F13815100172B19 /* UserpilotSwiftUISample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UserpilotSwiftUISample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ABC28A0F2F13815200172B19 /* UserpilotSwiftUISampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UserpilotSwiftUISampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		ABC28A192F13815200172B19 /* UserpilotSwiftUISampleUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UserpilotSwiftUISampleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -42,11 +34,6 @@
 		ABC28A122F13815200172B19 /* UserpilotSwiftUISampleTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = UserpilotSwiftUISampleTests;
-			sourceTree = "<group>";
-		};
-		ABC28A1C2F13815200172B19 /* UserpilotSwiftUISampleUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = UserpilotSwiftUISampleUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -67,13 +54,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		ABC28A162F13815200172B19 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -82,7 +62,6 @@
 			children = (
 				ABC28A042F13815100172B19 /* UserpilotSwiftUISample */,
 				ABC28A122F13815200172B19 /* UserpilotSwiftUISampleTests */,
-				ABC28A1C2F13815200172B19 /* UserpilotSwiftUISampleUITests */,
 				ABC28A032F13815100172B19 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -92,7 +71,6 @@
 			children = (
 				ABC28A022F13815100172B19 /* UserpilotSwiftUISample.app */,
 				ABC28A0F2F13815200172B19 /* UserpilotSwiftUISampleTests.xctest */,
-				ABC28A192F13815200172B19 /* UserpilotSwiftUISampleUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -146,29 +124,6 @@
 			productReference = ABC28A0F2F13815200172B19 /* UserpilotSwiftUISampleTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		ABC28A182F13815200172B19 /* UserpilotSwiftUISampleUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = ABC28A292F13815200172B19 /* Build configuration list for PBXNativeTarget "UserpilotSwiftUISampleUITests" */;
-			buildPhases = (
-				ABC28A152F13815200172B19 /* Sources */,
-				ABC28A162F13815200172B19 /* Frameworks */,
-				ABC28A172F13815200172B19 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				ABC28A1B2F13815200172B19 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				ABC28A1C2F13815200172B19 /* UserpilotSwiftUISampleUITests */,
-			);
-			name = UserpilotSwiftUISampleUITests;
-			packageProductDependencies = (
-			);
-			productName = UserpilotSwiftUISampleUITests;
-			productReference = ABC28A192F13815200172B19 /* UserpilotSwiftUISampleUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,10 +139,6 @@
 						LastSwiftMigration = 2620;
 					};
 					ABC28A0E2F13815200172B19 = {
-						CreatedOnToolsVersion = 26.2;
-						TestTargetID = ABC28A012F13815100172B19;
-					};
-					ABC28A182F13815200172B19 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = ABC28A012F13815100172B19;
 					};
@@ -212,7 +163,6 @@
 			targets = (
 				ABC28A012F13815100172B19 /* UserpilotSwiftUISample */,
 				ABC28A0E2F13815200172B19 /* UserpilotSwiftUISampleTests */,
-				ABC28A182F13815200172B19 /* UserpilotSwiftUISampleUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -226,13 +176,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ABC28A0D2F13815200172B19 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ABC28A172F13815200172B19 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -256,13 +199,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		ABC28A152F13815200172B19 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -270,11 +206,6 @@
 			isa = PBXTargetDependency;
 			target = ABC28A012F13815100172B19 /* UserpilotSwiftUISample */;
 			targetProxy = ABC28A102F13815200172B19 /* PBXContainerItemProxy */;
-		};
-		ABC28A1B2F13815200172B19 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = ABC28A012F13815100172B19 /* UserpilotSwiftUISample */;
-			targetProxy = ABC28A1A2F13815200172B19 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -517,44 +448,6 @@
 			};
 			name = Release;
 		};
-		ABC28A2A2F13815200172B19 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.swiftui.UserpilotSwiftUISampleUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = UserpilotSwiftUISample;
-			};
-			name = Debug;
-		};
-		ABC28A2B2F13815200172B19 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.userpilot.swiftui.UserpilotSwiftUISampleUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = UserpilotSwiftUISample;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -581,15 +474,6 @@
 			buildConfigurations = (
 				ABC28A272F13815200172B19 /* Debug */,
 				ABC28A282F13815200172B19 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		ABC28A292F13815200172B19 /* Build configuration list for PBXNativeTarget "UserpilotSwiftUISampleUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				ABC28A2A2F13815200172B19 /* Debug */,
-				ABC28A2B2F13815200172B19 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -43,6 +43,7 @@ struct SampleConfig {
             .allowReceiveEventsFromExternalSource(self[.allowReceiveEventsFromExternalSource])
             .disableRequestPushNotificationsPermission(self[.disableRequestPushNotificationsPermission])
             .enableScreenAutoCapture(self[.enableScreenAutoCapture])
+            .enableScreenClassIdentity(self[.enableScreenClassIdentity])
             .enableInteractionAutoCapture(self[.enableInteractionAutoCapture])
             .enableInteractionTextCapture(self[.enableInteractionTextCapture])
             .enableInteractionAccessibilityLabelCapture(self[.enableInteractionAccessibilityLabelCapture])
