@@ -20,7 +20,7 @@ internal protocol ImageLoading: AnyObject {
 }
 
 /// Owns per-instance caches and URLSession downloads. Image decoding lives on UIImage.
-internal class ImageLoader: ImageLoading {
+internal final class ImageLoader: ImageLoading {
 
     /// Background reads of imageCache can overlap URLSession writes; decoding stays outside the lock.
     private let cacheLock = NSLock()

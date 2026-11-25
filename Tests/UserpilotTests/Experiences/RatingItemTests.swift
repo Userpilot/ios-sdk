@@ -18,15 +18,16 @@ final class RatingItemTests: XCTestCase {
             3: ["three", "five", "nine"],
             5: ["three", "five", "six", "nine", "ten"],
             7: ["one", "three", "five", "six", "seven", "nine", "ten"],
-            10: ["one", "two", "three", "four", "five", "six", "seven", "ten", "eight", "ten"]
+            10: ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
         ]
         for (range, names) in suffixes {
             let items = RatingItem.fillList(surveyStep: try step(type: "emojis", range: range))
             XCTAssertEqual(items.count, range)
             for (index, suffix) in names.enumerated() {
-                // The ten-point scale historically uses this unprefixed asset at index four.
-                let name = range == 10 && index == 4 ? "icon_smile_five" : "userpilot_icon_smile_\(suffix)"
-                XCTAssertEqual(items[index].image?.pngData(), UIImage.userpilotImage(named: name)?.pngData())
+                // Every cell must resolve a bundled asset; a missing name renders a blank rating button.
+                let expected = try XCTUnwrap(UIImage.userpilotImage(named: "userpilot_icon_smile_\(suffix)"))
+                let image = try XCTUnwrap(items[index].image, "Range \(range) index \(index) has no image")
+                XCTAssertEqual(image.pngData(), expected.pngData())
                 XCTAssertEqual(items[index].title, String(index + 1))
                 XCTAssertFalse(items[index].isSelected)
             }

@@ -1,0 +1,162 @@
+//
+//  UPStepsBarProgressView.swift
+//  Userpilot SDK
+//
+//  Created by Userpilot on 30/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Displays multi-step progress with configurable colors and right-to-left layout support.
+//
+
+import UIKit
+
+/// A custom UIView that displays a progress bar for a multi-step process. It shows the progress as a visual bar
+/// that fills according to the current step, with configurable colors and support for Right-To-Left layout.
+final class UPStepsBarProgressView: UIView {
+
+    /// The total number of steps in the progress bar.
+    /// When set, triggers a layout update.
+    var numberOfSteps: Int = 2 {
+        didSet { setNeedsLayout() }
+    }
+
+    /// The current step in the progress bar.
+    /// When set, updates the progress bar with optional animation.
+    var currentStep: Int = 0 {
+        didSet { setCurrentStep(withAnimation: true) }
+    }
+
+    /// The fill color of the progress bar (background color for inactive steps).
+    /// When set, updates the background layer color.
+    var fillColor: UIColor = UIColor.lightGray.withAlphaComponent(0.3) {
+        didSet { backgroundLayer.backgroundColor = fillColor.cgColor }
+    }
+
+    /// The color of the active progress bar (current step).
+    /// When set, updates the progress layer color.
+    var activeColor: UIColor = .black {
+        didSet { progressLayer.backgroundColor = activeColor.cgColor }
+    }
+
+    private let backgroundLayer = CALayer()
+    private let progressLayer = CALayer()
+
+    // MARK: - Initializers
+
+    /// Initializes the view with a given frame.
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupLayers()
+    }
+
+    /// Initializes the view from a storyboard or nib file.
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupLayers()
+    }
+
+    // MARK: - Private Methods
+
+    /// Sets up the background and progress layers with initial properties.
+    private func setupLayers() {
+        backgroundLayer.backgroundColor = fillColor.cgColor
+        layer.addSublayer(backgroundLayer)
+
+        progressLayer.backgroundColor = activeColor.cgColor
+        layer.addSublayer(progressLayer)
+
+        layer.cornerRadius = 2
+        clipsToBounds = true
+    }
+
+    /// Layout the subviews to update the background and progress layers' frames.
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let height = bounds.height
+        backgroundLayer.frame = bounds
+        backgroundLayer.cornerRadius = height / 2
+
+        progressLayer.frame = CGRect(x: 0, y: 0, width: 0, height: height)
+        progressLayer.cornerRadius = height / 2
+
+        setCurrentStep(withAnimation: false)
+    }
+
+    /// Sets the width of the progress layer based on the current step.
+    /// Optionally animates the transition.
+    private func setCurrentStep(withAnimation: Bool = false) {
+        guard numberOfSteps > 1 else { return }
+
+        let filledSteps = min(max(currentStep, 0), numberOfSteps)
+        let targetWidth = bounds.width * CGFloat(filledSteps) / CGFloat(numberOfSteps)
+
+        if withAnimation {
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.3)
+            let animation = CABasicAnimation(keyPath: "bounds.size.width")
+            animation.fromValue = progressLayer.bounds.width
+            animation.toValue = targetWidth
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            progressLayer.bounds.size.width = targetWidth
+            progressLayer.add(animation, forKey: "progressAnimation")
+            CATransaction.commit()
+        } else {
+            progressLayer.frame.size.width = targetWidth
+        }
+    }
+
+    // MARK: - Public Methods
+
+    /// Configures the view based on the provided theme, number of steps, and layout direction (RTL or LTR).
+    /// - Parameters:
+    ///   - stepsCount: The total number of steps in the progress view.
+    ///   - theme: The theme (`SurveyTheme`, `NPSTheme`, or a Flow step's `ExperienceTheme`) that defines
+    ///     the colors for the steps.
+    ///   - isRTL: A boolean value indicating whether the layout should be mirrored for Right-To-Left languages.
+    func setupView(
+        stepsCount: Int,
+        theme: Any,
+        isRTL: Bool
+    ) {
+        numberOfSteps = stepsCount
+        activeColor = getActiveColor(from: theme)
+
+        fillColor = UIColor.clear
+
+        currentStep = 1
+
+        if isRTL {
+            transform = CGAffineTransform(scaleX: -1, y: 1)
+        }
+    }
+
+    /// Returns the active color from the provided theme.
+    /// - Parameter theme: The theme that contains the color configuration.
+    /// - Returns: The active color from the theme.
+    private func getActiveColor(from theme: Any) -> UIColor {
+        switch theme {
+        case let theme as SurveyTheme:
+            return theme.stepsProgressColor
+        case let theme as NPSTheme:
+            if theme.isStepsProgressColorManual {
+                return theme.stepsProgressColor
+            } else {
+                return theme.primaryColor
+            }
+        case let theme as ExperienceTheme:
+            // An automatic color inverts the background, like the dots.
+            return theme.isStepsProgressColorManual
+                ? theme.stepsProgressColor
+                : theme.backgroundColorAsString.invertColor().color
+        default:
+            return .black
+        }
+    }
+
+    /// Sets the current step without animation.
+    /// - Parameter newStep: The step to set as the current step.
+    func setCurrentStep(_ newStep: Int) {
+        currentStep = newStep + 1
+    }
+}
