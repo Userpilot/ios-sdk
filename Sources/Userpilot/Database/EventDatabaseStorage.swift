@@ -47,14 +47,15 @@ internal protocol EventStoring: AnyObject {
 // MARK: - EventSQLiteStorage
 
 // swiftlint:disable:next type_body_length
-internal class EventDatabaseStorage: EventStoring {
+internal final class EventDatabaseStorage: EventStoring {
 
     // MARK: - Properties
 
     private let database: OpaquePointer?
     private let databaseURL: URL
+
     private let queue = DispatchQueue(
-        label: Constants.DispatchQueues.database,
+        label: Constants.Database.queueLabel,
         qos: .userInitiated
     )
     private let decoder = JSONDecoder()

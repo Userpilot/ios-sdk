@@ -32,6 +32,8 @@ internal enum SDKEventsName: String, CaseIterable {
     case flowExperienceCompleted = "complete_mobile_content"
     case flowExperienceStepSeen = "seen_mobile_content_step"
     case flowExperienceStepCompleted = "completed_mobile_content_step"
+    /// A Flow step's target can't be used (`FlowContentErrorEvent`).
+    case flowContentError = "mobile_content_error"
 
     case surveyExperienceSeen = "seen_survey"
     case surveyExperienceDismissed = "dismissed_survey"
@@ -70,6 +72,7 @@ extension SDKEventsName {
              .flowExperienceCompleted,
              .flowExperienceStepSeen,
              .flowExperienceStepCompleted,
+             .flowContentError,
              .surveyExperienceSeen,
              .surveyExperienceDismissed,
              .surveyExperienceCompleted,

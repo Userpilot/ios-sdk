@@ -27,7 +27,7 @@ internal protocol OfflineEventsHandling: AnyObject {
     /// Saves an internal SDK event to local storage when network is unavailable.
     func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent)
 
-    /// Restores events from local storage and publishes them as a batch
+    /// Restores events from local storage and publishes them as ordered batches
     /// - Parameter completion: Optional callback invoked when restoration is complete
     func restoreEventsFromLocalStorage(completion: (() -> Void)?)
 
@@ -44,11 +44,11 @@ extension OfflineEventsHandling {
 
 // MARK: - OfflineEventsHandler
 
-/// Saves admitted events and restores one user-bound batch before live analytics resumes.
+/// Saves admitted events and restores one user-bound backlog, in ordered chunks, before live analytics resumes.
 ///
 /// The database orders persistence; `offlineEventsQueue` decodes rows. `restoreLock` owns only
 /// the active restore and its completion, so logout/switch can invalidate pending work synchronously.
-internal class OfflineEventsHandler: OfflineEventsHandling {
+internal final class OfflineEventsHandler: OfflineEventsHandling {
 
     // MARK: - Properties
 
@@ -61,14 +61,16 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
 
     /// Serial background queue for processing offline events
     private let offlineEventsQueue = DispatchQueue(
-        label: Constants.DispatchQueues.offlineEvents,
+        label: Constants.OfflineEvents.queueLabel,
         qos: .utility
     )
 
-    /// Only the lock accesses ownership and completion. Decoding stays off the caller's queue.
+    /// Only the lock accesses ownership, chunk progress and completion. Decoding stays off the caller's queue.
     private final class RestoreOperation {
         let userID: String
         var completion: (() -> Void)?
+        var pendingChunks = 0
+        var allChunksSucceeded = true
 
         init(userID: String, completion: (() -> Void)?) {
             self.userID = userID
@@ -148,7 +150,7 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
         }
     }
 
-    /// Snapshot the user and read/delete rows in database order. Completion runs after batch ACK
+    /// Snapshot the user and read/delete rows in database order. Completion runs after every chunk's ACK
     /// (or an empty batch), on the existing worker/callback queue; cancelled restores stay silent.
     func restoreEventsFromLocalStorage(completion: (() -> Void)? = nil) {
         let operation = RestoreOperation(userID: storage.userId, completion: completion)
@@ -193,18 +195,26 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
         submit(events, for: operation)
     }
 
-    /// Keep the restore active until its own success, error or timeout releases the analytics queue.
+    /// Keep the restore active until every chunk's success, error or timeout releases the analytics queue.
+    /// Chunks are submitted in database order; the socket's main-queue sends keep that order.
     private func submit(_ events: [[String: Any]], for operation: RestoreOperation) {
         guard !events.isEmpty else { finishRestore(operation); return }
-        // The predicate also covers cancellation after decoding but before transport submission.
-        socketManager.publish(
-            Constants.Event.batchEventsEvent,
-            payload: [Constants.OfflineEvents.eventsProperty: events], userID: operation.userID,
-            shouldSend: { [weak self] in self?.isCurrent(operation) == true },
-            completion: { [weak self] _, success in
-                self?.didSend(operation, success: success)
-            })
-        logger.info("🗃️ Prepared %{public}d offline events as batch", events.count)
+        let chunkSize = Constants.OfflineEvents.replayChunkSize
+        let chunks = stride(from: 0, to: events.count, by: chunkSize).map {
+            Array(events[$0..<min($0 + chunkSize, events.count)])
+        }
+        restoreLock.withLock { operation.pendingChunks = chunks.count }
+        for chunk in chunks {
+            // The predicate also covers cancellation after decoding but before transport submission.
+            socketManager.publish(
+                Constants.Event.batchEventsEvent,
+                payload: [Constants.OfflineEvents.eventsProperty: chunk], userID: operation.userID,
+                shouldSend: { [weak self] in self?.isCurrent(operation) == true },
+                completion: { [weak self] _, success in
+                    self?.didSend(operation, success: success)
+                })
+            logger.info("🗃️ Prepared %{public}d offline events as batch", chunk.count)
+        }
     }
 
     private func isCurrent(_ operation: RestoreOperation) -> Bool {
@@ -262,10 +272,17 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
 
 extension OfflineEventsHandler {
 
-    /// Rows are deleted before send (existing at-most-once policy); finish only the captured restore.
+    /// Rows are deleted before send (existing at-most-once policy); finish only the captured restore,
+    /// once its last chunk settles.
     private func didSend(_ operation: RestoreOperation, success: Bool) {
-        guard isCurrent(operation) else { return }
-        if success {
+        let outcome: Bool? = restoreLock.withLock {
+            guard restore === operation else { return nil }
+            operation.pendingChunks -= 1
+            operation.allChunksSucceeded = operation.allChunksSucceeded && success
+            return operation.pendingChunks == 0 ? operation.allChunksSucceeded : nil
+        }
+        guard let allChunksSucceeded = outcome else { return }
+        if allChunksSucceeded {
             logger.info("✅ Offline batch events sent successfully")
         } else {
             logger.error("⚠️ Offline batch events send failed or timed out")

@@ -286,6 +286,37 @@ final class SocketManagerTests: XCTestCase {
         XCTAssertTrue(subscription.sentEvents.isEmpty)
     }
 
+    /// The sender's in-flight send would otherwise wait for a socket close that may never come.
+    func testAReplyAfterTheAppResignsActive_stillCompletesItsSend() throws {
+        socketManager.registerCallback(subscription)
+        let transport = try openAndJoinSocket()
+        var replies: [Bool] = []
+        socketManager.publish(
+            "track", payload: nil, userID: nil, shouldSend: { true }, completion: { replies.append($1) }
+        )
+        drainMainQueue()
+        let push = try XCTUnwrap(transport.lastSentPush(event: "track"))
+
+        userpilot.sessionMonitor.isAppActive = false
+        transport.reply(to: push, status: Constants.Socket.successKey)
+        drainMainQueue()
+
+        XCTAssertEqual(replies, [true])
+        XCTAssertTrue(subscription.sentEvents.isEmpty)
+    }
+
+    func testAPushThatCannotBeCreatedWhileInactive_stillFailsItsSend() {
+        userpilot.sessionMonitor.isAppActive = false
+        var replies: [Bool] = []
+
+        socketManager.publish(
+            "track", payload: nil, userID: nil, shouldSend: { true }, completion: { replies.append($1) }
+        )
+        drainMainQueue()
+
+        XCTAssertEqual(replies, [false])
+    }
+
     func testPublishResolutionIsSuppressedDuringShutdown() throws {
         socketManager.registerCallback(subscription)
         let transport = try openAndJoinSocket()
@@ -381,6 +412,28 @@ final class SocketManagerTests: XCTestCase {
         newTransport.reply(to: newPush, status: Constants.Socket.successKey)
         drainMainQueue()
         XCTAssertEqual(newReplyCount, 1)
+    }
+
+    func testPhoenixLogger_isInstalledOnlyWhileSDKLoggingIsEnabled() throws {
+        XCTAssertNil(try connectedSocket(loggingEnabled: false).logger,
+                     "Without SDK logging, Phoenix must not render each push payload into a log line")
+        XCTAssertNotNil(try connectedSocket(loggingEnabled: true).logger)
+    }
+
+    private func connectedSocket(loggingEnabled: Bool) throws -> Socket {
+        userpilot = MockUserpilot.make(
+            config: Userpilot.Config(token: "NX-test-token").logging(enabled: loggingEnabled))
+        userpilot.storage.socketURL = "https://socket.example.com/mobile/v1/events/websocket"
+        userpilot.storage.userId = "user-1"
+        var created: Socket?
+        socketManager = SocketManager(container: userpilot.container) { endpoint, params in
+            let socket = Socket(endPoint: endpoint, transport: { _ in FakePhoenixTransport() }, paramsClosure: { params })
+            created = socket
+            return socket
+        }
+        socketManager.connect()
+        drainMainQueue()
+        return try XCTUnwrap(created)
     }
 
     private func makeSocketManager() -> SocketManager {

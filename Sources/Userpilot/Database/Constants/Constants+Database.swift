@@ -18,5 +18,7 @@ extension Constants {
         static let maxSizeBytes: Int64 = 3 * 1024 * 1024
         /// Bump when the Events table schema changes; add migration in `EventDatabaseStorage`.
         static let schemaVersion: Int32 = 1
+
+        static let queueLabel = "com.userpilot.database-queue"
     }
 }

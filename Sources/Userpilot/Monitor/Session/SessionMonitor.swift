@@ -9,7 +9,6 @@
 //
 
 import Foundation
-import UIKit
 
 /**
 Protocol defining session monitoring behavior.
@@ -17,29 +16,28 @@ Objects that conform to `SessionMonitoring` are expected to handle lifecycle eve
 app entering the background or foreground.
  */
 internal protocol SessionMonitoring: AnyObject {
-    /// Starts the session monitoring process, setting up observers for app lifecycle events.
+    /// Removes lifecycle observers and clears the stored background timestamp.
     func reset()
 
-    /// A flag to mintor app status
+    /// Whether analytics may publish during the current foreground period.
     var isAppActive: Bool { get }
 }
 
-internal class SessionMonitor: SessionMonitoring {
+/// Owns this instance's session lifecycle: publishing eligibility, connectivity and analytics ordering.
+/// Native callbacks run on main; the atomic activity snapshot is safe for analytics/socket workers.
+internal final class SessionMonitor: SessionMonitoring, LifecycleDelegate {
 
     // Dependencies
     private let analyticsPublisher: AnalyticsPublishing
     private let networkMonitor: NetworkMonitoring
     private let storage: DataStoring
+    private let lifecycleMonitor: LifecycleMonitoring
 
-    /// A flag to mintor app status.
-    /// Written on the main thread by the lifecycle callbacks, read from the socket and
-    /// analytics queues (`SocketManaging.publish`, `AnalyticsPublishing.publish`) to drop
-    /// events while the app is inactive. Unguarded, a reader can miss the background
-    /// transition and push events over a socket the system is about to suspend.
-    private let _isAppActive = AtomicReference<Bool>(true)
+    /// Update before network callbacks or analytics work can read publishing eligibility.
+    private let appActive = AtomicReference<Bool>(true)
 
     /// Whether `onAppStart()` has run for the current foreground period.
-    /// Set on the main thread by `onAppStart()` and `didEnterBackground`, but also cleared by
+    /// Set on the main thread by `onAppStart()` and `onAppBackground`, but also cleared by
     /// `reset()`, which `deinit` calls on whichever thread releases the last reference — so
     /// this cannot be a plain `Bool`.
     private let hasStartedSession = AtomicReference<Bool>(false)
@@ -50,36 +48,12 @@ internal class SessionMonitor: SessionMonitoring {
         self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
         self.networkMonitor = container.resolve(NetworkMonitoring.self)
         self.storage = container.resolve(DataStoring.self)
+        self.lifecycleMonitor = container.resolve(LifecycleMonitoring.self)
 
-        // Add observer for when the app enters the background.
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(didEnterBackground),
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil
-        )
-        // Add observer for every transition to the active state.
-        // `didBecomeActive` supersedes `willEnterForeground`: it covers the first
-        // activation (which `willEnterForeground` never delivers — that one only fires
-        // when returning from background) *and* every later foreground return, so a
-        // single observer handles both. Wrapper SDKs (Capacitor / Flutter / React Native
-        // / MAUI) build `Userpilot` while UIKit is still `.inactive`, so with
-        // `willEnterForeground` alone `resume()` never ran and the socket stayed closed
-        // until the user backgrounded and foregrounded the app.
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(didBecomeActive),
-            name: UIApplication.didBecomeActiveNotification,
-            object: nil
-        )
-
-        // The one activation no notification can deliver: the SDK was created *after*
-        // the app was already `.active`, so `didBecomeActive` has already fired and will
-        // not fire again until the next activation. Catch up on the current state.
-        performOn(.main) { [weak self] in
-            guard let self, UIApplication.shared.applicationState == .active else { return }
-            self.onAppStart()
-        }
+        // The shared observer includes cold-start activation and foreground returns. Catch-up stays
+        // queued so this instance can finish constructing before analytics resumes. The per-session
+        // latch below deduplicates catch-up and a notification delivered for the same activation.
+        lifecycleMonitor.addDelegate(self, replayCurrentState: true)
     }
 
     /// remove notification observer
@@ -87,21 +61,13 @@ internal class SessionMonitor: SessionMonitoring {
         reset()
     }
 
-    /// Logic to check if the socket is currently open
+    /// Reads app activity independently of whether the socket is connected.
     var isAppActive: Bool {
-        _isAppActive.value
+        appActive.value
     }
 
     func reset() {
-        // Stop listening for further lifecycle callbacks
-        NotificationCenter.default.removeObserver(
-            self,
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil)
-        NotificationCenter.default.removeObserver(
-            self,
-            name: UIApplication.didBecomeActiveNotification,
-            object: nil)
+        lifecycleMonitor.removeDelegate(self)
 
         hasStartedSession.value = false
 
@@ -111,11 +77,9 @@ internal class SessionMonitor: SessionMonitoring {
 
     /// Called when the app enters the background.
     /// This method flushes any pending analytics events.
-    /// - Parameter notification: The notification object containing information about the event.
-    @objc
-    func didEnterBackground(notification: Notification) {
+    func onAppBackground() {
         hasStartedSession.value = false
-        _isAppActive.value = false
+        appActive.value = false
         storage.sessionDate = Date()
         networkMonitor.stopMonitoring()
         analyticsPublisher.flush()
@@ -123,21 +87,19 @@ internal class SessionMonitor: SessionMonitoring {
 
     /// Called when the app becomes active — cold start and every foreground return.
     /// This method resumes analytics socket connection and event publishing.
-    /// - Parameter notification: The notification object containing information about the event.
-    @objc
-    func didBecomeActive(notification: Notification) {
+    func onAppActive() {
         onAppStart()
     }
 
-    /// Resumes monitoring and publishing once per foreground period. Deduplicates the
-    /// init catch-up and `didBecomeActive` (which can both fire for the same activation),
+    /// Starts connectivity before resuming analytics, once per foreground period. Deduplicates the
+    /// init catch-up and `onAppActive` (which can both fire for the same activation),
     /// and `.inactive` → `.active` bounces (Control Center, alerts) that never backgrounded.
     private func onAppStart() {
         // Claim the foreground period in one atomic step - a separate read then write would
         // let two activations both pass the check and resume twice.
         guard hasStartedSession.compareAndSet(expected: false, new: true) else { return }
 
-        _isAppActive.value = true
+        appActive.value = true
         networkMonitor.startMonitoring()
         analyticsPublisher.resume()
     }

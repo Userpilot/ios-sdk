@@ -31,11 +31,15 @@ extension Constants {
         static let fakeReload = "fake_reload"
         static let seenContents = "seen_contents"
         static let seenSurveys = "seen_surveys"
+        static let errorSteps = "error_steps"
         static let eventNameProperty = "event_name"
         static let screenProperty = "screen"
 
         /// Session gap after which a new session starts.
         static let sessionDuration = TimeInterval(30 * 60)
+
+        static let publisherQueueLabel = "com.userpilot.event-queue"
+        static let screenSessionQueueLabel = "com.userpilot.screen-session-state-queue"
     }
 
     /// Offline batch event payload keys (wire format).
@@ -43,5 +47,9 @@ extension Constants {
         static let eventTypeProperty = "event_type"
         static let createdAtProperty = "created_at"
         static let eventsProperty = "events"
+        /// Restored events per `batch_events` push; each push is encoded in its own main-queue turn.
+        static let replayChunkSize = 200
+
+        static let queueLabel = "com.userpilot.offline-events-queue"
     }
 }

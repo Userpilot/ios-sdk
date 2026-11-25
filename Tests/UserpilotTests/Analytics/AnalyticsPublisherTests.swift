@@ -1272,7 +1272,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Generated refresh bypasses an earlier screen throttle, but retains its own ACK slot.
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
+        analyticsPublisher.publishFakeReloadScreenEvent()
 
         // Assert (wait for the delayed call)
         wait(for: [expectation], timeout: 2.0)
@@ -1286,7 +1286,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         let published = recordPublishedEvents()
 
-        let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        let sent = analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertTrue(sent)
         analyticsPublisher.testPublish(Event(type: .screen("Test Screen")))
@@ -1703,7 +1703,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         // Screen ACKs and same-user identifies preserve session-start until navigation.
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
         analyticsPublisher.testSettle()
         var refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
         XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
@@ -1885,7 +1885,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(nil, nil, isFakeReload: true))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
         analyticsPublisher.testSettle()
         let refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
         XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
@@ -1944,8 +1944,8 @@ final class AnalyticsPublisherTests: XCTestCase {
         XCTAssertTrue(analyticsPublisher.isStartSession)
 
         // Consecutive content dismissals on the first screen retain true, including after each ACK.
-        for experienceId in [10, 11] {
-            XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, experienceId, isFakeReload: true))
+        for _ in 0..<2 {
+            XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
             analyticsPublisher.testSettle()
 
             let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
@@ -1967,7 +1967,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertFalse(analyticsPublisher.isStartSession)
 
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
         analyticsPublisher.testSettle()
 
         let request = userpilot.socketManager.requests.last
@@ -1984,7 +1984,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.testPublish(Event(type: .screen("Home")))
         let published = recordPublishedEvents()
 
-        XCTAssertFalse(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
+        XCTAssertFalse(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
@@ -1998,7 +1998,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         analyticsPublisher.testPublish(Event(type: .event("First")))
         analyticsPublisher.testPublish(Event(type: .screen("Next")))
 
-        XCTAssertFalse(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
+        XCTAssertFalse(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 2)
         acknowledge(Constants.Event.trackEvent, nil, Message(), true)
         let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
@@ -2013,7 +2013,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
@@ -2026,7 +2026,7 @@ final class AnalyticsPublisherTests: XCTestCase {
             titles.append(payload?[Constants.Analytics.screenTitleProperty] as? String ?? "")
         }
 
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
         analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
 
         XCTAssertEqual(titles, ["Home"], "Navigation must wait for the reload ACK")
@@ -2114,7 +2114,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         userpilot.offlineEventsHandler.holdRestoreCompletion = true
         let sent = recordPublishedEvents()
 
-        let accepted = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        let accepted = analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertTrue(accepted, "The refresh waits in the same queue during offline replay")
         XCTAssertEqual(sent(), [])
@@ -2153,19 +2153,19 @@ final class AnalyticsPublisherTests: XCTestCase {
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
 
     func testReloadAfterPreviousReloadACK_isAdmittedWithoutWaitingForHostThrottle() {
         arrangeReloadableScreen()
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
         acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         let published = recordPublishedEvents()
 
-        let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 11, isFakeReload: true)
+        let sent = analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertTrue(sent)
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
@@ -2210,7 +2210,7 @@ final class AnalyticsPublisherTests: XCTestCase {
         let published = recordPublishedEvents()
 
         // Act — the dismissal drives a fake reload for the current screen
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 2, isFakeReload: true))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
 
         // Assert — the dismissal reaches the socket before the screen message
         XCTAssertEqual(published(), ["dismissed_mobile_content", Constants.Event.screenEvent])
@@ -2274,6 +2274,255 @@ final class AnalyticsPublisherTests: XCTestCase {
 
         XCTAssertTrue(offlineHandler.savedSDKEvents.isEmpty)
         XCTAssertTrue(didOpenSocket)
+    }
+
+    func testPublishInternalSDKEvent_persistsAFlowContentErrorWhileOffline() throws {
+        let offlineHandler = try XCTUnwrap(
+            userpilot.container.resolve(OfflineEventsHandling.self) as? MockOfflineEventsHandler)
+        offlineHandler.shouldSaveOffline = true
+        var didOpenSocket = false
+        userpilot.socketManager.onConnect = { didOpenSocket = true }
+
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowContentErrorEvent(flowId: 42, stepId: 7, issue: "not_found", screen: "Checkout"))
+
+        XCTAssertEqual(offlineHandler.savedSDKEvents.map(\.eventName), ["mobile_content_error"])
+        XCTAssertFalse(didOpenSocket)
+    }
+
+    // MARK: - Queued screen query
+
+    func testHasQueuedScreenEvent_isFalse_whenNothingIsQueued() {
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent(nil))
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent([Constants.Analytics.screenTitleProperty: "Home"]))
+    }
+
+    func testHasQueuedScreenEvent_skipsTheScreenItAnswers() throws {
+        userpilot.storage.userId = "user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let answered = try XCTUnwrap(userpilot.socketManager.requests.last?.payload)
+
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent(answered))
+        XCTAssertTrue(analyticsPublisher.hasQueuedScreenEvent([Constants.Analytics.screenTitleProperty: "Other"]))
+    }
+
+    func testHasQueuedScreenEvent_countsANewerScreenBehindTheAnsweredOne() throws {
+        userpilot.storage.userId = "user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let answered = try XCTUnwrap(userpilot.socketManager.requests.last?.payload)
+
+        analyticsPublisher.testPublish(Event(type: .screen("Settings")))
+
+        XCTAssertTrue(analyticsPublisher.hasQueuedScreenEvent(answered))
+    }
+
+    func testHasQueuedScreenEvent_ignoresQueuedNonScreenEvents() throws {
+        userpilot.storage.userId = "user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let answered = try XCTUnwrap(userpilot.socketManager.requests.last?.payload)
+
+        analyticsPublisher.testPublish(Event(type: .event("Purchase")))
+
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent(answered))
+    }
+
+    // MARK: - Flow run screen metadata (error_steps, shown steps in seen_contents)
+
+    func testErrorSteps_isAlwaysSent_emptyOnNormalAndFakeReloadScreens() {
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.storage.userId = "flow-user"
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testReset()
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenMetadata()?[Constants.Analytics.fakeReload] as? Bool, true)
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+    }
+
+    func testErrorSteps_carriesOpenRunsErroredSteps_onFakeReloadAndNormalScreens() {
+        arrangeReloadableScreen(title: "Home")
+        let sent = recordPublishedEvents()
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 50, stepId: 501))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(sent(), [
+            "mobile_content_error", "mobile_content_error", "mobile_content_error", Constants.Event.screenEvent
+        ])
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [401, 501])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Other")))
+        XCTAssertEqual(lastScreenMetadata()?[Constants.Analytics.fakeReload] as? Bool, false)
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [401, 501])
+    }
+
+    func testEveryRunEnd_dropsThatFlowsErrorSteps_andAContinuingRunKeepsThem() {
+        arrangeReloadableScreen(title: "Home")
+        for flowId in [40, 50, 60, 70] {
+            analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: flowId, stepId: flowId * 10 + 1))
+        }
+
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.completed(flowId: 40, stepId: 402, endsRun: true))
+        analyticsPublisher.testPublishInternalSDKEvent(FlowExperienceActionEvent.dismissed(flowId: 50, stepId: 502))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 60, stepId: 602, endsRun: true))
+        analyticsPublisher.testPublishInternalSDKEvent(FlowExperienceStepActionEvent.completed(flowId: 70, stepId: 702))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [701])
+    }
+
+    func testAnErrorThatEndsItsRun_isNeverSentInErrorSteps() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 403, endsRun: true))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+    }
+
+    func testAnExpiredBackgroundReturn_clearsErrorSteps() {
+        XCTAssertEqual(errorStepsAfterBackground(elapsedMinutes: 35), [])
+    }
+
+    func testAShortBackgroundReturn_keepsErrorSteps() {
+        XCTAssertEqual(errorStepsAfterBackground(elapsedMinutes: 10), [401])
+    }
+
+    func testAShownFlowStep_joinsSeenContents_withNoNewKey_andLeavesOnNavigation() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.experiencePublished(.flow, 40)
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 401, fromFlowRun: true))
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 40, fromFlowRun: true))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        let metadata = lastScreenMetadata()
+        XCTAssertEqual((metadata?[Constants.Analytics.seenContents] as? [Int])?.count, 2, "De-duplicated on the wire")
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [40, 401])
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenSurveys), [])
+        XCTAssertEqual(metadata.map { Set($0.keys) }, [
+            Constants.Analytics.isSessionStartedProperty, Constants.Analytics.fakeReload,
+            Constants.Analytics.seenContents, Constants.Analytics.seenSurveys, Constants.Analytics.errorSteps
+        ])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Other")))
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [])
+    }
+
+    func testTheSameScreen_keepsShownFlowSteps() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 401, fromFlowRun: true))
+
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+
+        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.flowSeenContent, [401])
+    }
+
+    func testAStandaloneStepSeen_orAFlowStepError_neverJoinsSeenContents() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(FlowExperienceStepActionEvent.seen(flowId: 10, stepId: 101))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [])
+    }
+
+    func testAShownFlowStep_withNoScreenSession_isSkipped() {
+        userpilot.storage.userId = "flow-user"
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 401, fromFlowRun: true))
+
+        XCTAssertNil(analyticsPublisher.screenSessionStateMachine)
+    }
+
+    func testLogout_clearsErrorStepsAndShownFlowSteps_forTheNextIdentity() {
+        arrangeReloadableScreen(title: "Home", userId: "first-user")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 402, fromFlowRun: true))
+
+        analyticsPublisher.logout()
+        userpilot.storage.userId = "" // Userpilot clears storage after the synchronous publisher logout.
+        analyticsPublisher.testSettle()
+        analyticsPublisher.testPublish(Event(type: .identify("next-user")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        XCTAssertEqual(userpilot.socketManager.requests.last?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [])
+    }
+
+    func testOfflineScreenBatchEntries_carryNeitherSeenContentsNorErrorSteps_asBefore() throws {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 402, fromFlowRun: true))
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { true }
+
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+
+        let saved = try XCTUnwrap(userpilot.offlineEventsHandler.savedEvents.first?.event)
+        let entry = try XCTUnwrap(StoredOfflineEvent(event: saved).toBatchPayload(createdAt: 0))
+        XCTAssertEqual(
+            entry[Constants.Analytics.metaDataProperty] as? NSDictionary,
+            [Constants.Analytics.fakeReload: false] as NSDictionary
+        )
+        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.flowSeenContent, [402])
+    }
+
+    private func contentError(flowId: Int, stepId: Int, endsRun: Bool = false) -> FlowContentErrorEvent {
+        FlowContentErrorEvent(flowId: flowId, stepId: stepId, issue: "not_found", screen: "Home", endsRun: endsRun)
+    }
+
+    /// Mirrors the background refresh path: the error is recorded live, then the app returns after `elapsedMinutes`.
+    private func errorStepsAfterBackground(elapsedMinutes: Double) -> Set<Int>? {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        userpilot.sessionMonitor.isAppActive = false
+        analyticsPublisher.testFlush()
+        userpilot.sessionMonitor.isAppActive = true
+        userpilot.storage.sessionDate = Date().addingTimeInterval(-elapsedMinutes * 60)
+        let sent = recordPublishedEvents()
+
+        analyticsPublisher.testResume()
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+
+        XCTAssertEqual(sent(), [Constants.Event.screenEvent])
+        XCTAssertEqual(lastScreenMetadata()?[Constants.Analytics.fakeReload] as? Bool, false)
+        return lastScreenIds(Constants.Analytics.errorSteps)
+    }
+
+    private func lastScreenMetadata() -> [String: Any]? {
+        let screen = userpilot.socketManager.requests.last { $0.event == Constants.Event.screenEvent }
+        return screen?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+    }
+
+    /// The last sent screen's id list for `key` as a set; nil when the key is missing.
+    private func lastScreenIds(_ key: String) -> Set<Int>? {
+        (lastScreenMetadata()?[key] as? [Int]).map(Set.init)
     }
 }
 

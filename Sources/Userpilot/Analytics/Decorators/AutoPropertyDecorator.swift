@@ -31,7 +31,7 @@ internal protocol AutoPropertyDecoratoring: AnyObject {
  automatic property decoration for analytics events. It includes system information, app
  properties, and font details.
  */
-internal class AutoPropertyDecorator {
+internal final class AutoPropertyDecorator {
 
     // MARK: - Properties
 

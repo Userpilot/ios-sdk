@@ -34,6 +34,9 @@ internal struct Event {
     /// non-fake screen, and true for a fake reload. Excluded from offline encoding.
     var isFakeReload: Bool?
 
+    /// In-memory visit correlation for opt-in native screens. Never encoded or sent to the backend.
+    var screenVisitID: UUID?
+
     init(
         type: EventType,
         properties: Payload = nil,
@@ -54,6 +57,23 @@ internal struct Event {
 // MARK: - EventType helpers
 
 extension Event {
+    /// Uses only captured native SwiftUI metadata; manual, wrapper and missing-class events fall back.
+    var nativeSwiftUIScreenClass: String? {
+        guard isScreenEvent,
+              properties?[Constants.AutoCapture.source] as? String == Constants.AutoCapture.autoCaptureSourceValue,
+              properties?[Constants.AutoCapture.uiFramework] as? String == Userpilot.AppFramework.SwiftUI.rawValue,
+              let screenClass = properties?[Constants.AutoCapture.screenClass] as? String,
+              !screenClass.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return screenClass
+    }
+
+    /// Internal identity only. Length-prefixing keeps names and generic class strings unambiguous.
+    func screenIdentityKey(classAware: Bool) -> String? {
+        guard let title = screenTitle else { return nil }
+        guard classAware, let screenClass = nativeSwiftUIScreenClass else { return title }
+        return "native-swiftui:\(title.utf8.count):\(title)\(screenClass.utf8.count):\(screenClass)"
+    }
+
     var isIdentifyEvent: Bool {
         return type.isIdentifyEvent
     }
@@ -212,24 +232,5 @@ extension Event {
             ? interactionEventName : eventTitle
         if let screen { payload[Constants.Analytics.screenProperty] = screen }
         return payload
-    }
-}
-
-private extension KeyedEncodingContainer {
-    /// Offline payloads must first pass Foundation's JSON validation and numeric bridging.
-    /// Encoding AnyCodable directly would silently turn unsupported values into null instead of rejecting the event.
-    mutating func encodePayloadIfPresent(_ payload: Payload, forKey key: Key) throws {
-        guard let payload else { return }
-        // Foundation raises an Objective-C exception for non-JSON objects/nonfinite numbers.
-        // Reject them as a Swift encoding error so the existing offline error handling can recover.
-        guard JSONSerialization.isValidJSONObject(payload) else {
-            throw EncodingError.invalidValue(payload, .init(
-                codingPath: codingPath + [key],
-                debugDescription: "Event payload must contain valid JSON values"
-            ))
-        }
-        let data = try JSONSerialization.data(withJSONObject: payload, options: [])
-        guard let normalized = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
-        try encode(normalized.mapValues { AnyCodable($0) }, forKey: key)
     }
 }

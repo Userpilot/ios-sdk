@@ -17,5 +17,8 @@ extension Constants {
         /// First-party host used for active reachability validation.
         /// Never probe public hosts (Google/Apple/Cloudflare) from customer apps.
         static let reachabilityHost = "find.userpilot.io"
+
+        static let monitorQueueLabel = "com.userpilot.network-monitor-queue"
+        static let stateQueueLabel = "com.userpilot.network-monitor-state-queue"
     }
 }

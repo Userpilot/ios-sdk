@@ -20,7 +20,7 @@ internal struct StoredOfflineEvent {
     static let schemaVersionValue = 1
 
     let schemaVersion: Int
-    let kind: StoredOfflineEventKind
+    let kind: Kind
     let eventType: String
     let event: Event?
     let payload: [String: Any]?
@@ -44,6 +44,17 @@ internal struct StoredOfflineEvent {
         self.event = nil
         self.payload = sdkEvent.eventPayload
     }
+
+    /// Which pipeline a stored offline row came from.
+    ///
+    /// The raw values are persisted and sent in offline batches; renaming them requires
+    /// a storage migration and compatibility with the backend batch contract.
+    internal enum Kind: String, Codable {
+        case analytics
+        /// `internal` is a Swift keyword, so the case is spelled differently from its raw value.
+        case internalEvent = "internal"
+    }
+
 }
 
 // MARK: - Codable Conformance
@@ -78,7 +89,7 @@ extension StoredOfflineEvent: Codable {
             ?? Self.schemaVersionValue
         // Required, not defaulted: every writer sets it, so a row without one is corrupt and
         // must not be silently filed as analytics. Preserves the stored envelope's event kind.
-        kind = try container.decode(StoredOfflineEventKind.self, forKey: .kind)
+        kind = try container.decode(Kind.self, forKey: .kind)
         eventType = try container.decode(String.self, forKey: .eventType)
         event = try container.decodeIfPresent(Event.self, forKey: .event)
 

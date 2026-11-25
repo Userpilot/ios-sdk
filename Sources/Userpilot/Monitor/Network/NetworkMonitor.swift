@@ -55,13 +55,13 @@ internal class NetworkMonitor: NetworkMonitoring {
     weak var delegate: NetworkMonitoringDelegate?
 
     private let networkQueue = DispatchQueue(
-        label: Constants.DispatchQueues.networkMonitor,
+        label: Constants.Network.monitorQueueLabel,
         qos: .utility
     )
     private let networkQueueKey = DispatchSpecificKey<Bool>()
 
     private let stateQueue = DispatchQueue(
-        label: Constants.DispatchQueues.networkMonitorState, attributes: .concurrent)
+        label: Constants.Network.stateQueueLabel, attributes: .concurrent)
 
     private var pathMonitor: NWPathMonitor?
     private var debounceWorkItem: DispatchWorkItem?

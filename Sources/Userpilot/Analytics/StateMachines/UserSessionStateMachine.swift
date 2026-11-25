@@ -5,7 +5,7 @@
 //  Created by Userpilot on 23/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  Owns session-start and identification/background context for analytics screen payloads.
+//  Owns session-start, identification/background context and Flow error steps for analytics screen payloads.
 //
 
 import Foundation
@@ -39,12 +39,15 @@ internal protocol UserSessionStateManaging: AnyObject {
     func resetSessionStart()
     func isPostIdentificationContext(_ eventName: String) -> Bool
     func shouldRequestInitialScreenEvent(_ eventsQueueEmpty: Bool, _ hasCurrentScreen: Bool) -> Bool
-    func getPostIdentificationScreenConfig() -> UserSessionStateMachine.ScreenConfig
-    func prepareScreen(isFakeReload: Bool) -> UserSessionStateMachine.ScreenConfig
+    func getPostIdentificationScreenConfig() -> ScreenEventConfig
+    func prepareScreen(isFakeReload: Bool) -> ScreenEventConfig
+    func recordFlowStepError(flowId: Int, stepId: Int)
+    func endFlowRun(_ flowId: Int)
+    func flowErrorStepIds() -> Set<Int>
 }
 
-/// Owns session-start and identification/background context. The publisher reports transitions
-/// and owns delivery, current-screen metadata and each queued screen's reload intent.
+/// Owns session-start, identification/background context and the session's Flow error steps.
+/// The publisher reports transitions and owns delivery, current-screen metadata and each queued screen's reload intent.
 /// One lock protects the related state so payload reads cannot observe half an ACK or session reset.
 /// Logging stays outside the lock; publisher queue ordering remains responsible for event delivery.
 internal final class UserSessionStateMachine: UserSessionStateManaging {
@@ -52,6 +55,8 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
     private let lock = NSLock()
     private var state: UserSessionState = .awaitingInitialScreen
     private var startSession = true
+    /// Each open Flow run's errored step ids, keyed by Flow id; a run's entry goes when the run ends.
+    private var flowErrorSteps: [Int: Set<Int>] = [:]
 
     init(container: DIContainer) {
         logger = container.resolve(Userpilot.Config.self).logger
@@ -82,10 +87,12 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
     }
 
     /// First identify, logout and a different user establish an initial screen until its successful ACK.
+    /// The new session starts with no Flow error steps.
     func beginSession() {
         lock.withLock {
             state = .userSwitching
             startSession = true
+            flowErrorSteps.removeAll()
         }
         logger.info("📝 User session state: UserSwitching")
     }
@@ -112,8 +119,12 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
     }
 
     /// The publisher supplies the inactivity result; storage and clocks stay outside session policy.
+    /// An expired session also drops its Flow error steps.
     func resumeSession(isExpired: Bool) {
-        lock.withLock { startSession = isExpired }
+        lock.withLock {
+            startSession = isExpired
+            if isExpired { flowErrorSteps.removeAll() }
+        }
     }
 
     /// Explicit reset starts a session without introducing an identification or background transition.
@@ -132,13 +143,13 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
     }
 
     /// Choose a generated screen's reload intent at enqueue time without changing session-start.
-    func getPostIdentificationScreenConfig() -> ScreenConfig {
+    func getPostIdentificationScreenConfig() -> ScreenEventConfig {
         lock.withLock { screenConfig(isFakeReload: !state.isUserSwitching()) }
     }
 
     /// Resolve session-start at send time while preserving the queued event's explicit reload intent.
     /// A pending first-user boundary overrides navigation/resume until its successful screen ACK.
-    func prepareScreen(isFakeReload: Bool) -> ScreenConfig {
+    func prepareScreen(isFakeReload: Bool) -> ScreenEventConfig {
         lock.withLock {
             let config = screenConfig(isFakeReload: isFakeReload)
             startSession = config.startSession
@@ -146,17 +157,25 @@ internal final class UserSessionStateMachine: UserSessionStateManaging {
         }
     }
 
-    /// Called only under the state lock; both reads use the same session snapshot.
-    private func screenConfig(isFakeReload: Bool) -> ScreenConfig {
-        ScreenConfig(startSession: state.isUserSwitching() || startSession, isFakeReload: isFakeReload)
+    /// A Flow step's target could not be used; its id goes out in `error_steps` until the run ends.
+    func recordFlowStepError(flowId: Int, stepId: Int) {
+        lock.withLock { _ = flowErrorSteps[flowId, default: []].insert(stepId) }
     }
-}
 
-extension UserSessionStateMachine {
-    /// Flags for one screen request; reload intent remains on that event while it waits in the queue.
-    struct ScreenConfig {
-        let startSession: Bool
-        let isFakeReload: Bool
+    /// The Flow's run ended as the SDK sees it (completed, dismissed or ended by an error), so its error
+    /// steps are no longer sent.
+    func endFlowRun(_ flowId: Int) {
+        lock.withLock { _ = flowErrorSteps.removeValue(forKey: flowId) }
+    }
+
+    /// Every open run's error step ids, for the `error_steps` screen metadata.
+    func flowErrorStepIds() -> Set<Int> {
+        lock.withLock { flowErrorSteps.values.reduce(into: Set<Int>()) { $0.formUnion($1) } }
+    }
+
+    /// Called only under the state lock; both reads use the same session snapshot.
+    private func screenConfig(isFakeReload: Bool) -> ScreenEventConfig {
+        ScreenEventConfig(startSession: state.isUserSwitching() || startSession, isFakeReload: isFakeReload)
     }
 }
 

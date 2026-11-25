@@ -15,6 +15,7 @@
 
 // swiftlint:disable file_length
 import Foundation
+import os.log
 
 /// Lifecycle and publishing contract implemented by `SocketManager`.
 internal protocol SocketManaging: AnyObject {
@@ -60,6 +61,7 @@ internal protocol SocketManaging: AnyObject {
 /// Owns one connection attempt from settings lookup through local teardown.
 /// Commands and callbacks enqueue on main; synchronous queries read one atomic snapshot.
 /// Phoenix objects never cross that boundary. Analytics still owns delivery ordering.
+/// Callbacks retain their connection identity, so a late result cannot affect a replacement connection.
 internal final class SocketManager: SocketManaging {
 
     typealias SocketFactory = (_ endpoint: String, _ params: SwiftPhoenixClientPayload?) -> Socket
@@ -211,9 +213,15 @@ internal final class SocketManager: SocketManaging {
         #endif
     }
 
+    /// `logging(enabled: false)` installs `OSLog.disabled`; any other logger records messages.
+    private var isLoggingEnabled: Bool {
+        guard let osLog = logger as? OSLog else { return true }
+        return osLog !== OSLog.disabled
+    }
+
     /// Validate admission and inbound callbacks against the selected identity. Outbound sends bind their destination.
     private func matchesIdentity(_ connection: Connection) -> Bool {
-        storage.userId == connection.userID && config.token == connection.token
+        storage.userId == connection.userID && Environment.getClientToken(config: config) == connection.token
     }
 
     // MARK: - Settings and connection admission
@@ -221,8 +229,9 @@ internal final class SocketManager: SocketManaging {
     /// Reserve current before starting settings, so another connect cannot create a second attempt.
     private func beginConnection() {
         Self.assertOnMain()
-        guard current == nil, config.token.isNotEmpty, storage.userId.isNotEmpty else { return }
-        let connection = Connection(userID: storage.userId, token: config.token)
+        let token = Environment.getClientToken(config: config)
+        guard current == nil, token.isNotEmpty, storage.userId.isNotEmpty else { return }
+        let connection = Connection(userID: storage.userId, token: token)
         current = connection
         phase = .fetchingSettings
         let id = connection.id
@@ -255,7 +264,8 @@ internal final class SocketManager: SocketManaging {
     /// Creates exactly one socket/channel pair. The channel's join timeout covers initial opening.
     private func openConnection(_ connection: Connection) {
         Self.assertOnMain()
-        guard storage.socketURL.isNotEmpty,
+        let url = Environment.getSocketURL(storage: storage)
+        guard url.isNotEmpty,
               let deviceJSON = autoProperties.autoProperties.toJSONString(),
               let appJSON = autoProperties.appProperties.toJSONString() else {
             logger.error("Socket connection parameters are unavailable")
@@ -269,7 +279,7 @@ internal final class SocketManager: SocketManaging {
             Constants.Socket.autoPropertiesKey: deviceJSON,
             Constants.Socket.appPropertiesKey: appJSON
         ]
-        let socket = socketFactory(Environment.getSocketURL(storage: storage), parameters)
+        let socket = socketFactory(url, parameters)
         let channel = socket.channel(Constants.Socket.channelTopic)
         connection.socket = socket
         connection.channel = channel
@@ -286,11 +296,13 @@ internal final class SocketManager: SocketManaging {
     // MARK: - Phoenix callbacks
 
     /// Logs lifecycle and, like main, the Phoenix wire traffic (pushes and replies with their payloads)
-    /// while SDK logging is enabled.
+    /// while SDK logging is enabled. Without a Phoenix logger, pushes skip rendering their payload to text.
     private func observe(_ socket: Socket, channel: Channel, id: UUID) {
         Self.assertOnMain()
-        socket.logger = { [weak self] message in
-            self?.logger.debug("✈️ SOCKET message: %{public}@", message)
+        if isLoggingEnabled {
+            socket.logger = { [weak self] message in
+                self?.logger.debug("✈️ SOCKET message: %{public}@", message)
+            }
         }
         socket.onOpen { [weak self] in
             self?.receive(id) { manager, _ in manager.logger.info("✅ SOCKET opened") }
@@ -435,14 +447,16 @@ extension SocketManager {
         }
     }
 
-    /// The sender owns completion; subscribers still receive shared screen-content and token replies.
+    /// The sender owns completion and always gets its reply, so its in-flight send is released even while the
+    /// app is inactive. Only an active app's subscribers receive shared screen-content and token replies.
     private func notifyEventSent(
         _ eventName: String, _ payload: Payload, _ message: Message,
         _ success: Bool, _ completion: SocketCompletion?
     ) {
         Self.assertOnMain()
-        guard phase != .closing, sessionMonitor?.isAppActive == true else { return }
+        guard phase != .closing else { return }
         tryCatch { completion?(message, success) }
+        guard sessionMonitor?.isAppActive == true else { return }
         subscribers.invoke {
             $0.onSocketEventSent(message.resolvedEvent ?? eventName, payload, message, success)
         }

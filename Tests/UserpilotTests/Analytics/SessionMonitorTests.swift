@@ -13,11 +13,16 @@ final class SessionMonitorTests: XCTestCase {
 
     var monitor: SessionMonitor!
     var userpilot: MockUserpilot!
+    private var center: NotificationCenter!
+    private var lifecycle: LifecycleMonitor!
 
     override func setUpWithError() throws {
         try super.setUpWithError()
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         userpilot = MockUserpilot.make(config: config)
+        center = NotificationCenter()
+        lifecycle = LifecycleMonitor(notificationCenter: center, applicationState: { .inactive })
+        userpilot.container.register(LifecycleMonitoring.self, value: lifecycle)
         monitor = SessionMonitor(container: userpilot.container)
     }
 
@@ -34,7 +39,7 @@ final class SessionMonitorTests: XCTestCase {
         userpilot.analyticsPublisher.onFlush = { trackedFlushEvent += 1 }
 
         // Act
-        monitor.didEnterBackground(notification: Notification(name: UIApplication.didEnterBackgroundNotification))
+        center.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
 
         // Assert
         XCTAssertFalse(monitor.isAppActive, "App should be marked inactive in background")
@@ -48,7 +53,7 @@ final class SessionMonitorTests: XCTestCase {
         userpilot.analyticsPublisher.onResume = { trackedResumeEvent += 1 }
 
         // Act
-        monitor.didBecomeActive(notification: Notification(name: UIApplication.didBecomeActiveNotification))
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
         // Assert
         XCTAssertTrue(monitor.isAppActive, "App should be marked active when becoming active")
@@ -59,13 +64,11 @@ final class SessionMonitorTests: XCTestCase {
         // Arrange
         var trackedResumeEvent = 0
         userpilot.analyticsPublisher.onResume = { trackedResumeEvent += 1 }
-        let activation = Notification(name: UIApplication.didBecomeActiveNotification)
-        let background = Notification(name: UIApplication.didEnterBackgroundNotification)
 
         // Act — cold start, then a background round trip
-        monitor.didBecomeActive(notification: activation)
-        monitor.didEnterBackground(notification: background)
-        monitor.didBecomeActive(notification: activation)
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        center.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
         // Assert
         XCTAssertTrue(monitor.isAppActive, "App should be active again after the second activation")
@@ -79,7 +82,7 @@ final class SessionMonitorTests: XCTestCase {
         userpilot.analyticsPublisher.onResume = { resumeCount += 1 }
         monitor = SessionMonitor(container: userpilot.container)
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
         let initialized = expectation(description: "init catch-up completed")
         DispatchQueue.main.async { initialized.fulfill() }
         wait(for: [initialized], timeout: 1.0)
@@ -106,8 +109,8 @@ final class SessionMonitorTests: XCTestCase {
         flushExpectation.isInverted = true
         userpilot.analyticsPublisher.onFlush = { flushExpectation.fulfill() }
 
-        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        center.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
         wait(for: [resumeExpectation, flushExpectation], timeout: 1.0)
     }
@@ -116,15 +119,15 @@ final class SessionMonitorTests: XCTestCase {
         // Assert
         XCTAssertTrue(monitor.isAppActive, "App should be active initially")
 
-        monitor.didEnterBackground(notification: Notification(name: UIApplication.didEnterBackgroundNotification))
+        center.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
         XCTAssertFalse(monitor.isAppActive, "App should be inactive after background event")
 
-        monitor.didBecomeActive(notification: Notification(name: UIApplication.didBecomeActiveNotification))
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
         XCTAssertTrue(monitor.isAppActive, "App should be active again after becoming active")
     }
 
     func testSessionDate_shouldBeClearedOnReset() {
-        monitor.didEnterBackground(notification: Notification(name: UIApplication.didEnterBackgroundNotification))
+        center.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
         XCTAssertNotNil(userpilot.storage.sessionDate, "Session date should be set when entering background")
 
         monitor.reset()

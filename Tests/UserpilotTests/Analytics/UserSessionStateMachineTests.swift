@@ -229,6 +229,49 @@ final class UserSessionStateMachineTests: XCTestCase {
         XCTAssertTrue(sessions.getPostIdentificationScreenConfig().isFakeReload)
     }
 
+    func testFlowErrorSteps_collectEveryOpenRunsStepsOnce() {
+        sessions.recordFlowStepError(flowId: 40, stepId: 401)
+        sessions.recordFlowStepError(flowId: 40, stepId: 402)
+        sessions.recordFlowStepError(flowId: 40, stepId: 401)
+        sessions.recordFlowStepError(flowId: 50, stepId: 501)
+
+        XCTAssertEqual(sessions.flowErrorStepIds(), [401, 402, 501])
+    }
+
+    func testEndingARun_dropsOnlyThatFlowsErrorSteps() {
+        sessions.recordFlowStepError(flowId: 40, stepId: 401)
+        sessions.recordFlowStepError(flowId: 50, stepId: 501)
+
+        sessions.endFlowRun(40)
+        sessions.endFlowRun(99)
+
+        XCTAssertEqual(sessions.flowErrorStepIds(), [501])
+    }
+
+    func testANewSession_clearsFlowErrorSteps() {
+        sessions.recordFlowStepError(flowId: 40, stepId: 401)
+
+        sessions.beginSession()
+
+        XCTAssertTrue(sessions.flowErrorStepIds().isEmpty)
+    }
+
+    func testAnExpiredResume_clearsFlowErrorSteps() {
+        sessions.recordFlowStepError(flowId: 40, stepId: 401)
+
+        sessions.resumeSession(isExpired: true)
+
+        XCTAssertTrue(sessions.flowErrorStepIds().isEmpty)
+    }
+
+    func testAResumeWithinTheSession_keepsFlowErrorSteps() {
+        sessions.recordFlowStepError(flowId: 40, stepId: 401)
+
+        sessions.resumeSession(isExpired: false)
+
+        XCTAssertEqual(sessions.flowErrorStepIds(), [401])
+    }
+
     func testTransitionDiagnosticNamesRemainUnchanged() {
         sessions.markNormal()
         sessions.markUserBackFromBackground()

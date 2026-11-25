@@ -45,14 +45,11 @@ internal protocol AnalyticsPublishing: AnyObject {
         _ sdkEvent: SDKEvent, shouldSend: @escaping () -> Bool, completion: SocketCompletion?
     )
 
-    /// Requests backend content re-evaluation through the analytics FIFO.
+    /// Requests backend content re-evaluation through the analytics FIFO. It carries no content: the
+    /// experience that closed was recorded as seen when it showed.
     /// - Returns: true when a screen refresh was accepted into the queue
     @discardableResult
-    func publishFakeReloadScreenEvent(
-        _ experienceType: ExperienceType?,
-        _ experienceId: Int?,
-        isFakeReload: Bool
-    ) -> Bool
+    func publishFakeReloadScreenEvent(isFakeReload: Bool) -> Bool
 
     /// Records flow/survey IDs for the current screen's seen-content metadata.
     func experiencePublished(
@@ -75,21 +72,24 @@ internal protocol AnalyticsPublishing: AnyObject {
 
     /// Current screen-session state.
     var screenSessionStateMachine: ScreenSessionStateMachine? { get }
+
+    /// True when a screen event other than the one that sent `answeredPayload` waits in the analytics queue,
+    /// including a queued fake reload. The user has moved on, so experiences drop that screen reply.
+    func hasQueuedScreenEvent(_ answeredPayload: Payload) -> Bool
 }
 
 extension AnalyticsPublishing {
 
-    /// Fake reload requested by experience close/dismiss flows.
+    /// Fake reload requested by experience close/dismiss flows; it carries no content type or id.
     @discardableResult
-    func publishFakeReloadScreenEvent(
-        _ experienceType: ExperienceType?,
-        _ experienceId: Int?
-    ) -> Bool {
-        publishFakeReloadScreenEvent(experienceType, experienceId, isFakeReload: true)
+    func publishFakeReloadScreenEvent() -> Bool {
+        publishFakeReloadScreenEvent(isFakeReload: true)
     }
 }
 
-/// Queue-owned processing with one in-flight operation. Main delivers delegate callbacks
+/// Owns analytics admission, the FIFO queue and one in-flight operation until its ACK or failure.
+/// User-session state owns screen flags; experiences request reloads through this same queue.
+/// Queue-owned processing keeps ordering stable. Main delivers delegate callbacks
 /// and socket lifecycle calls whose implementation accesses Phoenix state.
 /// Ordinary entry points enqueue work; the few synchronous contracts use withQueue.
 internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscriptionDelegate, NetworkMonitoringDelegate {
@@ -147,8 +147,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     private var experiencesPublisher: ExperiencesPublishing? { container?.resolve(ExperiencesPublishing.self) }
     private var sessionMonitor: SessionMonitoring? { container?.resolve(SessionMonitoring.self) }
 
-    // A dedicated serial instance; the existing event-queue label does not share queue ownership.
-    private let queue = DispatchQueue(label: Constants.DispatchQueues.eventQueue, qos: .userInitiated)
+    private let queue = DispatchQueue(label: Constants.Analytics.publisherQueueLabel, qos: .userInitiated)
     private let queueKey = DispatchSpecificKey<Bool>()
     private let reads = AtomicReference(ReadState())
     /// Invalidates this user's SDK sends, including those already queued at the socket.
@@ -223,7 +222,7 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     func isExperienceSeen(_ content: ExperienceContent) -> Bool {
         let screen = reads.value.screen
         switch content {
-        case .flow(let flow): return screen?.seenExperiences.contains(flow.id) == true
+        case .flow(let flow, _): return screen?.seenExperiences.contains(flow.id) == true
         case .survey(let survey): return screen?.seenSurveys.contains(survey.id) == true
         case .nps: return false // Once-per-screen NPS suppression belongs to the experience publisher.
         }
@@ -233,6 +232,34 @@ internal final class AnalyticsPublisher: AnalyticsPublishing, SocketSubscription
     func experiencePublished(_ type: ExperienceType, _ id: Int) {
         withQueue { screen?.recordExperiencePublished(type, id) }
     }
+
+    /// The answered entry is the in-flight send of `answeredPayload`. Payloads are values here, so that send
+    /// is matched by equal content; one analytics send is in flight at a time. Its ACK may already have
+    /// removed it from `pending`, leaving only later entries.
+    func hasQueuedScreenEvent(_ answeredPayload: Payload) -> Bool {
+        withQueue {
+            var answered: UUID?
+            if case .analytics(let sent) = inFlight, let answeredPayload,
+               NSDictionary(dictionary: sent.payload).isEqual(to: answeredPayload) {
+                answered = sent.entry.id
+            }
+            return pending.contains { $0.id != answered && $0.event.isScreenEvent }
+        }
+    }
+
+    /// An in-memory SDK queue entry; transport callbacks are never part of the event payload or storage.
+    private struct SDKSend {
+        let event: SDKEvent
+
+        /// Rechecked during analytics admission, socket submission and reply handling.
+        /// Must be fast, side-effect-free and safe across the calling queues.
+        let shouldSend: () -> Bool
+
+        /// Receives the transport result while this request remains valid.
+        /// Cancellation can suppress this callback.
+        let completion: SocketCompletion?
+    }
+
 }
 
 // MARK: - Admission and identity
@@ -243,9 +270,12 @@ extension AnalyticsPublisher {
     /// events then join the owner queue, including an event submitted just before backgrounding.
     /// Identify waits for admission so a following push-token call observes the newly selected user.
     func publish(_ event: Event) {
+        var event = event
         debugEventStore.record(event)
         // Navigation reaches experiences now; analytics screen state advances in FIFO order.
-        if event.isScreenEvent, event.isFakeReload == nil { experiencesPublisher?.updateScreen(event) }
+        if event.isScreenEvent, event.isFakeReload == nil {
+            event.screenVisitID = experiencesPublisher?.updateScreen(event)
+        }
         guard sessionMonitor?.isAppActive == true else { return }
         if event.isIdentifyEvent {
             withQueue { accept(event) }
@@ -330,11 +360,12 @@ extension AnalyticsPublisher {
             // Admit once, before retaining. A host resume rejected by the experience cooldown must
             // neither consume the throttle nor stand in for the required dismissal refresh.
             let precedingScreen = pending.last(where: { $0.event.isScreenEvent })?.event ?? screen?.event
-            let changed = precedingScreen?.screenTitle != event.screenTitle
+            let identity = event.screenIdentityKey(classAware: config.enableScreenClassIdentity)
+            let changed = precedingScreen?.screenIdentityKey(classAware: config.enableScreenClassIdentity) != identity
             guard event.isFakeReload != nil || changed || experiencesPublisher?.canRequestScreenEvent() == true else {
                 return
             }
-            guard !throttle.shouldThrottleScreenEvent(screenTitle: event.screenTitle ?? "") else { return }
+            guard !throttle.shouldThrottleScreenEvent(screenTitle: identity ?? "") else { return }
         }
         pending.append(Entry(event: event))
     }
@@ -373,7 +404,7 @@ extension AnalyticsPublisher {
             guard let entry = pending.first else {
                 if userSessionStateMachine.getCurrentState() == .backgroundToInitialScreen {
                     userSessionStateMachine.markNormal()
-                    if admitReload(nil, nil, isFakeReload: false) { continue }
+                    if admitReload(isFakeReload: false) { continue }
                 }
                 return
             }
@@ -391,7 +422,12 @@ extension AnalyticsPublisher {
         if awaitReply { inFlight = .analytics(sent) }
 
         socketManager.publish(event.eventName, payload: payload, shouldSend: { !sent.isCancelled.value },
-                       completion: { [weak self] _, success in
+                       completion: { [weak self] message, success in
+            if let self, self.config.enableScreenClassIdentity, event.isScreenEvent, !sent.isCancelled.value {
+                self.experiencesPublisher?.receiveScreenResponse(
+                    payload, message, success: success, visitID: event.screenVisitID
+                )
+            }
             if awaitReply { self?.didSend(sent, success: success) }
         })
         if event.isScreenEvent {
@@ -485,6 +521,7 @@ extension AnalyticsPublisher {
     /// Persist eligible SDK events offline; otherwise retain their completion until submission.
     private func acceptSDKEvent(_ send: SDKSend) {
         guard storage.userId.isNotEmpty, closing != .logout, send.shouldSend() else { return }
+        recordFlowRun(send.event)
         if offlineEventsHandler.shouldSaveOffline, send.event.isOfflineEligible {
             offlineEventsHandler.saveSDKEventToLocalStorage(send.event)
             return
@@ -505,22 +542,43 @@ extension AnalyticsPublisher {
                            shouldSend: send.shouldSend, completion: send.completion)
         }
     }
+
+    /// Feeds the next screen event's Flow metadata from the run's own events: a shown step joins
+    /// `seen_contents` on the current screen, an error step joins `error_steps`, and any run end drops that
+    /// run's error steps. Runs on the publisher's queue before the offline split, so an event saved offline
+    /// still counts.
+    private func recordFlowRun(_ event: SDKEvent) {
+        switch event {
+        case let step as FlowExperienceStepActionEvent:
+            if case let .seen(_, stepId, true) = step { screen?.recordFlowStepSeen(stepId) }
+            if case let .completed(flowId, _, true) = step { userSessionStateMachine.endFlowRun(flowId) }
+        case let flow as FlowExperienceActionEvent:
+            if case let .dismissed(flowId, _, _) = flow { userSessionStateMachine.endFlowRun(flowId) }
+        case let error as FlowContentErrorEvent:
+            userSessionStateMachine.recordFlowStepError(flowId: error.flowId, stepId: error.stepId)
+            if error.endsRun { userSessionStateMachine.endFlowRun(error.flowId) }
+        default:
+            break
+        }
+    }
 }
 
 // MARK: - Screen context and generated refreshes
 
 extension AnalyticsPublisher {
 
-    /// Same title retains seen IDs; a new title starts empty sets. The owner queue also protects
+    /// Same identity retains seen IDs; a new identity starts empty sets. The owner queue also protects
     /// replacement of the ScreenSessionStateMachine reference, not just its internal sets.
     @discardableResult
     private func setUpScreen(_ event: Event) -> Bool {
-        let changed = screen?.event.screenTitle != event.screenTitle
+        let changed = screen?.event.screenIdentityKey(classAware: config.enableScreenClassIdentity)
+            != event.screenIdentityKey(classAware: config.enableScreenClassIdentity)
         if screen != nil, canRequestEvent, changed { userSessionStateMachine.markScreenChanged() }
         screen = ScreenSessionStateMachine(
             event: event,
             seenExperiences: changed ? [] : (screen?.seenExperiences ?? []),
-            seenSurveys: changed ? [] : (screen?.seenSurveys ?? [])
+            seenSurveys: changed ? [] : (screen?.seenSurveys ?? []),
+            flowSeenContent: changed ? [] : (screen?.flowSeenContent ?? [])
         )
         publishReadState()
         return changed
@@ -544,20 +602,22 @@ extension AnalyticsPublisher {
         let metadata: [String: Any] = [
             Constants.Analytics.isSessionStartedProperty: screenConfig.startSession,
             Constants.Analytics.fakeReload: screenConfig.isFakeReload,
-            Constants.Analytics.seenContents: Array(screen.seenExperiences),
-            Constants.Analytics.seenSurveys: Array(screen.seenSurveys)
+            Constants.Analytics.seenContents: Array(
+                mergedSeenContents(seenFlowIds: screen.seenExperiences, flowSeenContent: screen.flowSeenContent)
+            ),
+            Constants.Analytics.seenSurveys: Array(screen.seenSurveys),
+            Constants.Analytics.errorSteps: Array(userSessionStateMachine.flowErrorStepIds())
         ]
-        return [
-            Constants.Analytics.screenTitleProperty: event.screenTitle ?? "",
-            Constants.Analytics.metaDataProperty: (event.properties ?? [:]).merging(metadata) { _, new in new }
-        ]
+        return screen.screenPayload.toDictionary(adding: metadata)
     }
 
     /// A returning user can have a tracked screen even when no screen session exists yet.
     private func ensureScreen() {
         guard screen == nil, storage.userId.isNotEmpty,
               let title = experiencesPublisher?.getCurrentScreen, !title.isEmpty else { return }
-        screen = ScreenSessionStateMachine(event: Event(type: .screen(title)))
+        // Opt-in screens tracked before identify retain their captured class and visit correlation.
+        let captured = config.enableScreenClassIdentity ? experiencesPublisher?.currentScreenEvent : nil
+        screen = ScreenSessionStateMachine(event: captured ?? Event(type: .screen(title)))
         publishReadState()
     }
 
@@ -566,15 +626,20 @@ extension AnalyticsPublisher {
         ensureScreen()
         guard var event = screen?.event else { return }
         event.isFakeReload = isFakeReload
+        if config.enableScreenClassIdentity,
+           let current = experiencesPublisher?.currentScreenEvent,
+           current.screenIdentityKey(classAware: true) == event.screenIdentityKey(classAware: true) {
+          event.screenVisitID = current.screenVisitID
+        }
         pending.append(Entry(event: event))
     }
 
-    /// The Bool retains its existing meaning: true only after actual queue admission, including
-    /// while an offline restore owns delivery. A snapshot followed by async enqueue cannot promise this.
+    /// True only once the screen event is admitted to the queue, including while an offline restore owns
+    /// delivery, so the check and the enqueue share one queue turn.
     @discardableResult
-    func publishFakeReloadScreenEvent(_ type: ExperienceType?, _ id: Int?, isFakeReload: Bool) -> Bool {
+    func publishFakeReloadScreenEvent(isFakeReload: Bool) -> Bool {
         withQueue {
-            let accepted = admitReload(type, id, isFakeReload: isFakeReload)
+            let accepted = admitReload(isFakeReload: isFakeReload)
             if accepted { drain() }
             return accepted
         }
@@ -582,10 +647,9 @@ extension AnalyticsPublisher {
 
     /// A fake reload needs no queued screen and refreshes the throttle to suppress host resume screens.
     /// An existing throttle window cannot reject it; ordinary reloads retain their queue/throttle checks.
-    private func admitReload(_ type: ExperienceType?, _ id: Int?, isFakeReload: Bool) -> Bool {
+    private func admitReload(isFakeReload: Bool) -> Bool {
         guard closing == nil, canRequestEvent, let screen else { return false }
-        if let type, let id { screen.recordExperiencePublished(type, id) }
-        let title = screen.event.screenTitle ?? ""
+        let title = screen.event.screenIdentityKey(classAware: config.enableScreenClassIdentity) ?? ""
         if isFakeReload {
             // A queued screen already asks for content. Other events retain FIFO ahead of this refresh.
             guard !pending.contains(where: { $0.event.isScreenEvent }) else { return false }
