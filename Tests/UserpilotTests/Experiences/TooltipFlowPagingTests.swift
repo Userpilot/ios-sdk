@@ -37,6 +37,7 @@ final class TooltipFlowPagingTests: XCTestCase {
         let afterFirstTap = sut.viewModel.currentStepIndex
         let wasHidden = sut.wrapperView.isHidden
         sut.onTargetTapped()
+        waitForRemoval(of: sut)
 
         XCTAssertEqual(afterFirstTap, 1)
         XCTAssertFalse(wasHidden)
@@ -57,6 +58,7 @@ final class TooltipFlowPagingTests: XCTestCase {
         }
 
         sut.onTargetTapped()
+        waitForRemoval(of: sut)
 
         XCTAssertEqual(dismissedWhenReported, false)
         XCTAssertTrue(sut.hasCompletedDismissal)
@@ -70,6 +72,7 @@ final class TooltipFlowPagingTests: XCTestCase {
 
         sut.onTargetTapped()
         sut.onTargetTapped()
+        waitForRemoval(of: sut)
 
         XCTAssertEqual(names(flowEvents), [
             "seen_mobile_content_step 401", "completed_mobile_content_step 401",
@@ -88,7 +91,8 @@ final class TooltipFlowPagingTests: XCTestCase {
 
         sut.onTargetTapped()
         XCTAssertTrue(sut.isParked)
-        XCTAssertEqual(sut.wrapperView.alpha, 0)
+        XCTAssertEqual(sut.wrapperView.shadowWrappingView.alpha, 0)
+        XCTAssertEqual(sut.wrapperView.backdropView.alpha, 0)
         let hidden = expectation(for: NSPredicate { _, _ in sut.wrapperView.isHidden }, evaluatedWith: nil)
         wait(for: [hidden], timeout: 2)
 
@@ -97,7 +101,8 @@ final class TooltipFlowPagingTests: XCTestCase {
 
         XCTAssertFalse(sut.isParked)
         XCTAssertFalse(sut.wrapperView.isHidden)
-        XCTAssertEqual(sut.wrapperView.alpha, 1)
+        XCTAssertEqual(sut.wrapperView.shadowWrappingView.alpha, 1)
+        XCTAssertEqual(sut.wrapperView.backdropView.alpha, 1)
         XCTAssertEqual(names(flowEvents).last, "seen_mobile_content_step 402")
     }
 
@@ -108,7 +113,7 @@ final class TooltipFlowPagingTests: XCTestCase {
 
         XCTAssertFalse(sut.isParked)
         XCTAssertFalse(sut.hasPendingStep)
-        XCTAssertEqual(sut.wrapperView.alpha, 1)
+        XCTAssertEqual(sut.wrapperView.shadowWrappingView.alpha, 1)
         XCTAssertFalse(sut.wrapperView.isHidden)
     }
 
@@ -195,6 +200,12 @@ final class TooltipFlowPagingTests: XCTestCase {
         let settled = expectation(description: "main queue drained")
         DispatchQueue.main.async { settled.fulfill() }
         wait(for: [settled], timeout: 1)
+    }
+
+    /// Waits for the card/dim fade, then UIKit removal.
+    private func waitForRemoval(of sut: TooltipViewController) {
+        let removed = expectation(for: NSPredicate { _, _ in sut.hasCompletedDismissal }, evaluatedWith: nil)
+        wait(for: [removed], timeout: 2)
     }
 
     /// Presents a tooltip segment of `TooltipFixture.flowPayload` and starts resolving its first target.

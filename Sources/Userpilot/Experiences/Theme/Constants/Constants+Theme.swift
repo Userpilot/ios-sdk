@@ -137,7 +137,7 @@ extension Constants {
         static let tooltipStillnessTimeout: TimeInterval = 2
         /// How far, in points, a target may shift between two lookups and still count as still.
         static let tooltipStillnessTolerance: CGFloat = 0.5
-        /// A held Flow overlay's park fade, its return and its dim blend; matches the reposition glide.
+        /// A held Flow overlay's dim blend between steps; matches the reposition glide.
         static let tooltipFlowFadeDuration: TimeInterval = 0.3
     }
 }

@@ -209,16 +209,10 @@ internal extension TooltipViewController {
     func park() {
         guard hasRevealed, !isParked, !hasReachedTerminalState else { return }
         isParked = true
-        UIView.animate(
-            withDuration: Constants.Theme.tooltipFlowFadeDuration,
-            delay: 0,
-            options: [.curveLinear, .beginFromCurrentState],
-            animations: { [weak self] in self?.wrapperView.alpha = 0 },
-            completion: { [weak self] _ in
-                guard let self, self.isParked else { return }
-                self.wrapperView.isHidden = true
-            }
-        )
+        wrapperView.animateDismiss { [weak self] in
+            guard let self, self.isParked else { return }
+            self.wrapperView.isHidden = true
+        }
     }
 
     /// Binds a step the held overlay was still waiting for, its dim fading with the glide. Returns
@@ -235,11 +229,6 @@ internal extension TooltipViewController {
     /// Fades a parked overlay back in at its new target.
     func fadeInFromPark() {
         isParked = false
-        UIView.animate(
-            withDuration: Constants.Theme.tooltipFlowFadeDuration,
-            delay: 0,
-            options: [.curveLinear, .beginFromCurrentState],
-            animations: { [weak self] in self?.wrapperView.alpha = 1 }
-        )
+        wrapperView.animateReveal()
     }
 }

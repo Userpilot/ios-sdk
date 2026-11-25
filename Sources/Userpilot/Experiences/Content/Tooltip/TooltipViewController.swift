@@ -97,9 +97,8 @@ internal final class TooltipViewController: UIViewController {
         // Covers the whole screen without a system dimming view of its own — the
         // keyhole backdrop is ours and must not be doubled.
         modalPresentationStyle = .overFullScreen
-        // Plain cross-dissolve for tooltips and no custom
-        // animator; nothing on the card animates its alpha, scale, or transform
-        // on appear.
+        // The overlay is still hidden while this runs. The card and dim animate
+        // in once the target resolves (`TooltipWrapperView+Appearance`).
         modalTransitionStyle = .crossDissolve
     }
 
@@ -242,7 +241,11 @@ internal final class TooltipViewController: UIViewController {
             targetingHost?.window?.userpilotScrollViews().forEach { $0.userpilotCancelDragInProgress() }
         }
         wrapperView.isHidden = false
-        if returnsFromPark { fadeInFromPark() }
+        if returnsFromPark {
+            fadeInFromPark()
+        } else if !hasRevealed {
+            wrapperView.animateReveal()
+        }
 
         guard !hasRevealed else { viewModel.onStepRevealed(); return }
         hasRevealed = true
@@ -329,14 +332,22 @@ internal final class TooltipViewController: UIViewController {
 
     /// Runs terminal callbacks and waiting SDK closes only after UIKit finishes removing this controller.
     /// The publisher then decides whether to request a reload or open the selected completion link.
+    /// A visible overlay fades out first; a hidden or never-revealed one is removed at once.
     private func dismissTooltip(completion: (() -> Void)?) {
-        dismiss(animated: true) { [weak self] in
-            self?.hasCompletedDismissal = true
-            completion?()
-            let waiters = self?.dismissalWaiters ?? []
-            self?.dismissalWaiters.removeAll()
-            waiters.forEach { $0() }
+        let remove: () -> Void = { [weak self] in
+            self?.dismiss(animated: false) { [weak self] in
+                self?.hasCompletedDismissal = true
+                completion?()
+                let waiters = self?.dismissalWaiters ?? []
+                self?.dismissalWaiters.removeAll()
+                waiters.forEach { $0() }
+            }
         }
+        guard hasRevealed, !wrapperView.isHidden else {
+            remove()
+            return
+        }
+        wrapperView.animateDismiss(completion: remove)
     }
 }
 
