@@ -97,7 +97,7 @@ final class DebugEventMapperTests: XCTestCase {
         XCTAssertTrue(debugEvent.properties.map(\.key).contains("mobile_content_id"))
     }
 
-    func testFlatten_sortsKeysAndCapsOversizedNestedMaps() {
+    func testFlatten_sortsKeysAndPreservesEveryNestedEntry() {
         var huge: [String: Any] = [:]
         for index in 1...30 {
             huge["k\(index)"] = index
@@ -106,15 +106,26 @@ final class DebugEventMapperTests: XCTestCase {
         let rows = mapper.flatten(["nested": huge, "alpha": "z"])
 
         XCTAssertEqual(rows.first?.key, "alpha")
-        XCTAssertEqual(rows[1].value, "{30 keys}")
+        for index in 1...30 {
+            XCTAssertTrue(rows[1].value.contains("k\(index)"))
+        }
     }
 
-    func testFlatten_truncatesLongStringValues() {
-        let rows = mapper.flatten(["blob": String(repeating: "x", count: 500)])
+    func testFlatten_preservesLongUnicodeStringsAllPropertiesAndFullCollections() {
+        let text = String(repeating: "🧪 مرحبا ", count: 150)
+        let collection = Array(1...100)
+        var source: [String: Any] = Dictionary(uniqueKeysWithValues: (1...100).map { ("key\($0)", $0) })
+        source["text"] = text
+        source["collection"] = collection
+        source["null"] = NSNull()
 
-        XCTAssertEqual(rows.count, 1)
-        XCTAssertEqual(rows[0].value.count, 401)
-        XCTAssertTrue(rows[0].value.hasSuffix("…"))
+        let rows = mapper.flatten(source)
+
+        XCTAssertEqual(rows.count, 103)
+        XCTAssertEqual(rows.map(\.key), source.keys.sorted())
+        XCTAssertEqual(rows.first { $0.key == "text" }?.value, text)
+        XCTAssertEqual(rows.first { $0.key == "collection" }?.value, String(describing: collection))
+        XCTAssertEqual(rows.first { $0.key == "null" }?.value, "null")
     }
 }
 

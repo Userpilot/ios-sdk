@@ -47,10 +47,8 @@ internal final class DebugFontCatalog: DebugFontCataloging {
 
     func systemFontNames() -> [String] {
         if let cached = lock.withLock({ cachedSystem }) { return cached }
-        let result = Array(UIFont.familyNames.sorted().prefix(Self.maxSystemFonts))
+        let result = UIFont.familyNames.sorted()
         lock.withLock { cachedSystem = result }
         return result
     }
-
-    private static let maxSystemFonts = 80
 }

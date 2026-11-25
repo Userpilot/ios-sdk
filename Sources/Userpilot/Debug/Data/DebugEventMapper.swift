@@ -44,6 +44,18 @@ internal final class DebugEventMapper {
         )
     }
 
+    /// A preview's event is never sent; its row leaves out the respondent's answers.
+    func fromPreview(_ sdkEvent: SDKEvent) -> DebugEvent {
+        DebugEvent(
+            id: nextIdentifier(),
+            channel: .internalSDK,
+            title: sdkEvent.eventName,
+            typeLabel: Self.typePreview,
+            timestampMs: clock(),
+            properties: flatten(sdkEvent.eventPayload.filter { !Self.answerKeys.contains($0.key) })
+        )
+    }
+
     func channelFor(_ event: Event) -> DebugEventChannel {
         switch event.type {
         case .autoCaptureEvent:
@@ -61,7 +73,7 @@ internal final class DebugEventMapper {
 
     func flatten(_ source: [String: Any]) -> [DebugProperty] {
         guard !source.isEmpty else { return [] }
-        return source.keys.sorted().prefix(Self.maxProperties).map { key in
+        return source.keys.sorted().map { key in
             DebugProperty(key: key, value: stringify(source[key] ?? NSNull()))
         }
     }
@@ -113,24 +125,7 @@ internal final class DebugEventMapper {
     }
 
     private func stringify(_ value: Any) -> String {
-        let raw: String
-        if value is NSNull {
-            raw = Self.nullValue
-        } else if let map = value as? [AnyHashable: Any] {
-            raw = map.count > Self.maxNestedEntries
-                ? "{\(map.count) keys}"
-                : String(describing: map)
-        } else if let collection = value as? [Any] {
-            raw = collection.count > Self.maxNestedEntries
-                ? "[\(collection.count) items]"
-                : String(describing: collection)
-        } else {
-            raw = String(describing: value)
-        }
-        if raw.count > Self.maxValueLength {
-            return String(raw.prefix(Self.maxValueLength)) + Self.ellipsis
-        }
-        return raw
+        value is NSNull ? Self.nullValue : String(describing: value)
     }
 
     private func nextIdentifier() -> Int {
@@ -138,9 +133,6 @@ internal final class DebugEventMapper {
         return nextId
     }
 
-    private static let maxProperties = 80
-    private static let maxValueLength = 400
-    private static let maxNestedEntries = 20
     private static let companySection = "company"
     private static let screenSection = "screen"
     private static let interactionName = "interaction_event_name"
@@ -149,6 +141,8 @@ internal final class DebugEventMapper {
     private static let typeIdentify = "identify"
     private static let typeAutoCapture = "auto_capture"
     private static let typeInternal = "internal"
+    private static let typePreview = "preview"
+    /// Survey and NPS answer keys.
+    private static let answerKeys: Set<String> = ["feedback", "score"]
     private static let nullValue = "null"
-    private static let ellipsis = "…"
 }

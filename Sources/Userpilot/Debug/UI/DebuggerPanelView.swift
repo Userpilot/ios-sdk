@@ -10,7 +10,7 @@ import UIKit
 
 internal final class DebuggerPanelView: UIView {
 
-    var onClose: (() -> Void)?
+    var onDismissRequested: (() -> Void)?
 
     private let eventStore: DebugEventStoring
     private let configFactory: DebugConfigSnapshotMaking
@@ -27,21 +27,29 @@ internal final class DebuggerPanelView: UIView {
     private let userList = DebuggerListView()
     private let manualList = DebuggerListView()
     private let autoList = DebuggerListView()
-    private let sdkList = DebuggerListView()
+    private let internalList = DebuggerListView()
+    private let flowList = DebuggerListView()
 
     private var tabs: [UIButton] = []
-    private var selectedTab = 0
+    private var selectedTab = DebugTab.config
     private var observerIds: [UUID] = []
     private var indicatorLeading: NSLayoutConstraint?
     private var indicatorWidth: NSLayoutConstraint?
 
-    private let tabTitles = [
-        DebuggerStrings.tabConfig,
-        DebuggerStrings.tabUser,
-        DebuggerStrings.tabManual,
-        DebuggerStrings.tabAuto,
-        DebuggerStrings.tabSDK
-    ]
+    private enum DebugTab: Int, CaseIterable {
+        case config, user, manual, autoCapture, internalSDK, flow
+
+        var title: String {
+            switch self {
+            case .config: return DebuggerStrings.tabConfig
+            case .user: return DebuggerStrings.tabUser
+            case .manual: return DebuggerStrings.tabManual
+            case .autoCapture: return DebuggerStrings.tabAuto
+            case .internalSDK: return DebuggerStrings.tabInternal
+            case .flow: return DebuggerStrings.tabFlow
+            }
+        }
+    }
 
     init(
         eventStore: DebugEventStoring,
@@ -58,6 +66,10 @@ internal final class DebuggerPanelView: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        observerIds.forEach { eventStore.removeObserver($0) }
     }
 
     func onShown() {
@@ -100,7 +112,7 @@ internal final class DebuggerPanelView: UIView {
         bindLists()
         layoutChrome()
         buildTabs()
-        showTab(0)
+        showTab(.config)
         refreshStaticTab()
     }
 
@@ -111,6 +123,7 @@ internal final class DebuggerPanelView: UIView {
         }
         configList.onPropertyTap = copy
         userList.onPropertyTap = copy
+        flowList.onPropertyTap = copy
     }
 
     private func layoutChrome() {
@@ -161,13 +174,13 @@ internal final class DebuggerPanelView: UIView {
     }
 
     private func buildTabs() {
-        for (index, title) in tabTitles.enumerated() {
+        for tab in DebugTab.allCases {
             let button = UIButton(type: .system)
-            button.setTitle(title, for: .normal)
+            button.setTitle(tab.title, for: .normal)
             button.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
             button.titleLabel?.adjustsFontSizeToFitWidth = true
             button.titleLabel?.minimumScaleFactor = 0.8
-            button.tag = index
+            button.tag = tab.rawValue
             button.addTarget(self, action: #selector(tabTapped(_:)), for: .touchUpInside)
             tabs.append(button)
             tabStack.addArrangedSubview(button)
@@ -186,40 +199,45 @@ internal final class DebuggerPanelView: UIView {
 private extension DebuggerPanelView {
 
     @objc func tabTapped(_ sender: UIButton) {
-        showTab(sender.tag)
+        guard let tab = DebugTab(rawValue: sender.tag) else { return }
+        showTab(tab)
     }
 
     @objc func closeTapped() {
-        onClose?()
+        onDismissRequested?()
     }
 
-    func showTab(_ index: Int) {
-        selectedTab = index
+    private func showTab(_ tab: DebugTab) {
+        selectedTab = tab
         updateTabColors()
         moveIndicator(animated: true)
         content.subviews.forEach { $0.removeFromSuperview() }
-        let list = listForTab(index)
+        let list = listForTab(tab)
         list.frame = content.bounds
         list.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         content.addSubview(list)
         refreshStaticTab()
     }
 
-    func listForTab(_ index: Int) -> DebuggerListView {
-        switch index {
-        case 1: return userList
-        case 2: return manualList
-        case 3: return autoList
-        case 4: return sdkList
-        default: return configList
+    private func listForTab(_ tab: DebugTab) -> DebuggerListView {
+        switch tab {
+        case .user: return userList
+        case .manual: return manualList
+        case .autoCapture: return autoList
+        case .internalSDK: return internalList
+        case .flow: return flowList
+        case .config: return configList
         }
     }
 
     func refreshStaticTab() {
-        if selectedTab == 0 {
+        if selectedTab == .config {
             configList.showProperties(configFactory.create().toListItems())
-        } else if selectedTab == 1 {
+        } else if selectedTab == .user {
             userList.showProperties(userFactory.create().toListItems())
+        } else if selectedTab == .flow {
+            let snapshot = DebugSnapshot(sections: eventStore.flowRuns.map(\.section))
+            flowList.showProperties(snapshot.toListItems(), emptyText: DebuggerStrings.emptyFlows)
         }
     }
 
@@ -241,7 +259,13 @@ private extension DebuggerPanelView {
             eventStore.observe(.internalSDK) { [weak self] in
                 performOnMain {
                     guard let self else { return }
-                    self.sdkList.showEvents(self.eventStore.events(for: .internalSDK))
+                    self.internalList.showEvents(self.eventStore.events(for: .internalSDK))
+                }
+            },
+            eventStore.observe(.flow) { [weak self] in
+                performOnMain {
+                    guard let self, self.selectedTab == .flow else { return }
+                    self.refreshStaticTab()
                 }
             }
         ]
@@ -254,7 +278,7 @@ private extension DebuggerPanelView {
 
     func updateTabColors() {
         for (index, button) in tabs.enumerated() {
-            let selected = index == selectedTab
+            let selected = index == selectedTab.rawValue
             button.setTitleColor(selected ? DebuggerTheme.brand : DebuggerTheme.secondary, for: .normal)
         }
     }
@@ -263,7 +287,7 @@ private extension DebuggerPanelView {
         guard !tabs.isEmpty, tabStack.bounds.width > 0 else { return }
         let width = tabStack.bounds.width / CGFloat(tabs.count)
         indicatorWidth?.constant = width
-        indicatorLeading?.constant = width * CGFloat(selectedTab)
+        indicatorLeading?.constant = width * CGFloat(selectedTab.rawValue)
         if animated {
             UIView.animate(withDuration: DebuggerTheme.fadeDuration) { self.layoutIfNeeded() }
         }
@@ -281,7 +305,7 @@ private extension DebuggerPanelView {
     }
 
     func configureIconButton(_ button: UIButton, systemName: String, label: String) {
-        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         button.setImage(UIImage(systemName: systemName, withConfiguration: config), for: .normal)
         button.tintColor = DebuggerTheme.icon
         button.accessibilityLabel = label

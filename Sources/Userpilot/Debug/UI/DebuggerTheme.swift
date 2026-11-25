@@ -25,20 +25,28 @@ enum DebuggerTheme {
     static let panelMargin: CGFloat = 12
     static let panelHeightFraction: CGFloat = 0.92
     static let fadeDuration: TimeInterval = 0.2
-    static let fabSize: CGFloat = 56
+    static let fabSize = CGSize(width: 112, height: 56)
+    static let fabButtonSize: CGFloat = 48
+    static let fabPadding: CGFloat = 4
+    static let fabBackground = UIColor(red: 16 / 255, green: 24 / 255, blue: 40 / 255, alpha: 1)
+    static let tagBackground = brand.withAlphaComponent(0.08)
     static let fabMargin: CGFloat = 16
-    static let fabInitialYFraction: CGFloat = 0.72
+    // Keep the debugger clear of the capture pill's lower default position.
+    static let fabInitialYFraction: CGFloat = 0.5
 }
 
 enum DebuggerStrings {
     static let panelTitle = "Debugger"
     static let fabAccessibility = "Open Userpilot debugger"
+    static let exitAccessibility = "Exit Userpilot debugger"
     static let closeAccessibility = "Close debugger panel"
     static let tabConfig = "Config"
     static let tabUser = "User"
     static let tabManual = "Manual"
     static let tabAuto = "Auto"
-    static let tabSDK = "SDK"
+    static let tabInternal = "SDK"
+    static let tabFlow = "Flow"
+    static let emptyFlows = "No flows recorded yet"
     static let emptyEvents = "No events yet"
     static let copied = "Copied"
 }

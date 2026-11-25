@@ -1,5 +1,5 @@
 //
-//  DebugOverlayView.swift
+//  DebuggerOverlayView.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 13/10/2026.
@@ -11,7 +11,9 @@
 import UIKit
 
 /// Full-screen passthrough overlay: dim + sheet + FAB as siblings so the FAB never jumps.
-internal final class DebugOverlayView: UIView {
+internal final class DebuggerOverlayView: UIView {
+
+    var onExitRequested: (() -> Void)?
 
     let fabView = DebuggerFabView()
 
@@ -44,7 +46,7 @@ internal final class DebugOverlayView: UIView {
 
         panelView.alpha = 0
         panelView.isUserInteractionEnabled = false
-        panelView.onClose = { [weak self] in
+        panelView.onDismissRequested = { [weak self] in
             self?.hidePanel(animated: true)
         }
 
@@ -68,11 +70,7 @@ internal final class DebugOverlayView: UIView {
             self.dimView.alpha = 1
             self.panelView.alpha = 1
         }
-        if animated {
-            UIView.animate(withDuration: DebuggerTheme.fadeDuration, animations: apply)
-        } else {
-            apply()
-        }
+        setPanelAlpha(animated: animated, apply: apply)
     }
 
     func hidePanel(animated: Bool) {
@@ -82,18 +80,30 @@ internal final class DebugOverlayView: UIView {
             self.dimView.alpha = 0
             self.panelView.alpha = 0
         }
-        let finish = {
-            self.dimView.isUserInteractionEnabled = false
-            self.panelView.isUserInteractionEnabled = false
-        }
+        // Interaction follows current state; no old fade completion can disable a reopened panel.
+        dimView.isUserInteractionEnabled = false
+        panelView.isUserInteractionEnabled = false
+        setPanelAlpha(animated: animated, apply: apply)
+    }
+
+    private func setPanelAlpha(animated: Bool, apply: @escaping () -> Void) {
         if animated {
-            UIView.animate(withDuration: DebuggerTheme.fadeDuration, animations: apply, completion: { _ in
-                finish()
-            })
+            UIView.animate(
+                withDuration: DebuggerTheme.fadeDuration,
+                delay: 0,
+                options: [.beginFromCurrentState, .allowUserInteraction],
+                animations: apply
+            )
         } else {
+            dimView.layer.removeAllAnimations()
+            panelView.layer.removeAllAnimations()
+            fabView.layer.removeAllAnimations()
             apply()
-            finish()
         }
+    }
+
+    func onFabExitRequested() {
+        onExitRequested?()
     }
 
     func onFabTapped() {
@@ -119,7 +129,7 @@ internal final class DebugOverlayView: UIView {
             safeArea: safeAreaInsets
         )
         fabOrigin = snapped
-        dockedRight = snapped.x + DebuggerFabDocking.size / 2 >= bounds.midX
+        dockedRight = snapped.x + DebuggerFabDocking.size.width / 2 >= bounds.midX
         UIView.animate(withDuration: DebuggerTheme.fadeDuration) {
             self.fabView.frame.origin = snapped
         }
@@ -164,7 +174,7 @@ internal final class DebugOverlayView: UIView {
     }
 
     private func layoutFab() {
-        let size = CGSize(width: DebuggerTheme.fabSize, height: DebuggerTheme.fabSize)
+        let size = DebuggerTheme.fabSize
         if fabOrigin == nil {
             fabOrigin = DebuggerFabDocking.initialOrigin(bounds: bounds, safeArea: safeAreaInsets)
             dockedRight = true

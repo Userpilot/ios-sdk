@@ -17,6 +17,8 @@ enum DebugPropertyLabel {
         guard !parts.isEmpty else { return key }
         return parts.enumerated().map { index, part in
             let lower = part.lowercased()
+            if lower == "swiftui" { return "SwiftUI" }
+            if lower == "uikit" { return "UIKit" }
             if Self.acronyms.contains(lower) {
                 return lower.uppercased()
             }

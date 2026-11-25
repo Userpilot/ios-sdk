@@ -5,34 +5,39 @@
 //  Created by Userpilot on 13/10/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  Circular Userpilot logo button. Gestures stay on this view so the panel fade cannot move it.
-//
 
 import UIKit
 
-/// Circular Userpilot logo button. Gestures stay on this view so the panel fade cannot move it.
+/// Floating debugger controls. The pan recognizer cancels either button's click when dragging begins.
 internal final class DebuggerFabView: UIView {
 
-    weak var host: DebugOverlayView?
+    weak var host: DebuggerOverlayView?
 
-    private let logoView = UIImageView(image: .userpilotImage(named: "userpilot_debugger_logo"))
-    private var downPoint = CGPoint.zero
-    private var dragging = false
-    private let slop: CGFloat = 8
+    private let logoButton = UIButton(type: .custom)
+    private let exitButton = UIButton(type: .system)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = DebuggerTheme.brand
-        layer.cornerRadius = DebuggerTheme.fabSize / 2
+        backgroundColor = DebuggerTheme.fabBackground
+        layer.cornerRadius = DebuggerTheme.fabSize.height / 2
         clipsToBounds = true
-        isUserInteractionEnabled = true
-        accessibilityLabel = DebuggerStrings.fabAccessibility
-        isAccessibilityElement = true
-        accessibilityTraits = .button
 
-        logoView.contentMode = .scaleAspectFit
-        logoView.isUserInteractionEnabled = false
-        addSubview(logoView)
+        logoButton.setImage(.userpilotImage(named: "userpilot_debugger_logo"), for: .normal)
+        logoButton.imageView?.contentMode = .scaleAspectFit
+        logoButton.backgroundColor = DebuggerTheme.brand
+        logoButton.layer.cornerRadius = DebuggerTheme.fabButtonSize / 2
+        logoButton.clipsToBounds = true
+        logoButton.accessibilityLabel = DebuggerStrings.fabAccessibility
+        logoButton.addTarget(self, action: #selector(logoTapped), for: .touchUpInside)
+
+        let symbol = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+        exitButton.setImage(UIImage(systemName: "xmark", withConfiguration: symbol), for: .normal)
+        exitButton.tintColor = .white
+        exitButton.accessibilityLabel = DebuggerStrings.exitAccessibility
+        exitButton.addTarget(self, action: #selector(exitTapped), for: .touchUpInside)
+        addSubview(logoButton)
+        addSubview(exitButton)
+        addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(dragged(_:))))
     }
 
     @available(*, unavailable)
@@ -42,43 +47,30 @@ internal final class DebuggerFabView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        logoView.frame = bounds
+        let padding = DebuggerTheme.fabPadding
+        let size = DebuggerTheme.fabButtonSize
+        logoButton.frame = CGRect(x: padding, y: padding, width: size, height: size)
+        exitButton.frame = CGRect(x: bounds.width - padding - size, y: padding, width: size, height: size)
     }
 
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        downPoint = touch.location(in: nil)
-        dragging = false
+    @objc private func logoTapped() {
+        host?.onFabTapped()
     }
 
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        let point = touch.location(in: nil)
-        let deltaX = point.x - downPoint.x
-        let deltaY = point.y - downPoint.y
-        if !dragging && (abs(deltaX) > slop || abs(deltaY) > slop) {
-            dragging = true
-        }
-        if dragging {
-            downPoint = point
-            host?.onFabDragged(deltaX: deltaX, deltaY: deltaY)
-        }
+    @objc private func exitTapped() {
+        host?.onFabExitRequested()
     }
 
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        finishTouch(cancelled: false)
-    }
-
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        finishTouch(cancelled: true)
-    }
-
-    private func finishTouch(cancelled: Bool) {
-        if dragging {
+    @objc private func dragged(_ gesture: UIPanGestureRecognizer) {
+        switch gesture.state {
+        case .began, .changed:
+            let delta = gesture.translation(in: superview)
+            gesture.setTranslation(.zero, in: superview)
+            host?.onFabDragged(deltaX: delta.x, deltaY: delta.y)
+        case .ended, .cancelled:
             host?.onFabDragEnded()
-        } else if !cancelled {
-            host?.onFabTapped()
+        default:
+            break
         }
-        dragging = false
     }
 }

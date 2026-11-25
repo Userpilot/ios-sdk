@@ -54,6 +54,44 @@ final class DebugEventStoreTests: XCTestCase {
         XCTAssertEqual(second.events(for: .manual).map(\.title), ["second"])
     }
 
+    func testFlowHistoryIsBoundedAndResetCannotReviveAPausedRun() throws {
+        let payload = MockContentFactory.makeFlowContractPayload()
+        let flow = try XCTUnwrap(payload.toJSONString()?.toFlowContent()?.flowContent)
+        let store = DebugEventStore()
+        store.start()
+        let generation = UUID()
+        var context = DebugFlowContext(flow: flow, isPreview: false, generation: generation)
+        for _ in 1...51 {
+            context = DebugFlowContext(flow: flow, isPreview: false, generation: generation)
+            store.recordFlow(context, outcome: nil, screen: nil)
+        }
+        XCTAssertEqual(store.flowRuns.map(\.number), Array((2...51).reversed()))
+        store.reset()
+        store.pauseFlow(operationID: context.operationID)
+        XCTAssertTrue(store.flowRuns.isEmpty)
+        store.recordFlow(context, outcome: nil, screen: nil)
+        XCTAssertEqual(store.flowRuns.first?.number, 1)
+        store.stop()
+        let preview = DebugFlowContext(flow: flow, isPreview: true, generation: generation)
+        store.recordFlow(preview, outcome: nil, screen: nil)
+        XCTAssertEqual(store.flowRuns.count, 1)
+    }
+
+    func testLaterCheckpointStartsANewRunAfterIdentityChangeAndForEachNewPreview() throws {
+        let payload = TooltipFixture.flowPayload(types: ["modal"], stepsCount: 4, firstPosition: 3)
+        let flow = try XCTUnwrap(payload.toJSONString()?.toFlowContent()?.flowContent)
+        let store = DebugEventStore()
+        store.start()
+        let generation = UUID()
+        for (generation, isPreview) in [(UUID(), false), (generation, false), (generation, true), (generation, true)] {
+            let context = DebugFlowContext(flow: flow, isPreview: isPreview, generation: generation)
+            store.recordFlow(context, outcome: nil, screen: nil)
+            store.pauseFlow(operationID: context.operationID)
+        }
+        XCTAssertEqual(store.flowRuns.map(\.number), [4, 3, 2, 1])
+        XCTAssertEqual(store.flowRuns.map(\.isPreview), [true, true, false, false])
+    }
+
     func testDelayedUIReadsTheLatestStateAfterReset() {
         let store = DebugEventStore()
         store.start()

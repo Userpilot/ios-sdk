@@ -9,7 +9,15 @@
 import UIKit
 
 enum DebuggerClipboard {
-    static func copy(_ value: String) {
-        UIPasteboard.general.string = value
+    /// Copied values include tokens and user data, so they never sync to other devices and expire.
+    static func copy(_ value: String, to pasteboard: UIPasteboard = .general) {
+        pasteboard.setItems(
+            [[plainTextType: value]],
+            options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(expiration)]
+        )
     }
+
+    static let expiration: TimeInterval = 120
+
+    private static let plainTextType = "public.utf8-plain-text"
 }

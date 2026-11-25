@@ -15,4 +15,5 @@ internal enum DebugEventChannel: CaseIterable {
     case manual
     case autoCapture
     case internalSDK
+    case flow
 }

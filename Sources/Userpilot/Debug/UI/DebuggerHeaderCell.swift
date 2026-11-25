@@ -18,7 +18,7 @@ internal final class DebuggerHeaderCell: UITableViewCell {
         backgroundColor = DebuggerTheme.headerBackground
         textLabel?.font = UIFont.systemFont(ofSize: 12, weight: .bold)
         textLabel?.textColor = DebuggerTheme.secondary
-        textLabel?.numberOfLines = 1
+        textLabel?.numberOfLines = 0
     }
 
     @available(*, unavailable)

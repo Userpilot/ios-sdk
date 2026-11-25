@@ -62,7 +62,8 @@ internal final class DebuggerListView: UIView, UITableViewDataSource, UITableVie
         fatalError("init(coder:) has not been implemented")
     }
 
-    func showProperties(_ items: [DebugListItem]) {
+    func showProperties(_ items: [DebugListItem], emptyText: String = DebuggerStrings.emptyEvents) {
+        emptyLabel.text = emptyText
         mode = .properties
         properties = items
         events = []

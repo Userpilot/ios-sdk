@@ -57,6 +57,48 @@ final class DebugConfigSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(row(snapshot, "App Fonts"), "CustomSans")
     }
 
+    func testSnapshot_exposesNativeWrapperAndPlatformCaptureOptionsAndOwnership() {
+        let config = Userpilot.Config(token: "NX-DEBUG")
+        let window = UIWindow()
+        config.attachedWindows.add(window)
+        config.attachedViewControllerClasses = [UINavigationController.self]
+        let factory = DebugConfigSnapshotFactory(
+            config: config, storage: MockStorage(),
+            fontCatalog: StubFontCatalog(appFonts: [], systemFonts: []), owner: nil
+        )
+        for enabled in [false, true] {
+            config.enableScreenAutoCapture = enabled
+            config.enableScreenTitleCapture = enabled
+            config.enableInteractionAutoCapture = enabled
+            config.enableInteractionTextCapture = enabled
+            config.enableInteractionAccessibilityLabelCapture = enabled
+            config.enableInteractionValueCapture = enabled
+            config.enableSwiftUIButtonAutoCapture = enabled
+            config.ignoreTapForTextInputEditingActions = enabled
+            config.preferUIKitOverSwiftUIForNavigationBar = enabled
+            config.additionalProperties = [
+                "PluginType": "Flutter",
+                "WrapperEnableScreenAutoCapture": enabled,
+                "WrapperEnableInteractionAutoCapture": enabled
+            ]
+            let snapshot = factory.create()
+            XCTAssertEqual(row(snapshot, "Is Wrapper SDK"), "true")
+            for key in [
+                "Enable Screen Auto Capture", "Enable Screen Title Capture", "Enable Interaction Auto Capture",
+                "Enable Interaction Text Capture", "Enable Interaction Accessibility Label Capture",
+                "Enable Interaction Value Capture", "Enable Wrapper Screen Auto Capture",
+                "Enable Wrapper Interaction Auto Capture", "Enable SwiftUI Button Auto Capture",
+                "Ignore Tap For Text Input Editing Actions", "Prefer UIKit Over SwiftUI For Navigation Bar"
+            ] {
+                XCTAssertEqual(row(snapshot, key), String(enabled), key)
+            }
+            XCTAssertEqual(row(snapshot, "Attached Window Count"), "1")
+            XCTAssertEqual(row(snapshot, "Attached Windows"), "UIWindow")
+            XCTAssertEqual(row(snapshot, "Attached View Controller Classes"), "UINavigationController")
+        }
+        withExtendedLifetime(window) {}
+    }
+
     func testHumanize_convertsSnakeCaseToReadableLabel() {
         XCTAssertEqual(DebugPropertyLabel.humanize("sdk_version"), "SDK Version")
         XCTAssertEqual(DebugPropertyLabel.humanize("apns_token"), "APNS Token")

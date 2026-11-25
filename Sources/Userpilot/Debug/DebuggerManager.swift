@@ -18,26 +18,29 @@ internal protocol DebuggerManaging: AnyObject {
     func reset()
 }
 
-internal final class DebuggerManager: DebuggerManaging {
+internal final class DebuggerManager: DebuggerManaging, LifecycleDelegate {
 
     private let eventStore: DebugEventStoring
     private let windowHost: DebugWindowHost
-    // Main-thread-only token owns activation; no separate started/observing flags are needed.
-    private var sceneObserver: NSObjectProtocol?
+    private let lifecycleMonitor: LifecycleMonitoring
+    // Main owns activation; lifecycle subscription follows this feature state.
+    private var isStarted = false
 
     var debugWindow: DebugUIWindow? { windowHost.debugWindow }
 
     init(container: DIContainer) {
         self.eventStore = container.resolve(DebugEventStoring.self)
+        self.lifecycleMonitor = container.resolve(LifecycleMonitoring.self)
         self.windowHost = DebugWindowHost(
             eventStore: eventStore,
             configFactory: container.resolve(DebugConfigSnapshotMaking.self),
             userFactory: container.resolve(DebugUserSnapshotMaking.self)
         )
+        windowHost.onExitRequested = { [weak self] in self?.hide() }
     }
 
     deinit {
-        if let sceneObserver { NotificationCenter.default.removeObserver(sceneObserver) }
+        lifecycleMonitor.removeDelegate(self)
         eventStore.stop()
         let host = windowHost
         // ARC may release the owning SDK on a worker; UIKit resources are released on main.
@@ -47,14 +50,10 @@ internal final class DebuggerManager: DebuggerManaging {
     func show() {
         performOnMain { [weak self] in
             guard let self else { return }
-            if self.sceneObserver == nil {
+            if !self.isStarted {
+                self.isStarted = true
                 self.eventStore.start()
-                self.sceneObserver = NotificationCenter.default.addObserver(
-                    forName: UIScene.didActivateNotification, object: nil, queue: .main
-                ) { [weak self] _ in
-                    guard let self, self.sceneObserver != nil else { return }
-                    self.windowHost.show()
-                }
+                self.lifecycleMonitor.addDelegate(self, replayCurrentState: false)
             }
             self.windowHost.show()
         }
@@ -63,12 +62,16 @@ internal final class DebuggerManager: DebuggerManaging {
     func hide() {
         performOnMain { [weak self] in
             guard let self else { return }
-            if let observer = self.sceneObserver { NotificationCenter.default.removeObserver(observer) }
-            self.sceneObserver = nil
+            self.lifecycleMonitor.removeDelegate(self)
+            self.isStarted = false
             self.eventStore.stop()
             self.eventStore.reset()
             self.windowHost.hide()
         }
+    }
+
+    func onSceneActive() {
+        if isStarted { windowHost.show() }
     }
 
     /// Logout clears history without disabling an open debugger.

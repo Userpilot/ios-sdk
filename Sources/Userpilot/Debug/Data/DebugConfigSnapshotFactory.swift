@@ -70,7 +70,14 @@ internal final class DebugConfigSnapshotFactory: DebugConfigSnapshotMaking {
                 ),
                 row("use_in_app_browser", String(config.useInAppBrowser)),
                 row("ui_framework", config.appFramework?.rawValue ?? Self.unset),
-                row("attached_bundles", formatList(Array(config.attachedBundleIdentifiers))),
+                row("attached_bundles", formatList(config.attachedBundleIdentifiers.sorted())),
+                row("attached_window_count", String(config.attachedWindows.allObjects.count)),
+                row("attached_windows", formatList(config.attachedWindows.allObjects.map {
+                    NSStringFromClass(type(of: $0))
+                }.sorted())),
+                row("attached_view_controller_classes", formatList(config.attachedViewControllerClasses.map {
+                    NSStringFromClass($0)
+                }.sorted())),
                 row("additional_properties", formatMap(config.additionalProperties)),
                 row("analytics_listener", present(owner?.analyticsDelegate != nil)),
                 row("experience_listener", present(owner?.experienceDelegate != nil)),
@@ -107,6 +114,15 @@ internal final class DebugConfigSnapshotFactory: DebugConfigSnapshotMaking {
         DebugSection(
             title: Self.sectionAutocapture,
             rows: [
+                row("is_wrapper_sdk", String(config.isWrapperSDK)),
+                row("enable_wrapper_screen_auto_capture", String(config.isWrapperScreenAutoCaptureEnabled)),
+                row("enable_wrapper_interaction_auto_capture", String(config.isWrapperInteractionAutoCaptureEnabled)),
+                row("enable_swiftui_button_auto_capture", String(config.enableSwiftUIButtonAutoCapture)),
+                row("ignore_tap_for_text_input_editing_actions", String(config.ignoreTapForTextInputEditingActions)),
+                row(
+                    "prefer_uikit_over_swiftui_for_navigation_bar",
+                    String(config.preferUIKitOverSwiftUIForNavigationBar)
+                ),
                 row("enable_screen_auto_capture", String(config.enableScreenAutoCapture)),
                 row("enable_screen_title_capture", String(config.enableScreenTitleCapture)),
                 row(

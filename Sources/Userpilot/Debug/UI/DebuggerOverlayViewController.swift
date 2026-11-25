@@ -1,5 +1,5 @@
 //
-//  DebugOverlayViewController.swift
+//  DebuggerOverlayViewController.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 13/10/2026.
@@ -12,7 +12,9 @@ import ObjectiveC
 import UIKit
 
 /// Untracked host for the debugger overlay. Defers status-bar style to the app.
-internal final class DebugOverlayViewController: UIViewController {
+internal final class DebuggerOverlayViewController: UIViewController {
+
+    var onExitRequested: (() -> Void)?
 
     private let eventStore: DebugEventStoring
     private let configFactory: DebugConfigSnapshotMaking
@@ -41,13 +43,14 @@ internal final class DebugOverlayViewController: UIViewController {
             true,
             .OBJC_ASSOCIATION_RETAIN
         )
-        view = DebugOverlayView(
+        let overlay = DebuggerOverlayView(
             frame: UIScreen.main.bounds,
             eventStore: eventStore,
             configFactory: configFactory,
             userFactory: userFactory
         )
-        view.backgroundColor = .clear
+        overlay.onExitRequested = { [weak self] in self?.onExitRequested?() }
+        view = overlay
     }
 
     override var prefersStatusBarHidden: Bool {

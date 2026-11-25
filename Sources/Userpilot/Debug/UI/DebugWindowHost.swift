@@ -13,6 +13,8 @@ import UIKit
 /// Concrete UI helper. The manager owns lifecycle policy; this type owns presentation resources.
 internal final class DebugWindowHost {
 
+    var onExitRequested: (() -> Void)?
+
     private let eventStore: DebugEventStoring
     private let configFactory: DebugConfigSnapshotMaking
     private let userFactory: DebugUserSnapshotMaking
@@ -38,13 +40,19 @@ internal final class DebugWindowHost {
             window.isHidden = false
             return
         }
-        let root = DebugOverlayViewController(
+        let root = DebuggerOverlayViewController(
             eventStore: eventStore, configFactory: configFactory, userFactory: userFactory
         )
+        root.onExitRequested = { [weak self] in self?.onExitRequested?() }
         debugWindow = DebugUIWindow(root: root, windowScene: scene)
     }
 
     func hide() {
+        if let overlay = debugWindow?.rootViewController?.viewIfLoaded as? DebuggerOverlayView {
+            overlay.hidePanel(animated: false)
+            overlay.fabView.host = nil
+            overlay.onExitRequested = nil
+        }
         debugWindow?.isHidden = true
         debugWindow = nil
     }
