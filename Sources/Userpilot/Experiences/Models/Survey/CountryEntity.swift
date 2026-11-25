@@ -14,7 +14,7 @@
 typealias CountriesEntity = [CountryEntity]
 
 // Struct representing a country with properties for the flag, name, and dial code.
-struct CountryEntity: Decodable {
+struct CountryEntity: Codable {
     let flag: String
     let name: String
     let dialCode: String

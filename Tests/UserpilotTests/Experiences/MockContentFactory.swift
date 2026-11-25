@@ -180,6 +180,193 @@ internal enum MockContentFactory {
     }
     
     
+    /// A tooltip Flow in the server's wire shape, with `stepCount`
+    /// tooltip steps. Step `i` gets `id` `9100 + i`, `order` `i`, `position` `i + 1`
+    /// and the selector `tooltip-target-i`, so a decoded step identifies itself.
+    static func makeTooltipFlowPayload(stepCount: Int) -> [String: Any] {
+        let steps: [[String: Any]] = (0..<stepCount).map { index in
+            [
+                "id": 9100 + index,
+                "order": index,
+                "position": index + 1,
+                "step_type": "tooltip",
+                "button_action": ["button_action": "next", "ios_deep_link": NSNull()],
+                "settings": [
+                    "position": "below",
+                    "advance_on": "button",
+                    "fallback": "skip_step",
+                    "dismiss_action": "end_flow"
+                ],
+                "target": ["selector": ["accessibility_identifier": "tooltip-target-\(index)"]],
+                "sections": [
+                    [
+                        "lines": [
+                            [
+                                "type": "heading",
+                                "attrs": ["__type__": "heading", "level": "h2", "text_align": "left"],
+                                "content": [["type": "text", "marks": [], "text": "Step \(index + 1)"]]
+                            ]
+                        ]
+                    ],
+                    [
+                        "lines": [
+                            [
+                                "type": "button",
+                                "attrs": ["__type__": "button", "text_align": "center"],
+                                "content": [["type": "text", "marks": [], "text": "Next"]]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        }
+        return [
+            "mobile_contents": [
+                "id": 9001,
+                "type": "flow",
+                "token": "mobile:9001",
+                "locale_code": "default",
+                "screen_type": "all",
+                "screens": [],
+                "steps_count": stepCount,
+                "steps": steps,
+                "theme_data": [
+                    "id": 1,
+                    "theme_id": 1,
+                    "theme_type": "custom",
+                    "theme_data": [
+                        "button": [
+                            "background_color": "#7F56D9",
+                            "border_color": "#7F56D9",
+                            "border_radius": 8,
+                            "label_color": "#FFFFFF"
+                        ],
+                        "colors": [
+                            "background_color": "#FFFFFF",
+                            "text_color": "#475467",
+                            "title_color": "#101828"
+                        ],
+                        "progress": ["color": "#7F56D9", "color_type": "manual", "enabled": true]
+                    ]
+                ]
+            ],
+            "request_id": NSNull()
+        ]
+    }
+
+    // MARK: – Mobile Flow -------------------------------------------------------------------
+
+    /// One screen reply in the backend's mobile Flow shape. Mirrors Android's
+    /// `fixtures/flow_contract_three_steps.json` byte for byte except `target`, which the
+    /// server narrows to the user's OS: a tooltip whose selector holds a numeric `tag`, a modal
+    /// with `target: null` and explicit null settings, and a `bottom` slideout with a link.
+    static let flowContractJSON = """
+    {
+      "mobile_contents": {
+        "id": 4242,
+        "type": "flow",
+        "token": "mobile:4242",
+        "theme_data": { "id": 77, "theme_id": 77, "theme_type": "system" },
+        "screens": ["Checkout"],
+        "screen_type": "selected",
+        "locale_code": "en",
+        "steps_count": 3,
+        "steps": [
+          {
+            "id": 9001,
+            "order": 0,
+            "position": 1,
+            "mobile_content_id": 4242,
+            "step_type": "tooltip",
+            "layout": "tooltip",
+            "sections": [
+              {
+                "lines": [
+                  { "type": "heading", "attrs": { "text_align": "left", "level": "h2" }, "content": [{ "text": "Save your cart" }] },
+                  { "type": "paragraph", "attrs": { "text_align": "left" }, "content": [{ "text": "Tap Save to keep it for later." }] },
+                  { "type": "button", "attrs": { "text_align": "center" }, "content": [{ "text": "Next" }] }
+                ]
+              }
+            ],
+            "theme_data": null,
+            "button_action": { "button_action": "next", "ios_deep_link": null, "android_deep_link": null },
+            "settings": {
+              "position": "below",
+              "advance_on": "button",
+              "fallback": "skip_step",
+              "dismiss_action": "dismiss_flow_show_next_session",
+              "backdrop": { "enabled": true, "color": "#000000", "opacity": 50 }
+            },
+            "target": {
+              "target_class": "UIButton",
+              "target_text": "Save",
+              "selector": { "accessibility_identifier": "checkout_save", "tag": 42, "userpilot_id": "checkout.save" },
+              "bounds": { "x": 16, "y": 320.5, "width": 120, "height": 48 }
+            }
+          },
+          {
+            "id": 9002,
+            "order": 1,
+            "position": 2,
+            "mobile_content_id": 4242,
+            "step_type": "modal",
+            "layout": "modal",
+            "sections": [
+              {
+                "lines": [
+                  { "type": "heading", "attrs": { "text_align": "center", "level": "h1" }, "content": [{ "text": "Almost done" }] },
+                  { "type": "button", "attrs": { "text_align": "center" }, "content": [{ "text": "Continue" }] }
+                ]
+              }
+            ],
+            "theme_data": null,
+            "button_action": { "button_action": "next", "ios_deep_link": null, "android_deep_link": null },
+            "settings": {
+              "position": null,
+              "advance_on": "button",
+              "fallback": null,
+              "dismiss_action": "end_flow",
+              "backdrop": null
+            },
+            "target": null
+          },
+          {
+            "id": 9003,
+            "order": 2,
+            "position": 3,
+            "mobile_content_id": 4242,
+            "step_type": "slideout",
+            "layout": "slideout",
+            "sections": [
+              {
+                "lines": [
+                  { "type": "paragraph", "attrs": { "text_align": "left" }, "content": [{ "text": "See your saved carts." }] },
+                  { "type": "button", "attrs": { "text_align": "center" }, "content": [{ "text": "Open" }] }
+                ]
+              }
+            ],
+            "theme_data": null,
+            "button_action": { "button_action": "link", "ios_deep_link": "shop://carts", "android_deep_link": "shop://carts" },
+            "settings": {
+              "position": "bottom",
+              "advance_on": "button",
+              "fallback": null,
+              "dismiss_action": "dismiss_flow_never_show_again",
+              "backdrop": { "enabled": false, "color": "#1A1A1A", "opacity": 30 }
+            },
+            "target": null
+          }
+        ]
+      }
+    }
+    """
+
+    /// `flowContractJSON` as a mutable payload, for tests that change one field.
+    static func makeFlowContractPayload() -> [String: Any] {
+        let object = try? JSONSerialization.jsonObject(with: Data(flowContractJSON.utf8))
+        return object as? [String: Any] ?? [:]
+    }
+
     // MARK: – NEW: Survey ------------------------------------------------------------------
     
     static func makeSurveyContent(id: Int = 1) -> SurveyContent {

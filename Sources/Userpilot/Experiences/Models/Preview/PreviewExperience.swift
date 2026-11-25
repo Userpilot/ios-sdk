@@ -34,7 +34,8 @@ internal extension PreviewExperienceQueryParams {
 
 // MARK: - Preview Experience Model
 
-internal struct PreviewExperience: Decodable {
+/// A QR preview response: one Flow (`mobile_content`) or survey, and the theme to show it with.
+internal struct PreviewExperience: Codable {
     let flow: FlowContent?
     let survey: SurveyContent?
     let contentType: String?
@@ -44,5 +45,15 @@ internal struct PreviewExperience: Decodable {
         case flow = "mobile_content"
         case contentType = "content_type"
         case survey, theme
+    }
+}
+
+internal extension PreviewExperience {
+    /// Decodes a preview response. Its Flow skips the step `position` and tooltip selector rules that a
+    /// screen reply must pass; Android's preview decoding does not run them either.
+    static func decode(from data: Data) throws -> PreviewExperience {
+        let decoder = JSONDecoder()
+        decoder.userInfo[.decodesPreviewContent] = true
+        return try decoder.decode(PreviewExperience.self, from: data)
     }
 }

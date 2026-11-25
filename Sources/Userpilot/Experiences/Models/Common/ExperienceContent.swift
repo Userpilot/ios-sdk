@@ -12,7 +12,9 @@ import Foundation
 
 // Enum that encapsulates different types of experience content: FlowContent and SurveyContent.
 internal enum ExperienceContent {
-    case flow(content: FlowContent)   // Represents a flow content.
+    /// Represents a flow content; `segment` is set when `content` is one segment of a Flow walk. It is the
+    /// SDK's wrapper, never a wire field.
+    case flow(content: FlowContent, segment: FlowSegment? = nil)
     case survey(content: SurveyContent) // Represents a survey content.
     case nps(content: NPSContent) // Represents a nps content.
 }
@@ -24,8 +26,16 @@ extension ExperienceContent {
     /// Safely retrieves the FlowContent if the current instance is of type .flow.
     /// - Returns: The FlowContent associated with this enum case, or nil if it's not of type flow.
     func asFlowContent() -> FlowContent? {
-        if case let .flow(content) = self {
+        if case let .flow(content, _) = self {
             return content
+        }
+        return nil
+    }
+
+    /// The Flow walk segment this content projects, or nil for standalone content, surveys and NPS.
+    func flowSegment() -> FlowSegment? {
+        if case let .flow(_, segment) = self {
+            return segment
         }
         return nil
     }
@@ -52,7 +62,7 @@ extension ExperienceContent {
     /// - Returns: A string representing the locale code of the content.
     func experienceLocale() -> String {
         switch self {
-        case .flow(let content):
+        case .flow(let content, _):
             return content.localeCode
         case .survey(let content):
             return content.localeCode
@@ -65,7 +75,7 @@ extension ExperienceContent {
     /// - Returns: An integer representing the base theme Id of the content.
     func experienceThemeId() -> Int {
         switch self {
-        case .flow(let content):
+        case .flow(let content, _):
             return content.baseThemeId
         case .survey(let content):
             return content.baseThemeId
@@ -78,7 +88,7 @@ extension ExperienceContent {
     /// - Returns: The associated content (either FlowContent or SurveyContent).
     func content() -> Any {
         switch self {
-        case .flow(let content):
+        case .flow(let content, _):
             return content
         case .survey(let content):
             return content
@@ -91,7 +101,7 @@ extension ExperienceContent {
     /// - Returns: A Int representing the id of the content.
     func experienceId() -> Int {
         switch self {
-        case .flow(let content):
+        case .flow(let content, _):
             return content.id
         case .survey(let content):
             return content.id

@@ -11,7 +11,7 @@
 import Foundation
 
 /// SurveyLogic contains survey step view logic for a question
-struct SurveyLogic: Decodable {
+struct SurveyLogic: Codable {
     let action: SurveyLogicActionType?
     let metadata: LogicMetadata?
     let moduleId: Int?
@@ -25,11 +25,11 @@ struct SurveyLogic: Decodable {
     }
 }
 
-struct LogicMetadata: Decodable {
+struct LogicMetadata: Codable {
     let value: ValueType?
 
     // Custom decoding logic for the `value` key
-    enum ValueType: Decodable {
+    enum ValueType: Codable {
         case string(String)
         case array([String])
 
@@ -44,16 +44,27 @@ struct LogicMetadata: Decodable {
                 throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid value type")
             }
         }
+
+        /// Preserve the authored string-or-array shape instead of encoding enum case names.
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .string(let value):
+                try container.encode(value)
+            case .array(let values):
+                try container.encode(values)
+            }
+        }
     }
 }
 
-enum SurveyLogicActionType: String, Decodable {
+enum SurveyLogicActionType: String, Codable {
     case goToModule = "go_to_module"
     case goToNextModule = "go_to_next_module"
     case endSurvey = "end_survey"
 }
 
-enum SurveyLogicOperandType: String, Decodable {
+enum SurveyLogicOperandType: String, Codable {
     case notKnown = "not_known"
     case known = "known"
     case contains = "contains"
