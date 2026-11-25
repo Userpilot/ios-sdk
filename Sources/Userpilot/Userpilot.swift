@@ -163,6 +163,9 @@ public class Userpilot: NSObject {
     deinit {
         UserpilotRuntime.shared.removeInstance(self)
         releaseExperienceOverlayWindowOnMain()
+        if let capture = container.resolveIfCreated(BuilderCaptureCoordinating.self) {
+            performOnMain { capture.stop() }
+        }
     }
 
     /// Tears the overlay window down on the main thread as this instance goes away.
@@ -198,6 +201,7 @@ public class Userpilot: NSObject {
         container.register(InstanceResolving.self, value: runtime.instanceResolver)
         container.register(AutoCaptureIntegrating.self, value: runtime.captureIntegration)
         container.register(SwiftUIScanCache.self, value: runtime.scanCache)
+        container.register(LifecycleMonitoring.self, value: runtime.lifecycleMonitor)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
         // One implementation per delivery contract.
@@ -207,6 +211,13 @@ public class Userpilot: NSObject {
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
+        container.registerLazy(UserpilotElementTargetingStrategy.self) { container in
+            container.resolve(Config.self).targetingStrategy ?? NativeElementTargetingStrategy()
+        }
+        container.registerLazy(ElementTargeting.self, initializer: ElementResolver.init)
+        container.registerLazy(ScreenSnapshotting.self, initializer: ScreenSnapshotter.init)
+        container.registerLazy(CaptureEncoding.self) { CaptureEncoder() }
+        container.registerLazy(BuilderCaptureCoordinating.self, initializer: BuilderCaptureCoordinator.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
         container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinator.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
@@ -336,7 +347,7 @@ extension Userpilot {
      Logs the user out and clears their session data.
 
      This method should be called when the user logs out of the application.
-     Clears stored identity and closes the user socket.
+     Clears stored identity, closes the user socket and ends Builder capture mode.
      */
     @objc
     public func logout() {
@@ -344,6 +355,7 @@ extension Userpilot {
         analyticsPublisher.logout()
         debuggerManager.reset()
         storage.clean()
+        container.resolveIfCreated(BuilderCaptureCoordinating.self)?.stop()
     }
 
 }

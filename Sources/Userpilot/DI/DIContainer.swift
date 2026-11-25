@@ -15,7 +15,7 @@ import Foundation
  The `DIContainer` class is responsible for handling dependency injection within the application.
  It manages the registration and resolution of components, supporting both lazy and immediate initialization.
  */
-internal class DIContainer {
+internal final class DIContainer {
 
     // MARK: - Properties
 
@@ -87,6 +87,11 @@ internal class DIContainer {
     }
 
     // MARK: - Resolve Methods
+
+    /// Reads an existing component without starting an unused feature during teardown.
+    func resolveIfCreated<Component>(_ type: Component.Type) -> Component? {
+        resolutionLock.withLock { components[String(describing: Component.self)] as? Component }
+    }
 
     /**
      Resolves a component instance of the specified type.

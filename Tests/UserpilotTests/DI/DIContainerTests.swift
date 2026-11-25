@@ -8,6 +8,20 @@ import XCTest
 
 final class DIContainerTests: XCTestCase {
 
+    func testResolveIfCreatedDoesNotStartUnusedFeature() {
+        let container = DIContainer()
+        var creations = 0
+        container.registerLazy(String.self) {
+            creations += 1
+            return "created"
+        }
+        XCTAssertNil(container.resolveIfCreated(String.self))
+        XCTAssertEqual(creations, 0)
+        XCTAssertEqual(container.resolve(String.self), "created")
+        XCTAssertEqual(container.resolveIfCreated(String.self), "created")
+        XCTAssertEqual(creations, 1)
+    }
+
     func testRegisterValueResolvesAndCanBeOverridden() {
         let container = DIContainer()
 

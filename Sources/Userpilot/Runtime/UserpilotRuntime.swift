@@ -19,6 +19,7 @@ internal final class UserpilotRuntime {
     let instanceResolver: InstanceResolving
     let captureIntegration: AutoCaptureIntegrating
     let scanCache: SwiftUIScanCache
+    let lifecycleMonitor: LifecycleMonitor
 
     /// Serializes registration and service startup. Startup may enqueue UI work, never wait for main.
     private let lifecycleLock = NSRecursiveLock()
@@ -28,7 +29,9 @@ internal final class UserpilotRuntime {
         instanceRegistry = registry
         instanceResolver = InstanceResolver(registry: registry)
         captureIntegration = AutoCaptureIntegration(registry: registry)
-        scanCache = SwiftUIScanCache(registry: registry, instanceResolver: instanceResolver)
+        lifecycleMonitor = LifecycleMonitor()
+        scanCache = SwiftUIScanCache(
+            registry: registry, instanceResolver: instanceResolver, lifecycleMonitor: lifecycleMonitor)
     }
 
     /// Register before eager services are built so native callbacks can resolve their owner during startup.

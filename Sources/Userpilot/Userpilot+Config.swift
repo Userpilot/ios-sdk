@@ -75,6 +75,9 @@ extension Userpilot {
         /// If set to true, the SDK will automatically capture screen events.
         var enableScreenAutoCapture: Bool = false
 
+        /// Opt-in native SwiftUI screen identity. Existing integrations retain name-based behavior.
+        var enableScreenClassIdentity: Bool = false
+
         /// Whether or not to enable screen title capture. Defaults to true.
         /// If false, the core SDK will prevent screen titles from being stored or uploaded
         /// and autocapture libraries will be instructed not to capture them.
@@ -174,6 +177,9 @@ extension Userpilot {
         /// (associated with the host's user/session).
         var allowReceiveEventsFromExternalSource: Bool = false
 
+        /// Native or wrapper targeting for this instance, configured before initialization.
+        var targetingStrategy: UserpilotElementTargetingStrategy?
+
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
         ///   Surrounding whitespace is removed before the token reaches SDK services.
@@ -265,6 +271,20 @@ extension Userpilot {
         @objc
         public func enableScreenAutoCapture(_ enabled: Bool = true) -> Self {
             enableScreenAutoCapture = enabled
+            return self
+        }
+
+        /// Distinguishes native SwiftUI screens by captured controller class and resolved name.
+        /// Defaults to disabled. Configure before initialization, together with screen autocapture.
+        /// Screen titles and metadata remain unchanged; distinct classes may create separate visits.
+        /// Manual and wrapper screens retain their existing behavior. Identical classes and names
+        /// still describe the same screen; this option does not discover a parent hierarchy.
+        /// - Parameter enabled: Whether to use class-aware identity for native SwiftUI screens.
+        /// - Returns: This configuration for chaining.
+        @discardableResult
+        @objc
+        public func enableScreenClassIdentity(_ enabled: Bool = true) -> Self {
+            enableScreenClassIdentity = enabled
             return self
         }
 
@@ -486,6 +506,14 @@ extension Userpilot {
         @objc
         public func allowReceiveEventsFromExternalSource(_ enabled: Bool = true) -> Self {
             allowReceiveEventsFromExternalSource = enabled
+            return self
+        }
+
+        /// Uses a strategy for Builder capture and tooltip targeting in this instance.
+        /// Passing nil keeps the native strategy. The SDK retains the strategy; avoid retaining the SDK from it.
+        @objc @discardableResult
+        public func elementTargetingStrategy(_ strategy: UserpilotElementTargetingStrategy?) -> Self {
+            targetingStrategy = strategy
             return self
         }
 
