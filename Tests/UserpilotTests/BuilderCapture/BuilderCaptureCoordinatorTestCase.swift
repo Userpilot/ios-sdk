@@ -77,6 +77,7 @@ class BuilderCaptureCoordinatorTestCase: XCTestCase {
         container.register(AnalyticsPublishing.self, value: owner.analyticsPublisher)
         container.register(DataStoring.self, value: owner.storage)
         container.register(InstanceRegistering.self, value: UserpilotRuntime.shared.instanceRegistry)
+        container.register(LifecycleMonitoring.self, value: UserpilotRuntime.shared.lifecycleMonitor)
         return container
     }
 

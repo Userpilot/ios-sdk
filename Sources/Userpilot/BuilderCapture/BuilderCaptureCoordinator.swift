@@ -81,6 +81,7 @@ internal final class BuilderCaptureCoordinator: BuilderCaptureCoordinating {
     private let remote: UserpilotRemoteSourcing
     private let storage: DataStoring
     private let registry: InstanceRegistering
+    private let lifecycleMonitor: LifecycleMonitoring
     private var analytics: AnalyticsPublishing? { container?.resolve(AnalyticsPublishing.self) }
     // The publisher can resolve Builder through deep-link routing; keep that peer deferred.
     private var experiences: ExperiencesPublishing? { container?.resolve(ExperiencesPublishing.self) }
@@ -110,6 +111,7 @@ internal final class BuilderCaptureCoordinator: BuilderCaptureCoordinating {
         remote = container.resolve(UserpilotRemoteSourcing.self)
         storage = container.resolve(DataStoring.self)
         registry = container.resolve(InstanceRegistering.self)
+        lifecycleMonitor = container.resolve(LifecycleMonitoring.self)
     }
 
     var isActive: Bool { session != nil }
@@ -180,6 +182,7 @@ private extension BuilderCaptureCoordinator {
         BuilderCaptureMode.begin(self)
         closeExperiencesInEveryInstance()
         presentCaptureButton(in: window)
+        lifecycleMonitor.addDelegate(self, replayCurrentState: false)
         logger.info("📸 Capture mode started")
     }
 
@@ -192,6 +195,7 @@ private extension BuilderCaptureCoordinator {
         self.session = nil
         pending = nil
         BuilderCaptureMode.end(self)
+        lifecycleMonitor.removeDelegate(self)
         if let window = captureWindow { Self.tearDown(window) }
         captureWindow = nil
         buttonController = nil
@@ -232,6 +236,19 @@ private extension BuilderCaptureCoordinator {
     func showAlert(_ alert: CaptureUploadAlert) {
         let presenter = captureWindow?.rootViewController ?? topControllerGetting.topViewController()
         dialogs.showAlert(alert, from: presenter) { _ in }
+    }
+}
+
+// MARK: - LifecycleDelegate
+
+extension BuilderCaptureCoordinator: LifecycleDelegate {
+
+    /// Closing the scene that holds the capture controls ends capture mode, so experiences show again.
+    /// The QR code is not spent, so the operator can scan it again in another window.
+    func onSceneDisconnected(_ scene: UIScene) {
+        guard session != nil, scene === captureWindow?.windowScene else { return }
+        endSession(spendingCaptureID: false)
+        logger.info("📸 Capture mode ended: its window closed")
     }
 }
 
