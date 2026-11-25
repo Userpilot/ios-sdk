@@ -254,7 +254,8 @@ internal class EventDatabaseStorage: EventStoring {
                 }
 
                 let events = self.performRead()
-                if !events.isEmpty {
+                // Undecodable rows go too, or `hasEvents()` stays true and every restore reads nothing.
+                if self.performGetRecordCount() > 0 {
                     self.performDeleteAll()
                     self.logger.info(
                         "✅ Retrieved and deleted %{public}d events from storage", events.count)
