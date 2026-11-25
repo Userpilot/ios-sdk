@@ -5,7 +5,7 @@
 //  Created by Userpilot on 05/10/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  Pure, field-by-field theme fallback shared by carousel, slide-out and survey preparation.
+//  Pure, field-by-field theme fallback shared by carousel, slide-out, survey and Flow step preparation.
 //
 
 extension Optional where Wrapped == ExperienceTheme {
@@ -22,6 +22,41 @@ extension Optional where Wrapped == ExperienceTheme {
             progress: (self?.progress).merging(global: globalTheme?.progress, step: stepTheme?.progress),
             backdrop: (self?.backdrop).merging(global: globalTheme?.backdrop, step: stepTheme?.backdrop)
         )
+    }
+}
+
+/// One Flow step's theme: step → the Flow's custom theme → `baseTheme`'s `flow` section, else each
+/// branch's own section → rendering defaults. The presenter picks its branch by step type, so each
+/// branch falls back to its own section. Every branch keeps progress; `stepBackdrop` wins the backdrop.
+func mergeFlowStepThemes(
+    baseTheme: ThemeData?,
+    contentTheme: ExperienceTheme?,
+    stepTheme: ExperienceTheme?,
+    stepBackdrop: FlowBackdrop?
+) -> ThemeData {
+    let flow = baseTheme?.flow
+    return ThemeData(
+        carousel: (flow ?? baseTheme?.carousel).mergingFlowStep(contentTheme, stepTheme, stepBackdrop),
+        slideOut: (flow ?? baseTheme?.slideOut).mergingFlowStep(contentTheme, stepTheme, stepBackdrop),
+        survey: nil,
+        tooltip: (flow ?? baseTheme?.tooltip).mergingFlowStep(contentTheme, stepTheme, stepBackdrop)
+    )
+}
+
+private extension Optional where Wrapped == ExperienceTheme {
+    /// `merging` over this base, then the step's `settings.backdrop` above every backdrop layer.
+    /// Both use the 0–100 opacity scale, so its fields copy as they are.
+    func mergingFlowStep(
+        _ contentTheme: ExperienceTheme?,
+        _ stepTheme: ExperienceTheme?,
+        _ stepBackdrop: FlowBackdrop?
+    ) -> ExperienceTheme {
+        var merged = merging(globalTheme: contentTheme, stepTheme: stepTheme)
+        let settingsBackdrop = stepBackdrop.map {
+            Backdrop(color: $0.color, enabled: $0.enabled, opacity: $0.opacity)
+        }
+        merged.backdrop = merged.backdrop.merging(global: nil, step: settingsBackdrop)
+        return merged
     }
 }
 
@@ -88,14 +123,23 @@ private extension Optional where Wrapped == GeneralStyle {
 }
 
 private extension Optional where Wrapped == ProgressStyle {
+    /// `style` resolves within each layer before merging, so a lower layer's `style` never overrides a higher
+    /// layer that only sets `type`.
     func merging(global: ProgressStyle?, step: ProgressStyle?) -> ProgressStyle {
         ProgressStyle(
             color: step?.color ?? global?.color ?? self?.color,
             colorType: step?.colorType ?? global?.colorType ?? self?.colorType,
             enabled: step?.enabled ?? global?.enabled ?? self?.enabled,
-            type: step?.type ?? global?.type ?? self?.type
+            type: step?.type ?? global?.type ?? self?.type,
+            style: step?.layerStyle ?? global?.layerStyle ?? self?.layerStyle
         )
     }
+}
+
+private extension ProgressStyle {
+    /// A layer's own progress style: a Flow theme names it `style`, a survey theme `type`. Resolved within
+    /// each layer before layers merge, so a lower layer's `style` never overrides a higher layer's `type`.
+    var layerStyle: ProgressStyleType? { style ?? type }
 }
 
 private extension Optional where Wrapped == Backdrop {

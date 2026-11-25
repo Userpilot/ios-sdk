@@ -32,6 +32,28 @@ final class ThemeHandlerTests: XCTestCase {
         return ThemeHandler(container: container)
     }
 
+    /// Tooltips only come through a Flow walk, whose steps merge through `mergeFlowStepThemes`.
+    func testStandaloneMergeWithoutBaseTheme_retainsInlineStepStyles_andBuildsNoTooltip() {
+        var step = ExperienceTheme()
+        step.colors = ColorsStyle(backgroundColor: "#123456", textColor: nil, titleColor: nil)
+
+        let merged = themeHandler.mergeExperienceThemes(nil, nil, step)
+
+        XCTAssertEqual(merged.carousel?.colors?.backgroundColor, "#123456")
+        XCTAssertEqual(merged.slideOut?.colors?.backgroundColor, "#123456")
+        XCTAssertNil(merged.tooltip)
+    }
+
+    func testStandaloneMerge_keepsCarouselProgress_andDropsSlideOutProgress() {
+        var global = ExperienceTheme()
+        global.progress = ProgressStyle(color: "#7F56D9", colorType: .manual, enabled: true, type: .ball)
+
+        let merged = themeHandler.mergeExperienceThemes(nil, global, nil)
+
+        XCTAssertEqual(merged.carousel?.progress?.color, "#7F56D9")
+        XCTAssertNil(merged.slideOut?.progress)
+    }
+
     func testSaveTheme_savesThemeCorrectly_whenValidThemeProvided() {
         // Arrange
         let themeId = 123

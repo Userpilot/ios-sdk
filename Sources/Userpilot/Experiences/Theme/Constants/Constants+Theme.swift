@@ -16,7 +16,7 @@ extension Constants {
     enum Theme {
         // Carousels & Slide out
         static let delayTimeForExperience = 0.5
-        static let delayTimeForDeepLink = 0.3
+        static let delayTimeForDeepLink = 0.25
         static let headerTextSize = 16
         static let normalTextSize = 16
         static let dimSlideOutDegree = 40
@@ -62,6 +62,10 @@ extension Constants {
         /// The height of `UPStepsBarProgressView`. Its layers are fully rounded,
         /// so this also drives their corner radius.
         static let stepsProgressBarHeight = CGFloat(5)
+        /// The height of a `UPStepsProgressView` dots row.
+        static let stepsProgressDotsHeight = CGFloat(20)
+        /// The text size of a `UPStepsCounterView`, which takes the dots' row.
+        static let stepsCounterTextSize = CGFloat(12)
         static let iconImageDimensions = 38
         static let npsImageDimensions = 100
 
@@ -113,5 +117,27 @@ extension Constants {
 
         static let manual = "manual"
         static let borderRadius = 0
+
+        // Tooltips
+        /// Gap between the target and the card.
+        static let tooltipGap: CGFloat = 8
+        /// Minimum distance from the card to the screen edges.
+        static let tooltipEdgeMargin: CGFloat = 16
+        static let tooltipPointerWidth: CGFloat = 16
+        static let tooltipPointerHeight: CGFloat = 8
+        /// How far the lit hole extends beyond the target.
+        static let tooltipHighlightPadding: CGFloat = 4
+        static let tooltipHighlightCornerRadius: CGFloat = 4
+        static let tooltipCornerRadius: CGFloat = 12
+        /// Delays between target lookups, in milliseconds, consumed in order rather than as a total deadline.
+        static let tooltipRetryIntervals = [300, 600, 900, 1_200]
+        /// Gap between the two lookups that must agree before a found target reveals.
+        static let tooltipStillnessInterval: TimeInterval = 0.1
+        /// Longest wait for a moving target to stop; after it the tooltip reveals at the latest position.
+        static let tooltipStillnessTimeout: TimeInterval = 2
+        /// How far, in points, a target may shift between two lookups and still count as still.
+        static let tooltipStillnessTolerance: CGFloat = 0.5
+        /// A held Flow overlay's park fade, its return and its dim blend; matches the reposition glide.
+        static let tooltipFlowFadeDuration: TimeInterval = 0.3
     }
 }

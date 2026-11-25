@@ -58,33 +58,9 @@ internal protocol ThemeHandling: AnyObject {
     ) -> SurveyTheme
 }
 
-extension ThemeHandling {
-
-    /// One theme per step. A resolved app theme replaces the content's base, flow and step themes,
-    /// including placement, which the app theme carries in `general`.
-    func flowThemes(for content: FlowContent) -> [ThemeData] {
-        if let appTheme {
-            let theme = mergeExperienceThemes(appTheme, nil, nil)
-            return content.steps.map { _ in theme }
-        }
-        let baseTheme = getThemeById(content.baseThemeId)
-        return content.steps.map { step in
-            mergeExperienceThemes(baseTheme, content.mobileTheme.themeData, step.mobileTheme)
-        }
-    }
-
-    /// A resolved app theme replaces the survey's base and embedded themes, including its position.
-    func surveyTheme(for content: SurveyContent) -> SurveyTheme {
-        if let appTheme {
-            return mergeSurveyThemes(appTheme, nil)
-        }
-        return mergeSurveyThemes(getThemeById(content.baseThemeId), content.surveyTheme.themeData)
-    }
-}
-
 // MARK: - ThemeHandler Class
 
-internal class ThemeHandler: ThemeHandling {
+internal final class ThemeHandler: ThemeHandling {
 
     // MARK: - Properties
 

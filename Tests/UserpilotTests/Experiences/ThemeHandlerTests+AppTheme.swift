@@ -173,6 +173,14 @@ extension ThemeHandlerTests {
         XCTAssertFalse(survey.isBottomSheet(using: themeHandler))
     }
 
+    func testIsBottomSheet_treatsMiddleAlignedSlideoutAsDialog() throws {
+        let flow = try flowContent(embeddedTheme: false)
+        themeHandler.setAppTheme(name: "Middle")
+        _ = themeHandler.saveAppTheme(try appThemeReply(title: "Middle", alignment: "middle"), title: "Middle")
+
+        XCTAssertFalse(flow.isBottomSheet(using: themeHandler))
+    }
+
     func testThemeContent_decodesTitle() throws {
         XCTAssertEqual(try appThemeReply(title: "Brand Dark").title, "Brand Dark")
     }
