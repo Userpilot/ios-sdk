@@ -50,6 +50,25 @@ final class TooltipLayoutObserverTests: XCTestCase {
         XCTAssertLessThanOrEqual(samples, 3, "The start, then at most one trailing look and one stray wake")
     }
 
+    func testAMoveRightAfterALookThatFoundAChange_isStillReported() {
+        let root = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let child = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 10))
+        var changes = 0
+        let observer = TooltipLayoutObserver(root: { root })
+        observer.onChange = {
+            changes += 1
+            guard changes == 1 else { return }
+            DispatchQueue.main.async { child.frame.origin.x = 5 }
+        }
+        observer.start()
+        addTeardownBlock { observer.stop() }
+
+        root.addSubview(child)
+        CFRunLoopRunInMode(.defaultMode, 0.6, false)
+
+        XCTAssertEqual(changes, 2, "The add, then the move made in the next turn")
+    }
+
     func testAnUnchangedWindow_orAStoppedObserver_neverSettles() {
         let unchanged = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         let changed = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))

@@ -46,9 +46,9 @@ internal final class TooltipLayoutObserver {
     /// Whether the next idle run loop must sample, because the trailing look is due.
     private var isSampleDue = false
 
-    /// Whether the last idle run loop sampled. Reading the layer tree wakes the run loop once more, and a
-    /// trailing look scheduled from that wake would keep an idle app sampling forever.
-    private var didSampleLastTurn = false
+    /// Whether the last look was a trailing one that found nothing. Reading the layer tree wakes the run loop
+    /// once more, and a trailing look scheduled from that wake would keep an idle app sampling forever.
+    private var shouldSkipNextWake = false
 
     // MARK: Initialization
 
@@ -82,7 +82,7 @@ internal final class TooltipLayoutObserver {
         trailingSample?.cancel()
         trailingSample = nil
         isSampleDue = false
-        didSampleLastTurn = false
+        shouldSkipNextWake = false
         guard let observer = runLoopObserver else { return }
         CFRunLoopObserverInvalidate(observer)
         runLoopObserver = nil
@@ -97,8 +97,8 @@ internal final class TooltipLayoutObserver {
             sample()
             return
         }
-        guard !didSampleLastTurn else {
-            didSampleLastTurn = false
+        guard !shouldSkipNextWake else {
+            shouldSkipNextWake = false
             return
         }
         guard trailingSample == nil else { return }
@@ -115,12 +115,13 @@ internal final class TooltipLayoutObserver {
     }
 
     private func sample() {
+        let isTrailingLook = isSampleDue
         isSampleDue = false
-        didSampleLastTurn = true
         trailingSample?.cancel()
         trailingSample = nil
         lastSampledAt = CACurrentMediaTime()
         let signature = root()?.layer.userpilotLayoutSignature()
+        shouldSkipNextWake = isTrailingLook && signature == lastSignature
         guard signature != lastSignature else { return }
         lastSignature = signature
         onChange?()
