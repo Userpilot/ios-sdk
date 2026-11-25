@@ -263,6 +263,7 @@ private final class PendingWebView: WKWebView {
     }
 
     /// The Swift content-world overload forwards here.
+    @available(iOS 14.0, *)
     override func __evaluateJavaScript(
         _ javaScriptString: String,
         inFrame frame: WKFrameInfo?,
