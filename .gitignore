@@ -85,3 +85,6 @@ plan/
 
 # Local benchmark tools, measurements, builds, and profiler traces
 /benchmarks/
+
+# Local plans and working documents
+/work/

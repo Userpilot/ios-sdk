@@ -222,6 +222,11 @@ userpilot.experienceDelegate = self
 
 See the [Configuration guide](https://docs.userpilot.com/developer/installation/mobile/ios/installation#configuration-optional) for all available options.
 
+The `enableScreenClassIdentity(true)` option distinguishes native SwiftUI screens captured by
+autocapture. It defaults to `false` and preserves existing wire names and metadata.
+See [class-aware SwiftUI screen identity](Sources/Userpilot/Userpilot.docc/Autocapture.md#class-aware-swiftui-screen-identity)
+for rollout behavior and limitations.
+
 #### Navigation Handler
 
 Defines how your app handles deep link routes triggered by Userpilot experiences. Implement this to route users to the appropriate screens or external URLs.

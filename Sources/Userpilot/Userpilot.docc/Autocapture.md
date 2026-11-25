@@ -22,11 +22,31 @@ let userpilot = Userpilot(config: Userpilot.Config(token: "<APP_TOKEN>")
 | Config option | Description | Default |
 |---------------|-------------|--------|
 | ``enableScreenAutoCapture`` | Automatically capture screen events when view controllers appear. | `false` |
+| ``Userpilot/Config/enableScreenClassIdentity(_:)`` | Opt in to separate native SwiftUI screen visits by captured controller class and resolved name. | `false` |
 | ``enableInteractionAutoCapture`` | Automatically capture user interactions (button taps, table/collection selections, text input, etc.). | `false` |
 
 ---
 
 ## What Gets Captured
+
+### Class-aware SwiftUI screen identity
+
+Configure `.enableScreenClassIdentity(true)` before creating Userpilot, together with
+`.enableScreenAutoCapture(true)` and `.appFramework(.SwiftUI)` (or `.Hybrid` for mixed apps).
+The default remains disabled. Existing integrations keep their current name-based behavior.
+
+When enabled, native SwiftUI screens with the same resolved name but different captured
+`screen_class` values are separate visits. Throttling, seen-content state, navigation dismissal
+and delayed screen responses use that distinction. This can increase screen counts and allow
+experiences on visits previously treated as one screen. Repeated appearances of the same class
+and name remain the same visit.
+
+The event name, `title`, `screen_name`, `screen_class` and metadata schema do not change.
+The existing captured class already includes generic content types when the runtime exposes
+them, for example `UIHostingController<CartView>`. Local visit IDs are never sent or persisted.
+UIKit, manual and wrapper screens keep their existing identity. Missing class information falls
+back to the existing name. Identical type-erased classes and names remain indistinguishable;
+this option does not capture parent hierarchies or add dashboard rule conditions.
 
 ### Screen events
 
@@ -272,7 +292,7 @@ You do **not** need to use this for:
 - `UIButton` or other `UIControl` subclasses  
 - Views that already receive touches and are in the responder chain  
 
-For SwiftUI, the equivalent API is ``userpilotLabel(_:)`` — it tags any SwiftUI view (including composite ones using `.onTapGesture`) with a stable analytics label and view type. See *Labeling custom or composite SwiftUI views* under [SwiftUI Autocapture](#swiftui-autocapture).
+For SwiftUI, use ``userpilotLabel(_:)`` to supply stable analytics text and a logical view type, including on composite views using `.onTapGesture`. To also let Builder and tooltips target the view, add ``userpilotTarget(_:)``. See *Identifying Custom or Composite SwiftUI Views* under [SwiftUI Autocapture](#swiftui-autocapture).
 
 
 ---
@@ -285,7 +305,7 @@ The Userpilot SDK supports automatic capture in SwiftUI apps. SwiftUI autocaptur
 |---|---|
 | ``userpilotScreenName(_:)`` | Override the screen name reported for the autocaptured screen this view belongs to. |
 | ``userpilotScreen(_:)`` | Emit a manual screen event when this view appears (for apps with automatic screen capture **disabled**). |
-| ``userpilotLabel(_:)`` | Attach a stable analytics label and logical view type to a view (recommended for custom or composite tappable views). |
+| ``userpilotLabel(_:)`` | Supply stable analytics text (`target_text`) and a logical view type. Analytics only; never a `userpilot_id`. |
 | ``userpilotRedactText(_:)`` | Mark text content as sensitive — captured text becomes `****`. |
 | ``userpilotIgnoreInteractions(_:)`` | Suppress all interaction events for this view and its descendants. |
 
@@ -318,7 +338,7 @@ The option changes when and with which title a SwiftUI click is reported; it nev
 
 With several SDK instances in one app (see <doc:MultiInstance>), enable the option on the instance that owns the SwiftUI content. Touch timing, title and accessibility settings follow that instance. Lifecycle and one-shot scan hooks also resolve the content's owner. Native hooks, the render snapshot and the OS-structure health breaker are shared by the process; event publication still goes through the owning instance's autocapture coordinator.
 
-During DEBUG builds with SDK logging enabled, the SDK logger emits `[UP-SUI]` logs that show SwiftUI title scans and resolution stages. Launching with the environment variable `UP_SUI_STRUCTURE=1` also logs the SwiftUI render path of every hosting view — the starting point when validating a new iOS release.
+During DEBUG builds with SDK logging enabled, the SDK logger emits `[UP-SUI]` logs that show SwiftUI title scans and resolution stages. Captured titles appear only as their length; launching with the environment variable `UP_SUI_TEXT=1` logs the text itself. Launching with `UP_SUI_STRUCTURE=1` also logs the SwiftUI render path of every hosting view — the starting point when validating a new iOS release.
 
 ### Screen Tracking in SwiftUI
 
@@ -374,9 +394,11 @@ When interaction autocapture is enabled, the SDK captures:
 - `List` row selections and `.pickerStyle(.inline)` / `.pickerStyle(.wheel)` selections
 - Most views with `.onTapGesture` — the gesture recognizer is observed through the same `UIWindow` swizzle the SDK uses for UIKit, so no accessibility traits are required
 
-#### Labeling Custom or Composite SwiftUI Views — ``userpilotLabel(_:)``
+#### Identifying Custom or Composite SwiftUI Views — ``userpilotLabel(_:)``
 
-The recommended way to make a custom or composite SwiftUI view identifiable in analytics is ``userpilotLabel(_:)``. The modifier sets a stable label and a logical view type (`Button`, `Text`, `Toggle`, `NavigationLink`, or the SwiftUI type name) on the resolved underlying UIKit view. The autocapture pipeline reads those values and reports them as `element_text` and `element_type` on every interaction event the view emits.
+Use ``userpilotLabel(_:)`` to give a custom or composite view stable analytics text and a logical view type (`Button`, `Text`, `Toggle`, `NavigationLink`, or the SwiftUI type name). Analytics reports them as `target_text` and `target_class` through the existing privacy policy. The label is analytics only: it never sets `userpilot_id` and never identifies the view for Builder or tooltips.
+
+Builder and tooltip targeting use ``userpilotTarget(_:)``. It records a stable `userpilot_id` from its own bounds for Builder and tooltip selectors, without requiring autocapture. It sends no analytics text and is not affected by text privacy settings. ``userpilotTarget(_:)`` takes a non-optional `String`; use a stable, non-personal value unique within the screen. An empty or whitespace-only value attaches nothing. See <doc:ElementTargeting>.
 
 ```swift
 // Composite tappable card — the entire VStack is one logical "Favorite row"
@@ -404,7 +426,7 @@ Resolution rules:
 
 Pass `nil` to clear a previously applied label when the content becomes conditional. Logical view types are best-effort from `String(reflecting: Self.self)`; unknown types fall back to the bare `Self` name.
 
-If you cannot use ``userpilotLabel(_:)`` for some reason (e.g. you can't reach the view to attach a modifier), Apple's native accessibility modifiers still help a screen reader and may improve hit-target resolution for some custom hierarchies — but they do **not** replace the analytics label that ``userpilotLabel(_:)`` provides:
+If you cannot use ``userpilotLabel(_:)`` (for example, you cannot reach the view to attach a modifier), native accessibility modifiers can improve accessibility and hit-target resolution, but do not replace this explicit analytics text override:
 
 ```swift
 .accessibilityElement(children: .combine)
@@ -524,7 +546,7 @@ This applies to the underlying SwiftUI subtree only. Interactions in pushed/pres
 |------|----------|
 | Override the autocaptured screen name | ``userpilotScreenName(_:)`` |
 | Emit a manual screen event (autocapture disabled) | ``userpilotScreen(_:)`` |
-| Label a custom or composite tappable view | ``userpilotLabel(_:)`` |
+| Label a custom or composite tappable view | ``userpilotLabel(_:)``; add ``userpilotTarget(_:)`` to also target it |
 | Capture SwiftUI button clicks with titles (iOS 26+) | ``enableSwiftUIButtonAutoCapture(_:)`` with ``enableInteractionAutoCapture(_:)`` and ``enableInteractionTextCapture(_:)`` |
 | Skip accessibility for a SwiftUI screen | ``userpilotSkipAccessibilityScan()`` |
 | Scan a current SwiftUI screen once | ``userpilotScanOnce()`` |

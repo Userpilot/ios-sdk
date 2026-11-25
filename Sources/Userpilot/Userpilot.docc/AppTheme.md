@@ -33,7 +33,8 @@ override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollect
 ## Behavior
 
 - The title must match one mobile theme exactly, including case. If no theme or more than one theme has that title, experiences keep their own themes. An empty title is ignored and logged.
-- While an app theme is in use, it replaces each experience's whole theme: colors, buttons, fonts, progress, backdrop, dismiss button and placement (a slideout's alignment and a survey's position), including per-step styling from the builder.
+- While an app theme is in use, it replaces each experience's whole theme: colors, buttons, fonts, progress, backdrop, dismiss button and placement (a slideout's alignment and a survey's position), including per-step styling from the builder. Two settings of a flow step still apply on top of it: the step's backdrop (whether it shows, its color and its opacity) and a slideout step's position (bottom or center).
+- Each experience reads its own section of the theme. Every step of a Flow (modal, slideout or tooltip) uses the theme's Flow section; a theme without one styles each step from that step type's section. A standalone carousel, slideout or survey uses its own section.
 - NPS surveys keep their own theme.
 - A new theme, or `clearTheme()`, applies from the next experience; an experience already on screen keeps its look.
 - Once fetched, each theme is reused, so switching back and forth is instant. Themes are fetched again after the SDK reconnects, so changes made in Userpilot reach the next experience.
