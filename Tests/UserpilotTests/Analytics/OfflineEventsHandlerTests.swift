@@ -372,6 +372,26 @@ class OfflineEventsHandlerTests: XCTestCase {
             logger.loggedErrors.contains { $0.contains("Failed to decode event from local storage") })
         XCTAssertFalse(logger.loggedErrors.contains { $0.contains("Dropping unsupported offline event") })
     }
+
+    func testRestore_completesOffTheDatabaseQueue_forEmptyStore() {
+        let token = "NX-\(UUID().uuidString)"
+        let userpilot = MockUserpilot(config: Userpilot.Config(token: token))
+        userpilot.container.register(
+            EventStoring.self, value: EventDatabaseStorage(container: userpilot.container))
+        let handler = OfflineEventsHandler(container: userpilot.container)
+        defer { EventDatabaseTestFiles.removeDatabase(for: token) }
+
+        let restored = expectation(description: "restore completion")
+        var completionQueueLabel: String?
+        handler.restoreEventsFromLocalStorage {
+            completionQueueLabel = String(cString: __dispatch_queue_get_label(nil))
+            restored.fulfill()
+        }
+        wait(for: [restored], timeout: 2)
+
+        XCTAssertNotNil(completionQueueLabel)
+        XCTAssertNotEqual(completionQueueLabel, Constants.DispatchQueues.database)
+    }
 }
 
 // swiftlint:enable all
