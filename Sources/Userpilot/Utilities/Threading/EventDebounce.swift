@@ -51,7 +51,7 @@ internal final class EventDebounce<Value> {
     init(
         delay: TimeInterval,
         deliveryQueue: DispatchQueue = .main,
-        queue: DispatchQueue = DispatchQueue(label: Constants.DispatchQueues.debounceQueue),
+        queue: DispatchQueue = DispatchQueue(label: "com.userpilot.debounce-queue"),
         onDeliver: @escaping (Value) -> Void
     ) {
         self.delay = delay

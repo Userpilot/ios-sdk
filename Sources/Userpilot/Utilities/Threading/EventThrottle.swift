@@ -14,7 +14,7 @@ import Foundation
 
 /// Synchronous throttle checks and resets are safe to call from any thread.
 /// Expiration uses monotonic time; rejected duplicates do not extend the throttle period.
-internal class EventThrottle {
+internal final class EventThrottle {
 
     private let throttleDuration: TimeInterval
     private let lock = NSLock()

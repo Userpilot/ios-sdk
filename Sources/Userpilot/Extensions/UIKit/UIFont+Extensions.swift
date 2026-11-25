@@ -1,11 +1,11 @@
 //
-//  FontsUtil.swift
+//  UIFont+Extensions.swift
 //  Userpilot SDK
 //
 //  Created by Userpilot on 06/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  A utility class to load fonts from assets or system font.
+//  Resolves native fonts, traits and scaling for themed experience widgets.
 //
 
 import Foundation

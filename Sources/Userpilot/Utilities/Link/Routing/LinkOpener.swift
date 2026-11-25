@@ -17,7 +17,7 @@ internal protocol LinkOpening: AnyObject {
     func processPendingDeepLink()
 }
 
-internal class LinkOpener: LinkOpening {
+internal final class LinkOpener: LinkOpening {
 
     // MARK: - Properties
 

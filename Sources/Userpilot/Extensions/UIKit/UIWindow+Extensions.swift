@@ -16,6 +16,6 @@ internal extension UIWindow {
     /// Keeps `ExperienceOverlayWindow`'s scene resolver from selecting an SDK overlay
     /// as the fallback application host.
     var isUserpilotWindow: Bool {
-        return self is ExperienceOverlayWindow || self is DebugUIWindow
+        return self is ExperienceOverlayWindow || self is DebugUIWindow || self is BuilderCaptureWindow
     }
 }

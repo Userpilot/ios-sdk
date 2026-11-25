@@ -10,10 +10,10 @@
 
 import Foundation
 
-internal class EventQueue<Element> {
+internal final class EventQueue<Element> {
     private var queue: [Element] = []
     private let dispatchQueue = DispatchQueue(
-        label: Constants.DispatchQueues.eventQueue,
+        label: "com.userpilot.event-queue",
         attributes: .concurrent
     )
 

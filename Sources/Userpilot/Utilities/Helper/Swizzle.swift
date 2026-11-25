@@ -47,23 +47,22 @@ internal enum Swizzler {
         swizzleSelector: Selector
     ) {
         let targetClass: AnyClass = type(of: targetInstance)
-        let existingMethod = class_getInstanceMethod(targetClass, targetSelector)
-        if existingMethod == nil {
-            // Keep the original selector present even when the app did not implement this callback.
-            guard let placeholder = class_getInstanceMethod(replacementOwner, placeholderSelector) else { return }
-            addMethod(placeholder, on: targetClass, as: targetSelector)
-        }
+        // Equal implementations mean this hook is already in place, on this class or one it inherits
+        // from; exchanging them again can make the hook's forwarding call re-enter itself indefinitely.
+        guard let replacement = class_getInstanceMethod(replacementOwner, swizzleSelector),
+              let callback = class_getInstanceMethod(targetClass, targetSelector)
+                ?? class_getInstanceMethod(replacementOwner, placeholderSelector),
+              method_getImplementation(callback) != method_getImplementation(replacement) else { return }
 
-        // Reuse the discovered original, or resolve the placeholder just installed above.
-        // Equal implementations mean this hook is already in place; exchanging them again can
-        // make the hook's forwarding call re-enter itself indefinitely.
-        guard let original = existingMethod ?? class_getInstanceMethod(targetClass, targetSelector),
-              let replacement = class_getInstanceMethod(replacementOwner, swizzleSelector),
-              method_getImplementation(original) != method_getImplementation(replacement) else { return }
+        // Only a method the class defines itself may be exchanged: exchanging an inherited one hooks every
+        // sibling class, none of which has the forwarding selector. Adding is a no-op when the class
+        // already defines the callback; otherwise the inherited callback or placeholder becomes its own.
+        addMethod(callback, on: targetClass, as: targetSelector)
 
         // Installing the forwarding selector is the existing once-per-class guard. Swapping a second
         // time would undo the hook or recurse; a selector already owned by the class must be left alone.
-        guard addMethod(replacement, on: targetClass, as: swizzleSelector),
+        guard let original = class_getInstanceMethod(targetClass, targetSelector),
+              addMethod(replacement, on: targetClass, as: swizzleSelector),
               let forwarding = class_getInstanceMethod(targetClass, swizzleSelector) else { return }
         method_exchangeImplementations(original, forwarding)
     }

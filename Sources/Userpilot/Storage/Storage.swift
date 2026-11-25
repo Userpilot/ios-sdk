@@ -49,7 +49,7 @@ internal protocol DataStoring: AnyObject {
  It utilizes `UserDefaults` to store data that should persist between app sessions, such as the
  socket URL, pending identify, and user ID. Each configured token uses its own suite.
  */
-internal class Storage: DataStoring {
+internal final class Storage: DataStoring {
     // MARK: - Keys
 
     /**

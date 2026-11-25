@@ -68,3 +68,17 @@ internal struct AnyCodable: Codable {
         }
     }
 }
+
+internal extension AnyCodable {
+    /// A scalar's text for selector matching; `nil` for null, dictionaries and arrays. `Bool` is matched before
+    /// the numbers so `true` never reads as `1`.
+    var selectorIdentity: String? {
+        switch value {
+        case let text as String: return text
+        case let flag as Bool: return String(flag)
+        case let number as Int: return String(number)
+        case let number as Double: return String(number)
+        default: return nil
+        }
+    }
+}

@@ -27,23 +27,12 @@ internal extension InstanceRegistering {
     }
 }
 
-/// ARC owns instance lifetime on iOS; the registry must never keep a host's SDK instance alive.
-private final class InstanceRegistration {
-    weak var instance: Userpilot?
-    let identity: ObjectIdentifier
-
-    init(_ instance: Userpilot) {
-        self.instance = instance
-        identity = ObjectIdentifier(instance)
-    }
-}
-
 /// Thread-safe membership only: no logging, native callbacks or dependency construction under the lock.
 internal final class InstanceRegistry: InstanceRegistering {
     // A weak read can release the last temporary strong reference on return. ARC may then
     // unregister that instance on this thread, so lifecycle reentry must remain safe.
     private let lock = NSRecursiveLock()
-    private var instances: [String: InstanceRegistration] = [:]
+    private var instances: [String: Registration] = [:]
     private var registrationOrder: [String] = []
     private weak var defaultInstance: Userpilot?
 
@@ -69,7 +58,7 @@ internal final class InstanceRegistry: InstanceRegistering {
     func register(_ instance: Userpilot) -> String? {
         lock.withLock {
             let token = instance.config.token
-            instances[token] = InstanceRegistration(instance)
+            instances[token] = Registration(instance)
             if !registrationOrder.contains(token) { registrationOrder.append(token) }
             guard instance.config.isDefault else { return nil }
             if let current = defaultInstance, current !== instance { return current.config.token }
@@ -89,4 +78,16 @@ internal final class InstanceRegistry: InstanceRegistering {
             if defaultInstance === instance { defaultInstance = nil }
         }
     }
+
+    /// ARC owns instance lifetime on iOS; the registry must never keep a host's SDK instance alive.
+    private final class Registration {
+        weak var instance: Userpilot?
+        let identity: ObjectIdentifier
+
+        init(_ instance: Userpilot) {
+            self.instance = instance
+            identity = ObjectIdentifier(instance)
+        }
+    }
+
 }

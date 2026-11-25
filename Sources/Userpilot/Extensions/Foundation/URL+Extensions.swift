@@ -38,4 +38,16 @@ internal extension URL {
         guard pathTokens.count == 2, pathTokens[0] == "experience_preview" else { return nil }
         return String(pathTokens[1])
     }
+
+    /// Scheme, host, and path only — the query string is dropped.
+    ///
+    /// Use this instead of `absoluteString` whenever a URL is logged. Deep links
+    /// into the SDK carry credentials in their query (`?capture_id=…&token=…` on
+    /// a Builder capture link), and a log line is exactly the wrong place for a
+    /// credential to end up. The path alone identifies which link arrived, which
+    /// is all a log needs to say.
+    var redactedDescription: String {
+        let base = "\(scheme ?? "")://\(host ?? "")\(path)"
+        return query == nil ? base : "\(base)?<redacted>"
+    }
 }

@@ -25,12 +25,14 @@ internal enum QueueType {
     case lowPriority
     case highPriority
 
+    private static let backgroundQueueLabel = "com.userpilot.background-queue"
+
     /// The shared serial background queue.
     ///
     /// Stored, not built per access: as a computed value every `performOn(.background)` call got its
     /// own queue, so work dispatched to `.background` was never serialized against other work on it.
     private static let backgroundQueue = DispatchQueue(
-        label: Constants.DispatchQueues.background,
+        label: QueueType.backgroundQueueLabel,
         qos: .background,
         target: nil
     )
