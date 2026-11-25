@@ -9,8 +9,11 @@
 //
 
 internal enum FlowExperienceActionEvent: ExperienceEvent {
+    /// Standalone content only; the server derives a Flow's seen from its step events.
     case seen(flowId: Int)
-    case dismissed(flowId: Int, stepId: Int)
+    /// `dismissAction` is the closed Flow step's `settings.dismiss_action`; `nil` outside Flows and when unset.
+    case dismissed(flowId: Int, stepId: Int, dismissAction: FlowDismissAction? = nil)
+    /// Standalone content only. `hasDeepLink` stays local: it is never part of the payload.
     case completed(flowId: Int, hasDeepLink: Bool = false)
 }
 
@@ -25,7 +28,7 @@ extension FlowExperienceActionEvent {
 
     private var flowId: Int {
         switch self {
-        case .seen(let flowId), .dismissed(let flowId, _), .completed(let flowId, _):
+        case .seen(let flowId), .dismissed(let flowId, _, _), .completed(let flowId, _):
             return flowId
         }
     }
@@ -37,11 +40,13 @@ extension FlowExperienceActionEvent {
         return hasDeepLink
     }
 
-    /// Only dismissal includes a step ID; completion reports the flow as a whole.
+    /// Only dismissal includes a step ID, plus `state` when its dismiss action has one;
+    /// completion reports the flow as a whole.
     var eventPayload: [String: Any] {
         var payload: [String: Any] = ["mobile_content_id": flowId]
-        if case .dismissed(_, let stepId) = self {
+        if case .dismissed(_, let stepId, let dismissAction) = self {
             payload["step_id"] = stepId
+            payload["state"] = dismissAction?.dismissState
         }
         return payload
     }

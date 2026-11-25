@@ -15,16 +15,14 @@ import Foundation
 
 /// Prepares survey content, advances questions and reports answers for one renderer.
 /// Renderer callbacks retain their existing main-thread delivery and dismissal ownership.
-final class SurveyViewModel {
+final class SurveyViewModel: BaseExperienceViewModel, ExperienceReporting {
 
     // MARK: - Properties
 
-    /// Weak reference to the owning `Userpilot` instance.
-    private weak var userpilot: Userpilot?
-    private let experiencesPublisher: ExperiencesPublishing
-    private let rendererID: UUID?
+    let experienceType = UserpilotExperienceType.survey
+    var experienceID: Int? { surveyContent?.id }
+
     private let themeHandler: ThemeHandling
-    private let logger: Logging
 
     /// The merged theme data for the survey.
     private(set) var surveyTheme: SurveyTheme?
@@ -41,17 +39,15 @@ final class SurveyViewModel {
     var bindNextSurveyStep: (() -> Void)?
     private let surveyLogic: SurveyLogicHandling.Type = SurveyLogicHandler.self
     let submissionId: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
+    private var didSendSeenContentEvent = false
 
     // MARK: - Initializers
 
     /// Initializes the view model with a dependency injection container.
     /// - Parameter container: Dependency injection container providing required services.
-    init(container: DIContainer) {
-        self.userpilot = container.owner
-        self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-        self.rendererID = experiencesPublisher.activeRendererID
+    override init(container: DIContainer) {
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.logger = container.resolve(Userpilot.Config.self).logger
+        super.init(container: container)
     }
 
     // MARK: - View Lifecycle
@@ -71,9 +67,8 @@ final class SurveyViewModel {
         prepareContent(surveyContent)
         prepareTheme(for: surveyContent)
 
-        // Keep the original content check: removing a disabled thank-you module does not
-        // change whether the backend supplied an empty survey.
-        bindData?(!surveyContent.modules.isEmpty && surveyTheme != nil)
+        // A survey whose only module is a disabled thank-you has nothing left to render.
+        bindData?(self.surveyContent?.modules.isEmpty == false && surveyTheme != nil)
     }
 
     /// Only the terminal thank-you module can be omitted; questions retain their original order.
@@ -110,18 +105,9 @@ final class SurveyViewModel {
         return false
     }
 
-    /// Notify the publisher after the survey view has finished dismissing.
-    func onExperienceDismissalCompleted() {
-        experiencesPublisher.experienceDidFinishDismissing(rendererID: rendererID)
-    }
-
-    /// Triggered the deep link from thank you message.
-    private func onDeepLinkTriggered() {
-        guard
-            let deepLink = surveyContent?.thankYouDeepLink,
-            let url = URL(string: deepLink)
-        else { return }
-        experiencesPublisher.triggerDeepLink(url: url)
+    /// Records the thank-you action's link before the renderer starts closing.
+    private func setCompletionDeepLink() {
+        setCompletionDeepLink(surveyContent?.thankYouDeepLink)
     }
 
     func isAnyQuestionRequired() -> Bool {
@@ -131,21 +117,11 @@ final class SurveyViewModel {
 
     // MARK: - Experience Event Handling
 
+    /// Reports the survey as seen on the first appearance only.
     func onExperienceSeen() {
-        delay(0.3) { [weak self] in
-            self?.onSurveyOpened()
-        }
-    }
-
-    /**
-     Sends a socket event indicating that an experience has been opened.
-     */
-    private func onSurveyOpened() {
-        guard let surveyContent else { return }
-        notifyExperienceState(.started, surveyContent: surveyContent)
-
-        let event = SurveyExperienceActionEvent.seen(surveyId: surveyContent.id, submissionId: submissionId)
-        experiencesPublisher.publishInternalSDKEvent(event, rendererID: rendererID)
+        guard let surveyContent, !didSendSeenContentEvent else { return }
+        didSendSeenContentEvent = true
+        report(SurveyContentEvents.opened(surveyContent, submissionId: submissionId))
 
         if surveyContent.type == .step {
             onSurveyStepSeen()
@@ -155,18 +131,9 @@ final class SurveyViewModel {
     /// Reports completion with the configured thank-you navigation flag.
     func onSurveyCompleted() {
         guard let surveyContent else { return }
-        publishSurveyCompleted(surveyContent, hasDeepLink: surveyContent.thankYouDeepLink != nil)
-    }
-
-    /// Shares completion reporting while callers distinguish a submitted action from a thank-you close.
-    private func publishSurveyCompleted(_ surveyContent: SurveyContent, hasDeepLink: Bool) {
-        notifyExperienceState(.completed, surveyContent: surveyContent)
-        let event = SurveyExperienceActionEvent.completed(
-            surveyId: surveyContent.id,
-            submissionId: submissionId,
-            hasDeepLink: hasDeepLink
-        )
-        experiencesPublisher.publishInternalSDKEvent(event, rendererID: rendererID)
+        report(SurveyContentEvents.completed(
+            surveyContent, submissionId: submissionId, hasDeepLink: surveyContent.thankYouDeepLink != nil
+        ))
     }
 
     /// Closing a thank-you step completes the survey; closing a question dismisses it.
@@ -175,74 +142,30 @@ final class SurveyViewModel {
             let surveyContent,
             let surveyStep = getCurrentStepSurveyContent()
         else { return }
-        if surveyStep.type == .completed {
-            publishSurveyCompleted(surveyContent, hasDeepLink: false)
-        } else {
-            notifyExperienceState(.dismissed, surveyContent: surveyContent)
-
-            let eventExperienceDismissed = SurveyExperienceActionEvent.dismissed(
-                surveyId: surveyContent.id,
-                submissionId: submissionId,
-                moduleId: surveyContent.type == .list ? nil : surveyStep.id,
-                type: surveyContent.type == .list ? nil : surveyStep.type.rawValue)
-            experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed, rendererID: rendererID)
-        }
+        report(SurveyContentEvents.dismissed(surveyContent, submissionId: submissionId, step: surveyStep))
     }
 
     private func onSurveyStepSeen() {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
-
-        notifyStepState(.started, surveyContent: surveyContent, surveyStep: surveyStep)
-
-        let eventStepSeen = SurveyExperienceStepActionEvent.seen(
-            surveyId: surveyContent.id,
-            submissionId: submissionId,
-            moduleId: surveyStep.id,
-            type: surveyStep.type.rawValue
-        )
-        experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
+        report(SurveyContentEvents.stepSeen(surveyContent, submissionId: submissionId, step: surveyStep))
     }
 
     /// Submits the list's answers before the renderer handles its thank-you or dismissal path.
     func onSurveyListSubmitted(answersPayload: [Payload]) {
         guard let surveyContent else { return }
-        notifyExperienceState(.submitted, surveyContent: surveyContent)
-
-        let eventContentSubmitted = SurveyExperienceActionEvent.submitted(
-            surveyId: surveyContent.id,
-            submissionId: submissionId,
-            feedback: answersPayload
-        )
-        experiencesPublisher.publishInternalSDKEvent(eventContentSubmitted, rendererID: rendererID)
+        report(SurveyContentEvents.listSubmitted(surveyContent, submissionId: submissionId, feedback: answersPayload))
     }
 
     private func onSurveyModuleSubmitted(_ answersPayload: Payload) {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
-
-        notifyStepState(.submitted, surveyContent: surveyContent, surveyStep: surveyStep)
-
-        let eventStepSubmitted = SurveyExperienceStepActionEvent.submitted(
-            surveyId: surveyContent.id,
-            submissionId: submissionId,
-            moduleId: surveyStep.id,
-            type: surveyStep.type.rawValue,
-            feedback: answersPayload?["value"]
-        )
-        experiencesPublisher.publishInternalSDKEvent(eventStepSubmitted, rendererID: rendererID)
+        report(SurveyContentEvents.stepSubmitted(
+            surveyContent, submissionId: submissionId, step: surveyStep, feedback: answersPayload?["value"]
+        ))
     }
 
     private func onSurveyModuleSkipped() {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
-
-        notifyStepState(.skipped, surveyContent: surveyContent, surveyStep: surveyStep)
-
-        let eventStepSkipped = SurveyExperienceStepActionEvent.skipped(
-            surveyId: surveyContent.id,
-            submissionId: submissionId,
-            moduleId: surveyStep.id,
-            type: surveyStep.type.rawValue
-        )
-        experiencesPublisher.publishInternalSDKEvent(eventStepSkipped, rendererID: rendererID)
+        report(SurveyContentEvents.stepSkipped(surveyContent, submissionId: submissionId, step: surveyStep))
     }
 
     /** Logic region, fetch and understand Survey logic, notify screen with next survey step */
@@ -251,9 +174,9 @@ final class SurveyViewModel {
         return currentStep == surveyContent.modules.count - 1
     }
 
-    // Return current survey step content
+    /// The module at `currentStep`, or nil when the index is outside the survey.
     private func getCurrentStepSurveyContent() -> SurveyStep? {
-        surveyContent?.modules[currentStep]
+        surveyContent?.modules[safe: currentStep]
     }
 
     func moveToNextSurveyStep(
@@ -263,7 +186,7 @@ final class SurveyViewModel {
         guard let surveyContent, let surveyStep = getCurrentStepSurveyContent() else { return }
         // We are on the last step, close the survey
         if isLastStep(), surveyStep.type == .completed {
-            onDeepLinkTriggered()
+            setCompletionDeepLink()
             completeAndCloseSurvey()
             return
         }
@@ -284,7 +207,7 @@ final class SurveyViewModel {
         // Get the next step index based on the logic handler
         let (nextStep, endSurvey) = surveyLogic.getNextQuestionIndex(
             currentStep: currentStep,
-            stepLogic: surveyContent.modules[currentStep].logic ?? [],
+            stepLogic: surveyStep.logic ?? [],
             answer: answer,
             surveySteps: surveyContent.modules
         )
@@ -310,61 +233,5 @@ final class SurveyViewModel {
     private func completeAndCloseSurvey() {
         onSurveyCompleted()
         closeSurvey?()
-    }
-
-    // MARK: - Reporting
-
-    /// Keep the delegate, log and subsequent event publication in their established order.
-    private func notifyExperienceState(_ state: UserpilotExperienceState, surveyContent: SurveyContent) {
-        userpilot?.experienceDelegate?.onExperienceStateChanged(
-            experienceType: .survey,
-            experienceId: NSNumber(value: surveyContent.id),
-            experienceState: state
-        )
-        logExperience(state: state.rawValueString, experienceId: surveyContent.id)
-    }
-
-    private func notifyStepState(
-        _ state: UserpilotExperienceState,
-        surveyContent: SurveyContent,
-        surveyStep: SurveyStep
-    ) {
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .survey,
-            experienceId: NSNumber(value: surveyContent.id),
-            stepId: NSNumber(value: surveyStep.id),
-            stepState: state,
-            step: nil,
-            totalSteps: nil
-        )
-        logStep(state: state.rawValueString, experienceId: surveyContent.id, stepId: surveyStep.id)
-    }
-
-    // MARK: - Logging
-
-    private func logExperience(
-        state: String,
-        experienceId: Int
-    ) {
-        logger.info(
-            "🌠 Userpilot experience -> type: Survey, experienceId: %{public}@, state: %{public}@",
-            String(experienceId),
-            state
-        )
-    }
-
-    private func logStep(
-        state: String,
-        experienceId: Int,
-        stepId: Int
-    ) {
-        logger.info(
-            // swiftlint:disable:next line_length
-            "🌠 Userpilot experience step -> type: %{public}@, experienceId: %{public}@, state: %{public}@, stepId: %{public}@",
-            UserpilotExperienceType.survey.rawValueString,
-            String(experienceId),
-            state,
-            String(stepId)
-        )
     }
 }

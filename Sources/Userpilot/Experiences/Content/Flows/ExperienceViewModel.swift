@@ -5,30 +5,26 @@
 //  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  This class is responsible for managing the state and interactions of the carousel experience.
-//  It integrates with various dependencies such as the experiences publisher, theme handler,
-//  to handle the experience flow, including data retrieval, theme merging, and
-//  sending analytics events through socket requests.
+//  Manages a carousel or slideout's content, merged themes and engagement reporting, for standalone
+//  content and for one modal or slideout step of a Flow walk.
 //
 
 import Foundation
 
 /// Prepares flow content and reports engagement in the renderer's existing callback order.
 /// UIKit callbacks own these calls; only completed dismissal releases the publisher's renderer.
-internal class ExperienceViewModel {
+internal final class ExperienceViewModel: BaseExperienceViewModel, ExperienceReporting {
 
     // MARK: - Properties
 
-    /// Weak reference to the owning `Userpilot` instance.
-    private weak var userpilot: Userpilot?
-    private let experiencesPublisher: ExperiencesPublishing
-    private let rendererID: UUID?
+    let experienceType = UserpilotExperienceType.flow
+    var experienceID: Int? { flowContent?.id }
+
     private let themeHandler: ThemeHandling
-    private let logger: Logging
     let imageLoader: ImageLoading
 
     /// A mutable list of merged theme data for the carousel.
-    private var mergedTheme = [ThemeData]()
+    private(set) var mergedTheme = [ThemeData]()
     var carouselTheme: [ExperienceTheme] {
         return mergedTheme.compactMap { $0.carousel }
     }
@@ -42,9 +38,20 @@ internal class ExperienceViewModel {
         flowContent?.steps.first
     }
 
+    /// Set when this renderer shows one step of a Flow walk; its steps then report through `FlowStepEvents`.
+    private var flowSegment: FlowSegment?
+
+    /// Whether this renderer shows a Flow step; only then does a slideout show progress.
+    var isFlowSegment: Bool {
+        flowSegment != nil
+    }
+
     /// Visible position may move backward; engagement advances only beyond the furthest step.
     private(set) var currentStep = 0
     private var furthestStep = 0
+
+    /// The first step's seen goes out once, on the first appearance.
+    private var didSendSeenContentEvent = false
 
     /// closure to observe the binding state of the content
     var bindData: ((Bool) -> Void)?
@@ -53,13 +60,10 @@ internal class ExperienceViewModel {
 
     /// Initializes the view model with a dependency injection container.
     /// - Parameter container: Dependency injection container providing required services.
-    init(container: DIContainer) {
-        self.userpilot = container.owner
-        self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-        self.rendererID = experiencesPublisher.activeRendererID
+    override init(container: DIContainer) {
         self.themeHandler = container.resolve(ThemeHandling.self)
-        self.logger = container.resolve(Userpilot.Config.self).logger
         self.imageLoader = container.resolve(ImageLoading.self)
+        super.init(container: container)
     }
 
     // MARK: - View Lifecycle
@@ -69,21 +73,21 @@ internal class ExperienceViewModel {
      Initializes the theme for each step and binds data for UI updates.
      */
     func onStart() {
-        guard
-            let flowContent = experiencesPublisher.getActiveExperience(rendererID: rendererID)?.asFlowContent()
-        else {
+        let experience = experiencesPublisher.getActiveExperience(rendererID: rendererID)
+        guard let flowContent = experience?.asFlowContent() else {
             bindData?(false)
             return
         }
 
         self.flowContent = flowContent
+        flowSegment = experience?.flowSegment()
         prepareThemes(for: flowContent)
         bindData?(canBindContent(flowContent))
     }
 
     /// Keeps one merged theme per step: the app theme when resolved, else the content's own themes.
     private func prepareThemes(for content: FlowContent) {
-        mergedTheme.append(contentsOf: themeHandler.flowThemes(for: content))
+        mergedTheme.append(contentsOf: themeHandler.flowThemes(for: content, isFlowSegment: isFlowSegment))
     }
 
     /// Prevents binding incomplete backend content without changing renderer fallback behavior.
@@ -94,6 +98,10 @@ internal class ExperienceViewModel {
             return !carouselTheme.isEmpty
         case .slideout:
             return mergedTheme.first?.slideOut != nil
+        case .tooltip:
+            return content.tooltipSteps != nil
+        case .flow:
+            return false
         }
     }
 
@@ -107,195 +115,100 @@ internal class ExperienceViewModel {
         return flowContent?.steps.count ?? 0
     }
 
+    /// Steps the progress view draws: the whole Flow's `steps_count` for a Flow step, else this content's steps.
+    var progressStepsCount: Int {
+        flowSegment?.stepsCount ?? carouselStepsCount
+    }
+
+    /// Progress index for carousel `page`: a Flow step's `position - 1` kept inside its steps, else the page itself.
+    func progressStepIndex(_ page: Int) -> Int {
+        flowStepsProgress(page)?.index ?? page
+    }
+
+    /// A Flow step's place in its progress view for carousel `page`; nil outside a Flow.
+    func flowStepsProgress(_ page: Int) -> FlowStepsProgress? {
+        guard let flowSegment else { return nil }
+        let position = flowContent?.steps[safe: page]?.position
+        return FlowStepsProgress(stepsCount: flowSegment.stepsCount, stepIndex: position.map { $0 - 1 } ?? page)
+    }
+
     // MARK: - Experience Event Handling
 
+    /// Reports seen on the first appearance only; a later `viewDidAppear` reports nothing.
     func onExperienceSeen() {
-        delay(0.3) { [weak self] in
-            self?.onExperienceOpened()
-        }
-    }
-    /**
-     Sends a socket event indicating that an experience has been opened.
-     */
-    private func onExperienceOpened() {
         guard
+            !didSendSeenContentEvent,
             let flowContent,
             let step = flowContent.steps.first
         else { return }
+        didSendSeenContentEvent = true
 
-        notifyExperienceState(.started, content: flowContent)
+        if let flowSegment {
+            reportFlowStep(FlowStepEvents.shown(flowSegment, step))
+            return
+        }
 
-        notifyStepState(.started, stepId: step.id, step: 1, content: flowContent)
-
-        let eventExperienceSeen = FlowExperienceActionEvent.seen(flowId: flowContent.id)
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen, rendererID: rendererID)
-
-        let eventStepSeen = FlowExperienceStepActionEvent.seen(flowId: flowContent.id, stepId: step.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
+        report(FlowContentEvents.opened(flowContent))
     }
 
     /**
-     Sends a socket event indicating that the experience has been completed.
+     The last page's action button. Standalone content records `action`'s deep link and completes; a Flow step
+     advances, or opens the link when it is the Flow's last step.
      */
-    func onExperienceCompleted() {
-        guard
-            let flowContent,
-            let step = flowContent.steps.last
-        else { return }
+    func onExperienceCompleted(_ action: ButtonAction) {
+        if let flowSegment, let step = flowContent?.steps.first {
+            reportFlowAction(flowSegment, step, action)
+            return
+        }
+        setCompletionDeepLink(action.deepLink)
+        guard let flowContent else { return }
 
-        notifyStepState(.completed, stepId: step.id, step: flowContent.steps.count, content: flowContent)
-
-        notifyExperienceState(.completed, content: flowContent)
-
-        let hasDeepLink = !(step.buttonAction?.deepLink?.isEmpty ?? true)
-
-        let eventStepCompleted = FlowExperienceStepActionEvent.completed(
-            flowId: flowContent.id,
-            stepId: step.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepCompleted, rendererID: rendererID)
-
-        let eventContentCompleted = FlowExperienceActionEvent.completed(
-            flowId: flowContent.id,
-            hasDeepLink: hasDeepLink)
-        experiencesPublisher.publishInternalSDKEvent(eventContentCompleted, rendererID: rendererID)
+        report(FlowContentEvents.completed(flowContent))
     }
 
     /**
-     Handles the change of steps in the carousel.
+     Handles the change of steps in the carousel. Only standalone content reports it; a Flow step is one page.
      
      - Parameter step: The current step number.
      */
     func onStepChanged(_ step: Int) {
         currentStep = step
-        guard step > furthestStep else { return }
+        guard flowSegment == nil, step > furthestStep else { return }
         furthestStep = step
 
-        guard
-            let flowContent,
-            let currentStep = flowContent.steps[safe: step],
-            let oldStep = flowContent.steps[safe: step - 1]
-        else { return }
+        guard let flowContent else { return }
 
-        // The completed callback and event both refer to the step the user just left.
-        notifyStepState(.completed, stepId: oldStep.id, step: step, content: flowContent)
-
-        notifyStepState(.started, stepId: currentStep.id, step: step + 1, content: flowContent)
-
-        let eventStepCompleted = FlowExperienceStepActionEvent.completed(
-            flowId: flowContent.id,
-            stepId: oldStep.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepCompleted, rendererID: rendererID)
-
-        let eventStepSeen = FlowExperienceStepActionEvent.seen(
-            flowId: flowContent.id,
-            stepId: currentStep.id)
-        experiencesPublisher.publishInternalSDKEvent(eventStepSeen, rendererID: rendererID)
+        report(FlowContentEvents.paged(flowContent, page: step))
     }
 
-    /// Reports the furthest reached step as dismissed; renderer teardown is reported separately.
+    /// The user's or the host app's close. Standalone content reports the furthest step and the Flow dismissed; a
+    /// Flow step reports through `FlowStepEvents.closed`, with the state from its own `dismiss_action`.
+    /// Renderer teardown is reported separately.
     func onDismissStep() {
-        guard
-            let flowContent,
-            let step = flowContent.steps[safe: furthestStep]
-        else { return }
+        if let flowSegment, let step = flowContent?.steps.first {
+            reportFlowStep(FlowStepEvents.closed(flowSegment, step))
+            return
+        }
+        guard let flowContent else { return }
 
-        notifyStepState(.dismissed, stepId: step.id, step: furthestStep + 1, content: flowContent)
-
-        notifyExperienceState(.dismissed, content: flowContent)
-
-        let eventExperienceDismissed = FlowExperienceActionEvent.dismissed(
-            flowId: flowContent.id,
-            stepId: step.id)
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed, rendererID: rendererID)
-    }
-
-    // MARK: - Deep Link Handling
-
-    /**
-     Handles navigation to a deep link specified in the last step of the carousel.
-     If a deep link exists, the navigation delegate triggers the navigation action.
-     */
-    func onDeepLinkTriggered() {
-        guard
-            let deepLink = flowContent?.steps.last?.buttonAction?.deepLink,
-            let url = URL(string: deepLink)
-        else { return }
-        experiencesPublisher.triggerDeepLink(url: url)
+        report(FlowContentEvents.dismissed(flowContent, furthestPage: furthestStep))
     }
 
     // MARK: - Engagement Reporting
 
-    /// Notifies the host before logging; callers publish socket events in their existing order.
-    private func notifyExperienceState(_ state: UserpilotExperienceState, content: FlowContent) {
-        userpilot?.experienceDelegate?.onExperienceStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: content.id),
-            experienceState: state
-        )
-        logExperience(state: state.rawValueString, experienceId: content.id)
+    /// `link` reports like `next`; only the Flow's last step records the deep link before its events go out.
+    private func reportFlowAction(_ segment: FlowSegment, _ step: Step, _ action: ButtonAction) {
+        let outcome = action.isLink ? FlowStepEvents.linked(segment, step) : FlowStepEvents.advanced(segment, step)
+        if outcome.opensDeepLink { setCompletionDeepLink(action.deepLink) }
+        reportFlowStep(outcome)
     }
 
-    /// Keeps delegate arguments and their matching log together without changing event delivery.
-    private func notifyStepState(
-        _ state: UserpilotExperienceState,
-        stepId: Int,
-        step: Int,
-        content: FlowContent
-    ) {
-        userpilot?.experienceDelegate?.onExperienceStepStateChanged(
-            experienceType: .flow,
-            experienceId: NSNumber(value: content.id),
-            stepId: NSNumber(value: stepId),
-            stepState: state,
-            step: NSNumber(value: step),
-            totalSteps: NSNumber(value: content.steps.count)
-        )
-        logStep(
-            state: state.rawValueString,
-            experienceId: content.id,
-            stepId: stepId,
-            step: step,
-            totalSteps: content.steps.count
-        )
-    }
-
-    // MARK: - Logging
-
-    private func logExperience(
-        state: String,
-        experienceId: Int
-    ) {
-        logger.info(
-            "🌠 Userpilot experience -> type: %{public}@, experienceId: %{public}@, state: %{public}@",
-            UserpilotExperienceType.flow.rawValueString,
-            String(experienceId),
-            state
-        )
-    }
-
-    private func logStep(
-        state: String,
-        experienceId: Int,
-        stepId: Int,
-        step: Int,
-        totalSteps: Int
-    ) {
-        // swiftlint:disable line_length
-        logger.info(
-            "🌠 Userpilot experience step -> type: Flow, experienceId: %{public}@, state: %{public}@, stepId: %{public}@, step: %{public}@, totalSteps: %{public}@",
-            String(experienceId),
-            state,
-            String(stepId),
-            String(step),
-            String(totalSteps)
-        )
-        // swiftlint:enable line_length
-    }
-}
-
-extension ExperienceViewModel {
-    /// Notify the publisher after the experience view has finished dismissing.
-    func onExperienceDismissalCompleted() {
-        experiencesPublisher.experienceDidFinishDismissing(rendererID: rendererID)
+    /// Hands the outcome's run and events to the publisher in one call, then fires its callbacks, so a host
+    /// reacting inside a callback already finds the outcome published. An outcome without events reports nothing.
+    private func reportFlowStep(_ outcome: FlowStepOutcome) {
+        guard !outcome.events.isEmpty, flowContent != nil else { return }
+        flowSegment?.run = outcome.run
+        experiencesPublisher.publishFlowStepOutcome(outcome, rendererID: rendererID)
+        notifyHost(outcome.callbacks)
     }
 }

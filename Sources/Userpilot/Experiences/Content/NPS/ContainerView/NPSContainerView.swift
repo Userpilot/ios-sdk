@@ -11,7 +11,7 @@
 import UIKit
 
 // swiftlint:disable all
-internal class NPSContainerView: UIView {
+internal final class NPSContainerView: UIView {
 
     // MARK: - UI Components
 
@@ -424,7 +424,7 @@ extension NPSContainerView {
         
         // Universal case
         if followUpContent.type == .universal, let all = followUpContent.all {
-            userFollowUpKey = all.key
+            userFollowUpKey = all.key ?? ""
             return all
         }
         
@@ -432,17 +432,17 @@ extension NPSContainerView {
         switch userAnswer {
         case 0...6:
             if let detractors = followUpContent.detractors {
-                userFollowUpKey = detractors.key
+                userFollowUpKey = detractors.key ?? ""
                 return detractors
             }
         case 7...8:
             if let passives = followUpContent.passives {
-                userFollowUpKey = passives.key
+                userFollowUpKey = passives.key ?? ""
                 return passives
             }
         default:
             if let promoters = followUpContent.promoters {
-                userFollowUpKey = promoters.key
+                userFollowUpKey = promoters.key ?? ""
                 return promoters
             }
         }

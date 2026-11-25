@@ -12,7 +12,7 @@
 
 import UIKit
 
-internal class StepCollectionViewCell: UICollectionViewCell {
+internal final class StepCollectionViewCell: UICollectionViewCell {
 
     /// A UIScrollView that allows the content to be scrollable.
     let theScrollView: UIScrollView = {

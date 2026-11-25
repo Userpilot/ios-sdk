@@ -10,7 +10,7 @@
 
 import UIKit
 
-internal class ThankYouBottomSheetViewController: BottomSheetViewController {
+internal final class ThankYouBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Components
 

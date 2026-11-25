@@ -82,7 +82,7 @@ final class NPSViewModelTests: XCTestCase {
         )
         var triggeredURL: URL?
         var didFinish = false
-        userpilot.experiencesPublisher.onTriggerDeepLink = { triggeredURL = $0 }
+        userpilot.experiencesPublisher.onSetCompletionDeepLink = { triggeredURL = $0 }
         userpilot.experiencesPublisher.onExperienceDidFinishDismissing = { didFinish = true }
 
         viewModel.endNPS(completedData)

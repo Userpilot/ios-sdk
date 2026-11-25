@@ -13,13 +13,14 @@
 import Foundation
 import UIKit
 
-internal class SlideOutDialogViewController: DialogViewController {
+internal final class SlideOutDialogViewController: DialogViewController {
 
     // MARK: - UI Elements
     /// Container view that holds the slide-out content
     internal lazy var slideOutContainerView: SlideOutContainerView = {
         let slideOutContainerView = SlideOutContainerView()
         slideOutContainerView.translatesAutoresizingMaskIntoConstraints = false
+        slideOutContainerView.cardTopInset = Constants.Theme.contentMargin
         return slideOutContainerView
     }()
 
@@ -27,6 +28,10 @@ internal class SlideOutDialogViewController: DialogViewController {
 
     /// View model managing the carousel experience state and actions
     internal let experienceViewModel: ExperienceViewModel
+
+    /// Set by the first close of any kind; only that close may report the step, and taps during the dismiss
+    /// animation do nothing.
+    private var isClosing = false
 
     // MARK: - Initializers
 
@@ -92,6 +97,14 @@ extension SlideOutDialogViewController {
                 andSlideOutContainerViewDelegate: self,
                 andImageLoader: self.experienceViewModel.imageLoader,
                 withLocal: experienceViewModel.isRTL)
+            if self.experienceViewModel.isFlowSegment {
+                self.slideOutContainerView.bindStepsProgress(
+                    stepsCount: self.experienceViewModel.progressStepsCount,
+                    stepIndex: self.experienceViewModel.progressStepIndex(self.experienceViewModel.currentStep),
+                    theme: self.experienceViewModel.slideOutTheme,
+                    isRTL: self.experienceViewModel.isRTL
+                )
+            }
         }
 
         // Trigger any initial actions or setup needed when the view model starts.
@@ -108,24 +121,24 @@ extension SlideOutDialogViewController {
 // MARK: - SlideOutContainerViewDelegate
 extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
 
-    /// Handles the close action from the slide-out container.
+    /// Reports the dismissal at the tap, before the dismiss animation; later taps do nothing.
     func onClose() {
+        guard !isClosing else { return }
+        isClosing = true
+        experienceViewModel.onDismissStep()
         dismissDialog { [weak self] in
-            self?.experienceViewModel.onDismissStep()
             self?.experienceViewModel.onExperienceDismissalCompleted()
         }
     }
 
-    /// Handles actions triggered by buttons in the slide-out container.
+    /// Reports the button's outcome at the tap, before the dismiss animation; later taps do nothing.
     /// - Parameter action: The action triggered by the button.
     func onAction(_ action: ButtonAction?) {
-        guard let action else { return }
+        guard let action, !isClosing else { return }
+        isClosing = true
+        experienceViewModel.onExperienceCompleted(action)
         dismissDialog { [weak self] in
-            self?.experienceViewModel.onExperienceCompleted()
             self?.experienceViewModel.onExperienceDismissalCompleted()
-            if action.deepLink != nil {
-                self?.experienceViewModel.onDeepLinkTriggered()
-            }
         }
     }
 }
@@ -133,10 +146,17 @@ extension SlideOutDialogViewController: SlideOutContainerViewDelegate {
 // MARK: - UPExperienceDelegate
 
 extension SlideOutDialogViewController: UPExperienceDelegate {
+    /// The host app's close (`manualClose`) reports like the close button, or nothing when a tap already closed
+    /// the dialog. An SDK-driven close sends no event and fires no host callback, and taps during its dismissal
+    /// report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        if manualClose, !isClosing {
+            experienceViewModel.onDismissStep()
+        }
+        isClosing = true
         dismissDialog { [weak self] in
             if let completion {
                 completion()

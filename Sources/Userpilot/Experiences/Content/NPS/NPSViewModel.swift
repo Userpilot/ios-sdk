@@ -12,15 +12,13 @@
 import Foundation
 
 /// Prepares NPS content and reports answers for one renderer using its existing main-thread callbacks.
-final class NPSViewModel {
+final class NPSViewModel: BaseExperienceViewModel, ExperienceReporting {
 
     // MARK: - Properties
 
-    /// Weak reference to the owning `Userpilot` instance.
-    private weak var userpilot: Userpilot?
-    private let experiencesPublisher: ExperiencesPublishing
-    private let rendererID: UUID?
-    private let logger: Logging
+    let experienceType = UserpilotExperienceType.nps
+    let experienceID: Int? = nil
+
     let imageLoader: ImageLoading
 
     /// The theme supplied with the NPS content.
@@ -32,16 +30,15 @@ final class NPSViewModel {
     /// Reports whether content is available for the renderer to bind.
     var bindData: ((Bool) -> Void)?
 
+    private var didSendSeenContentEvent = false
+
     // MARK: - Initializers
 
     /// Initializes the view model with a dependency injection container.
     /// - Parameter container: Dependency injection container providing required services.
-    init(container: DIContainer) {
-        self.userpilot = container.owner
-        self.experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-        self.rendererID = experiencesPublisher.activeRendererID
+    override init(container: DIContainer) {
         self.imageLoader = container.resolve(ImageLoading.self)
-        self.logger = container.resolve(Userpilot.Config.self).logger
+        super.init(container: container)
     }
 
     // MARK: - View Lifecycle
@@ -66,43 +63,28 @@ final class NPSViewModel {
     }
     // MARK: - Experience Event Handling
 
-    /// Retains the presentation delay before reporting NPS as started.
+    /// Reports NPS as started on the first appearance only.
     func onExperienceSeen() {
-        delay(0.3) { [weak self] in
-            self?.onNPSOpened()
-        }
-    }
-
-    /// Reports the start after content binding and the renderer's seen callback.
-    private func onNPSOpened() {
-        guard npsContent != nil else { return }
-        notifyExperienceState(.started)
-
-        let eventExperienceSeen = NPSExperienceActionEvent.seen
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceSeen, rendererID: rendererID)
+        guard npsContent != nil, !didSendSeenContentEvent else { return }
+        didSendSeenContentEvent = true
+        report(NPSContentEvents.opened())
     }
 
     /// Reports dismissal; the renderer's completion callback releases presentation ownership.
     func onNPSDismissed() {
         guard npsContent != nil else { return }
-        notifyExperienceState(.dismissed)
-
-        let eventExperienceDismissed = NPSExperienceActionEvent.dismissed
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceDismissed, rendererID: rendererID)
+        report(NPSContentEvents.dismissed())
     }
 
     /// Converts the one-based selection to the backend score and preserves both question keys.
     func onNPSSubmitted(_ userAnswer: Int, _ userFollowUpKey: String, _ userFollowUp: String) {
         guard let npsContent else { return }
-        notifyExperienceState(.submitted)
-
-        let eventExperienceSubmitted = NPSExperienceActionEvent.submitted(
+        report(NPSContentEvents.submitted(
             score: userAnswer - 1,
             npsKey: npsContent.content.survey.key ?? "",
             feedback: userFollowUp,
             feedbackKey: userFollowUpKey
-        )
-        experiencesPublisher.publishInternalSDKEvent(eventExperienceSubmitted, rendererID: rendererID)
+        ))
     }
 
     /// Opens the configured completion link; dismissal remains owned by the renderer.
@@ -111,31 +93,6 @@ final class NPSViewModel {
               button.buttonAction == .deepLink,
               let deepLink = button.iosDeepLink,
               let url = URL(string: deepLink) else { return }
-        experiencesPublisher.triggerDeepLink(url: url)
-    }
-
-    /// Notify the publisher after the NPS view has finished dismissing.
-    func onExperienceDismissalCompleted() {
-        experiencesPublisher.experienceDidFinishDismissing(rendererID: rendererID)
-    }
-
-    // MARK: - Reporting
-
-    /// Keep the delegate, log and subsequent event publication in their established order.
-    private func notifyExperienceState(_ state: UserpilotExperienceState) {
-        userpilot?.experienceDelegate?.onExperienceStateChanged(
-            experienceType: .nps,
-            experienceId: nil,
-            experienceState: state
-        )
-        logExperience(state: state.rawValueString)
-    }
-
-    private func logExperience(state: String) {
-        logger.info(
-            "🌠 Userpilot experience -> type: %{public}@, state: %{public}@",
-            UserpilotExperienceType.nps.rawValueString,
-            state
-        )
+        setCompletionDeepLink(url.absoluteString)
     }
 }

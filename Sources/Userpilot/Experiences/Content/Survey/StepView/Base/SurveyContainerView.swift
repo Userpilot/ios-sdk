@@ -12,7 +12,7 @@ import Foundation
 import UIKit
 
 // swiftlint:disable all
-internal class SurveyContainerView: UIView {
+internal final class SurveyContainerView: UIView {
 
     // MARK: - UI Components
 
@@ -252,7 +252,7 @@ internal class SurveyContainerView: UIView {
         self.currentStep = currentStep
         updateStepProgress()
         bindSurveyViews()
-        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent().isRequired == false)
+        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent()?.isRequired == false)
     }
 
     // MARK: - Component Setup
@@ -278,21 +278,21 @@ internal class SurveyContainerView: UIView {
 
     /** Configures the action button based on the step's data. */
     private func setupActionButton() {
-        guard surveyContent != nil, let theme else { return }
+        guard surveyContent != nil, let theme, let step = getCurrentStepSurveyContent() else { return }
 
         // Set up the action button with the step's button configuration and theme.
         actionButton.setupViews(
-            title: getCurrentStepSurveyContent().buttonLabel ?? "Next",
+            title: step.buttonLabel ?? "Next",
             theme: theme
         ) { [weak self] _ in
             self?.actionButton.isEnabled = false
-            if self?.getCurrentStepSurveyContent().type == SurveyViewType.completed {
+            if self?.getCurrentStepSurveyContent()?.type == SurveyViewType.completed {
                 self?.surveyContainerViewDelegate?.onAction(nil, nil)
             } else {
                 self?.getAnswerAndMoveToNextStep()
             }
         }
-        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent().isRequired == false)
+        actionButton.updateEnableState(isEnabled: step.isRequired == false)
     }
 
     private func setupStepsProgress() {
@@ -343,7 +343,7 @@ internal class SurveyContainerView: UIView {
     /** Binds the sections of the provided step to the stack view. */
     private func bindSurveyViews() {
         // stepSectionsStackView.clearViews()
-        let contentStep = getCurrentStepSurveyContent()
+        guard let contentStep = getCurrentStepSurveyContent() else { return }
         setupActionButton()
 
         var newView: UIView?
@@ -477,14 +477,15 @@ internal class SurveyContainerView: UIView {
 
 extension SurveyContainerView {
 
-    // Return current survey step content
-    private func getCurrentStepSurveyContent() -> SurveyStep {
-        return surveyContent.modules[currentStep]
+    /// The module at `currentStep`, or nil when the index is outside the survey.
+    private func getCurrentStepSurveyContent() -> SurveyStep? {
+        return surveyContent?.modules[safe: currentStep]
     }
     
     private func isPreviousViewSameToCurrentView() -> Bool {
-        if currentStep - 1 < 0 { return false }
-        return surveyContent.modules[currentStep].type == surveyContent.modules[currentStep - 1].type
+        guard let current = getCurrentStepSurveyContent(),
+              let previous = surveyContent?.modules[safe: currentStep - 1] else { return false }
+        return current.type == previous.type
     }
 
     private func getStepsCount() -> Int {

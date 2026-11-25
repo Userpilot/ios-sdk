@@ -50,7 +50,7 @@ extension SurveyListViewController {
 
     /// Process survey form answers.
     func processSurvey() {
-        guard actionButton.isEnabled else { return }
+        guard actionButton.isEnabled, claimCloseReport() else { return }
 
         let answersPayload = containerView.subviews
             .compactMap { ($0 as? UPExperienceViewDelegate)?.getAnswerPayload() }
@@ -68,9 +68,11 @@ extension SurveyListViewController {
         actionButton.updateEnableState(isEnabled: isValidForm)
     }
 
-    /// Closes the carousel experience view and triggers the onDismiss event.
+    /// Reports the dismissal unless the survey is already closing, then dismisses it.
     func closeExperience(completion: (() -> Void)? = nil) {
-        surveyViewModel.onSurveyDismissed()
+        if claimCloseReport() {
+            surveyViewModel.onSurveyDismissed()
+        }
         dismiss(animated: true) { [weak self] in
             if let completion {
                 completion()

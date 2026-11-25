@@ -10,7 +10,7 @@
 
 import UIKit
 
-internal class NPSBottomSheetViewController: BottomSheetViewController {
+internal final class NPSBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Elements
     /// Container view that holds the slide-out content
@@ -25,6 +25,10 @@ internal class NPSBottomSheetViewController: BottomSheetViewController {
 
     /// View model managing the carousel experience state and actions
     internal let npsViewModel: NPSViewModel
+
+    /// Set by the first close of any kind; only that close may report, and taps during the dismiss
+    /// animation do nothing.
+    private var isClosing = false
 
     // MARK: - Initializers
 
@@ -101,6 +105,7 @@ extension NPSBottomSheetViewController {
                 let npsContent = self.npsViewModel.npsContent,
                 let npsTheme = self.npsViewModel.npsTheme
             else {
+                self?.isClosing = true
                 self?.dismissBottomSheet {
                     self?.npsViewModel.onExperienceDismissalCompleted()
                 }
@@ -129,10 +134,12 @@ extension NPSBottomSheetViewController {
 // MARK: - UPExperienceDelegate
 
 extension NPSBottomSheetViewController: UPExperienceDelegate {
+    /// Dismisses without reporting; taps during the dismissal report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        isClosing = true
         dismissBottomSheet { [weak self] in
             if let completion {
                 completion()
@@ -148,6 +155,8 @@ extension NPSBottomSheetViewController: UPExperienceDelegate {
 extension NPSBottomSheetViewController: NPSContainerViewDelegate {
 
     func onNPSDismissed() {
+        guard !isClosing else { return }
+        isClosing = true
         npsViewModel.onNPSDismissed()
         dismissBottomSheet { [weak self] in
             self?.npsViewModel.onExperienceDismissalCompleted()
@@ -159,10 +168,13 @@ extension NPSBottomSheetViewController: NPSContainerViewDelegate {
         _ userFollowUpKey: String,
         _ userFollowUp: String
     ) {
+        guard !isClosing else { return }
         npsViewModel.onNPSSubmitted(userAnswer, userFollowUpKey, userFollowUp)
     }
 
     func onEndNPS(completedData: CompletedData?) {
+        guard !isClosing else { return }
+        isClosing = true
         npsViewModel.endNPS(completedData)
         dismissBottomSheet { [weak self] in
             self?.npsViewModel.onExperienceDismissalCompleted()

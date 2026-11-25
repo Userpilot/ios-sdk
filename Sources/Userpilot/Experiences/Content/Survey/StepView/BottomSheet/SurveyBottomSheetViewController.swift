@@ -14,7 +14,7 @@
 
 import UIKit
 
-internal class SurveyBottomSheetViewController: BottomSheetViewController {
+internal final class SurveyBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Elements
     /// Container view that holds the slide-out content
@@ -29,6 +29,10 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
 
     /// View model managing the carousel experience state and actions
     internal let surveyViewModel: SurveyViewModel
+
+    /// Set by the first close of any kind; only that close may report, and taps during the dismiss
+    /// animation do nothing.
+    private var isClosing = false
 
     // MARK: - Initializers
 
@@ -106,6 +110,7 @@ extension SurveyBottomSheetViewController {
                 let surveyContent = self.surveyViewModel.surveyContent,
                 let surveyTheme = self.surveyViewModel.surveyTheme
             else {
+                self?.isClosing = true
                 self?.dismissBottomSheet {
                     self?.surveyViewModel.onExperienceDismissalCompleted()
                 }
@@ -129,6 +134,7 @@ extension SurveyBottomSheetViewController {
 
         // triger close survey
         surveyViewModel.closeSurvey = { [weak self] in
+            self?.isClosing = true
             self?.dismissBottomSheet {
                 self?.surveyViewModel.onExperienceDismissalCompleted()
             }
@@ -148,10 +154,12 @@ extension SurveyBottomSheetViewController {
 // MARK: - UPExperienceDelegate
 
 extension SurveyBottomSheetViewController: UPExperienceDelegate {
+    /// Dismisses without reporting; taps during the dismissal report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        isClosing = true
         dismissBottomSheet { [weak self] in
             if let completion {
                 completion()
@@ -167,6 +175,8 @@ extension SurveyBottomSheetViewController: UPExperienceDelegate {
 extension SurveyBottomSheetViewController: SurveyContainerViewDelegate {
 
     func onClose() {
+        guard !isClosing else { return }
+        isClosing = true
         surveyViewModel.onSurveyDismissed()
         dismissBottomSheet { [weak self] in
             self?.surveyViewModel.onExperienceDismissalCompleted()
@@ -177,6 +187,7 @@ extension SurveyBottomSheetViewController: SurveyContainerViewDelegate {
         _ answer: Any?,
         _ answerPayload: Payload
     ) {
+        guard !isClosing else { return }
         surveyViewModel.moveToNextSurveyStep(answer, answerPayload)
     }
 

@@ -15,7 +15,7 @@
 import Foundation
 import UIKit
 
-internal class SlideOutBottomSheetViewController: BottomSheetViewController {
+internal final class SlideOutBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Components
 
@@ -33,6 +33,10 @@ internal class SlideOutBottomSheetViewController: BottomSheetViewController {
     /// It provides the data and behavior for the slide-out view, including user actions, theme data,
     /// and content to be displayed.
     internal let experienceViewModel: ExperienceViewModel
+
+    /// Set by the first close of any kind; only that close may report the step, and taps during the dismiss
+    /// animation do nothing.
+    private var isClosing = false
 
     // MARK: - Initializers
 
@@ -105,6 +109,14 @@ extension SlideOutBottomSheetViewController {
                 andImageLoader: self.experienceViewModel.imageLoader,
                 withLocal: self.experienceViewModel.isRTL
             )
+            if self.experienceViewModel.isFlowSegment {
+                self.slideOutContainerView.bindStepsProgress(
+                    stepsCount: self.experienceViewModel.progressStepsCount,
+                    stepIndex: self.experienceViewModel.progressStepIndex(self.experienceViewModel.currentStep),
+                    theme: self.experienceViewModel.slideOutTheme,
+                    isRTL: self.experienceViewModel.isRTL
+                )
+            }
         }
 
         // Start any initial view model actions.
@@ -122,25 +134,25 @@ extension SlideOutBottomSheetViewController {
 // MARK: - SlideOutContainerViewDelegate
 extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
 
-    /// Dismisses the bottom sheet when the close action is triggered.
+    /// Reports the dismissal at the tap, before the dismiss animation; later taps do nothing.
     func onClose() {
+        guard !isClosing else { return }
+        isClosing = true
+        experienceViewModel.onDismissStep()
         dismissBottomSheet { [weak self] in
-            self?.experienceViewModel.onDismissStep()
             self?.experienceViewModel.onExperienceDismissalCompleted()
         }
     }
 
-    /// Handles actions triggered from buttons within the slide-out experience.
+    /// Reports the button's outcome at the tap, before the dismiss animation; later taps do nothing.
     ///
     /// - Parameter action: A `ButtonAction` that defines the type of action triggered (e.g., deep-linking).
     func onAction(_ action: ButtonAction?) {
-        guard let action else { return }
+        guard let action, !isClosing else { return }
+        isClosing = true
+        experienceViewModel.onExperienceCompleted(action)
         dismissBottomSheet { [weak self] in
-            self?.experienceViewModel.onExperienceCompleted()
             self?.experienceViewModel.onExperienceDismissalCompleted()
-            if action.deepLink != nil {
-                self?.experienceViewModel.onDeepLinkTriggered()
-            }
         }
     }
 }
@@ -148,10 +160,17 @@ extension SlideOutBottomSheetViewController: SlideOutContainerViewDelegate {
 // MARK: - UPExperienceDelegate
 
 extension SlideOutBottomSheetViewController: UPExperienceDelegate {
+    /// The host app's close (`manualClose`) reports like the close button, or nothing when a tap already closed
+    /// the sheet. An SDK-driven close sends no event and fires no host callback, and taps during its dismissal
+    /// report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        if manualClose, !isClosing {
+            experienceViewModel.onDismissStep()
+        }
+        isClosing = true
         dismissBottomSheet { [weak self] in
             if let completion {
                 completion()

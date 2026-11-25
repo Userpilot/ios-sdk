@@ -8,9 +8,14 @@
 //  Builds flow step engagement without treating step completion as flow completion.
 //
 
+/// A step's `seen_mobile_content_step` or `completed_mobile_content_step`, carrying `mobile_content_id` and `step_id`.
 internal enum FlowExperienceStepActionEvent: ExperienceEvent {
-    case seen(flowId: Int, stepId: Int)
-    case completed(flowId: Int, stepId: Int)
+    /// `fromFlowRun` is set by `FlowStepEvents`: a Flow run's step, whose id joins `seen_contents`.
+    /// Standalone steps don't. It is never part of the payload.
+    case seen(flowId: Int, stepId: Int, fromFlowRun: Bool = false)
+    /// `endsRun` is set by `FlowStepEvents`: completing the Flow's last step ended the run, so its error steps
+    /// are dropped. It is never part of the payload.
+    case completed(flowId: Int, stepId: Int, endsRun: Bool = false)
 }
 
 extension FlowExperienceStepActionEvent {
@@ -23,7 +28,7 @@ extension FlowExperienceStepActionEvent {
 
     private var identity: (flowId: Int, stepId: Int) {
         switch self {
-        case let .seen(flowId, stepId), let .completed(flowId, stepId):
+        case let .seen(flowId, stepId, _), let .completed(flowId, stepId, _):
             return (flowId, stepId)
         }
     }

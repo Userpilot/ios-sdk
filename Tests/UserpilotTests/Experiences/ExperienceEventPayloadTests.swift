@@ -32,6 +32,52 @@ final class ExperienceEventPayloadTests: XCTestCase {
         )
     }
 
+    func testFlowDismissalCarriesTheDismissActionStateOnlyWhenItHasOne() throws {
+        let dismissals: [(action: FlowDismissAction?, payload: [String: Any])] = [
+            (nil, ["mobile_content_id": 10, "step_id": 3]),
+            (.endFlow, ["mobile_content_id": 10, "step_id": 3]),
+            (.dismissFlowShowNextSession, ["mobile_content_id": 10, "step_id": 3, "state": "session"]),
+            (.dismissFlowNeverShowAgain, ["mobile_content_id": 10, "step_id": 3, "state": "never_show_again"])
+        ]
+        for dismissal in dismissals {
+            let event = FlowExperienceActionEvent.dismissed(flowId: 10, stepId: 3, dismissAction: dismissal.action)
+            try assertEvent(event, "dismissed_mobile_content", dismissal.payload)
+            XCTAssertTrue(event.isEventForCloseExperience())
+        }
+    }
+
+    func testContractStepsDismissWithTheirAuthoredState() throws {
+        let flow = try XCTUnwrap(MockContentFactory.flowContractJSON.experienceCandidates().first?.asFlowContent())
+
+        XCTAssertEqual(
+            flow.steps.map { $0.settings?.dismissAction?.dismissState }, ["session", nil, "never_show_again"]
+        )
+        let first = flow.steps[0]
+        try assertEvent(
+            FlowExperienceActionEvent.dismissed(
+                flowId: flow.id, stepId: first.id, dismissAction: first.settings?.dismissAction
+            ),
+            "dismissed_mobile_content", ["mobile_content_id": 4242, "step_id": 9001, "state": "session"]
+        )
+    }
+
+    func testFlowContentErrorReportsTheStepIssueAndOmitsAnUnknownScreen() throws {
+        try assertEvent(
+            FlowContentErrorEvent(flowId: 10, stepId: 3, issue: "not_found", screen: "Checkout"),
+            "mobile_content_error",
+            ["mobile_content_id": 10, "step_id": 3, "issue": "not_found", "screen": "Checkout"]
+        )
+        let unknownScreen = FlowContentErrorEvent(flowId: 10, stepId: 3, issue: "ambiguous", screen: nil)
+        try assertEvent(
+            unknownScreen, "mobile_content_error", ["mobile_content_id": 10, "step_id": 3, "issue": "ambiguous"]
+        )
+        XCTAssertFalse(unknownScreen.isEventForCloseExperience())
+        XCTAssertFalse(unknownScreen.isSeenContentEvent())
+        XCTAssertFalse(unknownScreen.hasDeepLink)
+        XCTAssertEqual(unknownScreen.experience?.type, .flow)
+        XCTAssertEqual(unknownScreen.experience?.id, 10)
+    }
+
     func testSurveyPayloadsPreserveIdentityAndStructuredBatchFeedback() throws {
         let submissionId = Int64.max - 1
         let feedback: [[String: Any]] = [["module_id": 7, "value": ["first", "second"]]]

@@ -15,7 +15,7 @@
 import Foundation
 import UIKit
 
-internal class SurveyDialogViewController: DialogViewController {
+internal final class SurveyDialogViewController: DialogViewController {
 
     // MARK: - UI Elements
     /// Container view that holds the slide-out content
@@ -30,6 +30,10 @@ internal class SurveyDialogViewController: DialogViewController {
 
     /// View model managing the carousel experience state and actions
     internal let surveyViewModel: SurveyViewModel
+
+    /// Set by the first close of any kind; only that close may report, and taps during the dismiss
+    /// animation do nothing.
+    private var isClosing = false
 
     // MARK: - Initializers
 
@@ -100,6 +104,7 @@ extension SurveyDialogViewController {
                 let surveyContent = self.surveyViewModel.surveyContent,
                 let surveyTheme = self.surveyViewModel.surveyTheme
             else {
+                self?.isClosing = true
                 self?.dismissDialog {
                     self?.surveyViewModel.onExperienceDismissalCompleted()
                 }
@@ -124,6 +129,7 @@ extension SurveyDialogViewController {
 
         // triger close survey
         surveyViewModel.closeSurvey = { [weak self] in
+            self?.isClosing = true
             self?.dismissDialog {
                 self?.surveyViewModel.onExperienceDismissalCompleted()
             }
@@ -143,10 +149,12 @@ extension SurveyDialogViewController {
 // MARK: - UPExperienceDelegate
 
 extension SurveyDialogViewController: UPExperienceDelegate {
+    /// Dismisses without reporting; taps during the dismissal report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        isClosing = true
         dismissDialog { [weak self] in
             if let completion {
                 completion()
@@ -162,6 +170,8 @@ extension SurveyDialogViewController: UPExperienceDelegate {
 extension SurveyDialogViewController: SurveyContainerViewDelegate {
 
     func onClose() {
+        guard !isClosing else { return }
+        isClosing = true
         surveyViewModel.onSurveyDismissed()
         dismissDialog { [weak self] in
             self?.surveyViewModel.onExperienceDismissalCompleted()
@@ -172,6 +182,7 @@ extension SurveyDialogViewController: SurveyContainerViewDelegate {
         _ answer: Any?,
         _ answerPayload: Payload
     ) {
+        guard !isClosing else { return }
         surveyViewModel.moveToNextSurveyStep(answer, answerPayload)
     }
 

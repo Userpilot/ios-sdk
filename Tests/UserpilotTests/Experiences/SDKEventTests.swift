@@ -151,6 +151,7 @@ final class SDKEventTests: XCTestCase {
         "complete_mobile_content",
         "seen_mobile_content_step",
         "completed_mobile_content_step",
+        "mobile_content_error",
         "seen_survey",
         "dismissed_survey",
         "completed_survey",
@@ -175,7 +176,7 @@ final class SDKEventTests: XCTestCase {
         let eligible = Set(SDKEventsName.allCases.filter { $0.isOfflineEligible }.map { $0.rawValue })
 
         XCTAssertEqual(eligible, Self.offlineEligibleEventNames)
-        XCTAssertEqual(Self.offlineEligibleEventNames.count, 16)
+        XCTAssertEqual(Self.offlineEligibleEventNames.count, 17)
         XCTAssertEqual(
             Set(SDKEventsName.allCases.map { $0.rawValue }),
             Self.offlineEligibleEventNames.union(Self.offlineIneligibleEventNames)

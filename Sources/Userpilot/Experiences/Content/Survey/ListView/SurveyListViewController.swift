@@ -12,7 +12,7 @@
 
 import UIKit
 
-internal class SurveyListViewController: UIViewController {
+internal final class SurveyListViewController: UIViewController {
 
     // MARK: - IBOutlets
 
@@ -27,6 +27,10 @@ internal class SurveyListViewController: UIViewController {
     /// View model managing the carousel experience state and actions.
     internal let surveyViewModel: SurveyViewModel
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
+
+    /// Set by the first close of any kind; only that close may report, and taps during the dismiss
+    /// animation do nothing.
+    private(set) var isClosing = false
 
     // MARK: - Initializers
 
@@ -102,13 +106,23 @@ internal class SurveyListViewController: UIViewController {
     /// Action handler for the close button. Dismisses the experience view.
     /// - Parameter sender: The button triggering the close action.
     @IBAction func onCloseButtonClicked(_ sender: UIButton) {
+        guard !isClosing else { return }
         closeExperience()
+    }
+
+    /// True only for the first close of any kind; later closes and taps report nothing.
+    func claimCloseReport() -> Bool {
+        guard !isClosing else { return false }
+        isClosing = true
+        return true
     }
 }
 
 // MARK: - UPExperienceDelegate
 
 extension SurveyListViewController: UPExperienceDelegate {
+    /// The host app's close reports like the close button, or nothing when the survey is already closing.
+    /// An SDK-driven close reports nothing, and taps during its dismissal report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
@@ -116,6 +130,7 @@ extension SurveyListViewController: UPExperienceDelegate {
         if manualClose {
             closeExperience(completion: completion)
         } else {
+            isClosing = true
             dismiss(animated: true) { [weak self] in
                 if let completion {
                     completion()
