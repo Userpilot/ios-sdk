@@ -5,7 +5,8 @@
 //  Created by Userpilot on 17/09/2024.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  Fetches cached SDK settings and preview content with the existing URLSession transport.
+//  Fetches cached SDK settings and preview content, and uploads Builder captures,
+//  with the existing URLSession transport.
 //
 
 import Foundation
@@ -21,11 +22,28 @@ internal protocol UserpilotRemoteSourcing: AnyObject {
         params: PreviewExperienceQueryParams,
         completion: @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void
     )
+
+    /// Posts one prepared capture to the capture upload URL with its Bearer token. One attempt of at most
+    /// `requestTimeout` seconds in total; the caller owns retries. Completion runs once on URLSession's queue.
+    @discardableResult
+    func uploadCapture(
+        _ upload: CaptureUpload,
+        token: CaptureToken,
+        url: URL,
+        completion: @escaping (Result<Void, CaptureUploadError>) -> Void
+    ) -> CaptureUploadCancellable
 }
 
+/// An in-flight capture upload. Cancelling reports `.cancelled` once through the upload's completion.
+internal protocol CaptureUploadCancellable: AnyObject {
+    func cancel()
+}
+
+extension URLSessionTask: CaptureUploadCancellable {}
+
 /// `UserpilotRemoteSource` is a class that handles all remote API interactions.
-/// It fetches SDK settings and preview experiences from remote servers.
-internal class UserpilotRemoteSource {
+/// It fetches SDK settings and preview experiences, and uploads Builder captures.
+internal final class UserpilotRemoteSource {
 
     // MARK: - Dependencies
 
@@ -33,6 +51,9 @@ internal class UserpilotRemoteSource {
     private let logger: Logging
     private let storage: DataStoring
     private let session: URLSession
+    /// Capture uploads only: `timeoutIntervalForResource` bounds a whole attempt, body upload included,
+    /// which `URLRequest.timeoutInterval` (an idle timeout) cannot.
+    let uploadSession: URLSession
 
     // MARK: - Initialization
 
@@ -46,6 +67,7 @@ internal class UserpilotRemoteSource {
         self.storage = container.resolve(DataStoring.self)
         self.logger = config.logger
         self.session = URLSession.shared
+        self.uploadSession = Self.makeUploadSession(configuration: .ephemeral)
     }
 
     // Custom (test) initializer
@@ -55,8 +77,23 @@ internal class UserpilotRemoteSource {
             self.storage = container.resolve(DataStoring.self)
             self.logger = config.logger
             self.session = session
+            // Keeps the test session's protocol classes, so stubs see capture uploads too.
+            self.uploadSession = Self.makeUploadSession(configuration: session.configuration)
         }
     #endif
+
+    deinit {
+        uploadSession.finishTasksAndInvalidate()
+    }
+
+    /// Ephemeral and uncached: nothing about an upload outlives its request.
+    private static func makeUploadSession(configuration: URLSessionConfiguration) -> URLSession {
+        let configuration = configuration.copy() as? URLSessionConfiguration ?? .ephemeral
+        configuration.timeoutIntervalForResource = Constants.BuilderCapture.Upload.requestTimeout
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.urlCache = nil
+        return URLSession(configuration: configuration)
+    }
 
     // MARK: - Private Helper Methods
 
@@ -162,8 +199,7 @@ internal class UserpilotRemoteSource {
         logger.info("📱 Preview experience response received")
 
         do {
-            let decoder = JSONDecoder()
-            let previewExperience = try decoder.decode(PreviewExperience.self, from: data)
+            let previewExperience = try PreviewExperience.decode(from: data)
             logger.info("✅ Successfully parsed Preview experience")
             return .success(previewExperience)
         } catch {
@@ -234,5 +270,65 @@ extension UserpilotRemoteSource: UserpilotRemoteSourcing {
             }
             completion(result.flatMap(self.handlePreviewExperienceResponse))
         }
+    }
+
+    /**
+     * Uploads one Builder capture to `url`, exactly as given.
+     *
+     * The body has three parts: the `capture_id` text, the `screenshot` PNG and the `capture.json` `document`.
+     * The token travels only in the `Authorization` header. Logs carry the outcome category, HTTP status and
+     * the backend's `details` code, never the token, URL, headers, body or raw transport error.
+     *
+     * - Parameters:
+     *   - upload: The prepared capture id, PNG and document bytes
+     *   - token: The Builder session credential
+     *   - url: The environment's capture upload URL
+     *   - completion: Closure invoked once with success for any 2xx, or a safe `CaptureUploadError`
+     * - Returns: The running request
+     */
+    @discardableResult
+    func uploadCapture(
+        _ upload: CaptureUpload,
+        token: CaptureToken,
+        url: URL,
+        completion: @escaping (Result<Void, CaptureUploadError>) -> Void
+    ) -> CaptureUploadCancellable {
+        typealias Upload = Constants.BuilderCapture.Upload
+        var body = MultipartFormBody()
+        body.append(field: Upload.captureIDPart, value: upload.captureID)
+        body.append(file: Upload.screenshotPart, fileName: Upload.screenshotFileName,
+                    contentType: Upload.screenshotContentType, data: upload.screenshot)
+        body.append(file: Upload.documentPart, fileName: Upload.documentFileName,
+                    contentType: Upload.documentContentType, data: upload.document)
+
+        var request = URLRequest(
+            url: url,
+            cachePolicy: .reloadIgnoringLocalCacheData,
+            timeoutInterval: Upload.requestTimeout
+        )
+        request.httpMethod = "POST"
+        request.setValue(token.bearerHeader(), forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+        request.httpBody = body.encoded()
+
+        let task = uploadSession.dataTask(with: request) { [weak self] data, response, error in
+            let result = CaptureUploadError.result(data: data, response: response, error: error)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode
+            switch result {
+            case .success:
+                self?.logger.info("📸 Capture uploaded: saved (status %{public}@)", String(statusCode ?? 0))
+            case .failure(.cancelled):
+                // The SDK cancelled the request itself (stop, replacement or background expiry); nothing to log.
+                break
+            case let .failure(failure):
+                let details = CaptureUploadError.details(in: data)
+                self?.logger.error("📸 Capture upload failed: %{public}@",
+                                   failure.logDescription(statusCode: statusCode, details: details))
+            }
+            completion(result)
+        }
+        task.resume()
+        return task
     }
 }

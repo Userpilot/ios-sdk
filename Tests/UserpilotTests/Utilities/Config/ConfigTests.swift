@@ -49,4 +49,12 @@ final class EnvironmentTests: XCTestCase {
         // Assert
         XCTAssertEqual(result, "https://appex.userpilot.io/api/v1/public/content")
     }
+
+    func test_getCaptureUploadUrl_returnsProductionHostInProduction() {
+        // Act
+        let result = Environment.getCaptureUploadUrl()
+
+        // Assert
+        XCTAssertEqual(result, "https://appex.userpilot.io/api/v1/public/mobile_screen_captures")
+    }
 }

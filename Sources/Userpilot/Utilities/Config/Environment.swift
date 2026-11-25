@@ -6,9 +6,9 @@
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  A utility struct that handles environment-specific configuration settings for the Userpilot SDK.
-//  Determines the appropriate socket URL, client token, and public content API host based on the
-//  environment (development, staging, production). Automatically adjusts configuration depending on
-//  build environment to ensure correct SDK behavior.
+//  Determines the appropriate socket URL, client token, public content API host and Builder capture
+//  upload URL based on the environment (development, staging, production). Automatically adjusts
+//  configuration depending on build environment to ensure correct SDK behavior.
 //
 
 import Foundation
@@ -19,10 +19,10 @@ internal struct Environment {
     internal static let environmentType: EnvironmentType = .PRODUCTION
     private static let socketUrl = "<#SOCKET_URL#>"
     private static let clientToken = "<#TOKEN#>"
-    private static let experienceContentUrlProduction =
-        "https://appex.userpilot.io/api/v1/public/content"
-    private static let experienceContentUrlDevelopment =
-        "https://appex-dev.userpilot.io/api/v1/public/content"
+    private static let appexBaseUrlProduction = "https://appex.userpilot.io"
+    private static let appexBaseUrlDevelopment = "https://appex-dev.userpilot.io"
+    private static let experienceContentPath = "/api/v1/public/content"
+    private static let captureUploadPath = "/api/v1/public/mobile_screen_captures"
 
     /**
      Enum representing the possible environment types.
@@ -77,11 +77,33 @@ internal struct Environment {
      - Returns: The experience content base URL as a `String`.
      */
     static func getExperienceContentUrl() -> String {
+        appexBaseUrl() + experienceContentPath
+    }
+
+    /**
+     Returns the Builder capture upload URL.
+
+     - DEVELOPMENT uses the QA host.
+     - STAGING and PRODUCTION use the live host.
+
+     - Returns: The capture upload URL as a `String`.
+     */
+    static func getCaptureUploadUrl() -> String {
+        appexBaseUrl() + captureUploadPath
+    }
+
+    /**
+     Returns the Appex base URL (no trailing slash) for the current environment type.
+
+     - DEVELOPMENT uses the QA host.
+     - STAGING and PRODUCTION use the live host.
+     */
+    private static func appexBaseUrl() -> String {
         switch environmentType {
         case .DEVELOPMENT:
-            return experienceContentUrlDevelopment
+            return appexBaseUrlDevelopment
         case .STAGING, .PRODUCTION:
-            return experienceContentUrlProduction
+            return appexBaseUrlProduction
         }
     }
 }
