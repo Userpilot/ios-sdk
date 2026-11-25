@@ -14,10 +14,20 @@ import Foundation
 private let swiftUICaptureLogStart = CFAbsoluteTimeGetCurrent()
 #endif
 
+/// How captured screen text appears in SwiftUI capture diagnostics. Host apps build the SDK in Debug
+/// under SPM, so text they redacted shows only as a length unless launched with `UP_SUI_TEXT=1`.
+internal enum SwiftUICaptureLogText {
+    static let revealsText = ProcessInfo.processInfo.environment["UP_SUI_TEXT"] == "1"
+
+    static func describe(_ text: String, revealsText: Bool = revealsText) -> String {
+        revealsText ? "\"\(text)\"" : "<\(text.count) chars>"
+    }
+}
+
 internal extension Logging {
     /// Keeps the scan prefix/timing while respecting Config.logging and SDK instance attribution.
     /// The message is an argument, so percent signs are never format directives.
-    /// DEBUG diagnostics include full captured text; analytics payloads retain their privacy rules.
+    /// Captured text goes through `SwiftUICaptureLogText`; analytics payloads retain their privacy rules.
     /// Release builds do not evaluate the message. A nil message skips a conditional diagnostic.
     func debugSwiftUICapture(_ message: @autoclosure () -> String?) {
         #if DEBUG
@@ -27,7 +37,7 @@ internal extension Logging {
         #endif
     }
 
-    /// Log complete titles with the existing labels, counts and chunk boundaries in DEBUG builds only.
+    /// Log titles with the existing labels, counts and chunk boundaries in DEBUG builds only.
     func debugSwiftUITitles(_ label: String, _ titles: @autoclosure () -> [String], chunkSize: Int = 8) {
         #if DEBUG
         let titles = titles()
@@ -37,8 +47,8 @@ internal extension Logging {
         }
         for start in stride(from: 0, to: titles.count, by: chunkSize) {
             let end = min(start + chunkSize, titles.count)
-            let chunk = Array(titles[start..<end])
-            debugSwiftUICapture("  → \(label)(\(titles.count))[\(start)..<\(end)]: \(chunk)")
+            let chunk = titles[start..<end].map { SwiftUICaptureLogText.describe($0) }
+            debugSwiftUICapture("  → \(label)(\(titles.count))[\(start)..<\(end)]: \(chunk.joined(separator: ", "))")
         }
         #endif
     }

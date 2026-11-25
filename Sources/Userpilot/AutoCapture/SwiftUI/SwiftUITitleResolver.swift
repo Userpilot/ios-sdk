@@ -67,7 +67,7 @@ internal final class SwiftUITitleResolver {
         if captureAccessibility, accessibilityReadEnabled, let hit, !skipsAccessibility(hit: hit, logger: logger),
             let title = accessibilityTreeTitle(at: pointInWindow, hit: hit, in: window)
         {
-            logger?.debugSwiftUICapture("  ✓ STAGE A (accessibility): \"\(title)\"")
+            logger?.debugSwiftUICapture("  ✓ STAGE A (accessibility): \(SwiftUICaptureLogText.describe(title))")
             return title
         }
 
@@ -78,7 +78,7 @@ internal final class SwiftUITitleResolver {
                 at: pointInWindow, in: window,
                 textMap: textMap, interactive: interactive, logger: logger)
         {
-            logger?.debugSwiftUICapture("  ✓ STAGE B (display-list): \"\(title)\"")
+            logger?.debugSwiftUICapture("  ✓ STAGE B (display-list): \(SwiftUICaptureLogText.describe(title))")
             return title
         }
 
@@ -102,7 +102,7 @@ internal final class SwiftUITitleResolver {
 
     private func skipsAccessibility(hit: UIView, logger: Logging?) -> Bool {
         let (_, inventoryHost) = UserpilotRuntime.shared.scanCache.inventory(logger: logger)
-        let resolvedHost = inventoryHost ?? hit.up_nearestViewController
+        let resolvedHost = inventoryHost ?? hit.userpilotNearestViewController
         return resolvedHost.map { SwiftUIScanPolicy.shouldSkipAccessibility($0) } ?? false
     }
 
@@ -196,7 +196,7 @@ internal final class SwiftUITitleResolver {
     /// Button-likeness for accessibility hit objects: trait-based, plus the
     /// `.userpilotLabel` carrier view (which marks a custom tappable component).
     private static func isButtonLike(_ obj: NSObject) -> Bool {
-        if UserpilotSafeAccessibility.accessibilityTraits(of: obj).up_containsButtonLike {
+        if UserpilotSafeAccessibility.accessibilityTraits(of: obj).userpilotContainsButtonLike {
             return true
         }
         return String(describing: type(of: obj)).contains("LabelCarrierView")
@@ -212,7 +212,7 @@ internal final class SwiftUITitleResolver {
     private func textMapTitle(
         at pointInWindow: CGPoint,
         in window: UIWindow,
-        textMap: [DisplayListTextMap.Entry],
+        textMap: [DisplayListTextEntry],
         interactive: [(title: String, viewType: String)],
         logger: Logging?
     ) -> String? {
@@ -263,11 +263,11 @@ internal final class SwiftUITitleResolver {
 
     /// Called lazily by the shared logger, so Release never builds diagnostic candidate strings.
     private func unresolvedCandidatesMessage(
-        at point: CGPoint, in window: UIWindow, textMap: [DisplayListTextMap.Entry]
+        at point: CGPoint, in window: UIWindow, textMap: [DisplayListTextEntry]
     ) -> String? {
         let candidates = textMap.compactMap { entry -> String? in
             guard let title = entry.title, entry.containsWindowPoint(point, in: window) else { return nil }
-            return "\(title) styled=\(entry.isStyledControlTitleCandidate)"
+            return "\(SwiftUICaptureLogText.describe(title)) styled=\(entry.isStyledControlTitleCandidate)"
         }
         guard !candidates.isEmpty else { return nil }
         return "    STAGE B candidates under tap but not resolvable: \(candidates)"
@@ -431,32 +431,5 @@ internal final class SwiftUITitleResolver {
             inner.append(outer)
         }
         return inner
-    }
-}
-
-// MARK: - Responder helper
-
-extension UIResponder {
-    /// Nearest enclosing `UIViewController` in the responder chain.
-    var up_nearestViewController: UIViewController? {
-        var responder: UIResponder? = self
-        while let current = responder {
-            if let vc = current as? UIViewController { return vc }
-            responder = current.next
-        }
-        return nil
-    }
-}
-
-// MARK: - Trait helper
-
-extension UIAccessibilityTraits {
-    /// Traits that mark an element as a clickable "button" for autocapture
-    /// purposes. Capture is button-first: static text, headers, fields and
-    /// containers never produce a resolver-supplied title.
-    fileprivate var up_containsButtonLike: Bool {
-        if contains(.button) || contains(.link) { return true }
-        if #available(iOS 17.0, *), contains(.toggleButton) { return true }
-        return false
     }
 }

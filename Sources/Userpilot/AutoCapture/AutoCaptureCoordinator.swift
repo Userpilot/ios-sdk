@@ -55,7 +55,7 @@ internal protocol AutoCaptureCoordinating: AnyObject {
 /// Coordinates capture gates, screen context, and delivery for one SDK instance.
 /// Payload models own field conversion; native hooks retain responsibility for redaction.
 /// Screen coalescing and suppression share a lock; publishing occurs after releasing it.
-internal class AutoCaptureCoordinator {
+internal final class AutoCaptureCoordinator {
     private let analyticsPublisher: AnalyticsPublishing
     private let config: Userpilot.Config
     private let screenNameTracker: ScreenNameTracking

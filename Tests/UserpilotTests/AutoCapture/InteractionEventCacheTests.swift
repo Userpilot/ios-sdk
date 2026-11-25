@@ -261,13 +261,14 @@ final class InteractionEventCacheTests: XCTestCase {
     func testPendingInteraction_doesNotRetainItsOwnerOrField() {
         weak var releasedOwner: MockUserpilot?
         weak var releasedField: UITextField?
-        let pending: PendingInteraction = autoreleasepool {
+        let pending: InteractionEventCache.PendingInteraction = autoreleasepool {
             let owner = makeOwner()
             let field = UITextField()
             releasedOwner = owner
             releasedField = field
-            return PendingInteraction(
-                payload: textPayload(length: length), textLengthForDedupe: length, owner: owner, view: field
+            let payload = textPayload(length: length)
+            return InteractionEventCache.PendingInteraction(
+                textLengthForDedupe: length, owner: owner, view: field, buildPayload: { payload }
             )
         }
 
@@ -289,12 +290,10 @@ final class InteractionEventCacheTests: XCTestCase {
     }
 
     private func send(_ length: Int, targetClass: String = "UITextField", for view: UIView, owner: Userpilot) {
-        InteractionEventCache.sendDebouncedInteraction(
-            textPayload(length: length, targetClass: targetClass),
-            for: view,
-            owner: owner,
-            textLengthForDedupe: length
-        )
+        let payload = textPayload(length: length, targetClass: targetClass)
+        InteractionEventCache.sendDebouncedInteraction(for: view, owner: owner, textLengthForDedupe: length) { _ in
+            payload
+        }
     }
 
     private func textPayload(length: Int, targetClass: String = "UITextField") -> InteractionPayload {

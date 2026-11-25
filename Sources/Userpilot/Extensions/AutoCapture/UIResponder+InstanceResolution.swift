@@ -74,3 +74,17 @@ internal extension UIResponder {
         userpilotOwnerBinding = nil
     }
 }
+
+// MARK: - Responder helper
+
+internal extension UIResponder {
+    /// Nearest enclosing `UIViewController` in the responder chain.
+    var userpilotNearestViewController: UIViewController? {
+        var responder: UIResponder? = self
+        while let current = responder {
+            if let controller = current as? UIViewController { return controller }
+            responder = current.next
+        }
+        return nil
+    }
+}

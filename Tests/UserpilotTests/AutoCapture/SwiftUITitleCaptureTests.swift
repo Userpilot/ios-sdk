@@ -92,14 +92,14 @@ final class ScanDebouncerTests: XCTestCase {
     }
 }
 
-// MARK: - SwiftUIReflection.ViewRecord
+// MARK: - SwiftUIViewRecord
 
 final class SwiftUIViewRecordTests: XCTestCase {
 
     func testInteractiveClassification() {
-        let button = SwiftUIReflection.ViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)
-        let text = SwiftUIReflection.ViewRecord(title: "Hello", viewType: "Text", depth: 0, order: 1)
-        let link = SwiftUIReflection.ViewRecord(title: "Go", viewType: "NavigationLink", depth: 0, order: 2)
+        let button = SwiftUIViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)
+        let text = SwiftUIViewRecord(title: "Hello", viewType: "Text", depth: 0, order: 1)
+        let link = SwiftUIViewRecord(title: "Go", viewType: "NavigationLink", depth: 0, order: 2)
         XCTAssertTrue(button.isInteractive)
         XCTAssertTrue(link.isInteractive)
         XCTAssertFalse(text.isInteractive)
@@ -170,7 +170,7 @@ final class DisplayListTextMapHitFrameTests: XCTestCase {
         textLayer.frame = CGRect(x: 74, y: 120, width: 140, height: 22)
         host.layer.addSublayer(textLayer)
 
-        let entry = DisplayListTextMap.Entry(
+        let entry = DisplayListTextEntry(
             title: "UI Components",
             textFrame: CGRect(x: 74, y: 120, width: 140, height: 22),
             hitFrame: CGRect(x: 20, y: 100, width: 200, height: 64),
@@ -189,7 +189,7 @@ final class DisplayListTextMapHitFrameTests: XCTestCase {
         let textLayer = CALayer()
         textLayer.frame = CGRect(x: 74, y: 120, width: 140, height: 22)
         swappedOutContent.layer.addSublayer(textLayer)
-        let entry = DisplayListTextMap.Entry(
+        let entry = DisplayListTextEntry(
             title: "Previous Screen Button",
             textFrame: textLayer.frame,
             hitFrame: CGRect(x: 20, y: 100, width: 200, height: 64),
@@ -325,13 +325,13 @@ final class SwiftUIReflectionTests: XCTestCase {
     func testScanCacheMergesInventoriesFromMultipleHosts() {
         let parent = UIViewController()
         let child = UIViewController()
-        let parentRecord = SwiftUIReflection.ViewRecord(
+        let parentRecord = SwiftUIViewRecord(
             title: "Confirm Order",
             viewType: "Button",
             depth: 1,
             order: 1
         )
-        let childRecord = SwiftUIReflection.ViewRecord(
+        let childRecord = SwiftUIViewRecord(
             title: "Open Detail Screen",
             viewType: "NavigationLink",
             depth: 1,
@@ -384,15 +384,15 @@ final class SwiftUITitleResolverStageTests: XCTestCase {
         // Non-empty text map whose entries can NEVER match: nil layer means
         // `textMapTitle` skips every entry (the desync condition).
         let unmatchable = [
-            DisplayListTextMap.Entry(title: "Confirm Order", textFrame: .zero,
+            DisplayListTextEntry(title: "Confirm Order", textFrame: .zero,
                                      hitFrame: .zero, layer: nil),
-            DisplayListTextMap.Entry(title: "Add to Cart", textFrame: .zero,
+            DisplayListTextEntry(title: "Add to Cart", textFrame: .zero,
                                      hitFrame: .zero, layer: nil)
         ]
         let inventory = [
-            SwiftUIReflection.ViewRecord(title: "Confirm Order", viewType: "Button", depth: 0, order: 0),
-            SwiftUIReflection.ViewRecord(title: "Add to Cart", viewType: "Button", depth: 0, order: 1),
-            SwiftUIReflection.ViewRecord(title: "Custom Styled Button", viewType: "Button", depth: 0, order: 2)
+            SwiftUIViewRecord(title: "Confirm Order", viewType: "Button", depth: 0, order: 0),
+            SwiftUIViewRecord(title: "Add to Cart", viewType: "Button", depth: 0, order: 1),
+            SwiftUIViewRecord(title: "Custom Styled Button", viewType: "Button", depth: 0, order: 2)
         ]
         UserpilotRuntime.shared.scanCache._testSeedSnapshot(textMap: unmatchable, inventory: inventory)
 

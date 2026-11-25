@@ -97,23 +97,3 @@ extension UIView {
         // The SDK's automatic tracking will capture the event
     }
 }
-
-// MARK: - Private
-
-private var explicitlyRecognizedKey: UInt8 = 0
-
-// MARK: - Internal
-
-/// Extension providing explicit recognition flag for UIView
-internal extension UIView {
-    // Internal flag to mark views that were explicitly recognized via the API
-    // swiftlint:disable:next identifier_name
-    var userpilot_isExplicitlyRecognized: Bool {
-        get {
-            return objc_getAssociatedObject(self, &explicitlyRecognizedKey) as? Bool ?? false
-        }
-        set {
-            objc_setAssociatedObject(self, &explicitlyRecognizedKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
-}

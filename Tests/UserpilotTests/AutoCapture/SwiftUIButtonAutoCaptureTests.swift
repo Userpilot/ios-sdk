@@ -247,7 +247,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
         let textLayer = CALayer()
         textLayer.frame = CGRect(x: 20, y: 50, width: 100, height: 30)
         tapped.layer.addSublayer(textLayer)
-        let entry = DisplayListTextMap.Entry(
+        let entry = DisplayListTextEntry(
             title: "Save",
             textFrame: textLayer.frame,
             hitFrame: textLayer.frame,
@@ -255,7 +255,7 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
         )
         UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: [entry],
-            inventory: [SwiftUIReflection.ViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)]
+            inventory: [SwiftUIViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)]
         )
         return (window, tapped)
     }
@@ -349,8 +349,8 @@ final class SwiftUIButtonTitleEnrichmentTests: XCTestCase {
 
         XCTAssertEqual(properties[Constants.AutoCapture.targetText] as? String, Constants.AutoCapture.reductText,
                        "a redacted SwiftUI subtree under the tap must never publish its rendered title")
-        XCTAssertTrue(logger.messages.contains { $0.contains("STAGE B (display-list): \"Save\"") },
-                      "DEBUG diagnostics retain full text while the analytics payload stays redacted")
+        XCTAssertTrue(logger.messages.contains { $0.contains("STAGE B (display-list): <4 chars>") },
+                      "DEBUG diagnostics log a length, never the redacted text")
     }
 
     func testDisabledFeatureLeavesTargetTextUnset() {

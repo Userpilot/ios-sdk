@@ -32,7 +32,7 @@
 
 import UIKit
 
-internal final class SwiftUIScanCache {
+internal final class SwiftUIScanCache: LifecycleDelegate {
 
     // Native hooks share one process-wide view snapshot. It contains no tenant settings:
     // admission and publishing stay with the owning instance, while the health breaker is
@@ -49,8 +49,8 @@ internal final class SwiftUIScanCache {
     private lazy var debouncer = ScanDebouncer(delay: Self.backgroundScanDebounceDelay) { [weak self] in
         self?.performPendingBackgroundScan()
     }
-    private var latestInventory: [SwiftUIReflection.ViewRecord] = []
-    private var latestTextMap: [DisplayListTextMap.Entry] = []
+    private var latestInventory: [SwiftUIViewRecord] = []
+    private var latestTextMap: [DisplayListTextEntry] = []
     private var latestInteractiveRecords: [(title: String, viewType: String)] = []
     private weak var inventoryHost: UIViewController?
     private let snapshotLock = NSLock()
@@ -73,8 +73,9 @@ internal final class SwiftUIScanCache {
     // window or keep a disappeared window/SDK instance alive.
     private weak var pendingWindow: UIWindow?
     private weak var pendingOwner: Userpilot?
-    private var becomeActiveObserver: NSObjectProtocol?
-    private var memoryWarningObserver: NSObjectProtocol?
+    private let lifecycleMonitor: LifecycleMonitoring
+    private var isWaitingForActive = false
+    private var isStarted = false
     private static let backgroundScanDebounceDelay: TimeInterval = 0.5
 
     // A background scan cut short by its budget re-arms itself so a cold first
@@ -84,7 +85,10 @@ internal final class SwiftUIScanCache {
     private var truncatedFollowUps = 0
     private static let maxTruncatedFollowUps = 3
 
-    init(registry: InstanceRegistering, instanceResolver: InstanceResolving) {
+    init(
+        registry: InstanceRegistering, instanceResolver: InstanceResolving, lifecycleMonitor: LifecycleMonitoring
+    ) {
+        self.lifecycleMonitor = lifecycleMonitor
         self.registry = registry
         self.instanceResolver = instanceResolver
     }
@@ -92,7 +96,7 @@ internal final class SwiftUIScanCache {
     // MARK: - Lifecycle
 
     func start() {
-        performOnMain { [weak self] in self?.registerMemoryWarningEviction() }
+        performOnMain { [weak self] in self?.startOnMain() }
     }
 
     func stop() {
@@ -102,10 +106,8 @@ internal final class SwiftUIScanCache {
     private func stopOnMain() {
         clearPendingScan()
         clearCaches()
-        if let token = memoryWarningObserver {
-            NotificationCenter.default.removeObserver(token)
-            memoryWarningObserver = nil
-        }
+        isStarted = false
+        lifecycleMonitor.removeDelegate(self)
     }
 
     /// Requests a debounced, idle-gated background re-scan. Called on screen
@@ -148,10 +150,8 @@ internal final class SwiftUIScanCache {
         pendingWindow = nil
         pendingOwner = nil
         pendingBackgroundReason = .debounced
-        if let token = becomeActiveObserver {
-            NotificationCenter.default.removeObserver(token)
-            becomeActiveObserver = nil
-        }
+        isWaitingForActive = false
+        if !isStarted { lifecycleMonitor.removeDelegate(self) }
     }
 
     /// Marks that the visible screen changed (called from the `viewDidAppear`
@@ -213,7 +213,7 @@ internal final class SwiftUIScanCache {
         refreshHost(containing: tappedView, logger: logger)
     }
 
-    private static func canResolveTitle(from entry: DisplayListTextMap.Entry,
+    private static func canResolveTitle(from entry: DisplayListTextEntry,
                                         interactive: [(title: String, viewType: String)],
                                         at pointInWindow: CGPoint,
                                         in window: UIWindow) -> Bool {
@@ -237,7 +237,7 @@ internal final class SwiftUIScanCache {
             deadline: Date().addingTimeInterval(budget.displayListHostSeconds),
             maxVisited: budget.displayListMaxVisited, logger: logger
         )
-        let controller = host.up_nearestViewController
+        let controller = host.userpilotNearestViewController
         let inventory = controller.map {
             SwiftUIReflection.extractInventory(
                 from: $0, deadline: Date().addingTimeInterval(budget.reflectionHostSeconds), logger: logger
@@ -354,7 +354,7 @@ internal final class SwiftUIScanCache {
     }
 
     private struct ScanInventory {
-        var records: [SwiftUIReflection.ViewRecord] = []
+        var records: [SwiftUIViewRecord] = []
         var interactive: [(title: String, viewType: String)] = []
         weak var host: UIViewController?
     }
@@ -386,19 +386,9 @@ internal final class SwiftUIScanCache {
     /// One-shot deferral of a scan request that arrived before the app finished
     /// launching (or while backgrounded).
     private func scheduleScanWhenActive() {
-        guard becomeActiveObserver == nil else { return }
-        becomeActiveObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didBecomeActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            if let token = self.becomeActiveObserver {
-                NotificationCenter.default.removeObserver(token)
-                self.becomeActiveObserver = nil
-            }
-            self.debouncer.schedule()
-        }
+        guard !isWaitingForActive else { return }
+        isWaitingForActive = true
+        lifecycleMonitor.addDelegate(self, replayCurrentState: false)
     }
 
     /// One-shot title scan for a specific host. Used by `userpilotScanOnce()`
@@ -445,7 +435,7 @@ internal final class SwiftUIScanCache {
 
     /// The cached SwiftUI reflection inventory + the host it came from. Read by
     /// the touch path; never triggers a fresh `body` evaluation.
-    func inventory(logger: Logging? = nil) -> ([SwiftUIReflection.ViewRecord], UIViewController?) {
+    func inventory(logger: Logging? = nil) -> ([SwiftUIViewRecord], UIViewController?) {
         let (stale, records, host, cg, cur) = snapshotLock.withLock {
             let stale = cacheGen != currentScreenGen
             return (stale, stale ? [] : latestInventory, stale ? nil : inventoryHost, cacheGen, currentScreenGen)
@@ -456,7 +446,7 @@ internal final class SwiftUIScanCache {
 
     /// The cached display-list text map plus the interactive titles derived
     /// from the reflection inventory. Read by the touch path.
-    func textResolution(logger: Logging? = nil) -> (textMap: [DisplayListTextMap.Entry],
+    func textResolution(logger: Logging? = nil) -> (textMap: [DisplayListTextEntry],
                               interactive: [(title: String, viewType: String)]) {
         let (stale, map, interactive, cg, cur) = snapshotLock.withLock {
             let stale = cacheGen != currentScreenGen
@@ -468,15 +458,22 @@ internal final class SwiftUIScanCache {
 
     // MARK: - Cache hygiene
 
-    private func registerMemoryWarningEviction() {
-        guard memoryWarningObserver == nil else { return }
-        memoryWarningObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didReceiveMemoryWarningNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.clearCaches()
-        }
+    private func startOnMain() {
+        guard !isStarted else { return }
+        isStarted = true
+        lifecycleMonitor.addDelegate(self, replayCurrentState: false)
+    }
+
+    /// Wake only a pending inactive-app scan; activation alone never starts a new capture.
+    func onAppActive() {
+        guard isWaitingForActive else { return }
+        isWaitingForActive = false
+        if !isStarted { lifecycleMonitor.removeDelegate(self) }
+        debouncer.schedule()
+    }
+
+    func onMemoryWarning() {
+        if isStarted { clearCaches() }
     }
 
     func clearCaches() {
@@ -500,8 +497,8 @@ internal final class SwiftUIScanCache {
     /// Test seam — seeds the click-time snapshot directly so the resolver's
     /// stage-selection can be exercised without a live SwiftUI render. NOT used
     /// in production (release builds exclude it).
-    func _testSeedSnapshot(textMap: [DisplayListTextMap.Entry],
-                           inventory: [SwiftUIReflection.ViewRecord],
+    func _testSeedSnapshot(textMap: [DisplayListTextEntry],
+                           inventory: [SwiftUIViewRecord],
                            inventoryHost host: UIViewController? = nil,
                            fresh: Bool = true) {
         let interactive = SwiftUIScanner.interactiveRecords(in: inventory)

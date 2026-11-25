@@ -34,12 +34,12 @@ final class SwiftUIScanCacheGenerationTests: XCTestCase {
         super.tearDown()
     }
 
-    private func sampleInventory() -> [SwiftUIReflection.ViewRecord] {
-        [SwiftUIReflection.ViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)]
+    private func sampleInventory() -> [SwiftUIViewRecord] {
+        [SwiftUIViewRecord(title: "Save", viewType: "Button", depth: 0, order: 0)]
     }
 
-    private func sampleTextMap() -> [DisplayListTextMap.Entry] {
-        [DisplayListTextMap.Entry(title: "Save", textFrame: .zero, hitFrame: .zero, layer: nil)]
+    private func sampleTextMap() -> [DisplayListTextEntry] {
+        [DisplayListTextEntry(title: "Save", textFrame: .zero, hitFrame: .zero, layer: nil)]
     }
 
     func testFreshSeededSnapshotReturnsThroughAccessors() {
@@ -164,7 +164,7 @@ final class SwiftUIReflectionDeadlineTests: XCTestCase {
 
             // Text at content origin; the hit frame is a 44pt-tall button background
             // enclosing it → `isStyledControl` is true.
-            let entry = DisplayListTextMap.Entry(
+            let entry = DisplayListTextEntry(
                 title: "Confirm Order",
                 textFrame: CGRect(x: 0, y: 0, width: 80, height: 20),
                 hitFrame: CGRect(x: 100, y: 10, width: 160, height: 44),

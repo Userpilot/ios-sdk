@@ -66,7 +66,8 @@ internal final class WindowTapTracker {
             )
             return tap != nil && touchCount == 1
 
-        case .cancelled:
+        case .ended, .cancelled:
+            // A touch that began in tap-end mode can end in the other mode; its start must not linger.
             forget(touch)
             return false
 

@@ -14,7 +14,7 @@ import UIKit
 internal enum SwiftUIScanner {
     /// Phase B result across every hosting view below the supplied root.
     struct TextMapScan {
-        var entries: [DisplayListTextMap.Entry] = []
+        var entries: [DisplayListTextEntry] = []
         var hostCount = 0
         var locatedLists = 0
         var textItems = 0
@@ -65,9 +65,9 @@ internal enum SwiftUIScanner {
         budget: SwiftUIScanBudget.Budget,
         scanDeadline: Date,
         logger: Logging?
-    ) -> ([SwiftUIReflection.ViewRecord], UIViewController?) {
+    ) -> ([SwiftUIViewRecord], UIViewController?) {
         let controllers = SwiftUIReflection.allHostingControllers(in: window)
-        let snapshots = controllers.map { host -> (records: [SwiftUIReflection.ViewRecord], host: UIViewController) in
+        let snapshots = controllers.map { host -> (records: [SwiftUIViewRecord], host: UIViewController) in
             // Per-host reflection deadline, clamped to the whole-scan deadline so
             // a late host can never push past the total budget.
             let hostDeadline = min(Date().addingTimeInterval(budget.reflectionHostSeconds), scanDeadline)
@@ -79,9 +79,9 @@ internal enum SwiftUIScanner {
     }
 
     static func mergeInventories(
-        _ snapshots: [(records: [SwiftUIReflection.ViewRecord], host: UIViewController)]
-    ) -> (records: [SwiftUIReflection.ViewRecord], host: UIViewController?) {
-        var merged: [SwiftUIReflection.ViewRecord] = []
+        _ snapshots: [(records: [SwiftUIViewRecord], host: UIViewController)]
+    ) -> (records: [SwiftUIViewRecord], host: UIViewController?) {
+        var merged: [SwiftUIViewRecord] = []
         var selectedHost: UIViewController?
         for snapshot in snapshots where !snapshot.records.isEmpty {
             merged.append(contentsOf: snapshot.records)
@@ -94,7 +94,7 @@ internal enum SwiftUIScanner {
     /// button-first: a rendered text whose title is NOT in this list never
     /// becomes a resolver-supplied title.
     static func interactiveRecords(
-        in records: [SwiftUIReflection.ViewRecord]
+        in records: [SwiftUIViewRecord]
     ) -> [(title: String, viewType: String)] {
         var seen = Set<String>()
         var out: [(String, String)] = []

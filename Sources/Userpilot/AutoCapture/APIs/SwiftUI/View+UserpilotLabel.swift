@@ -21,8 +21,8 @@ public extension View {
 
     /// Attaches a stable label and semantic view type to this view for mobile autocapture.
     ///
-    /// Use this when you want autocapture events to report a specific `element_text` and a
-    /// readable `element_type` (for example `"Button"` or `"Text"`) instead of relying only
+    /// Use this when you want autocapture events to report a specific `target_text` and a
+    /// readable `target_class` (for example `"Button"` or `"Text"`) instead of relying only
     /// on private SwiftUI/UIKit class names from hit-testing.
     ///
     /// ## How it works
@@ -57,6 +57,9 @@ public extension View {
     ///
     /// ## Important notes
     ///
+    /// - Analytics only: the label never sets `userpilot_id` and is not used for tooltip targeting
+    ///   or Builder identity. Tooltip targeting uses ``SwiftUI/View/userpilotTarget(_:)``.
+    /// - It does not enable autocapture; normal text privacy settings still apply.
     /// - Pass `nil` if you need to clear a previously applied label when content is conditional.
     /// - Target resolution prefers a **taggable** sibling under the same UIKit parent (typical
     ///   for `.background` placement), then walks up for the nearest taggable ancestor.
@@ -97,6 +100,7 @@ private struct UserpilotLabelInjector: UIViewRepresentable {
 }
 
 /// Hidden view that assigns `userpilotLabel` / `userpilotLabelViewType` to a resolved UIKit target.
+/// Keep its class and placement stable for analytics hierarchy compatibility.
 final class LabelCarrierView: UIView {
 
     private weak var appliedToView: UIView?
@@ -194,39 +198,5 @@ private enum UserpilotSwiftUIViewTypeResolver {
         if reflected.contains("toggle") { return "Toggle" }
         if reflected.contains("navigationlink") { return "NavigationLink" }
         return String(describing: viewType)
-    }
-}
-
-// MARK: - Taggable detection (SwiftUI file–local)
-
-private var labelAttachmentKey: UInt8 = 0
-
-private extension UIView {
-
-    /// Tracks the writer without retaining the carrier or creating a view-hierarchy cycle.
-    var userpilotLabelAttachmentID: UUID? {
-        get { objc_getAssociatedObject(self, &labelAttachmentKey) as? UUID }
-        set { objc_setAssociatedObject(self, &labelAttachmentKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
-    }
-
-    /// Deepest descendant (including self) considered a good host for SwiftUI-driven tagging.
-    var deepestTaggableView: UIView? {
-        if isTaggable { return self }
-
-        for subview in subviews {
-            if let match = subview.deepestTaggableView {
-                return match
-            }
-        }
-
-        return nil
-    }
-
-    /// UIKit view kinds that meaningfully represent interactive or readable SwiftUI content.
-    var isTaggable: Bool {
-        self is UIControl ||
-        self is UILabel ||
-        self is UIImageView ||
-        self is UITextView
     }
 }

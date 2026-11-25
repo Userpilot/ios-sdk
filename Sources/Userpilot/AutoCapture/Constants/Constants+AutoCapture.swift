@@ -50,10 +50,10 @@ extension Constants {
 
         static let hierarchy = "hierarchy"
         static let interactionType = "interaction_type"
-        static let targetClass = "target_class"
-        static let targetText = "target_text"
-        static let accessibilityLabel = "accessibility_label"
-        static let accessibilityIdentifier = "accessibility_identifier"
+        static let targetClass = ElementPropertyKeys.targetClass.rawValue
+        static let targetText = ElementPropertyKeys.targetText.rawValue
+        static let accessibilityLabel = ElementPropertyKeys.accessibilityLabel.rawValue
+        static let accessibilityIdentifier = ElementPropertyKeys.accessibilityIdentifier.rawValue
         static let targetAction = "target_action"
         static let ownerTargetClass = "owner_target_class"
         static let targetViewName = "target_view_name"

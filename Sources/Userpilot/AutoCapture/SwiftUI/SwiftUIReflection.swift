@@ -65,27 +65,6 @@ extension UIHostingController: SwiftUIHostingRootProviding {
 
 internal enum SwiftUIReflection {
 
-    // MARK: - Public
-
-    struct ViewRecord: CustomStringConvertible {
-        let title: String
-        let viewType: String   // "Button" | "NavigationLink" | "Text" | "UserpilotLabel" | <type>
-        let depth: Int
-        let order: Int         // pre-order traversal index
-        /// Identifies the source for single-host refreshes without retaining its screen.
-        weak var host: UIViewController?
-
-        /// View types that represent a tappable control. Stage B intersects
-        /// display-list text against the titles of these records.
-        static let interactiveTypes: Set<String> = [
-            "Button", "NavigationLink", "Toggle", "Menu", "Link", "UserpilotLabel"
-        ]
-
-        var isInteractive: Bool { Self.interactiveTypes.contains(viewType) }
-
-        var description: String { "[\(order) d=\(depth)] \(viewType): \"\(title)\"" }
-    }
-
     /// Find the deepest visible `UIHostingController` reachable from this
     /// window. Kept for callers that want a single best guess.
     static func topmostHostingController(in window: UIWindow) -> UIViewController? {
@@ -134,12 +113,12 @@ internal enum SwiftUIReflection {
         from hostingController: UIViewController,
         deadline: Date? = nil,
         logger: Logging? = nil
-    ) -> [ViewRecord] {
+    ) -> [SwiftUIViewRecord] {
         guard let rootView = rootView(of: hostingController) else {
             return []
         }
 
-        var records: [ViewRecord] = []
+        var records: [SwiftUIViewRecord] = []
         var order = 0
         var budget = Budget(deadline: deadline ?? .distantFuture)
         #if DEBUG
@@ -236,7 +215,7 @@ internal enum SwiftUIReflection {
         depth: Int,
         order: inout Int,
         budget: inout Budget,
-        into records: inout [ViewRecord]
+        into records: inout [SwiftUIViewRecord]
     ) {
         if budget.exhausted || depth > budget.maxDepth { return }
         budget.nodes += 1
@@ -260,7 +239,7 @@ internal enum SwiftUIReflection {
             // the whole value only when no label property exists.
             let labelSource = anyStoredChild(of: value, named: ["label", "_label"])
             if let title = findFirstString(under: labelSource ?? value, maxDepth: 24) {
-                records.append(ViewRecord(title: title, viewType: typeName,
+                records.append(SwiftUIViewRecord(title: title, viewType: typeName,
                                           depth: depth, order: order))
             }
             // Recurse ONLY into the label. A control's other stored children
@@ -275,7 +254,7 @@ internal enum SwiftUIReflection {
             }
         } else if typeName == "Text" {
             if let title = findFirstString(under: value, maxDepth: 8) {
-                records.append(ViewRecord(title: title, viewType: "Text",
+                records.append(SwiftUIViewRecord(title: title, viewType: "Text",
                                           depth: depth, order: order))
             }
             // A Text's internals (storage, fonts, modifiers) cannot contain
@@ -285,7 +264,7 @@ internal enum SwiftUIReflection {
         } else if typeName.contains("UserpilotLabelInjector")
                     || typeName.contains("LabelCarrier") {
             if let label = findStoredString(in: value, named: "label") {
-                records.append(ViewRecord(title: label, viewType: "UserpilotLabel",
+                records.append(SwiftUIViewRecord(title: label, viewType: "UserpilotLabel",
                                           depth: depth, order: order))
             }
         }

@@ -33,7 +33,8 @@ struct UserpilotLabelCaptureResult {
 
 extension UIView {
 
-    /// Developer-defined text from the SwiftUI `userpilotLabel(_:)` modifier for autocapture `element_text`.
+    /// Analytics text from the SwiftUI `userpilotLabel(_:)` modifier for autocapture `target_text`.
+    /// Never an identity: `userpilot_id` comes only from the `userpilotTarget(_:)` marker.
     ///
     /// When set from the SwiftUI bridge, this value is preferred over inferred control text
     /// where the capture pipeline supports it.

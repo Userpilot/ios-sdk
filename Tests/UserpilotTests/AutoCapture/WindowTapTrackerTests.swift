@@ -181,6 +181,14 @@ final class WindowTapCaptureDecisionTests: XCTestCase {
         ]), 0)
     }
 
+    func testAnEndOutsideTapEndMode_retiresTheTouchStart() {
+        XCTAssertEqual(clicks([
+            Step(phase: .began, time: 1.0, tapEnd: true),
+            Step(phase: .ended, time: 1.1, tapEnd: false),
+            Step(phase: .ended, time: 1.2, tapEnd: true)
+        ]), 0, "A start left over from an earlier end would turn a later end into a click")
+    }
+
     func testRepeatedTaps_publishOneClickEach() {
         let tracker = WindowTapTracker()
         let touch = NSObject()

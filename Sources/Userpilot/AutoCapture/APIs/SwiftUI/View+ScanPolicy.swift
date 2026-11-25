@@ -84,7 +84,7 @@ private final class SwiftUIScanPolicyCarrierView: UIView {
 
     func applyIfPossible() {
         guard SwiftUITitleCapturePolicy.isSupportedOS,
-              window != nil, let host = up_nearestViewController else { return }
+              window != nil, let host = userpilotNearestViewController else { return }
 
         SwiftUIScanPolicy.skipAccessibility(for: host)
 

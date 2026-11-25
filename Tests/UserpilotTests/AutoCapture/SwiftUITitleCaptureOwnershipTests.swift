@@ -203,7 +203,7 @@ final class SwiftUITitleCaptureOwnershipTests: XCTestCase {
         let textLayer = CALayer()
         textLayer.frame = firstWindow.bounds
         firstWindow.layer.addSublayer(textLayer)
-        let entry = DisplayListTextMap.Entry(title: "Save", textFrame: textLayer.frame,
+        let entry = DisplayListTextEntry(title: "Save", textFrame: textLayer.frame,
                                             hitFrame: textLayer.frame, layer: textLayer)
         scanCache._testSeedSnapshot(
             textMap: [entry], inventory: [.init(title: "Save", viewType: "Button", depth: 0, order: 0)]

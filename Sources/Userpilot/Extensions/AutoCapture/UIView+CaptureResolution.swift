@@ -350,6 +350,7 @@ internal extension UIView {
             Constants.AutoCapture.hierarchy: path
         ]
 
+        // Select the explicit source before privacy; suppression must not expose automatic text.
         if let capture = resolveUserpilotLabelCapture(atWindowPoint: point, in: window) {
             if let labelViewType = capture.viewType {
                 eventProperties[Constants.AutoCapture.targetClass] = labelViewType

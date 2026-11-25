@@ -107,7 +107,7 @@ private struct UserpilotRedactTextRepresentable: UIViewRepresentable {
 }
 
 /// Internal UIView that applies the redaction property to its parent view
-private class UserpilotRedactTextView: UIView {
+private final class UserpilotRedactTextView: UIView {
     private var redact: Bool
     private weak var appliedToView: UIView?
 

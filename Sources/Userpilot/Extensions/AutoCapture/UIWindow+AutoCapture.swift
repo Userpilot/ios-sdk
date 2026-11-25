@@ -47,7 +47,8 @@ extension UIWindow {
         guard let touches = event.allTouches else { return }
         let resolver = UserpilotRuntime.shared.instanceResolver
         var scanOwner: Userpilot?
-        for touch in touches {
+        // Only a sequence's boundaries capture or retire anything; moves arrive at the display rate.
+        for touch in touches where Self.boundaryPhases.contains(touch.phase) {
             let point = touch.location(in: self)
             let hitView = touch.view ?? hitTest(point, with: event)
             let source = touchOwnerSource(hitView: hitView, at: point, phase: touch.phase, resolver: resolver)
@@ -79,6 +80,8 @@ extension UIWindow {
     }
 
     // MARK: Touch Routing
+
+    private static let boundaryPhases: Set<UITouch.Phase> = [.began, .ended, .cancelled]
 
     /// A nested owner on a descendant can affect click timing, so tap boundaries resolve
     /// from the innermost view, but only when a binding or configured scope exists.

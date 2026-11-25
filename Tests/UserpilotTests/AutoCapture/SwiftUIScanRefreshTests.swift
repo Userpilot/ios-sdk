@@ -173,7 +173,7 @@ final class SwiftUIScanRefreshTests: XCTestCase {
         let layer = CALayer()
         layer.frame = CGRect(x: 10, y: 10, width: 100, height: 60)
         host.view.layer.addSublayer(layer)
-        let entry = DisplayListTextMap.Entry(title: title, textFrame: layer.frame, hitFrame: layer.frame, layer: layer)
+        let entry = DisplayListTextEntry(title: title, textFrame: layer.frame, hitFrame: layer.frame, layer: layer)
         cache._testSeedSnapshot(
             textMap: [entry], inventory: SwiftUIReflection.extractInventory(from: host), inventoryHost: host
         )

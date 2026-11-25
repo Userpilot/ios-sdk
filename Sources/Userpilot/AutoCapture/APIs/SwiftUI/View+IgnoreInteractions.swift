@@ -115,7 +115,7 @@ private struct UserpilotIgnoreInteractionsRepresentable: UIViewRepresentable {
 }
 
 /// Internal UIView that applies the ignore interactions property to its parent view
-private class UserpilotIgnoreInteractionsView: UIView {
+private final class UserpilotIgnoreInteractionsView: UIView {
     private var ignore: Bool
     private weak var appliedToView: UIView?
 

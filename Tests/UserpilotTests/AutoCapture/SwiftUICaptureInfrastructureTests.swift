@@ -67,7 +67,7 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
         XCTAssertTrue(logger.loggedInfos.isEmpty)
     }
 
-    func testTitleDiagnostics_keepFullTextCountsAndChunkShape() {
+    func testTitleDiagnostics_logLengthsInCountsAndChunkShape() {
         let logger = MockSwiftUICaptureLogger()
         let titles = (0..<8).map { "Title \($0)" } + ["Save 50% — %@"]
         var evaluations = 0
@@ -80,9 +80,16 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
 
         XCTAssertEqual(evaluations, 1)
         XCTAssertEqual(logger.messages.count, 3)
-        XCTAssertTrue(logger.messages[0].hasSuffix("textMap titles(9)[0..<8]: \(Array(titles.prefix(8)))"))
-        XCTAssertTrue(logger.messages[1].hasSuffix("textMap titles(9)[8..<9]: \(Array(titles.suffix(1)))"))
+        let firstChunk = Array(repeating: "<7 chars>", count: 8).joined(separator: ", ")
+        XCTAssertTrue(logger.messages[0].hasSuffix("textMap titles(9)[0..<8]: \(firstChunk)"))
+        XCTAssertTrue(logger.messages[1].hasSuffix("textMap titles(9)[8..<9]: <13 chars>"))
         XCTAssertTrue(logger.messages[2].hasSuffix("interactive titles(0): []"))
+        XCTAssertFalse(logger.messages.contains { $0.contains("Title") })
+    }
+
+    func testCapturedText_appearsInDiagnosticsOnlyWhenOptedIn() {
+        XCTAssertEqual(SwiftUICaptureLogText.describe("Save 50%", revealsText: false), "<8 chars>")
+        XCTAssertEqual(SwiftUICaptureLogText.describe("Save 50%", revealsText: true), "\"Save 50%\"")
     }
 
     func testConditionalDiagnostic_withNilMessageDoesNotLog() {
@@ -93,7 +100,7 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
         XCTAssertTrue(logger.messages.isEmpty)
     }
 
-    func testResolvedAndUnresolvedTitles_appearInDebugDiagnostics() {
+    func testResolvedAndUnresolvedTitles_appearInDebugDiagnosticsOnlyAsLengths() {
         let logger = MockSwiftUICaptureLogger()
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 300, height: 200))
         window.isHidden = false
@@ -105,7 +112,7 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
         layer.frame = CGRect(x: 20, y: 50, width: 100, height: 30)
         window.layer.addSublayer(layer)
         let sensitiveTitle = "private-survey-answer"
-        let entry = DisplayListTextMap.Entry(title: sensitiveTitle, textFrame: layer.frame,
+        let entry = DisplayListTextEntry(title: sensitiveTitle, textFrame: layer.frame,
                                             hitFrame: layer.frame, layer: layer)
         UserpilotRuntime.shared.scanCache._testSeedSnapshot(
             textMap: [entry],
@@ -118,8 +125,10 @@ final class SwiftUICaptureInfrastructureTests: XCTestCase {
         XCTAssertNil(resolver.resolveTitle(at: CGPoint(x: 40, y: 60), in: window,
                                           captureAccessibility: false, logger: logger))
 
-        XCTAssertTrue(logger.messages.contains { $0.contains("STAGE B (display-list)") && $0.contains(sensitiveTitle) })
-        XCTAssertTrue(logger.messages.contains { $0.contains("candidates under tap") && $0.contains(sensitiveTitle) })
+        let length = "<\(sensitiveTitle.count) chars>"
+        XCTAssertTrue(logger.messages.contains { $0.contains("STAGE B (display-list)") && $0.contains(length) })
+        XCTAssertTrue(logger.messages.contains { $0.contains("candidates under tap") && $0.contains(length) })
+        XCTAssertFalse(logger.messages.contains { $0.contains(sensitiveTitle) })
     }
 
     func testSnapshotDiagnostics_invokeLoggerAfterUnlocking() {

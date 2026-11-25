@@ -96,13 +96,21 @@ internal extension UIControl {
     /// Captures control interaction based on control type.
     /// Both action hooks use this path. UIAction has no selector/target, so those fields stay absent.
     func captureControlInteraction(action: Selector?, target: Any?, event: UIEvent?, owner owningInstance: Userpilot) {
-        guard let payload = controlInteractionPayload(action: action, target: target, owner: owningInstance) else {
+        // Continuous controls (UISlider): debounce per view — build and send once after quiet period.
+        // The source framework is resolved now, so a slider moved before delivery keeps it.
+        if self is UISlider {
+            guard shouldCaptureControlInteraction(action: action, owner: owningInstance) else { return }
+            let config = owningInstance.config
+            let framework = captureFramework(config: config)
+            let targetType = target.map { type(of: $0) }
+            InteractionEventCache.sendDebouncedInteraction(for: self, owner: owningInstance) { slider in
+                slider.controlInteractionPayload(
+                    action: action, targetType: targetType, config: config, framework: framework)
+            }
             return
         }
 
-        // Continuous controls (UISlider): debounce per view — send once after quiet period
-        if self is UISlider {
-            InteractionEventCache.sendDebouncedInteraction(payload, for: self, owner: owningInstance)
+        guard let payload = controlInteractionPayload(action: action, target: target, owner: owningInstance) else {
             return
         }
 
@@ -114,42 +122,59 @@ internal extension UIControl {
     private func controlInteractionPayload(
         action: Selector?, target: Any?, owner owningInstance: Userpilot
     ) -> InteractionPayload? {
-        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return nil }
-        guard !UIApplication.viewIsWithinSystemKeyboardChrome(self) else { return nil }
+        guard shouldCaptureControlInteraction(action: action, owner: owningInstance) else { return nil }
+        let config = owningInstance.config
+        return controlInteractionPayload(
+            action: action,
+            targetType: target.map { type(of: $0) },
+            config: config,
+            framework: captureFramework(config: config)
+        )
+    }
+
+    /// Owner, privacy and configuration gates; false when this control's interaction is not captured.
+    private func shouldCaptureControlInteraction(action: Selector?, owner owningInstance: Userpilot) -> Bool {
+        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return false }
+        guard !UIApplication.viewIsWithinSystemKeyboardChrome(self) else { return false }
         // Per-instance stop gate: this control's tenant may have paused capture
         // via `stopAutoCapture()` while other instances keep running.
-        guard !owningInstance.autoCaptureCoordinator.isStopped else { return nil }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return false }
         let config = owningInstance.config
-        guard config.enableInteractionAutoCapture else { return nil }
+        guard config.enableInteractionAutoCapture else { return false }
 
         // Skip tap for text field/text view editing actions when configured;
         // keep only text_field_changed / text_view_changed
         if config.ignoreTapForTextInputEditingActions, self is UITextField, let action,
            Self.isTextEditingAction(action) {
-            return nil
+            return false
         }
 
         // Check if this control should be ignored
-        guard !shouldIgnoreInteractions() else { return nil }
+        return !shouldIgnoreInteractions()
+    }
 
+    private func controlInteractionPayload(
+        action: Selector?, targetType: Any.Type?, config: Userpilot.Config, framework: Userpilot.AppFramework?
+    ) -> InteractionPayload {
         // Create the appropriate payload based on control type
-        var payload = buildInteractionPayload(config: config)
+        var payload = buildInteractionPayload(config: config, framework: framework)
 
         // Add target-action info (e.g., "onBackButtonClicked:" from IBAction)
         payload.targetAction = action.map(NSStringFromSelector)
-        if let target = target {
-            payload.ownerTargetClass = String(describing: type(of: target))
+        if let targetType {
+            payload.ownerTargetClass = String(describing: targetType)
         }
         return payload
     }
 
     // Builds an interaction payload based on the control type
     // swiftlint:disable:next cyclomatic_complexity function_body_length
-    private func buildInteractionPayload(config: Userpilot.Config) -> InteractionPayload {
+    private func buildInteractionPayload(
+        config: Userpilot.Config, framework: Userpilot.AppFramework?
+    ) -> InteractionPayload {
         var payload: InteractionPayload
 
         let elementType = String(describing: type(of: self))
-        let framework = captureFramework(config: config)
 
         // Determine interaction type and extract value based on control type
         switch self {
@@ -212,7 +237,7 @@ internal extension UIControl {
             )
             if config.enableInteractionValueCapture {
                 payload.sourceProperties[Constants.AutoCapture.selectedDate] =
-                    ISO8601DateFormatter().string(from: datePicker.date)
+                    Self.selectedDateFormatter.string(from: datePicker.date)
             }
 
         case let pageControl as UIPageControl:
@@ -265,6 +290,9 @@ internal extension UIControl {
 
         return payload
     }
+
+    /// Shared because creating a formatter is expensive; `ISO8601DateFormatter` is thread-safe.
+    private static let selectedDateFormatter = ISO8601DateFormatter()
 
     /// Selectors that indicate text-editing (we send text_field_changed / text_view_changed separately; skip tap).
     private static func isTextEditingAction(_ action: Selector) -> Bool {

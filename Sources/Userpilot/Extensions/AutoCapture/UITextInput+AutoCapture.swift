@@ -35,15 +35,15 @@ internal extension UITextField {
         payload.sourceProperties[Constants.AutoCapture.hasText] = !(text?.isEmpty ?? true)
         payload.sourceProperties[Constants.AutoCapture.textLength] = text?.count ?? 0
         payload.placeholder = placeholder
-
-        completeTextInteractionPayload(&payload, config: config)
+        payload.appFramework = captureFramework(config: config)
 
         InteractionEventCache.sendDebouncedInteraction(
-            payload,
             for: self,
             owner: owningInstance,
             textLengthForDedupe: payload.sourceProperties[Constants.AutoCapture.textLength] as? Int
-        )
+        ) { [payload] field in
+            field.completedTextInteractionPayload(payload)
+        }
     }
 }
 
@@ -67,24 +67,24 @@ internal extension UITextView {
 
         payload.sourceProperties[Constants.AutoCapture.hasText] = !text.isEmpty
         payload.sourceProperties[Constants.AutoCapture.textLength] = text.count
-
-        completeTextInteractionPayload(&payload, config: config)
+        payload.appFramework = captureFramework(config: config)
 
         InteractionEventCache.sendDebouncedInteraction(
-            payload,
             for: self,
             owner: owningInstance,
             textLengthForDedupe: payload.sourceProperties[Constants.AutoCapture.textLength] as? Int
-        )
+        ) { [payload] textView in
+            textView.completedTextInteractionPayload(payload)
+        }
     }
 }
 
 // MARK: - Shared text metadata
 
 private extension UIView {
-    /// Finalizes identity after each editor has read its own text/placeholder semantics.
-    func completeTextInteractionPayload(_ payload: inout InteractionPayload, config: Userpilot.Config) {
-        payload.appFramework = captureFramework(config: config)
+    /// Finalizes identity after each editor has read its own text/placeholder semantics and framework.
+    func completedTextInteractionPayload(_ textPayload: InteractionPayload) -> InteractionPayload {
+        var payload = textPayload
         let effectiveView = userpilotEffectiveViewForCapture()
         // SwiftUI siblings need their stable on-screen ordinal. An ignored inner hierarchy uses
         // its effective ancestor; UIKit retains its existing sibling indices.
@@ -99,5 +99,6 @@ private extension UIView {
             payload.accessibilityLabel = getAccessibilityLabelContent()
             payload.targetViewName = resolveReferenceName()
         }
+        return payload
     }
 }
