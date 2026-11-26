@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F5A800000000000000000001 /* ThemeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A800000000000000000002 /* ThemeViewController.swift */; };
 		AB1942AC2CD25DFE00924844 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */; };
 		AB1942AF2CD25FD200924844 /* ScreenTwoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942AE2CD25FD200924844 /* ScreenTwoViewController.xib */; };
 		AB1942B32CD2609700924844 /* ScreenOneViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = AB1942B22CD2609700924844 /* ScreenOneViewController.xib */; };
@@ -54,6 +55,17 @@
 		ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */; };
 		ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */; };
 		ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */; };
+		B44EB5779C2B41FBA5262D96 /* TooltipsTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C019347BCB046869662821E /* TooltipsTestViewController.swift */; };
+		B9D3CBD8074E53E573A24634 /* TooltipAlertViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37EE2771FDF01C8913B766D8 /* TooltipAlertViewController.swift */; };
+		UPTT01BFHUB000000001 /* TooltipsHubViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRHUB000000001 /* TooltipsHubViewController.swift */; };
+		UPTT01BFTAB000000001 /* TooltipsDemoTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRTAB000000001 /* TooltipsDemoTabBarController.swift */; };
+		UPTT01BFDASH00000001 /* DashboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRDASH00000001 /* DashboardViewController.swift */; };
+		UPTT01BFDETAIL000001 /* DashboardDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRDETAIL000001 /* DashboardDetailViewController.swift */; };
+		UPTT01BFNEWS00000001 /* NewsfeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRNEWS00000001 /* NewsfeedViewController.swift */; };
+		UPTT01BFPROF00000001 /* ProfileViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRPROF00000001 /* ProfileViewController.swift */; };
+		UPTT01BFSETT00000001 /* DemoSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRSETT00000001 /* DemoSettingsViewController.swift */; };
+		UPTT01BFCHART0000001 /* SimpleBarChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPTT01FRCHART0000001 /* SimpleBarChartView.swift */; };
+		19A7D18235B34C969B520FAA /* BuilderHubViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A7D18235B34C969B520FAB /* BuilderHubViewController.swift */; };
 		ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEB317B2F73F58400E1789D /* PickerViewTestViewController.swift */; };
 		ABED3F5E2C9803D000004D1C /* IdentifyViewController+UserProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5D2C9803D000004D1C /* IdentifyViewController+UserProperties.swift */; };
 		ABED3F602C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABED3F5F2C9803DE00004D1C /* IdentifyViewController+CompanyProperties.swift */; };
@@ -85,6 +97,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F5A800000000000000000002 /* ThemeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeViewController.swift; sourceTree = "<group>"; };
 		AB1942AB2CD25DFE00924844 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		AB1942AD2CD25FD200924844 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ScreenTwoViewController.xib; sourceTree = "<group>"; };
 		AB1942B02CD25FD200924844 /* mul */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = mul; path = mul.lproj/ScreenTwoViewController.xcstrings; sourceTree = "<group>"; };
@@ -151,6 +164,17 @@
 		ABCDBF452CAEACED0083DF1D /* NibLoadable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NibLoadable.swift; sourceTree = "<group>"; };
 		ABD07B272D6C4ED000619C47 /* Prod.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Prod.xcconfig; sourceTree = "<group>"; };
 		ABEB31702F73F58400E1789D /* AutoCaptureTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCaptureTestViewController.swift; sourceTree = "<group>"; };
+		7C019347BCB046869662821E /* TooltipsTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipsTestViewController.swift; sourceTree = "<group>"; };
+		37EE2771FDF01C8913B766D8 /* TooltipAlertViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipAlertViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRHUB000000001 /* TooltipsHubViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipsHubViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRTAB000000001 /* TooltipsDemoTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipsDemoTabBarController.swift; sourceTree = "<group>"; };
+		UPTT01FRDASH00000001 /* DashboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRDETAIL000001 /* DashboardDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardDetailViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRNEWS00000001 /* NewsfeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsfeedViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRPROF00000001 /* ProfileViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRSETT00000001 /* DemoSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSettingsViewController.swift; sourceTree = "<group>"; };
+		UPTT01FRCHART0000001 /* SimpleBarChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleBarChartView.swift; sourceTree = "<group>"; };
+		19A7D18235B34C969B520FAB /* BuilderHubViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuilderHubViewController.swift; sourceTree = "<group>"; };
 		ABEB31712F73F58400E1789D /* CollectionViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEB31722F73F58400E1789D /* TableViewTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableViewTestViewController.swift; sourceTree = "<group>"; };
 		ABEB31732F73F58400E1789D /* TextConfigDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextConfigDemoViewController.swift; sourceTree = "<group>"; };
@@ -204,6 +228,31 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		412ED853689941D5B7AB740A /* Tooltips */ = {
+			isa = PBXGroup;
+			children = (
+				UPTT01FRHUB000000001 /* TooltipsHubViewController.swift */,
+				7C019347BCB046869662821E /* TooltipsTestViewController.swift */,
+				37EE2771FDF01C8913B766D8 /* TooltipAlertViewController.swift */,
+				UPTT01GRDEMO000000001 /* Demo */,
+			);
+			path = Tooltips;
+			sourceTree = "<group>";
+		};
+		UPTT01GRDEMO000000001 /* Demo */ = {
+			isa = PBXGroup;
+			children = (
+				UPTT01FRTAB000000001 /* TooltipsDemoTabBarController.swift */,
+				UPTT01FRDASH00000001 /* DashboardViewController.swift */,
+				UPTT01FRDETAIL000001 /* DashboardDetailViewController.swift */,
+				UPTT01FRNEWS00000001 /* NewsfeedViewController.swift */,
+				UPTT01FRPROF00000001 /* ProfileViewController.swift */,
+				UPTT01FRSETT00000001 /* DemoSettingsViewController.swift */,
+				UPTT01FRCHART0000001 /* SimpleBarChartView.swift */,
+			);
+			path = Demo;
+			sourceTree = "<group>";
+		};
 		AB585F5F2CD79C0400E2A66D /* Properties */ = {
 			isa = PBXGroup;
 			children = (
@@ -259,6 +308,8 @@
 				FACF000000000000000000C1 /* Config */,
 				UP08E667051DEB4096A385C2 /* Debug */,
 				ABEB31742F73F58400E1789D /* AutoCapture */,
+				412ED853689941D5B7AB740A /* Tooltips */,
+				19A7D18235B34C969B520FAC /* Builder */,
 				AB6ABAA42CE8890700FB72A8 /* SDKEvents */,
 				ABCDBF3E2CAEAB250083DF1D /* DeepLink */,
 				ABFB5FD62C916E410054E142 /* Events */,
@@ -268,6 +319,14 @@
 				AB6DBD2D2C68BF450009BB11 /* Identify */,
 			);
 			path = Featues;
+			sourceTree = "<group>";
+		};
+		19A7D18235B34C969B520FAC /* Builder */ = {
+			isa = PBXGroup;
+			children = (
+				19A7D18235B34C969B520FAB /* BuilderHubViewController.swift */,
+			);
+			path = Builder;
 			sourceTree = "<group>";
 		};
 		AB6DBD362C68CD450009BB11 /* Core */ = {
@@ -590,6 +649,7 @@
 				UP05E7237BA6114ABE8008E3 /* DebugViewController.swift */,
 				UP1D9D3FCE847D46FDB03B8A /* Offline */,
 				UPAE8C6135D07D4AA9914D9D /* OnlineQueue */,
+				F5A800000000000000000003 /* Theme */,
 			);
 			path = Debug;
 			sourceTree = "<group>";
@@ -608,6 +668,14 @@
 				UP8E6144D021E7477EBB9582 /* OnlineQueueViewController.swift */,
 			);
 			path = OnlineQueue;
+			sourceTree = "<group>";
+		};
+		F5A800000000000000000003 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				F5A800000000000000000002 /* ThemeViewController.swift */,
+			);
+			path = Theme;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -667,7 +735,7 @@
 			);
 			mainGroup = C5C897AC2C5CFFFA0083928E;
 			packageReferences = (
-				AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */,
+				AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../.." */,
 			);
 			productRefGroup = C5C897B62C5CFFFA0083928E /* Products */;
 			projectDirPath = "";
@@ -724,7 +792,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Add Homebrew to path\nif [[ $(arch) == 'arm64' ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nelse\n  export PATH=\"/usr/local/bin:$PATH\"\nfi\n\n# Run swiftlint on app and local package folder\nif which swiftlint >/dev/null; then\n  echo \"Running SwiftLint for app...\"\n  swiftlint --quiet\n  swiftlint --quiet --path Tests  # Include app unit tests (adjust path if different)\n\n  echo \"Running SwiftLint for SDK package...\"\n  cd ../../../ios-sdk\n\n  # Run on SDK sources and test files\n  swiftlint --quiet --config .swiftlint.yml Sources/Userpilot\n  swiftlint --quiet --config .swiftlint.yml Tests/UserpilotTests\n\n  cd - > /dev/null  # Return to original directory\n\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+			shellScript = "# Add Homebrew to path\nif [[ $(arch) == 'arm64' ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nelse\n  export PATH=\"/usr/local/bin:$PATH\"\nfi\n\n# Run swiftlint on app and local package folder\nif which swiftlint >/dev/null; then\n  echo \"Running SwiftLint for app...\"\n  swiftlint --quiet\n\n  echo \"Running SwiftLint for SDK package...\"\n  cd \"$SRCROOT/../..\"\n\n  # Run on SDK sources and test files\n  swiftlint --quiet --config .swiftlint.yml Sources/Userpilot\n  swiftlint --quiet --config .swiftlint.yml Tests/UserpilotTests\n\n  cd - > /dev/null  # Return to original directory\n\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -750,6 +818,7 @@
 				FACF000000000000000000B3 /* ConfigFlagTableViewCell.swift in Sources */,
 				UP9B74448B7CF24C7EBF611D /* DebugViewController.swift in Sources */,
 				UPDE5091EFDF0F402DB75A79 /* OnlineQueueViewController.swift in Sources */,
+				F5A800000000000000000001 /* ThemeViewController.swift in Sources */,
 				UP2547E6FA14E34C4C8FE2F8 /* OfflineEventsViewController.swift in Sources */,
 				ABCD472E2F793C7600D71EA8 /* IgnoredScreenDemoViewController.swift in Sources */,
 				ABAD7AC02F7BE8C6003BC33A /* AutoCaptureTabsTestViewController.swift in Sources */,
@@ -779,6 +848,17 @@
 				ABEB31762F73F58400E1789D /* TableViewTestViewController.swift in Sources */,
 				ABEB31772F73F58400E1789D /* CollectionViewTestViewController.swift in Sources */,
 				ABEB31782F73F58400E1789D /* AutoCaptureTestViewController.swift in Sources */,
+				B44EB5779C2B41FBA5262D96 /* TooltipsTestViewController.swift in Sources */,
+				B9D3CBD8074E53E573A24634 /* TooltipAlertViewController.swift in Sources */,
+				UPTT01BFHUB000000001 /* TooltipsHubViewController.swift in Sources */,
+				UPTT01BFTAB000000001 /* TooltipsDemoTabBarController.swift in Sources */,
+				UPTT01BFDASH00000001 /* DashboardViewController.swift in Sources */,
+				UPTT01BFDETAIL000001 /* DashboardDetailViewController.swift in Sources */,
+				UPTT01BFNEWS00000001 /* NewsfeedViewController.swift in Sources */,
+				UPTT01BFPROF00000001 /* ProfileViewController.swift in Sources */,
+				UPTT01BFSETT00000001 /* DemoSettingsViewController.swift in Sources */,
+				UPTT01BFCHART0000001 /* SimpleBarChartView.swift in Sources */,
+				19A7D18235B34C969B520FAA /* BuilderHubViewController.swift in Sources */,
 				UP29C06D0153AF4F2ABE3C29 /* AutoCaptureHubViewController.swift in Sources */,
 				ABEB31792F73F58400E1789D /* PickerViewTestViewController.swift in Sources */,
 				AB4721352DBA1E8800B92EE2 /* AppDelegate+PushNotification.swift in Sources */,
@@ -1108,9 +1188,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../../../ios-sdk copy" */ = {
+		AB68595F30594DA300EAEF1A /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../ios-sdk copy";
+			relativePath = "../..";
 		};
 /* End XCLocalSwiftPackageReference section */
 

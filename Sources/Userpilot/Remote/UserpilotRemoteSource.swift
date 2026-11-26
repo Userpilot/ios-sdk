@@ -1,14 +1,12 @@
 //
-//  UserpilotConstants.RemoteSource.swift
+//  UserpilotRemoteSource.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 17/09/2024.
+//  Created by Userpilot on 17/09/2024.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
-//  The `UserpilotRemoteSource` responsible for fetching SDK settings.
-//
-//  It allows events to be mutated or updated to add additional context or information as needed by conforming classes.
+//  Fetches cached SDK settings and preview content, and uploads Builder captures,
+//  with the existing URLSession transport.
 //
 
 import Foundation
@@ -16,33 +14,46 @@ import Foundation
 // MARK: - Protocol
 
 internal protocol UserpilotRemoteSourcing: AnyObject {
-    /// Fetches SDK settings and invokes the provided callback with Result type.
+    /// Uses fresh cached settings immediately; network completions keep URLSession delivery.
     func fetchSettings(completion: @escaping (Result<Void, RemoteSourceError>) -> Void)
 
-    /// Fetches preview experience from the public content API using Result type.
+    /// Fetches preview content without caching or changing the callback queue.
     func fetchPreviewExperience(
         params: PreviewExperienceQueryParams,
         completion: @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void
     )
+
+    /// Posts one prepared capture to the capture upload URL with its Bearer token. One attempt of at most
+    /// `requestTimeout` seconds in total; the caller owns retries. Completion runs once on URLSession's queue.
+    @discardableResult
+    func uploadCapture(
+        _ upload: CaptureUpload,
+        token: CaptureToken,
+        url: URL,
+        completion: @escaping (Result<Void, CaptureUploadError>) -> Void
+    ) -> CaptureUploadCancellable
 }
 
+/// An in-flight capture upload. Cancelling reports `.cancelled` once through the upload's completion.
+internal protocol CaptureUploadCancellable: AnyObject {
+    func cancel()
+}
+
+extension URLSessionTask: CaptureUploadCancellable {}
+
 /// `UserpilotRemoteSource` is a class that handles all remote API interactions.
-/// It fetches SDK settings and preview experiences from remote servers.
-internal class UserpilotRemoteSource {
+/// It fetches SDK settings and preview experiences, and uploads Builder captures.
+internal final class UserpilotRemoteSource {
 
-    // MARK: - Properties
+    // MARK: - Dependencies
 
-    /// A configuration instance holding SDK-related configuration details.
     private let config: Userpilot.Config
-
-    /// Logger instance for logging information and errors.
     private let logger: Logging
-
-    /// Storage used to store user-related data.
     private let storage: DataStoring
-
-    /// URLSession to request API
     private let session: URLSession
+    /// Capture uploads only: `timeoutIntervalForResource` bounds a whole attempt, body upload included,
+    /// which `URLRequest.timeoutInterval` (an idle timeout) cannot.
+    let uploadSession: URLSession
 
     // MARK: - Initialization
 
@@ -56,6 +67,7 @@ internal class UserpilotRemoteSource {
         self.storage = container.resolve(DataStoring.self)
         self.logger = config.logger
         self.session = URLSession.shared
+        self.uploadSession = Self.makeUploadSession(configuration: .ephemeral)
     }
 
     // Custom (test) initializer
@@ -65,8 +77,23 @@ internal class UserpilotRemoteSource {
             self.storage = container.resolve(DataStoring.self)
             self.logger = config.logger
             self.session = session
+            // Keeps the test session's protocol classes, so stubs see capture uploads too.
+            self.uploadSession = Self.makeUploadSession(configuration: session.configuration)
         }
     #endif
+
+    deinit {
+        uploadSession.finishTasksAndInvalidate()
+    }
+
+    /// Ephemeral and uncached: nothing about an upload outlives its request.
+    private static func makeUploadSession(configuration: URLSessionConfiguration) -> URLSession {
+        let configuration = configuration.copy() as? URLSessionConfiguration ?? .ephemeral
+        configuration.timeoutIntervalForResource = Constants.BuilderCapture.Upload.requestTimeout
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.urlCache = nil
+        return URLSession(configuration: configuration)
+    }
 
     // MARK: - Private Helper Methods
 
@@ -82,49 +109,9 @@ internal class UserpilotRemoteSource {
         return elapsedTime < Constants.RemoteSource.configurationDuration
     }
 
-    // Returns appropriate error message based on HTTP status code.
-    // swiftlint:disable:next cyclomatic_complexity
-    private func getErrorMessage(statusCode: Int) -> String {
-        switch statusCode {
-        case 400:
-            return "Bad request: The content request is invalid"
-        case 401:
-            return "Unauthorized: Invalid or missing authentication"
-        case 403:
-            return "Forbidden: Access to this content is denied"
-        case 404:
-            return "Not found: The requested content could not be found"
-        case 408:
-            return "Request timeout: The server took too long to respond"
-        case 429:
-            return "Too many requests: Please try again later"
-        case 500:
-            return "Server error: The server encountered an internal error"
-        case 502:
-            return "Bad gateway: The server received an invalid response"
-        case 503:
-            return "Service unavailable: The server is temporarily unavailable"
-        case 504:
-            return "Gateway timeout: The server did not respond in time"
-        default:
-            return "Request failed with status code: \(statusCode)"
-        }
-    }
-
     /// Builds the remote settings URL using the SDK token.
     private func buildSettingsUrl() -> String {
         return Constants.RemoteSource.settingsBaseURL + config.token
-    }
-
-    /// Builds the URL for fetching preview experience content.
-    private func buildPreviewExperienceUrl(params: PreviewExperienceQueryParams) -> String {
-        var components = URLComponents(string: params.baseUrl)
-        components?.queryItems = [
-            URLQueryItem(name: "app_token", value: params.appToken),
-            URLQueryItem(name: "content_type", value: params.contentType),
-            URLQueryItem(name: "content_id", value: params.contentId)
-        ]
-        return components?.url?.absoluteString ?? params.baseUrl
     }
 
     /// Executes a network request and returns Result with success or failure.
@@ -144,37 +131,39 @@ internal class UserpilotRemoteSource {
                 return
             }
 
-            if let error {
-                self.logger.error("🌐 Network request failed: %{public}@", error.localizedDescription)
-                completion(.failure(.networkError(error.localizedDescription)))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("❌ Invalid response type")
-                completion(.failure(.invalidResponse))
-                return
-            }
-
-            guard httpResponse.isSuccessStatusCode else {
-                let errorMessage = self.getErrorMessage(statusCode: httpResponse.statusCode)
-                self.logger.error("❌ Request failed with code: %{public}@", String(httpResponse.statusCode))
-                completion(
-                    .failure(.httpError(statusCode: httpResponse.statusCode, message: errorMessage))
-                )
-                return
-            }
-
-            guard let data else {
-                self.logger.error("📭 Request failed: Empty response body")
-                completion(.failure(.emptyResponse))
-                return
-            }
-
-            self.logger.info("✅ Request successful: %{public}@", String(httpResponse.statusCode))
-            completion(.success(data))
+            completion(self.handleResponse(data: data, response: response, error: error))
         }
         task.resume()
+    }
+
+    /// Maps the transport response once, before endpoint-specific decoding and cache writes.
+    private func handleResponse(
+        data: Data?,
+        response: URLResponse?,
+        error: Error?
+    ) -> Result<Data, RemoteSourceError> {
+        if let error {
+            logger.error("🌐 Network request failed: %{public}@", error.localizedDescription)
+            return .failure(.networkError(error.localizedDescription))
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            logger.error("❌ Invalid response type")
+            return .failure(.invalidResponse)
+        }
+
+        guard httpResponse.isSuccessStatusCode else {
+            logger.error("❌ Request failed with code: %{public}@", String(httpResponse.statusCode))
+            return .failure(.fromStatusCode(httpResponse.statusCode))
+        }
+
+        guard let data else {
+            logger.error("📭 Request failed: Empty response body")
+            return .failure(.emptyResponse)
+        }
+
+        logger.info("✅ Request successful: %{public}@", String(httpResponse.statusCode))
+        return .success(data)
     }
 
     /// Parses SDK settings response and updates socket URL storage. Returns Result.
@@ -184,10 +173,9 @@ internal class UserpilotRemoteSource {
         }
 
         do {
+            let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
             guard
-                let json = try JSONSerialization.jsonObject(with: data, options: [])
-                    as? [String: Any],
-                let endpoint = json["endpoint"] as? String,
+                let endpoint = json?["endpoint"] as? String,
                 let baseUrl = endpoint.baseURL()
             else {
                 logger.error("🔍 Failed to extract endpoint from response")
@@ -211,8 +199,7 @@ internal class UserpilotRemoteSource {
         logger.info("📱 Preview experience response received")
 
         do {
-            let decoder = JSONDecoder()
-            let previewExperience = try decoder.decode(PreviewExperience.self, from: data)
+            let previewExperience = try PreviewExperience.decode(from: data)
             logger.info("✅ Successfully parsed Preview experience")
             return .success(previewExperience)
         } catch {
@@ -248,15 +235,11 @@ extension UserpilotRemoteSource: UserpilotRemoteSourcing {
                 return
             }
 
-            switch result {
-            case .success(let data):
-                let result = self.handleSettingsResponse(data)
-                completion(result)
-            case .failure(let error):
+            if case .failure(let error) = result {
                 self.logger.error(
                     "❌ Failed to fetch settings: %{public}@", error.localizedDescription)
-                completion(.failure(error))
             }
+            completion(result.flatMap(self.handleSettingsResponse))
         }
     }
 
@@ -274,22 +257,78 @@ extension UserpilotRemoteSource: UserpilotRemoteSourcing {
         params: PreviewExperienceQueryParams,
         completion: @escaping (Result<PreviewExperience, RemoteSourceError>) -> Void
     ) {
-        let url = buildPreviewExperienceUrl(params: params)
+        let url = params.requestURL
         executeRequest(url: url) { [weak self] result in
             guard let self else {
                 completion(.failure(.networkError("Request cancelled")))
                 return
             }
 
-            switch result {
-            case .success(let data):
-                let result = self.handlePreviewExperienceResponse(data)
-                completion(result)
-            case .failure(let error):
+            if case .failure(let error) = result {
                 self.logger.error(
                     "❌ Failed to fetch preview experience: %{public}@", error.localizedDescription)
-                completion(.failure(error))
             }
+            completion(result.flatMap(self.handlePreviewExperienceResponse))
         }
+    }
+
+    /**
+     * Uploads one Builder capture to `url`, exactly as given.
+     *
+     * The body has three parts: the `capture_id` text, the `screenshot` PNG and the `capture.json` `document`.
+     * The token travels only in the `Authorization` header. Logs carry the outcome category, HTTP status and
+     * the backend's `details` code, never the token, URL, headers, body or raw transport error.
+     *
+     * - Parameters:
+     *   - upload: The prepared capture id, PNG and document bytes
+     *   - token: The Builder session credential
+     *   - url: The environment's capture upload URL
+     *   - completion: Closure invoked once with success for any 2xx, or a safe `CaptureUploadError`
+     * - Returns: The running request
+     */
+    @discardableResult
+    func uploadCapture(
+        _ upload: CaptureUpload,
+        token: CaptureToken,
+        url: URL,
+        completion: @escaping (Result<Void, CaptureUploadError>) -> Void
+    ) -> CaptureUploadCancellable {
+        typealias Upload = Constants.BuilderCapture.Upload
+        var body = MultipartFormBody()
+        body.append(field: Upload.captureIDPart, value: upload.captureID)
+        body.append(file: Upload.screenshotPart, fileName: Upload.screenshotFileName,
+                    contentType: Upload.screenshotContentType, data: upload.screenshot)
+        body.append(file: Upload.documentPart, fileName: Upload.documentFileName,
+                    contentType: Upload.documentContentType, data: upload.document)
+
+        var request = URLRequest(
+            url: url,
+            cachePolicy: .reloadIgnoringLocalCacheData,
+            timeoutInterval: Upload.requestTimeout
+        )
+        request.httpMethod = "POST"
+        request.setValue(token.bearerHeader(), forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+        request.httpBody = body.encoded()
+
+        let task = uploadSession.dataTask(with: request) { [weak self] data, response, error in
+            let result = CaptureUploadError.result(data: data, response: response, error: error)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode
+            switch result {
+            case .success:
+                self?.logger.info("📸 Capture uploaded: saved (status %{public}@)", String(statusCode ?? 0))
+            case .failure(.cancelled):
+                // The SDK cancelled the request itself (stop, replacement or background expiry); nothing to log.
+                break
+            case let .failure(failure):
+                let details = CaptureUploadError.details(in: data)
+                self?.logger.error("📸 Capture upload failed: %{public}@",
+                                   failure.logDescription(statusCode: statusCode, details: details))
+            }
+            completion(result)
+        }
+        task.resume()
+        return task
     }
 }

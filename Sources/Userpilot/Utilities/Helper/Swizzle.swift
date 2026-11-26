@@ -1,8 +1,8 @@
 //
-//  Swizzler.swift
+//  Swizzle.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 17/02/2025.
+//  Created by Userpilot on 17/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  This utility provides a method-swizzling mechanism used primarily for delegate method interception,
@@ -17,6 +17,9 @@ internal enum Swizzler {
 
     /// Exchanges two instance method implementations on the given class.
     /// Returns false when either method cannot be found.
+    /// This deliberately exchanges on every call: notification fallback assignment temporarily
+    /// restores the original getter and then reinstalls the hook. Callers that install permanent
+    /// autocapture hooks own their once-only guards.
     @discardableResult
     static func swapInstanceMethods(
         on cls: AnyClass,
@@ -32,21 +35,10 @@ internal enum Swizzler {
         return true
     }
 
-    /// Swizzling for delegate objects.
-    ///
-    /// This is unique because,
-    /// 1. We aren't certain of the class type that implements the delegate protocol at compile time.
-    /// This is the reason why this function takes an instance of the delegate instead of the delegate type.
-    /// 2. Delegate methods are frequently optional, so we can't rely on the implementation being there to swizzle.
-    /// If this is the case, we add an empty placeholder implementation and then swizzle that.
-    ///
-    /// - Parameters:
-    ///   - targetInstance: Instance of the class to replace the method in.
-    ///   - targetSelector: Selector of the method to replace.
-    ///   - replacementOwner: Class containing the methods selected by `swizzleSelector` and `placeholderSelector`.
-    ///   - placeholderSelector: Selector of the method to use the `targetSelector` method is not implemented.
-    ///   This should be an empty function.
-    ///   - swizzleSelector: Selector of the method to use as the replacement.
+    /// Installs a delegate hook once per concrete class, discovered from the host's delegate instance.
+    /// Delegate callbacks are optional: when the host omits one, a placeholder gives the hook a valid
+    /// original implementation to forward to instead of raising an unrecognized-selector exception.
+    /// After exchange, calling `swizzleSelector` forwards to the host callback or that placeholder.
     static func swizzle(
         targetInstance: AnyObject,
         targetSelector: Selector,
@@ -54,68 +46,30 @@ internal enum Swizzler {
         placeholderSelector: Selector,
         swizzleSelector: Selector
     ) {
-        // see if the currently assigned delegate has an implementation for the target selector already.
-        // these are optional methods in the protocol, and if they are not there already, we'll need to add
-        // a placeholder implementation so that we can consistently swap it with our override, which will attempt
-        // to call back into it, in case there was an implementation already - if we don't do this, we'll
-        // get invalid selector errors in these cases.
         let targetClass: AnyClass = type(of: targetInstance)
-        let originalMethod = class_getInstanceMethod(targetClass, targetSelector)
+        // Equal implementations mean this hook is already in place, on this class or one it inherits
+        // from; exchanging them again can make the hook's forwarding call re-enter itself indefinitely.
+        guard let replacement = class_getInstanceMethod(replacementOwner, swizzleSelector),
+              let callback = class_getInstanceMethod(targetClass, targetSelector)
+                ?? class_getInstanceMethod(replacementOwner, placeholderSelector),
+              method_getImplementation(callback) != method_getImplementation(replacement) else { return }
 
-        if originalMethod == nil {
-            // this is the case where the existing delegate does not have an implementation for the target selector
+        // Only a method the class defines itself may be exchanged: exchanging an inherited one hooks every
+        // sibling class, none of which has the forwarding selector. Adding is a no-op when the class
+        // already defines the callback; otherwise the inherited callback or placeholder becomes its own.
+        addMethod(callback, on: targetClass, as: targetSelector)
 
-            guard
-                let placeholderMethod = class_getInstanceMethod(
-                    replacementOwner, placeholderSelector)
-            else {
-                // this should never be nil as it would be a developer error, but we must nil check this call
-                return
-            }
+        // Installing the forwarding selector is the existing once-per-class guard. Swapping a second
+        // time would undo the hook or recurse; a selector already owned by the class must be left alone.
+        guard let original = class_getInstanceMethod(targetClass, targetSelector),
+              addMethod(replacement, on: targetClass, as: swizzleSelector),
+              let forwarding = class_getInstanceMethod(targetClass, swizzleSelector) else { return }
+        method_exchangeImplementations(original, forwarding)
+    }
 
-            // add the placeholder, so it can be swizzled uniformly
-            class_addMethod(
-                targetClass,
-                targetSelector,
-                method_getImplementation(placeholderMethod),
-                method_getTypeEncoding(placeholderMethod)
-            )
-        }
-
-        // this should never be nil since the method gets added above
-        guard
-            let originalMethod =
-                originalMethod ?? class_getInstanceMethod(targetClass, targetSelector)
-        else { return }
-
-        // swizzle the new implementation to inject our own custom logic
-
-        // this should never be nil as it would be a developer error, but we must nil check this call
-        guard let swizzleMethod = class_getInstanceMethod(replacementOwner, swizzleSelector) else {
-            return
-        }
-
-        // implementations must be different (otherwise the target selector already has the implementation we want) and
-        // without this check we would add the implementation again which will cause an infinite loop
-        guard method_getImplementation(originalMethod) != method_getImplementation(swizzleMethod)
-        else { return }
-
-        // add the swizzled version - this will only succeed once for this instance, if its already there, we've already
-        // swizzled, and we can exit early in the next guard
-        let addMethodResult = class_addMethod(
-            targetClass,
-            swizzleSelector,
-            method_getImplementation(swizzleMethod),
-            method_getTypeEncoding(swizzleMethod)
-        )
-
-        guard addMethodResult,
-            let swizzledMethod = class_getInstanceMethod(targetClass, swizzleSelector)
-        else {
-            return
-        }
-
-        // finally, here is where we swizzle in our custom implementation
-        method_exchangeImplementations(originalMethod, swizzledMethod)
+    /// Copies the implementation and its Objective-C type encoding together.
+    @discardableResult
+    private static func addMethod(_ method: Method, on targetClass: AnyClass, as selector: Selector) -> Bool {
+        class_addMethod(targetClass, selector, method_getImplementation(method), method_getTypeEncoding(method))
     }
 }

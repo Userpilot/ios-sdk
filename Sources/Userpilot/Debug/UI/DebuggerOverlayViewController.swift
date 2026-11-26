@@ -1,0 +1,59 @@
+//
+//  DebuggerOverlayViewController.swift
+//  Userpilot SDK
+//
+//  Created by Userpilot on 13/10/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
+//
+//  Untracked host for the debugger overlay. Defers status-bar style to the app.
+//
+
+import ObjectiveC
+import UIKit
+
+/// Untracked host for the debugger overlay. Defers status-bar style to the app.
+internal final class DebuggerOverlayViewController: UIViewController {
+
+    var onExitRequested: (() -> Void)?
+
+    private let eventStore: DebugEventStoring
+    private let configFactory: DebugConfigSnapshotMaking
+    private let userFactory: DebugUserSnapshotMaking
+
+    init(
+        eventStore: DebugEventStoring,
+        configFactory: DebugConfigSnapshotMaking,
+        userFactory: DebugUserSnapshotMaking
+    ) {
+        self.eventStore = eventStore
+        self.configFactory = configFactory
+        self.userFactory = userFactory
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func loadView() {
+        objc_setAssociatedObject(
+            self,
+            &ScreenNameTracker.untrackedScreenKey,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
+        let overlay = DebuggerOverlayView(
+            frame: UIScreen.main.bounds,
+            eventStore: eventStore,
+            configFactory: configFactory,
+            userFactory: userFactory
+        )
+        overlay.onExitRequested = { [weak self] in self?.onExitRequested?() }
+        view = overlay
+    }
+
+    override var prefersStatusBarHidden: Bool {
+        false
+    }
+}

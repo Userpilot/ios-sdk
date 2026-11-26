@@ -2,10 +2,10 @@
 //  DeepLinkHandler.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 16/10/2025.
+//  Created by Userpilot on 16/10/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  Handles deep link URLs for the Userpilot SDK, including experience preview links.
+//  Handles deep link URLs for the Userpilot SDK: experience previews and Builder QR capture links.
 //  Manages deferred URL handling when app scenes are not yet active.
 //
 
@@ -15,7 +15,7 @@ internal protocol DeepLinkHandling: AnyObject {
     func didHandleURL(_ url: URL) -> Bool
 }
 
-internal class DeepLinkHandler: DeepLinkHandling {
+internal final class DeepLinkHandler: DeepLinkHandling, LifecycleDelegate {
 
     // MARK: - Nested Types
 
@@ -23,21 +23,25 @@ internal class DeepLinkHandler: DeepLinkHandling {
         /// Preview for draft content with experience ID and optional query parameters
         case preview(experienceID: String, queryItems: [URLQueryItem])
 
+        /// `sdk/capture?capture_id&platform&token`; nil when a value is missing or blank, or the platform is not iOS.
+        case capture(link: CaptureLink?)
+
+        /// A capture link whose `platform` is Android, refused before capture starts.
+        case otherPlatformCapture
+
         init?(url: URL, token: String) {
-            let scheme = url.scheme?.lowercased()
-            // The scheme is the token as the SDK was configured with it, so a staging token keeps
-            // its `STG-` prefix: `STG-NX-12345678` matches `userpilot-stg-nx-12345678`.
-            let isValidScheme = scheme == "userpilot-\(token)".lowercased()
-            guard isValidScheme, url.host == "sdk" else { return nil }
-
-            // Supported paths:
-            // userpilot-{token}://sdk/experience_preview/{experience_id}
-
-            let pathTokens = url.path.split(separator: "/").map { String($0) }
-
-            if pathTokens.count == 2, pathTokens[0] == "experience_preview" {
-                self = .preview(experienceID: pathTokens[1], queryItems: url.queryItems)
-            } else {
+            guard url.scheme?.lowercased() == "userpilot-\(token)".lowercased(), url.host == "sdk" else { return nil }
+            let parts = url.path.split(separator: "/").map(String.init)
+            switch (parts.first, parts.count) {
+            case ("experience_preview", 2):
+                self = .preview(experienceID: parts[1], queryItems: url.queryItems)
+            case (Constants.BuilderCapture.Link.route, 1):
+                let values = DeepLinkHandler.captureLinkValues(in: url)
+                self = CaptureLink.isForOtherPlatform(values[.platform])
+                    ? .otherPlatformCapture
+                    : .capture(link: CaptureLink.from(
+                        captureID: values[.captureID], platform: values[.platform], token: values[.token]))
+            default:
                 return nil
             }
         }
@@ -46,10 +50,11 @@ internal class DeepLinkHandler: DeepLinkHandling {
     // MARK: - Properties
 
     private weak var container: DIContainer?
+    private let lifecycleMonitor: LifecycleMonitoring
     private lazy var config = container?.resolve(Userpilot.Config.self)
     private lazy var logger = container?.resolve(Userpilot.Config.self).logger
 
-    /// This is a set because a `SceneDelegate` has a `Set<UIOpenURLContext>` to handle.
+    /// Main-thread only. Identical links received before scene activation share one pending action.
     private var actionsToHandle: Set<Action> = []
 
     /// Dependency for getting the top view controller. Can be mocked for testing.
@@ -59,6 +64,7 @@ internal class DeepLinkHandler: DeepLinkHandling {
 
     init(container: DIContainer) {
         self.container = container
+        self.lifecycleMonitor = container.resolve(LifecycleMonitoring.self)
     }
 
     // MARK: - DeepLinkHandling
@@ -68,18 +74,26 @@ internal class DeepLinkHandler: DeepLinkHandling {
             let token = config?.token,
             let action = Action(url: url, token: token)
         else {
-            logger?.debug("🔗 Deep link not handled: %{public}@", url.absoluteString)
+            logger?.debug("🔗 Deep link not handled: %{public}@", url.redactedDescription)
             return false
         }
 
-        logger?.info("🔗 Deep link handling: %{public}@", url.absoluteString)
+        logger?.info("🔗 Deep link handling: %{public}@", url.redactedDescription)
+        // Only the failing field's name; never a link value.
+        switch action {
+        case .capture(link: nil):
+            let values = Self.captureLinkValues(in: url)
+            let field = CaptureLink.invalidField(
+                captureID: values[.captureID], platform: values[.platform], token: values[.token])
+            logger?.error("❌ Capture link rejected: %{public}@", field?.rawValue ?? "")
+        case .otherPlatformCapture:
+            logger?.error("❌ Capture link rejected: %{public}@", CaptureLink.Field.platform.rawValue)
+        case .capture, .preview:
+            break
+        }
 
-        if Thread.isMainThread {
-            dispatch(action: action)
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.dispatch(action: action)
-            }
+        performOnMain { [weak self] in
+            self?.dispatch(action: action)
         }
 
         return true
@@ -87,24 +101,29 @@ internal class DeepLinkHandler: DeepLinkHandling {
 
     // MARK: - Private Methods
 
+    /// The capture link's URL-decoded query values, keyed by field; a raw `+` stays `+`, as the token may
+    /// contain one. The values are never logged.
+    private static func captureLinkValues(in url: URL) -> [CaptureLink.Field: String] {
+        var values: [CaptureLink.Field: String] = [:]
+        for field in CaptureLink.Field.allCases {
+            values[field] = url.queryValue(for: field.rawValue)
+        }
+        return values
+    }
+
     /// Dispatches an action either immediately or defers it until a scene becomes active.
     private func dispatch(action: Action) {
         if topControllerGetting.hasActiveWindowScenes {
-            // UIScene is already active and we can handle the action immediately.
             handle(action: action)
-        } else if actionsToHandle.isEmpty {
-            actionsToHandle.insert(action)
+            return
+        }
 
-            // Set up a single observer to trigger handling any action(s).
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(sceneDidActivate),
-                name: UIScene.didActivateNotification,
-                object: nil
-            )
+        let needsActivationObserver = actionsToHandle.isEmpty
+        actionsToHandle.insert(action)
+        if needsActivationObserver {
+            // One observer owns the whole batch until the next scene activation.
+            lifecycleMonitor.addDelegate(self, replayCurrentState: false)
             logger?.debug("🔗 Deep link deferred until scene activates")
-        } else {
-            actionsToHandle.insert(action)
         }
     }
 
@@ -118,20 +137,31 @@ internal class DeepLinkHandler: DeepLinkHandling {
                     experienceID,
                     queryItems
                 )
+            case let .capture(link):
+                let coordinator = container?.resolve(BuilderCaptureCoordinating.self)
+                if let link {
+                    coordinator?.start(link: link)
+                } else {
+                    coordinator?.rejectInvalidLink()
+                }
+            case .otherPlatformCapture:
+                container?.resolve(BuilderCaptureCoordinating.self).rejectOtherPlatformLink()
             }
         }
     }
 
-    @objc
-    private func sceneDidActivate() {
-        logger?.info("✅ Scene activated, handling %d deferred deep link(s)", actionsToHandle.count)
+    func onSceneActive() {
+        performOnMain { [weak self] in
+            guard let self else { return }
 
-        actionsToHandle.forEach(handle(action:))
+            // Release this batch before callbacks, which may defer another link reentrantly.
+            let pendingActions = self.actionsToHandle
+            self.actionsToHandle.removeAll()
+            self.lifecycleMonitor.removeDelegate(self)
+            self.logger?.info("✅ Scene activated, handling %d deferred deep link(s)", pendingActions.count)
 
-        // Reset after handling to avoid handling notifications multiple times.
-        actionsToHandle.removeAll()
-        NotificationCenter.default.removeObserver(
-            self, name: UIScene.didActivateNotification, object: nil)
+            pendingActions.forEach(self.handle(action:))
+        }
     }
 }
 

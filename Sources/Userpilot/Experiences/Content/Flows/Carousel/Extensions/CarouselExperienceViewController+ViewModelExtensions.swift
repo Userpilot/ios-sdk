@@ -2,10 +2,9 @@
 //  CarouselExperienceViewController+ViewModelExtensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This extension provides methods to handle the setup and interactions for
 //  the carousel experience, including configuring view styles, managing
 //  action button bindings, handling step transitions, and binding the view model

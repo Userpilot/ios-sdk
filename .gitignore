@@ -4,6 +4,7 @@
 
 ## User settings
 xcuserdata/
+.derivedData/
 
 ## Obj-C/Swift specific
 *.hmap
@@ -78,3 +79,12 @@ plan/
 # Local GitHub Actions cleanup helper and audit records
 /scripts/cleanup-github-actions.py
 /.local/github-actions-cleanup/
+
+# Local private API audit helper
+/scripts/scan-private-api.sh
+
+# Local benchmark tools, measurements, builds, and profiler traces
+/benchmarks/
+
+# Local plans and working documents
+/work/

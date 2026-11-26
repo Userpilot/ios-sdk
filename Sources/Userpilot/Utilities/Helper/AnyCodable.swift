@@ -2,17 +2,19 @@
 //  AnyCodable.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 03/11/2025.
+//  Created by Userpilot on 03/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Utility to encode/decode heterogeneous Any values in JSON.
 //
+
 // MARK: - AnyCodable Helper
 
 import Foundation
 
-/// Helper struct to encode/decode Any values
+/// Offline JSON bridge for strings, native scalars, string-keyed dictionaries and arrays.
+/// Unsupported values encode as null; callers that must reject them validate with JSONSerialization first.
+/// Keep the scalar cast order: Foundation NSNumber values can bridge to more than one Swift scalar type.
 internal struct AnyCodable: Codable {
     let value: Any
 
@@ -63,6 +65,20 @@ internal struct AnyCodable: Codable {
                 in: container,
                 debugDescription: "AnyCodable value cannot be decoded"
             )
+        }
+    }
+}
+
+internal extension AnyCodable {
+    /// A scalar's text for selector matching; `nil` for null, dictionaries and arrays. `Bool` is matched before
+    /// the numbers so `true` never reads as `1`.
+    var selectorIdentity: String? {
+        switch value {
+        case let text as String: return text
+        case let flag as Bool: return String(flag)
+        case let number as Int: return String(number)
+        case let number as Double: return String(number)
+        default: return nil
         }
     }
 }

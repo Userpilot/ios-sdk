@@ -2,10 +2,11 @@
 //  StoredOfflineEvent.swift
 //  Userpilot SDK
 //
+//  Created by Userpilot on 21/09/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
 //  Stable JSON payload stored inside the offline events database.
-//  Mirrors the Android `StoredOfflineEvent` so both platforms replay the same batch shape.
+//  Stores offline events in the batch envelope expected by the backend.
 //
 
 import Foundation
@@ -19,7 +20,7 @@ internal struct StoredOfflineEvent {
     static let schemaVersionValue = 1
 
     let schemaVersion: Int
-    let kind: StoredOfflineEventKind
+    let kind: Kind
     let eventType: String
     let event: Event?
     let payload: [String: Any]?
@@ -43,6 +44,17 @@ internal struct StoredOfflineEvent {
         self.event = nil
         self.payload = sdkEvent.eventPayload
     }
+
+    /// Which pipeline a stored offline row came from.
+    ///
+    /// The raw values are persisted and sent in offline batches; renaming them requires
+    /// a storage migration and compatibility with the backend batch contract.
+    internal enum Kind: String, Codable {
+        case analytics
+        /// `internal` is a Swift keyword, so the case is spelled differently from its raw value.
+        case internalEvent = "internal"
+    }
+
 }
 
 // MARK: - Codable Conformance
@@ -76,8 +88,8 @@ extension StoredOfflineEvent: Codable {
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
             ?? Self.schemaVersionValue
         // Required, not defaulted: every writer sets it, so a row without one is corrupt and
-        // must not be silently filed as analytics. Matches the Android envelope.
-        kind = try container.decode(StoredOfflineEventKind.self, forKey: .kind)
+        // must not be silently filed as analytics. Preserves the stored envelope's event kind.
+        kind = try container.decode(Kind.self, forKey: .kind)
         eventType = try container.decode(String.self, forKey: .eventType)
         event = try container.decodeIfPresent(Event.self, forKey: .event)
 
@@ -86,5 +98,49 @@ extension StoredOfflineEvent: Codable {
         } else {
             payload = nil
         }
+    }
+}
+
+// MARK: - Offline replay
+
+extension StoredOfflineEvent {
+
+    /// Builds one `batch_events` entry without changing the stored envelope or its schema.
+    func toBatchPayload(createdAt: TimeInterval) -> [String: Any]? {
+        guard isSupportedSchema else { return nil }
+        var data: [String: Any] = [
+            Constants.OfflineEvents.eventTypeProperty: eventType,
+            Constants.OfflineEvents.createdAtProperty: formatTimestampWithTimezone(createdAt)
+        ]
+        if isInternalEvent {
+            // Internal payloads stay flat, including their existing collision precedence.
+            for (key, value) in payload ?? [:] { data[key] = value }
+            return data
+        }
+        guard let event else { return nil }
+        data[Constants.OfflineEvents.eventTypeProperty] = event.eventName
+        data[Constants.Analytics.metaDataProperty] = event.properties ?? [:]
+        switch event.type {
+        case .identify:
+            if let company = event.company, !company.isEmpty {
+                data[Constants.Analytics.identifyCompanyProperty] = company
+            }
+        case .screen:
+            data[Constants.Analytics.screenTitleProperty] = event.screenTitle ?? ""
+            var metadata = event.properties ?? [:]
+            metadata[Constants.Analytics.fakeReload] = false
+            data[Constants.Analytics.metaDataProperty] = metadata
+        case .event, .autoCaptureEvent:
+            data[Constants.Analytics.eventNameProperty] = event.interactionEventName ?? event.eventTitle
+            if let screen = event.screen { data[Constants.Analytics.screenProperty] = screen }
+        }
+        return data
+    }
+
+    /// Keep the existing UTC ISO-8601 representation; each call owns its formatter.
+    private func formatTimestampWithTimezone(_ timestampMillis: TimeInterval) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date(timeIntervalSince1970: timestampMillis / 1_000.0))
     }
 }

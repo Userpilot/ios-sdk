@@ -2,10 +2,9 @@
 //  SurveyListViewController+ViewExtensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/01/2025.
+//  Created by Userpilot on 21/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This extension provides methods to handle the setup and interactions for
 //  the survey experience, including configuring the view themes, managing
 //  action button bindings and setup questions.
@@ -51,10 +50,10 @@ extension SurveyListViewController {
 
     /// Process survey form answers.
     func processSurvey() {
-        guard actionButton.isEnabled else { return }
+        guard actionButton.isEnabled, claimCloseReport() else { return }
 
         let answersPayload = containerView.subviews
-            .compactMap { ($0 as? UPExperienceView)?.getAnswerPayload() }
+            .compactMap { ($0 as? UPExperienceViewDelegate)?.getAnswerPayload() }
 
         surveyViewModel.onSurveyListSubmitted(answersPayload: answersPayload)
         showThankYouMessage()
@@ -63,15 +62,17 @@ extension SurveyListViewController {
     /// Update button enabled state based on views' validation status.
     func checkActionButtonState() {
         let isValidForm = containerView.subviews
-            .compactMap { $0 as? UPExperienceView }
+            .compactMap { $0 as? UPExperienceViewDelegate }
             .allSatisfy { $0.isValidAnswer() }
 
         actionButton.updateEnableState(isEnabled: isValidForm)
     }
 
-    /// Closes the carousel experience view and triggers the onDismiss event.
+    /// Reports the dismissal unless the survey is already closing, then dismisses it.
     func closeExperience(completion: (() -> Void)? = nil) {
-        surveyViewModel.onSurveyDismissed()
+        if claimCloseReport() {
+            surveyViewModel.onSurveyDismissed()
+        }
         dismiss(animated: true) { [weak self] in
             if let completion {
                 completion()

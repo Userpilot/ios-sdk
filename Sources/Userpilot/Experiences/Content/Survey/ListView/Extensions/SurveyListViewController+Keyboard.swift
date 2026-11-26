@@ -1,8 +1,11 @@
 //
 //  SurveyListViewController+Keyboard.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 26/01/2025.
+//  Created by Userpilot on 26/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Updates the survey list layout and scrolling when the keyboard changes.
 //
 
 import UIKit
@@ -52,7 +55,7 @@ extension SurveyListViewController {
                 // Calculate the desired offset to make the field right above the keyboard
                 var offsetY = fieldFrameInScrollView.maxY - (view.frame.height - keyboardHeight) + 20 // 20 for padding
                 if let textField = activeField as? UITextField,
-                   activeField.tag == ThemeHandler.DefaultValues.surveyOtherChoiceTag,
+                   activeField.tag == Constants.Theme.surveyOtherChoiceTag,
                    let customTag = textField.customTag {
 
                     let components = customTag.split(separator: ":")

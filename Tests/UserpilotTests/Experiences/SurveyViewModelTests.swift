@@ -13,7 +13,7 @@ final class SurveyViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(
+        userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "SURVEY-VM-\(UUID().uuidString)").defaultInstance(false)
         )
         userpilot.themeHandler.onMergeSurveyThemes = { _, surveyTheme in
@@ -137,7 +137,7 @@ final class SurveyViewModelTests: XCTestCase {
         ])
     }
 
-    func testCompletedStepTriggersDeepLinkAndClose() {
+    func testCompletedStepRecordsCompletionLinkAndCloses() {
         let survey = Self.makeSurveyContent(modules: [
             Self.makeCompletedStep(id: 1, enabled: true, deepLink: "https://example.com/thanks")
         ])
@@ -145,7 +145,7 @@ final class SurveyViewModelTests: XCTestCase {
         var didClose = false
         var eventName: String?
         userpilot.experiencesPublisher.onGetActiveMobileContent = { .survey(content: survey) }
-        userpilot.experiencesPublisher.onTriggerDeepLink = { triggeredURL = $0 }
+        userpilot.experiencesPublisher.onSetCompletionDeepLink = { triggeredURL = $0 }
         userpilot.experiencesPublisher.onPublishInternalSDKEvent = { eventName = $0.eventName }
         viewModel.closeSurvey = { didClose = true }
         viewModel.onStart()
@@ -173,6 +173,54 @@ final class SurveyViewModelTests: XCTestCase {
         XCTAssertEqual(event?.eventPayload["module_id"] as? Int, 10)
         XCTAssertEqual(event?.eventPayload["type"] as? String, SurveyViewType.openText.rawValue)
         XCTAssertTrue(didFinish)
+    }
+
+    func testStepSeenUsesSurveyIDAndSeparateModuleID() {
+        let survey = Self.makeSurveyContent(id: 50, modules: [Self.makeStep(id: 300), Self.makeStep(id: 301)])
+        var events: [SDKEvent] = []
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .survey(content: survey) }
+        userpilot.experiencesPublisher.onPublishInternalSDKEvent = { events.append($0) }
+        viewModel.onStart()
+
+        viewModel.moveToNextSurveyStep(nil, nil)
+
+        XCTAssertEqual(events.last?.eventName, SDKEventsName.surveyExperienceStepSeen.rawValue)
+        XCTAssertEqual(events.last?.eventPayload["survey_id"] as? Int, 50)
+        XCTAssertEqual(events.last?.eventPayload["module_id"] as? Int, 301)
+    }
+
+    func testDisabledNonterminalThankYouDoesNotRemoveFinalQuestion() {
+        let survey = Self.makeSurveyContent(modules: [
+            Self.makeStep(id: 1), Self.makeCompletedStep(id: 2, enabled: false), Self.makeStep(id: 3)
+        ])
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .survey(content: survey) }
+
+        viewModel.onStart()
+
+        XCTAssertEqual(viewModel.surveyContent?.modules.map(\.id), [1, 2, 3])
+    }
+
+    func testOnStartBindsFalse_whenTheOnlyModuleIsADisabledThankYou() {
+        let survey = Self.makeSurveyContent(modules: [Self.makeCompletedStep(id: 1, enabled: false)])
+        var didBind: Bool?
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .survey(content: survey) }
+        viewModel.bindData = { didBind = $0 }
+
+        viewModel.onStart()
+
+        XCTAssertEqual(didBind, false)
+        XCTAssertEqual(viewModel.surveyContent?.modules.isEmpty, true)
+    }
+
+    func testEnabledTerminalThankYouIsRetained() {
+        let survey = Self.makeSurveyContent(modules: [
+            Self.makeStep(id: 1), Self.makeCompletedStep(id: 2, enabled: true)
+        ])
+        userpilot.experiencesPublisher.onGetActiveMobileContent = { .survey(content: survey) }
+
+        viewModel.onStart()
+
+        XCTAssertEqual(viewModel.surveyContent?.modules.map(\.id), [1, 2])
     }
 
     private static func makeSurveyContent(

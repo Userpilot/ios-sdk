@@ -2,16 +2,15 @@
 //  ThankYouBottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 21/01/2025.
+//  Created by Userpilot on 21/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A view to show Thank you message.
 //
 
 import UIKit
 
-internal class ThankYouBottomSheetViewController: BottomSheetViewController {
+internal final class ThankYouBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Components
 
@@ -52,7 +51,7 @@ internal class ThankYouBottomSheetViewController: BottomSheetViewController {
             [buttonDismissContainerView, thankYouView, spaceView, actionButton])
         stackView.axis = .vertical
         stackView.distribution = .fill
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -139,7 +138,7 @@ extension ThankYouBottomSheetViewController {
             buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+                constant: Constants.Theme.dismissButtonMargin),
             buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
             buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
         ])

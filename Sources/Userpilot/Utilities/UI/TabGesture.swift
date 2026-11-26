@@ -1,13 +1,16 @@
 //
-//  TabGesture.kt
+//  TabGesture.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 26/01/2025.
+//  Created by Userpilot on 26/01/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
+//  TabGesture.kt
+//
+//
 //  A class to add tab gesture to any view.
 //
+
 // swiftlint:disable all
 import UIKit
 
@@ -54,28 +57,6 @@ internal final class BindableGestureRecognizer: UITapGestureRecognizer, UIGestur
     /// Executes the stored action when the gesture is recognized.
     @objc private func execute() {
         action()
-    }
-}
-
-internal extension UIView {
-    /// Adds a tap gesture recognizer to the `UIView`, allowing you to execute a closure when tapped.
-    /// - Parameters:
-    ///   - tapNumber: The number of taps required to recognize the gesture. Defaults to 1.
-    ///   - closure: A closure to be executed when the gesture is recognized.
-    func addTapGesture(
-        tapNumber: Int = 1,
-        _ closure: (() -> Void)?
-    ) {
-        guard let closure = closure else { return }
-
-        // Create a bindable tap gesture recognizer with the provided closure
-        let tap = BindableGestureRecognizer(action: closure)
-        tap.numberOfTapsRequired = tapNumber
-        tap.cancelsTouchesInView = false
-        isUserInteractionEnabled = true
-
-        // Add the gesture recognizer to the view
-        addGestureRecognizer(tap)
     }
 }
 // swiftlint:enable all

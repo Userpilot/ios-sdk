@@ -11,12 +11,15 @@ import XCTest
 final class AutoCapturerTests: XCTestCase {
 
     func testScreenEventIdentity_usesLogicalScreenNameForSwiftUI() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-SWIFTUI-\(UUID().uuidString)")
                 .appFramework(.SwiftUI)
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
+        // Native screen hooks reach the coordinator only with screen capture on; enable it after
+        // construction so this payload test installs no process-wide hooks.
+        userpilot.config.enableScreenAutoCapture = true
         let expectation = expectation(description: "SwiftUI screen event published")
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { event in
@@ -40,12 +43,13 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testScreenEventIdentity_keepsClassNameForUIKit() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-UIKIT-\(UUID().uuidString)")
                 .appFramework(.UIKit)
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
+        userpilot.config.enableScreenAutoCapture = true
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
         let payload = ScreenTrackingPayload(
@@ -64,11 +68,11 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureScreen_isIgnoredForNonWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 
@@ -78,14 +82,14 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureScreen_isPublishedForWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-WRAPPER-\(UUID().uuidString)")
                 .additionalProperties([
                     WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeReactNative
                 ])
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 
@@ -95,11 +99,11 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureEvent_isIgnoredForNonWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-NATIVE-\(UUID().uuidString)")
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 
@@ -109,14 +113,14 @@ final class AutoCapturerTests: XCTestCase {
     }
 
     func testExternalAutoCaptureEvent_isPublishedForWrapperConfig() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "AUTOCAPTURE-WRAPPER-\(UUID().uuidString)")
                 .additionalProperties([
                     WrapperSDKConstants.pluginType: WrapperSDKConstants.pluginTypeFlutter
                 ])
                 .defaultInstance(false)
         )
-        let autoCapturer = AutoCaptureCoordinater(container: userpilot.container)
+        let autoCapturer = AutoCaptureCoordinator(container: userpilot.container)
         var trackedEvent: Event?
         userpilot.analyticsPublisher.onPublish = { trackedEvent = $0 }
 

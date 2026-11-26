@@ -16,8 +16,14 @@ final class EnvironmentTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         userpilot.storage.socketURL = "wss://socket.prod.example.com"
+    }
+
+    override func tearDown() {
+        // The runtime registry has no reset: a retained instance would keep the default claim and token.
+        userpilot = nil
+        super.tearDown()
     }
 
     func test_getSocketURL_returnsFromStorageInProduction() {
@@ -42,5 +48,13 @@ final class EnvironmentTests: XCTestCase {
 
         // Assert
         XCTAssertEqual(result, "https://appex.userpilot.io/api/v1/public/content")
+    }
+
+    func test_getCaptureUploadUrl_returnsProductionHostInProduction() {
+        // Act
+        let result = Environment.getCaptureUploadUrl()
+
+        // Assert
+        XCTAssertEqual(result, "https://appex.userpilot.io/api/v1/public/mobile_screen_captures")
     }
 }

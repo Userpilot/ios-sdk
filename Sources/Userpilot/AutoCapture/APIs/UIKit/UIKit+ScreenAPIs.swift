@@ -1,8 +1,11 @@
 //
-//  UIKit+Screen.swift
-//  Userpilot
+//  UIKit+ScreenAPIs.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/03/2026.
+//  Created by Userpilot on 29/03/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
+//
+//  Provides view controller overrides for screen names, container detection and screen capture.
 //
 
 import UIKit
@@ -34,7 +37,7 @@ extension UIViewController {
         // Use the owning instance's `enableScreenTitleCapture` so embedded SDKs and
         // the host app each control their own screens' title capture independently.
         let titleCaptureEnabled =
-            InstanceResolver.shared.target(forViewController: self)?.config.enableScreenTitleCapture ?? true
+            UserpilotRuntime.shared.instanceResolver.resolveOwner(from: self)?.config.enableScreenTitleCapture ?? true
         if let containerTitle = ScreenNameResolver.tabBarControllerPreferredTitle(
             self, titleCaptureEnabled: titleCaptureEnabled
         ) {

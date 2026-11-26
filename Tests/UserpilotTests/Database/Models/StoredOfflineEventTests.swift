@@ -45,6 +45,18 @@ class StoredOfflineEventTests: XCTestCase {
         XCTAssertEqual(restored.payload?["skipped"] as? Bool, false)
     }
 
+    func testAnalyticsEnvelope_keepsWholeNumbersAsIntInsideProperties() throws {
+        let event = Event(
+            type: .event("purchase"), properties: ["count": 3, "price": 9.5, "nested": ["qty": 2]]
+        )
+
+        let restored = try encodeDecode(StoredOfflineEvent(event: event))
+
+        XCTAssertEqual(restored.event?.properties?["count"] as? Int, 3)
+        XCTAssertEqual(restored.event?.properties?["price"] as? Double, 9.5)
+        XCTAssertEqual((restored.event?.properties?["nested"] as? [String: Any])?["qty"] as? Int, 2)
+    }
+
     func testAnalyticsEnvelope_roundTripsTheNestedEvent() throws {
         let event = Event(type: .screen("Home"))
 

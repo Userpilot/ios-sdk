@@ -2,10 +2,9 @@
 //  SurveyBottomSheetViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 03/02/2025.
+//  Created by Userpilot on 03/02/2025.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  A specialized view controller that displays a survey bottom sheet experience,
 //  controlled by an `SurveyViewModel`. It allows dynamic content rendering,
 //  user actions (like closing or triggering deep links), and customizable themes.
@@ -15,7 +14,7 @@
 
 import UIKit
 
-internal class SurveyBottomSheetViewController: BottomSheetViewController {
+internal final class SurveyBottomSheetViewController: BottomSheetViewController {
 
     // MARK: - UI Elements
     /// Container view that holds the slide-out content
@@ -30,6 +29,10 @@ internal class SurveyBottomSheetViewController: BottomSheetViewController {
 
     /// View model managing the carousel experience state and actions
     internal let surveyViewModel: SurveyViewModel
+
+    /// Set by the first close of any kind; only that close may report, and taps during the dismiss
+    /// animation do nothing.
+    private var isClosing = false
 
     // MARK: - Initializers
 
@@ -107,6 +110,7 @@ extension SurveyBottomSheetViewController {
                 let surveyContent = self.surveyViewModel.surveyContent,
                 let surveyTheme = self.surveyViewModel.surveyTheme
             else {
+                self?.isClosing = true
                 self?.dismissBottomSheet {
                     self?.surveyViewModel.onExperienceDismissalCompleted()
                 }
@@ -130,6 +134,7 @@ extension SurveyBottomSheetViewController {
 
         // triger close survey
         surveyViewModel.closeSurvey = { [weak self] in
+            self?.isClosing = true
             self?.dismissBottomSheet {
                 self?.surveyViewModel.onExperienceDismissalCompleted()
             }
@@ -146,13 +151,18 @@ extension SurveyBottomSheetViewController {
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension SurveyBottomSheetViewController: UPExperience {
+extension SurveyBottomSheetViewController: UPExperienceDelegate {
+    /// Dismisses without reporting; taps during the dismissal report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
     ) {
+        if manualClose, !isClosing {
+            surveyViewModel.onSurveyDismissed()
+        }
+        isClosing = true
         dismissBottomSheet { [weak self] in
             if let completion {
                 completion()
@@ -168,6 +178,8 @@ extension SurveyBottomSheetViewController: UPExperience {
 extension SurveyBottomSheetViewController: SurveyContainerViewDelegate {
 
     func onClose() {
+        guard !isClosing else { return }
+        isClosing = true
         surveyViewModel.onSurveyDismissed()
         dismissBottomSheet { [weak self] in
             self?.surveyViewModel.onExperienceDismissalCompleted()
@@ -178,6 +190,7 @@ extension SurveyBottomSheetViewController: SurveyContainerViewDelegate {
         _ answer: Any?,
         _ answerPayload: Payload
     ) {
+        guard !isClosing else { return }
         surveyViewModel.moveToNextSurveyStep(answer, answerPayload)
     }
 

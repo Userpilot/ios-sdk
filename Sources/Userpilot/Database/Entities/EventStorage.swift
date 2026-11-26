@@ -2,10 +2,9 @@
 //  EventStorage.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 08/10/2025.
+//  Created by Userpilot on 08/10/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Represents an event stored in the local database with all necessary metadata
 //  for tracking and syncing with the backend.
 //

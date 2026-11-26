@@ -13,7 +13,7 @@ final class NPSViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        userpilot = MockUserpilot(
+        userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "NPS-VM-\(UUID().uuidString)").defaultInstance(false)
         )
         viewModel = NPSViewModel(container: userpilot.container)
@@ -82,7 +82,7 @@ final class NPSViewModelTests: XCTestCase {
         )
         var triggeredURL: URL?
         var didFinish = false
-        userpilot.experiencesPublisher.onTriggerDeepLink = { triggeredURL = $0 }
+        userpilot.experiencesPublisher.onSetCompletionDeepLink = { triggeredURL = $0 }
         userpilot.experiencesPublisher.onExperienceDidFinishDismissing = { didFinish = true }
 
         viewModel.endNPS(completedData)

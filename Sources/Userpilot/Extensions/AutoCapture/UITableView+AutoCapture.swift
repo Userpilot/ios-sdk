@@ -1,0 +1,137 @@
+//
+//  UITableView+AutoCapture.swift
+//  Userpilot SDK
+//
+//  Created by Userpilot on 17/02/2026.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  UITableView+AutoCapture provides utilities for capturing UITableView cell interactions.
+//  Cell taps are captured via UIWindow.sendEvent when a UITableViewCell is touched.
+//
+
+import UIKit
+
+// MARK: - UITableViewCell Auto Capture
+
+internal extension UITableViewCell {
+
+    /// Captures a table view cell selection interaction
+    /// - Parameter touchedView: The specific view that was touched within the cell
+    func captureTableViewCellSelection(touchedView: UIView?, owner owningInstance: Userpilot) {
+        guard UserpilotRuntime.shared.instanceRegistry.isRegistered(owningInstance) else { return }
+        guard !owningInstance.autoCaptureCoordinator.isStopped else { return }
+        let config = owningInstance.config
+        guard config.enableInteractionAutoCapture else { return }
+        guard !shouldIgnoreInteractions() else { return }
+
+        var payload = InteractionPayload(
+            interactionType: .tableViewCellSelected,
+            elementType: String(describing: type(of: self))
+        )
+        payload.ownerTargetClass = "UITableViewCell"
+
+        // Try to get index path from parent table view
+        if let tableView = findParentTableView(),
+           let indexPath = tableView.indexPath(for: self) {
+            payload.section = indexPath.section
+            payload.row = indexPath.row
+        }
+
+        completeListInteractionPayload(&payload, touchedView: touchedView) {
+            userpilotResolvedCellText(touchedView: touchedView)
+        }
+
+        // Send to the owning instance's engine
+        payload.appFramework = captureFramework(config: config)
+        owningInstance.autoCaptureCoordinator.handleInteractionEvent(payload)
+    }
+
+    /// Resolves `target_text` for a row selection, in priority order.
+    ///
+    /// The interacted element is the **row**, not the leaf view under the finger, so the row's own
+    /// title wins: two taps on the same row publish the same text no matter where they land, and a
+    /// cell that renders a large text blob (a JSON preview, a long description) can no longer push
+    /// that blob into the payload ahead of its title.
+    ///
+    /// 1. `textLabel` (standard cells) / `UIListContentConfiguration.text` (iOS 14+ cells)
+    /// 2. First visible, non-redacted text inside `contentView` (custom cells)
+    /// 3. The touched view itself (rows whose only text lives outside `contentView`)
+    ///
+    /// Text-capture policy (config flag, `userpilotRedactText`) and bounding are applied by
+    /// ``UIView/resolvedInteractionText(_:)`` / ``UIView/getTextContent()``.
+    ///
+    /// - Parameter touchedView: The specific view that was touched
+    /// - Returns: The resolved text content or nil
+    func userpilotResolvedCellText(touchedView: UIView?) -> String? {
+        if let title = userpilotCellTitle() {
+            return title.owner.resolvedInteractionText(title.text)
+        }
+        if let rowText = contentView.userpilotFirstTextInSubtree() {
+            return resolvedInteractionText(rowText)
+        }
+        return touchedView?.getTextContent()
+    }
+
+    // MARK: - Private Helpers
+
+    /// Finds the parent UITableView
+    private func findParentTableView() -> UITableView? {
+        superview?.firstAncestor(of: UITableView.self)
+    }
+
+    /// The cell's own title, together with the view that owns it.
+    ///
+    /// The owner matters: text-capture policy is resolved against a view's responder chain,
+    /// which runs UPWARD. Resolving a child label's text against the cell therefore never sees
+    /// that label's own `userpilotRedactText`, and published it verbatim. Resolving against the
+    /// label covers both — the label itself and every ancestor, the cell included.
+    private func userpilotCellTitle() -> (text: String, owner: UIView)? {
+        if let label = textLabel, let text = label.text, !text.isEmpty {
+            return (text, label)
+        }
+        if #available(iOS 14.0, *),
+           let text = UIKitViewResolver.listConfigurationText(contentConfiguration) {
+            // A content configuration renders through views the host cannot mark
+            // individually, so the cell is the correct scope for the policy.
+            return (text, self)
+        }
+        return nil
+    }
+}
+
+// MARK: - UITableViewHeaderFooterView Auto Capture
+
+internal extension UITableViewHeaderFooterView {
+
+    /// Resolves `target_text` for a tap that landed inside a section header or footer.
+    ///
+    /// Same rule as a row: the element is the header, so its own title wins over whichever leaf
+    /// view the finger hit. See ``UITableViewCell/userpilotResolvedCellText(touchedView:)``.
+    ///
+    /// - Parameter touchedView: The specific view that was touched
+    /// - Returns: The resolved text content or nil
+    func userpilotResolvedHeaderFooterText(touchedView: UIView?) -> String? {
+        if let title = userpilotHeaderFooterTitle() {
+            return title.owner.resolvedInteractionText(title.text)
+        }
+        if let headerText = contentView.userpilotFirstTextInSubtree() {
+            return resolvedInteractionText(headerText)
+        }
+        return touchedView?.getTextContent()
+    }
+
+    // MARK: - Private Helpers
+
+    /// The header/footer's own title, together with the view that owns it.
+    /// Same owner rule as ``UITableViewCell/userpilotCellTitle()``.
+    private func userpilotHeaderFooterTitle() -> (text: String, owner: UIView)? {
+        if let label = textLabel, let text = label.text, !text.isEmpty {
+            return (text, label)
+        }
+        if #available(iOS 14.0, *),
+           let text = UIKitViewResolver.listConfigurationText(contentConfiguration) {
+            return (text, self)
+        }
+        return nil
+    }
+}

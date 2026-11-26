@@ -1,15 +1,18 @@
 //
 //  SurveyContainerView.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 30/01/2025.
+//  Created by Userpilot on 30/01/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Builds survey question views and their navigation, submission and dismiss controls.
 //
 
 import Foundation
 import UIKit
 
 // swiftlint:disable all
-internal class SurveyContainerView: UIView {
+internal final class SurveyContainerView: UIView {
 
     // MARK: - UI Components
 
@@ -43,7 +46,7 @@ internal class SurveyContainerView: UIView {
         let progressView = UPStepsBarProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
         progressView.heightAnchor.constraint(
-            equalToConstant: ThemeHandler.DefaultValues.stepsProgressBarHeight).isActive = true
+            equalToConstant: Constants.Theme.stepsProgressBarHeight).isActive = true
         return progressView
     }()
 
@@ -69,7 +72,7 @@ internal class SurveyContainerView: UIView {
             stepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -93,7 +96,7 @@ internal class SurveyContainerView: UIView {
     private let stepSectionsStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -148,7 +151,7 @@ internal class SurveyContainerView: UIView {
             }
             scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
                 lessThanOrEqualToConstant:
-                    screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                    screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
@@ -249,7 +252,7 @@ internal class SurveyContainerView: UIView {
         self.currentStep = currentStep
         updateStepProgress()
         bindSurveyViews()
-        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent().isRequired == false)
+        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent()?.isRequired == false)
     }
 
     // MARK: - Component Setup
@@ -266,7 +269,7 @@ internal class SurveyContainerView: UIView {
             buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
             buttonDismiss.trailingAnchor.constraint(
                 equalTo: buttonDismissContainerView.trailingAnchor,
-                constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+                constant: Constants.Theme.dismissButtonMargin),
             buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
             buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
         ])
@@ -275,21 +278,21 @@ internal class SurveyContainerView: UIView {
 
     /** Configures the action button based on the step's data. */
     private func setupActionButton() {
-        guard surveyContent != nil, let theme else { return }
+        guard surveyContent != nil, let theme, let step = getCurrentStepSurveyContent() else { return }
 
         // Set up the action button with the step's button configuration and theme.
         actionButton.setupViews(
-            title: getCurrentStepSurveyContent().buttonLabel ?? "Next",
+            title: step.buttonLabel ?? "Next",
             theme: theme
         ) { [weak self] _ in
             self?.actionButton.isEnabled = false
-            if self?.getCurrentStepSurveyContent().type == SurveyViewType.completed {
+            if self?.getCurrentStepSurveyContent()?.type == SurveyViewType.completed {
                 self?.surveyContainerViewDelegate?.onAction(nil, nil)
             } else {
                 self?.getAnswerAndMoveToNextStep()
             }
         }
-        actionButton.updateEnableState(isEnabled: getCurrentStepSurveyContent().isRequired == false)
+        actionButton.updateEnableState(isEnabled: step.isRequired == false)
     }
 
     private func setupStepsProgress() {
@@ -326,7 +329,7 @@ internal class SurveyContainerView: UIView {
     /// This function extracts the answer from the user input and transitions to the next step in the survey.
     private func getAnswerAndMoveToNextStep() {
         let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap { $0 as? UPExperienceView }
+            .compactMap { $0 as? UPExperienceViewDelegate }
             .first
 
         let answer = upExperienceView?.getAnswer()
@@ -340,7 +343,7 @@ internal class SurveyContainerView: UIView {
     /** Binds the sections of the provided step to the stack view. */
     private func bindSurveyViews() {
         // stepSectionsStackView.clearViews()
-        let contentStep = getCurrentStepSurveyContent()
+        guard let contentStep = getCurrentStepSurveyContent() else { return }
         setupActionButton()
 
         var newView: UIView?
@@ -474,14 +477,15 @@ internal class SurveyContainerView: UIView {
 
 extension SurveyContainerView {
 
-    // Return current survey step content
-    private func getCurrentStepSurveyContent() -> SurveyStep {
-        return surveyContent.modules[currentStep]
+    /// The module at `currentStep`, or nil when the index is outside the survey.
+    private func getCurrentStepSurveyContent() -> SurveyStep? {
+        return surveyContent?.modules[safe: currentStep]
     }
     
     private func isPreviousViewSameToCurrentView() -> Bool {
-        if currentStep - 1 < 0 { return false }
-        return surveyContent.modules[currentStep].type == surveyContent.modules[currentStep - 1].type
+        guard let current = getCurrentStepSurveyContent(),
+              let previous = surveyContent?.modules[safe: currentStep - 1] else { return false }
+        return current.type == previous.type
     }
 
     private func getStepsCount() -> Int {
@@ -505,7 +509,7 @@ extension SurveyContainerView {
 
 }
 
-extension SurveyContainerView: ViewStateDelegate {
+extension SurveyContainerView: UPViewStateDelegate {
 
     func onViewStateChanged(isValid: Bool) {
         actionButton.updateEnableState(isEnabled: isValid)

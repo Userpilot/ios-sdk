@@ -1,11 +1,10 @@
 //
 //  View+ScreenName.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 11/01/2026.
+//  Created by Userpilot on 11/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  View+ScreenName provides SwiftUI view modifiers for setting custom screen names
 //  for automatic screen tracking using PreferenceKey and UIKit bridging.
 //

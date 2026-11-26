@@ -2,13 +2,15 @@
 //  ExperiencesPublisher.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 29/09/2024.
-//  Copyright © 2024 Userpilot. All rights reserved.
+//  Created by Userpilot on 02/10/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  [Brief Description]
-//  The `ExperiencesPublisher` class is responsible for managing and publishing in-app experiences,
-//  such as carousels, using socket connections. It handles socket events, updates themes, and
-//  manages the lifecycle of the experiences displayed within the application.
+//  Registered for ExperiencesPublishing in `Userpilot.initializeContainer()`.
+//  Coordinates when backend-selected experiences (flows, surveys, NPS) may use the UI. One operation
+//  owns the UI from acceptance to final dismissal; any other experience arriving meanwhile is dropped,
+//  except a server push: the latest one waits in `HeldPushCoordinator` and starts when the operation finishes.
+//  Only a QR preview interrupts it: it cancels preparation or dismisses the UI, then takes over.
+//  While Builder capture mode is on in any instance, nothing is admitted or presented.
 //
 
 // swiftlint:disable file_length
@@ -17,18 +19,9 @@ import UIKit
 
 /*
  The `ExperiencesPublishing` protocol defines the required methods for managing experiences,
- such as starting the service, retrieving active carousel content, and sending socket requests.
+ such as starting the service, retrieving active carousel experience, and sending socket requests.
  */
 internal protocol ExperiencesPublishing: AnyObject {
-
-    /// Whether the publisher is currently processing a preview experience.
-    func isPreviewExperienceMode() -> Bool
-
-    /// Get current experience
-    func getActiveMobileContent() -> ExperienceContent?
-
-    /// Send experience event to backend
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent)
 
     /// Manually trigger experience
     func triggerExperience(_ experienceId: String)
@@ -39,1349 +32,1334 @@ internal protocol ExperiencesPublishing: AnyObject {
     /// Updates the current screen used for experience targeting
     func updateScreen(_ screenName: String)
 
+    /// Reports an app screen immediately, independently of analytics delivery.
+    @discardableResult
+    func updateScreen(_ event: Event) -> UUID?
+
+    /// Original latest native event, including local visit correlation for generated requests.
+    var currentScreenEvent: Event? { get }
+
+    /// Opt-in responses arrive through the originating analytics send, retaining its visit identity.
+    func receiveScreenResponse(_ payload: Payload, _ message: Message, success: Bool, visitID: UUID?)
+
     /// The current screen used for experience targeting
     var getCurrentScreen: String { get }
 
-    /// Manually end experience
+    /// The host app's close (`manualClose: true`): a seen experience is dismissed with its state, then the
+    /// screen reloads.
     func endExperience(manualClose: Bool)
 
-    /// Notify that an experience view finished dismissing
-    func experienceDidFinishDismissing()
+    /// Whether an operation has handed a renderer to UIKit, including dismissal.
+    var isExperienceVisible: Bool { get }
 
-    /// Determine if can requst screen event
+    /// Completes on main after the current operation has released its renderer.
+    func endExperience(manualClose: Bool, completion: (() -> Void)?)
+
+    /// The SDK-driven close Builder capture uses, the same one as navigation, logout and QR preview: no
+    /// dismissal, host callback, step event or fake reload, and any held push is dropped. `completion` runs on
+    /// main after the current operation has released its renderer.
+    func closeSilently(completion: (() -> Void)?)
+
+    /// True when idle and outside the cooldown for a repeat host screen event.
     func canRequestScreenEvent() -> Bool
 
-    /// Try to handle the deep link internally
-    func triggerDeepLink(url: URL)
+    /// Records the selected completion link; navigation waits for final native dismissal.
+    func setCompletionDeepLink(_ deepLink: String?, rendererID: UUID?)
 
-    /// logout event
+    /// Invalidates callbacks and closes current experience without requesting a screen refresh.
     func logout()
 
-    /// Show thank you message
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme, _ submissionId: Int64)
+    /// Renderers capture this identity at construction and return it with every callback.
+    var activeRendererID: UUID? { get }
+
+    /// The renderer's experience; nil for any renderer other than the current presentation.
+    func getActiveExperience(rendererID: UUID?) -> ExperienceContent?
+
+    /// True while the renderer's running flow still owes a step, so its experience is not finished.
+    func hasNextFlowStep(rendererID: UUID?) -> Bool
+
+    /// Sends the renderer's experience event to the backend.
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent, rendererID: UUID?)
+
+    /// Notifies that the renderer's view finished dismissing.
+    func experienceDidFinishDismissing(rendererID: UUID?)
+
+    /// Shows the renderer's survey thank-you message.
+    func showThankYouMessage(
+        _ survey: SurveyContent, _ theme: SurveyTheme, _ submissionId: Int64, rendererID: UUID?
+    )
+
+    /// Keeps a Flow step outcome's run on the renderer's operation, then publishes its events in order.
+    /// Renderers call it when the user's action is committed, before any fade.
+    func publishFlowStepOutcome(_ outcome: FlowStepOutcome, rendererID: UUID?)
+
 }
 
-/**
- * ExperiencesPublisher manages the lifecycle and display of user experiences (flows, surveys, NPS).
- *
- * This class is responsible for:
- * - Receiving and processing experience content from socket events
- * - Managing experience queuing and display timing
- * - Handling theme caching and fetching
- * - Coordinating with analytics for proper event tracking
- * - Managing experience state and lifecycle
- * - Handling deep links and navigation
- *
- * The publisher ensures experiences are shown at appropriate times by validating screen context,
- * managing delays, and handling concurrent experience scenarios.
- */
-internal class ExperiencesPublisher: ExperiencesPublishing {
-
-    // MARK: - Properties
-
-    /// The dependency injection container used for resolving services and configurations.
-    private weak var container: DIContainer?
-
-    /// Reference to the `Userpilot` instance that owns this manager.
-    private weak var userpilot: Userpilot?
-
-    /// Manages socket connections and listens for socket events.
-    private let socketManager: SocketManaging
-
-    /// Analytics publisher to manage events triggering.
-    private let analyticsPublisher: AnalyticsPublishing
-
-    /// Remote source used for fetching preview experience content.
-    private let userpilotRemoteSource: UserpilotRemoteSourcing
-
-    /// Handles themes for the experiences, managing theme data and styles.
-    private let themeHandler: ThemeHandling
-
-    /// Handles local data storage operations.
-    private let storage: DataStoring
-
-    /// The configuration settings for the `Userpilot` SDK.
-    private let config: Userpilot.Config
-
-    /// Logger used for internal logging of operations and errors.
-    private let linkOpener: LinkOpening
-
-    /// Manages experience flow state transitions.
-    private let experienceStateMachine: ExperienceStateManaging
-
-    /// Logger used for internal logging of operations and errors.
-    private let logger: Logging
-
-    /// ---- Logic Variables ---- ///
-
-    /// The current screen title being tracked
-    private lazy var currentScreen: String = ""
-
-    /// Set when NPS is presented so it shows at most once per screen visit, matching Android.
-    /// Cleared when the screen changes or the user logs out, but preserved across QR previews.
-    /// Atomic because presentation writes on main while socket and reset paths use other queues.
-    private let npsShownOnCurrentScreen = AtomicReference(false)
-
-    /// Keeps trigger provenance with content across theme fetching and display delays.
-    private struct PendingExperience {
-        let experienceContent: ExperienceContent
-        let triggerType: TriggerType
+/// Default overloads preserve the basic contract for service substitutes.
+extension ExperiencesPublishing {
+    var isExperienceVisible: Bool { activeRendererID != nil }
+    func endExperience(manualClose: Bool, completion: (() -> Void)?) {
+        endExperience(manualClose: manualClose)
+        completion?()
     }
 
-    /// Queue to track pending experience content waiting to be displayed.
-    private var pendingExperiences: [PendingExperience] = []
+    func closeSilently(completion: (() -> Void)?) {
+        endExperience(manualClose: false, completion: completion)
+    }
 
-    /// Rejects preview responses that were overtaken by a newer preview or a lifecycle reset.
-    private let previewSessionTracker = PreviewSessionTracker()
+    var currentScreenEvent: Event? { nil }
 
-    /// Utility for managing display delays for surveys and NPS experiences
-    private lazy var delayUtils = DelayUtils()
+    func receiveScreenResponse(_ payload: Payload, _ message: Message, success: Bool, visitID: UUID?) {}
 
-    /// Thread-safe lock for managing experience content operations
+    @discardableResult
+    func updateScreen(_ event: Event) -> UUID? {
+        guard event.isFakeReload == nil, let screenName = event.screenTitle else { return nil }
+        updateScreen(screenName)
+        return nil
+    }
+
+    var activeRendererID: UUID? { nil }
+}
+
+/// Owns experience admission, preparation and presentation until the final renderer is removed.
+/// An accepted operation blocks new experiences through dismissal, including a survey's thank-you.
+/// `experienceQueue` owns orchestration state; main owns UIKit and renderer references.
+/// Synchronous queries read the `reads` snapshot, so neither thread ever waits on the other.
+/// The backend selects eligible experience; the once-per-screen NPS limit is the only local presentation rule.
+internal final class ExperiencesPublisher: ExperiencesPublishing, SocketSubscriptionDelegate {
+
+    /// Where an operation came from. Manual fetches match their own reply; preview suppresses analytics.
+    private enum Trigger {
+        case automatic, manual, preview
+    }
+
+    /// Preparation steps of the one accepted operation, not separate admission gates.
+    private enum Phase {
+        case experience
+        case theme(ThemeKey)
+        case delay
+        case waitingForHost
+        case visible
+        case dismissing
+    }
+
+    /// Grace period before every SDK-driven close, letting a navigated-to screen become visible first (Android
+    /// `SCREEN_TRANSITION_CLOSE_DELAY_MS`).
+    static let screenTransitionCloseDelay: TimeInterval = 0.5
+
+    /// One accepted experience, including a survey's thank-you screen. Holding it as `current`
+    /// keeps admission closed. Main receives its presentation, never its mutable state.
+    private final class Operation {
+        let trigger: Trigger
+        let generation: UUID
+        let screenVisitID: UUID?
+        var presentation: Presentation?
+        let isCancelled = AtomicReference(false)
+        var experience: ExperienceContent?
+        var phase: Phase = .experience
+        var needsThankYou = false
+        var dismissalCompletions: [() -> Void] = []
+        /// SDK-driven closes (navigation, logout, QR preview, Builder capture) skip the post-dismissal fake reload.
+        var refreshAfterDismissal = true
+        /// Decides the post-dismissal fake reload; receiving it does not release ownership.
+        var closeEvent: ExperienceEvent?
+        /// The selected action's link, consumed only after the final renderer is gone.
+        var completionDeepLink: URL?
+        /// The Flow payload walked segment by segment; cleared to pause the walk, so no later segment opens.
+        /// nil for other content.
+        var flowWalk: FlowWalk?
+        /// The Flow's run on this device, tracked apart from any overlay; every reported step outcome replaces it.
+        var flowRun = FlowRun()
+        /// The in-app debugger's identity for this Flow walk; nil for other content.
+        var debugFlow: DebugFlowContext?
+        /// This held push started in place of the previous operation's fake reload, so its own `finish` owes
+        /// it, unless the reload policy cancels it.
+        var owedReload = false
+
+        /// True once a Flow walk presented a segment, paused or not, so its end follows the walk's reload rule.
+        var isFlowWalk: Bool { experience?.flowSegment() != nil }
+
+        init(trigger: Trigger, generation: UUID, experience: ExperienceContent? = nil, screenVisitID: UUID? = nil) {
+            self.trigger = trigger
+            self.generation = generation
+            self.experience = experience
+            self.screenVisitID = screenVisitID
+        }
+    }
+
+    /// Latest QR request, waiting for the outgoing renderer to finish dismissing.
+    private struct PreviewRequest {
+        let experienceID: String
+        let contentType: String
+    }
+
+    /// Any-thread snapshot for analytics and renderer queries.
+    private struct ReadState {
+        var screen = ""
+        var screenEvent: Event?
+        var experience: ExperienceContent?
+        var presentation: Presentation?
+        var generation: UUID?
+        /// Main may present the current operation only while this is true.
+        var isVisible = false
+        /// Covers fetch, delay, presentation, thank-you, dismissal, and a waiting preview.
+        var busy = false
+        var needsThankYou = false
+        var suppressScreenUntil: DispatchTime?
+    }
+
+    private enum PresentationStyle {
+        case fullScreen, dialog, bottomSheet, anchored
+    }
+
+    /// One UI presentation, distinct from the backend experience ID. ViewModels return this identity
+    /// so a late event from a removed renderer cannot affect its replacement. Only main touches the controller.
+    private final class Presentation {
+        let id = UUID()
+        let screenVisitID: UUID?
+        weak var controller: UIViewController?
+
+        init(screenVisitID: UUID? = nil) { self.screenVisitID = screenVisitID }
+    }
+
+    private weak var container: DIContainer?
+    private weak var userpilot: Userpilot?
+    private let analytics: AnalyticsPublishing
+    /// The in-app debugger's log; Flow walks record their runs and outcomes here.
+    private let debugEventStore: DebugEventStoring
+    private let remote: UserpilotRemoteSourcing
+    private let themes: ThemeHandling
+    private let links: LinkOpening
+    private let lifecycleMonitor: LifecycleMonitoring
+    private let config: Userpilot.Config
+    private let logger: Logging
+
+    private let reads = AtomicReference(ReadState())
+    private let generation = AtomicReference(UUID())
+    private static let queueLabel = "com.userpilot.experience-queue"
+
     private let experienceQueue = DispatchQueue(
-        label: Constants.DispatchQueues.experienceQueue,
+        label: ExperiencesPublisher.queueLabel,
         qos: .userInteractive
     )
 
-    /// Date when a fake screen reload event was last requested.
-    /// Armed on every experience close, online or offline. Closing an experience makes the host
-    /// surface re-emit its screen event, and that repeat is an artifact of the dismissal rather
-    /// than real navigation whether or not a socket is there to carry the fake reload — offline it
-    /// would otherwise be persisted and replayed to the backend as a genuine screen view.
-    private var requestFakeScreenReloadEventDate: Date?
+    // Owned by experienceQueue. `current != nil` is the admission gate.
+    /// Display and thank-you delays. Its actions fire on main and hop back to the queue.
+    private lazy var delayUtils = DelayUtils()
+    private var current: Operation?
+    private var replacementPreview: PreviewRequest?
+    private var npsShownOnCurrentScreen = false
+    /// The latest server push that arrived while another experience was active.
+    private lazy var heldPush = HeldPushCoordinator(
+        logger: logger,
+        start: { [weak self] experience, owedReload in
+            self?.accept(experience, owedReload: owedReload) ?? false
+        },
+        publishFakeReload: { [weak self] in self?.analytics.publishFakeReloadScreenEvent() }
+    )
 
-    /// Track last active experience
-    private weak var activeExperience: UIViewController?
-
-    /// Determines if there are currently active experiences being displayed
-    private var hasActiveExperience: Bool {
-        return activeExperience != nil || experienceStateMachine.isActivelyRendered()
+    // Owned by main.
+    private weak var previewErrorAlert: UIAlertController?
+    /// `screenTransitionCloseDelay`, replaceable in tests.
+    private var sdkCloseDelay = ExperiencesPublisher.screenTransitionCloseDelay
+    /// Presentation host when no overlay window exists; replaceable in tests.
+    internal var topViewControllerProvider: () -> UIViewController? = {
+        UIApplication.shared.topViewController()
     }
 
-    /// Expereinces presentation style.
-    private enum PresentationStyle {
-        case fullScreen
-        case dialog
-        case bottomSheet
-        case normal
-    }
-
-    // MARK: - Initialization
-
-    /**
-     * Initializes the ExperiencesPublisher by setting up socket subscription
-     * and activity tracker listeners.
-     *
-     * - Parameter container: A `DIContainer` instance that provides dependencies.
-     */
+    /// Resolves collaborators and subscribes to socket results. Performs no UI work.
     init(container: DIContainer) {
+        let config = container.resolve(Userpilot.Config.self)
         self.container = container
         self.userpilot = container.owner
-        self.storage = container.resolve(DataStoring.self)
-        self.config = container.resolve(Userpilot.Config.self)
-        self.socketManager = container.resolve(SocketManaging.self)
-        self.analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-        self.userpilotRemoteSource = container.resolve(UserpilotRemoteSourcing.self)
-        self.themeHandler = container.resolve(ThemeHandling.self)
-        self.logger = container.resolve(Userpilot.Config.self).logger
-        self.linkOpener = container.resolve(LinkOpening.self)
-        self.experienceStateMachine = container.resolve(ExperienceStateManaging.self)
+        self.analytics = container.resolve(AnalyticsPublishing.self)
+        self.debugEventStore = container.resolve(DebugEventStoring.self)
+        self.remote = container.resolve(UserpilotRemoteSourcing.self)
+        self.themes = container.resolve(ThemeHandling.self)
+        self.links = container.resolve(LinkOpening.self)
+        self.lifecycleMonitor = container.resolve(LifecycleMonitoring.self)
+        self.config = config
+        self.logger = config.logger
 
-        socketManager.registerCallback(self)
+        let socket: SocketManaging = container.resolve(SocketManaging.self)
+        socket.registerCallback(self)
+        lifecycleMonitor.addDelegate(self, replayCurrentState: false)
     }
 
-    // MARK: - SDK API Methods
-
-    /**
-     * Resets state and cancels pending content on user logout.
-     * This prevents experiences from being shown to the wrong user.
-     */
-    func logout() {
-        npsShownOnCurrentScreen.value = false
-        resetState()
+    deinit {
+        lifecycleMonitor.removeDelegate(self)
     }
 
-    /**
-     * Determines if screen tracking events are allowed to be triggered.
-     *
-     * Screen events can be tracked when:
-     * - Close full screen content flag is not active (more than 1 second has passed)
-     * - No active experience is currently displayed
-     * - No thank you survey message is currently active
-     *
-     * - Returns: true if screen events can be triggered, false otherwise
-     */
-    func canRequestScreenEvent() -> Bool {
-        return requestFakeScreenReloadEventDate?.isMoreThanOneSecond(from: Date()) ?? true
-            && !hasActiveExperience
-            && !experienceStateMachine.isActive()
-            // A preview being set up is not yet "active", but requesting screen events during it
-            // would drive normal content on top of the draft being previewed.
-            && !isPreviewExperienceMode()
-            && !experienceStateMachine.hasCachedExperience()
-    }
+    // MARK: - Thread boundary and synchronous queries
 
-    /**
-     * Triggers an experience manually by its ID.
-     * Only allows triggering if no other experiences are currently pending or active.
-     *
-     * - Parameter experienceId: The ID of the experience to be triggered
-     */
-    func triggerExperience(_ experienceId: String) {
+    /// Enter the owner queue and drop work submitted before logout; dismissal cleanup may bypass that check.
+    private func onQueue(checkGeneration: Bool = true, _ action: @escaping (ExperiencesPublisher) -> Void) {
+        let expectedGeneration = generation.value
         experienceQueue.async { [weak self] in
-            self?.triggerExperienceIfIdle(experienceId)
+            guard let self, !checkGeneration || self.generation.value == expectedGeneration else { return }
+            tryCatch { action(self) }
         }
     }
 
-    /// Runs on `experienceQueue` for both host requests and cached manual replay.
-    private func triggerExperienceIfIdle(_ experienceId: String) {
-        guard case .idle = experienceStateMachine.getCurrentState(),
-              !hasActiveExperience,
-              !experienceStateMachine.hasCachedExperience(),
-              pendingExperiences.isEmpty else {
-            experienceStateMachine.markCachedManual(experienceId)
-            logger.info("Experience cached - active experience in progress")
-            return
-        }
-
-        delayUtils.cancelDelay()
-        experienceStateMachine.markManualTrigger(experienceId)
-        publishInternalSDKEvent(ExperienceContentEvent(experienceId: experienceId))
-    }
-
-    /// Helper method to get top view controller
-    internal var topViewControllerProvider: () -> UIViewController? = {
-        return UIApplication.shared.topViewController()
-    }
-
-    /// Resolves the host view controller that experiences should be presented on.
-    ///
-    /// Multi-instance: returns this instance's overlay window root VC so two
-    /// instances may render experiences concurrently without competing for the
-    /// host app's `keyWindow`. The overlay uses passthrough hit-testing so
-    /// non-experience touches still reach the underlying app UI.
-    ///
-    /// Single-instance: behaves identically — the overlay is a single full-screen
-    /// window at `windowLevel.normal + 1` that fully passes touches through when
-    /// no experience is being presented.
-    ///
-    /// The overlay window surfaces itself synchronously in `init`, so by the
-    /// time we return the rootVC it is already in the scene's window hierarchy
-    /// and safe to present on. `refreshWindowLevel()` re-resolves the level on
-    /// every present so newly-registered tenants don't disturb the z-order of
-    /// in-flight presentations.
-    ///
-    /// Falls back to the legacy `topViewControllerProvider()` only when the
-    /// owning instance has been deallocated (defensive — should not happen
-    /// under normal lifecycle).
-    internal func experiencePresentationHost() -> UIViewController? {
-        if let overlay = userpilot?.experienceOverlayWindow {
-            overlay.prepareForPresentation()
-            return overlay.rootViewController
-        }
-        return topViewControllerProvider()
-    }
-
-    /// Hides the overlay window when no experience is currently presented on it.
-    /// Called from dismissal paths so the overlay window doesn't sit visible
-    /// (and consume input focus) while idle.
-    ///
-    /// Reached from `resetState`, which runs on the caller's queue — `logout()` and
-    /// `updateScreen(_:)` are public API and wrappers call them from their own
-    /// queues (Capacitor from its `bridge` queue). Hiding a window is UIKit work,
-    /// so marshal it onto the main queue; the `Thread.isMainThread` fast path keeps
-    /// the already-on-main callers (`endExperience`, `experienceDidFinishDismissing`)
-    /// synchronous so their hide still lands before their completion handler.
-    ///
-    /// Uses the non-creating accessor: an instance that never presented an
-    /// experience has no overlay to collapse, and building one here would construct
-    /// (and briefly surface) a window purely in order to hide it.
-    internal func hideExperienceOverlayIfIdle() {
-        if Thread.isMainThread {
-            userpilot?.existingExperienceOverlayWindow?.hideIfIdle()
-        } else {
-            performOn(.main) { [weak self] in
-                self?.userpilot?.existingExperienceOverlayWindow?.hideIfIdle()
-            }
-        }
-    }
-
-    /**
-     * Ends all active experience views.
-     *
-     * - Parameter manualClose: true if the user manually closed the experience, false for automatic closure
-     */
-    func endExperience(manualClose: Bool) {
-        endExperience(manualClose: manualClose, completion: nil)
-    }
-
-    private func endExperience(manualClose: Bool, completion: (() -> Void)?) {
-        performOn(.main) { [weak self] in
-            guard let self else {
-                completion?()
-                return
-            }
-            let activeViewController = self.activeExperience
-            let activeComponent = self.experienceStateMachine.getActiveComponent()
-            self.activeExperience = nil
-
-            guard let experience = (activeViewController as? UPExperience) ?? activeComponent else {
-                if !self.experienceStateMachine.hasCachedExperience() {
-                    self.experienceStateMachine.markIdle()
-                }
-                self.hideExperienceOverlayIfIdle()
-                completion?()
-                return
-            }
-
-            experience.triggerCloseExperience(manualClose: manualClose) { [weak self] in
-                guard let self else {
-                    completion?()
-                    return
-                }
-                if !self.experienceStateMachine.hasCachedExperience() {
-                    self.experienceStateMachine.markIdle()
-                }
-                self.experienceDidFinishDismissing()
-                completion?()
-            }
-        }
-    }
-
-    /// Cleans up the overlay after the actual UIKit dismissal completion fires.
-    ///
-    /// This is the one hook every renderer reaches — through `onExperienceDismissalCompleted()`
-    /// when the user closes it, and through `endExperience`'s completion when an incoming scan
-    /// replaces it — so it is where the preview session is settled, mirroring Android's
-    /// `completeExperienceDismissal`.
-    func experienceDidFinishDismissing() {
-        // Settle the preview that just went away. Its session is ended only while the preview that
-        // rendered under it still owns it: a scan that arrived while this experience was closing
-        // has already begun the next session, and that one must outlive this close — otherwise the
-        // scan would dismiss the content on screen and show nothing.
-        if experienceStateMachine.isPreviewMode() {
-            if previewSessionTracker.ownsRenderedSession() {
-                resetProcessingPreviewExperienceStatus()
-            } else {
-                resetProcessingExperienceStatus()
-            }
-        } else if experienceStateMachine.isActivelyRendered() {
-            resetProcessingExperienceStatus()
-        }
-        // A cached request belongs to the next experience. Start it only after the current
-        // renderer has finished dismissing, and never while a replacement preview owns the flow.
-        processCachedExperienceAfterClose()
-        performOn(.main) { [weak self] in
-            self?.hideExperienceOverlayIfIdle()
-        }
-    }
-
-    /**
-     * Opens the survey thank you bottom sheet after survey completion.
-     * Manages the thank you message display timing and deep link handling.
-     *
-     * - Parameter surveyContent: The survey content that was completed
-     * - Parameter surveyTheme: The theme to apply to the thank you message
-     */
-    func showThankYouMessage(
-        _ surveyContent: SurveyContent,
-        _ surveyTheme: SurveyTheme,
-        _ submissionId: Int64
-    ) {
-        triggerThankYouMessageView(surveyContent, surveyTheme, submissionId)
-    }
-
-    // MARK: - Helper Methods
-
-    /**
-     * Retrieves the currently active mobile content and clears the pending queue.
-     * Used by experience activities to get their content data.
-     *
-     * - Returns: The first pending experience content, or null if none available
-     */
-    func getActiveMobileContent() -> ExperienceContent? {
-        guard !pendingExperiences.isEmpty else { return nil }
-        let content = pendingExperiences.first?.experienceContent
-        clearPendingExperiences()
-        return content
-    }
-
-    /// Preview mode suppresses normal analytics while draft content is being rendered.
-    func isPreviewExperienceMode() -> Bool {
-        // The tracker covers the window before the state machine is marked: a preview is already
-        // in flight while `resetState` and the fetch are still running.
-        experienceStateMachine.isPreviewMode() || previewSessionTracker.isActive()
-    }
-
-    // MARK: - Deep Link Handling
-
-    /**
-     * Triggers deep link navigation, passing control to the client app.
-     * Uses the app's navigation handler if available, otherwise opens with system.
-     *
-     * - Parameter url: The deep link URL to navigate to
-     */
-    func triggerDeepLink(url: URL) {
-        delay(ThemeHandler.DefaultValues.delayTimeForDeepLink) { [weak self] in
-            self?.linkOpener.handleURL(url)
-        }
-    }
-
-    // MARK: - SDK Event Management
-
-    /**
-     * Sends a socket request based on the provided SDK event.
-     * Handles experience tracking, content caching, and fake reload triggering.
-     *
-     * - Parameter sdkEvent: The SDK event containing the event name and payload
-     */
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
-        tryCatch {
-            // Deliberately the state machine alone, not `isPreviewExperienceMode()`: a QR deep link
-            // claims its preview session before the experience it replaces has finished closing, so
-            // the wider check would route that experience's own close into this branch and let it
-            // cancel the session belonging to the preview that replaced it.
-            if experienceStateMachine.isPreviewMode() {
-                if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
-                    activeExperience = nil
-                    requestFakeScreenReloadEventDate = Date()
-                    // Same exclusions as the non-preview path below, and as Android's
-                    // `handlePreviewCloseEvent`: NPS is the last content shown, and a deep link
-                    // opens a new screen that will ask for content on its own.
-                    if !sdkEvent.isEventForCloseNPSExperience(), !sdkEvent.hasDeepLink {
-                        analyticsPublisher.publishFakeReloadScreenEvent(
-                            sdkEvent.getContentType(),
-                            sdkEvent.getContentId()
-                        )
-                    }
-                }
-                return
-            }
-
-            // Process the event through analytics publisher; the response comes
-            // back through the multicast subscription as `message.resolvedEvent`
-            analyticsPublisher.publishInternalSDKEvent(sdkEvent)
-
-            // Update seen content for ScreenSessionStateMachine tracking
-            if sdkEvent.isSeenContentEvent(), let contentId = sdkEvent.getContentId() {
-                analyticsPublisher.experiencePublished(sdkEvent.getContentType(), contentId)
-            }
-
-            // On close content events, remove all cached experiences
-            // Cache date is used because if app goes to background and returns,
-            // closing the experience directly won't trigger screen content
-            if sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() {
-                activeExperience = nil
-                requestFakeScreenReloadEventDate = Date()
-            }
-
-            // Don't trigger fake reload for NPS experiences or experiences with deep links
-            // NPS is the last content, and deep links will open new screen
-            if sdkEvent.isEventForCloseNPSExperience() || sdkEvent.hasDeepLink {
-                if !experienceStateMachine.hasCachedExperience() {
-                    experienceStateMachine.markIdle()
-                }
-                return
-            }
-
-            // Trigger fake reload when closing experience that wasn't manually triggered
-            if sdkEvent.isEventForCloseExperience() && !experienceStateMachine.hasCachedExperience() {
-                experienceStateMachine.markIdle()
-                analyticsPublisher.publishFakeReloadScreenEvent(
-                    sdkEvent.getContentType(), sdkEvent.getContentId()
-                )
-            }
-        }
-    }
-}
-
-// MARK: - SocketSubscription
-
-extension ExperiencesPublisher: SocketSubscription {
-
-    // MARK: - Screen Management
-
-    /**
-     * Updates screen from AnalyticsPublisher directly without waiting for response.
-     * This is a high priority operation that processes immediately to avoid showing
-     * content on old screens while moving to new screens.
-     *
-     * - Parameter screenName: The new screen title being navigated to
-     */
-    func updateScreen(_ screenName: String) {
-        tryCatch {
-            if currentScreen == screenName { return }
-            currentScreen = screenName
-            npsShownOnCurrentScreen.value = false
-            // A preview renders on whatever screen the deep link landed on, so the screen change
-            // that reveals it must resume it instead of resetting it away.
-            if isPreviewExperienceMode() {
-                resumePendingPreviewExperience()
-                return
-            }
-            resetState()
-        }
-    }
-
-    /// Re-opens a preview that was waiting for the screen it was triggered from.
-    private func resumePendingPreviewExperience() {
-        experienceQueue.async { [weak self] in
-            guard
-                let self,
-                case .pendingPreview = self.experienceStateMachine.getCurrentState(),
-                !self.pendingExperiences.isEmpty
-            else { return }
-            self.openExperienceFlow()
-        }
-    }
-
-    /// The current screen used for experience targeting.
-    var getCurrentScreen: String {
-        currentScreen
-    }
-
-    // MARK: - Socket Event Handling
-
-    /*
-     * Handles socket events when an event is sent and processes experience content responses.
-     *
-     * - Parameter eventName: The name of the event that was sent
-     * - Parameter payload: The event payload that was sent
-     * - Parameter message: The response message object from the server
-     * - Parameter eventSent: Whether the event was successfully sent
-     */
-    // swiftlint:disable:next cyclomatic_complexity, superfluous_disable_command
-    func onSocketEventSent(
-        _ eventName: String,
-        _ payload: Payload,
-        _ message: Message,
-        _ eventSent: Bool
-    ) {
-        experienceQueue.async { [weak self] in
+    /// Runs inline when already on main; otherwise hops asynchronously.
+    private func onMain(_ action: @escaping (ExperiencesPublisher) -> Void) {
+        performOnMain { [weak self] in
             guard let self else { return }
-            defer { self.finishManualRequestIfEmpty(eventName, payload) }
-            // If there's an active experience, ignore new content.
-            guard !hasActiveExperience,
-                  !experienceStateMachine.isActive(),
-                  !experienceStateMachine.isPreviewMode(),
-                  !message.payload.isEmpty,
-                  let response = message.payload.toJSONString() else { return }
-            if eventName == SDKEventsName.fetchExperienceContent.rawValue, !eventSent { return }
-
-            // Cache theme data if this is a fetch theme event
-            if eventName == SDKEventsName.fetchExperienceTheme.rawValue,
-               let themeData = response.toMobileTheme(), themeData.id != nil {
-                self.themeHandler.saveTheme(themeData)
-            }
-
-            // Process content from screen events and fetch experience content events
-            if eventName == Constants.Event.screenEvent ||
-                eventName == SDKEventsName.fetchExperienceContent.rawValue {
-
-                // Decode every type the response carries instead of stopping at the first, so
-                // automatic selection can skip past a candidate that was already seen.
-                let triggerType = self.triggerTypeForEvent(eventName)
-                let candidates = self.experienceCandidates(response)
-                let experience: ExperienceContent? = triggerType == .automatic
-                    ? candidates.first { !self.analyticsPublisher.isExperienceSeen($0) }
-                    : candidates.first
-
-                if let experience {
-                    if self.isDuplicateExperience(experience) {
-                        self.logger.info(
-                            "Ignoring duplicate experience: %@",
-                            experience.experienceId().toString()
-                        )
-                        return
-                    }
-                    if triggerType == .manual {
-                        self.experienceStateMachine.markManualTrigger(
-                            experience.experienceId().toString()
-                        )
-                    } else {
-                        self.experienceStateMachine.markAutomaticTrigger(experience)
-                    }
-                    self.pendingExperiences.append(
-                        PendingExperience(experienceContent: experience, triggerType: triggerType)
-                    )
-                }
-            }
-
-            // Process the first pending experience
-            if let pendingExperience = self.pendingExperiences.first {
-                if pendingExperience.experienceContent.asNPSContent() != nil {
-                    self.openNPSBottomSheetExperience(pendingExperience)
-                } else {
-                    self.checkCachedThemes(pendingExperience.experienceContent.experienceThemeId())
-                }
-            }
+            action(self)
         }
     }
 
-    /// Empty or failed manual replies end preparation even when there is no renderer to dismiss.
-    private func finishManualRequestIfEmpty(_ eventName: String, _ payload: Payload) {
-        guard eventName == SDKEventsName.fetchExperienceContent.rawValue,
-              case .pendingManual(let experienceId) = experienceStateMachine.getCurrentState(),
-              pendingExperiences.isEmpty,
-              !hasActiveExperience,
-              !previewSessionTracker.isActive() else { return }
-        if let requestedId = payload?["mobile_content_token"] as? String, requestedId != experienceId { return }
-        resetProcessingExperienceStatus()
-        processCachedExperienceAfterClose()
+    /// Debug-only ownership checks; release builds never trap the host app.
+    private func assertOnQueue() {
+        #if DEBUG
+        dispatchPrecondition(condition: .onQueue(experienceQueue))
+        #endif
     }
 
-    /**
-     * Handles new messages received from the socket.
-     * This is triggered from manual experience events.
-     *
-     * - Parameter message: The message object containing the data received through the socket
-     */
-    func onNewMessage(_ message: Message) {
-        if let payload = message.payload["payload"] as? [String: Any] {
-            experienceQueue.async { [weak self] in
-                guard let self,
-                      !experienceStateMachine.isPreviewMode(),
-                      payload.keys.contains("request_id"),
-                      payload["request_id"] as? Int == nil else { return }
-
-                // Determine the new content based on payload
-                let experience: ExperienceContent? = {
-                    if let mobileContents = payload["mobile_contents"] as? [String: Any],
-                       !mobileContents.isEmpty,
-                       let flowContentData = payload.toJSONString()?.toFlowContent() {
-                        return ExperienceContent.flow(content: flowContentData.flowContent)
-                    } else if let mobileContents = payload["surveys"] as? [String: Any],
-                              !mobileContents.isEmpty,
-                              let surveyContentData = payload.toJSONString()?.toSurveyContent() {
-                        return ExperienceContent.survey(content: surveyContentData.surveyContent)
-                    } else if let mobileContents = payload["nps"] as? [String: Any],
-                              !mobileContents.isEmpty,
-                              let npsContentData = payload.toJSONString()?.toNPSContent() {
-                        return ExperienceContent.nps(content: npsContentData.npsContent)
-                    }
-                    return nil
-                }()
-
-                if let experience {
-                    if self.hasActiveExperience || self.experienceStateMachine.isActive() {
-                        self.experienceStateMachine.markCachedAutomatic(experience)
-                        self.logger.info("Active experience in progress, caching incoming experience")
-                    } else {
-                        self.delayUtils.cancelDelay()
-                        self.experienceStateMachine.markManualTrigger(
-                            experience.experienceId().toString()
-                        )
-                        self.pendingExperiences.append(
-                            PendingExperience(experienceContent: experience, triggerType: .manual)
-                        )
-                        self.checkCachedThemes(experience.experienceThemeId())
-                    }
-                }
-            }
-        }
+    private func assertOnMain() {
+        #if DEBUG
+        dispatchPrecondition(condition: .onQueue(.main))
+        #endif
     }
-}
 
-// MARK: - Theme Management
+    /// Blocks normal responses for an active preview and for one waiting to replace current work.
+    private var isPreviewing: Bool {
+        replacementPreview != nil || current?.trigger == .preview
+    }
 
-extension ExperiencesPublisher {
-
-    /**
-     * Checks whether a theme is cached and fetches it if necessary.
-     * If the theme is available, immediately opens the experience flow.
-     * Otherwise, fetches the theme data first.
-     *
-     * - Parameter themeId: The ID of the theme to check and potentially fetch
-     */
-    private func checkCachedThemes(_ themeId: Int) {
-        tryCatch {
-            if themeHandler.getThemeById(themeId) != nil {
-                openExperienceFlow()
-            } else {
-                fetchThemeData(themeId)
-            }
+    /// Publishes the current operation for synchronous queries. Screen and cooldown keep their own writers.
+    private func publishReadState() {
+        assertOnQueue()
+        let operation = current
+        let waitingPreview = replacementPreview != nil
+        reads.update {
+            var state = $0
+            state.busy = operation != nil || waitingPreview
+            state.experience = operation?.experience
+            state.presentation = operation?.presentation
+            state.generation = operation?.generation
+            state.isVisible = false
+            if let operation, case .visible = operation.phase { state.isVisible = true }
+            state.needsThankYou = operation?.needsThankYou == true
+            return state
         }
     }
 
-    /**
-     * Fetches theme data for uncached themes.
-     * Clears pending experiences if socket is not available.
-     *
-     * - Parameter themeId: The ID of the theme to fetch
-     */
-    private func fetchThemeData(_ themeId: Int) {
-        guard analyticsPublisher.canRequestEvent else {
-            // Theme preparation is abandoned on this queue; leave the flow ready for cached work.
-            pendingExperiences.removeAll()
-            resetProcessingExperienceStatus()
-            processCachedExperienceAfterClose()
-            return
-        }
+    var getCurrentScreen: String { reads.value.screen }
 
-        publishInternalSDKEvent(ThemeContentEvent(themeId: themeId, token: config.token))
+    var currentScreenEvent: Event? { reads.value.screenEvent }
+
+    /// Captured by each ViewModel at construction; invalidated synchronously by logout.
+    var activeRendererID: UUID? {
+        let state = reads.value
+        return state.generation == generation.value ? state.presentation?.id : nil
     }
 
-}
-
-// MARK: - Experience Launch Management
-
-extension ExperiencesPublisher {
-
-    /**
-     * Starts the experience flow by determining the type and opening the appropriate UI.
-     * Handles flows (carousel, slide-out), surveys (list, step), and NPS experiences.
-     */
-    private func openExperienceFlow() {
-        if let pendingExperience = pendingExperiences.first {
-            switch pendingExperience.experienceContent {
-            case .flow(let content):
-                switch content.type {
-                case .carousel:
-                    self.openCarouselExperience(pendingExperience)
-                case .slideout:
-                    if self.isBottomSheetContent(content) {
-                        self.openSlideOutBottomSheetExperience(pendingExperience)
-                    } else {
-                        self.openSlideOutDialogExperience(pendingExperience)
-                    }
-                }
-
-            case .survey(let content):
-                switch content.type {
-                case .list:
-                    self.openSurveyListExperience(pendingExperience)
-                case .step:
-                    if self.isBottomSheetSurveyContent(content) {
-                        self.openSurveyBottomSheetExperience(pendingExperience)
-                    } else {
-                        self.openSurveyDialogExperience(pendingExperience)
-                    }
-                }
-
-            case .nps:
-                openNPSBottomSheetExperience(pendingExperience)
-            }
-        }
+    /// Return experience only to the current presentation and user generation, including during dismissal.
+    func getActiveExperience(rendererID: UUID?) -> ExperienceContent? {
+        let state = reads.value
+        guard rendererID != nil, state.presentation?.id == rendererID,
+              state.generation == generation.value else { return nil }
+        return state.experience
     }
 
-    /**
-     * Determines whether the flow content should be displayed as a bottom sheet.
-     * Checks theme data first, then falls back to cached theme information.
-     *
-     * - Parameter mobileContent: The flow content object to evaluate
-     * - Returns: true if content should be displayed as bottom sheet, false for dialog
-     */
-    private func isBottomSheetContent(_ mobileContent: FlowContent) -> Bool {
-        if let themeData = mobileContent.mobileTheme.themeData {
-            return themeData.general?.contentAlignment == ContentAlignmentType.bottom
-        } else {
-            return themeHandler.getThemeById(mobileContent.mobileTheme.id)?.isDialogExperience == false
-        }
+    /// A matching survey renderer may continue to thank-you without releasing the experience gate.
+    func hasNextFlowStep(rendererID: UUID?) -> Bool {
+        let state = reads.value
+        return rendererID != nil && state.presentation?.id == rendererID
+            && state.generation == generation.value && state.needsThankYou
     }
 
-    /**
-     * Determines whether the survey content should be displayed as a bottom sheet.
-     * Checks theme data first, then falls back to cached theme information.
-     *
-     * - Parameter surveyContent: The survey content to evaluate
-     * - Returns: true if content should be displayed as bottom sheet, false for dialog
-     */
-    private func isBottomSheetSurveyContent(_ surveyContent: SurveyContent) -> Bool {
-        if let themeData = surveyContent.surveyTheme.themeData, let position = themeData.general?.position {
-            return position == .bottom
-        } else {
-            return themeHandler.getThemeById(surveyContent.surveyTheme.id)?.isDialogSurvey == false
-        }
+    /// Recheck after asynchronous work: reference identity rejects replacement, generation rejects logout.
+    private func owns(_ operation: Operation) -> Bool {
+        current === operation && operation.generation == generation.value
+            && (operation.screenVisitID == nil || operation.screenVisitID == currentScreenEvent?.screenVisitID)
     }
 
-}
-
-// MARK: - Experience Opening Methods
-
-extension ExperiencesPublisher {
-
-    /**
-     * Opens a carousel experience in a full-screen activity.
-     * Content is passed to prevent issues if pending experiences are cleared during screen transitions.
-     */
-    private func openCarouselExperience(_ pendingExperience: PendingExperience) {
-        showExperience(
-            pendingExperience,
-            makeViewModel: ExperienceViewModel.init,
-            makeViewController: CarouselExperienceViewController.init,
-            presentation: .fullScreen
-        )
-    }
-
-    /** Opens a slide-out experience as a dialog fragment */
-    private func openSlideOutDialogExperience(_ pendingExperience: PendingExperience) {
-        showExperience(
-            pendingExperience,
-            makeViewModel: ExperienceViewModel.init,
-            makeViewController: SlideOutDialogViewController.init,
-            presentation: .dialog
-        )
-    }
-
-    /** Opens a slide-out experience as a bottom sheet fragment */
-    private func openSlideOutBottomSheetExperience(_ pendingExperience: PendingExperience) {
-        showExperience(
-            pendingExperience,
-            makeViewModel: ExperienceViewModel.init,
-            makeViewController: SlideOutBottomSheetViewController.init,
-            presentation: .bottomSheet
-        )
-    }
-
-    /** Opens a survey experience in a full-screen activity with list view */
-    private func openSurveyListExperience(_ pendingExperience: PendingExperience) {
-        showExperience(
-            pendingExperience,
-            makeViewModel: SurveyViewModel.init,
-            makeViewController: SurveyListViewController.init,
-            presentation: .fullScreen
-        )
-    }
-
-    /** Opens a survey experience as a dialog fragment */
-    private func openSurveyDialogExperience(_ pendingExperience: PendingExperience) {
-        showExperience(
-            pendingExperience,
-            makeViewModel: SurveyViewModel.init,
-            makeViewController: SurveyDialogViewController.init,
-            presentation: .dialog
-        )
-    }
-
-    /** Opens a survey experience as a bottom sheet fragment */
-    private func openSurveyBottomSheetExperience(_ pendingExperience: PendingExperience) {
-        showExperience(
-            pendingExperience,
-            makeViewModel: SurveyViewModel.init,
-            makeViewController: SurveyBottomSheetViewController.init,
-            presentation: .bottomSheet
-        )
-    }
-
-    /** Opens an NPS experience as a bottom sheet, at most once per screen visit. */
-    private func openNPSBottomSheetExperience(_ pendingExperience: PendingExperience) {
-        if npsShownOnCurrentScreen.value {
-            logger.info("🎯 NPS suppressed - already shown on the current screen")
-            // Drain the queue rather than only resetting the state: every launch path reads
-            // `pendingExperiences.first`, so an NPS left at the head after being refused blocks
-            // each experience that arrives behind it until the screen changes.
-            processNextPendingExperiences()
-            return
-        }
-        showExperience(
-            pendingExperience,
-            makeViewModel: NPSViewModel.init,
-            makeViewController: NPSBottomSheetViewController.init,
-            presentation: .bottomSheet
-        )
-    }
-
-    /** Opens the survey thank you bottom sheet after survey completion */
-    private func triggerThankYouMessageView(
-        _ surveyContent: SurveyContent,
-        _ surveyTheme: SurveyTheme,
-        _ submissionId: Int64
+    /// Resolve UI callbacks once on the owning queue, then pass the validated operation onward.
+    private func onPresentation(
+        _ shown: Presentation,
+        _ action: @escaping (ExperiencesPublisher, Operation) -> Void
     ) {
-        experienceStateMachine.markShowingThankYou()
-        performOn(.main) { [weak self] in
-            guard
-                let self = self,
-                let host = self.experiencePresentationHost()
-            else {
-                self?.experienceDidFinishDismissing()
+        onQueue { publisher in
+            guard let operation = publisher.current, publisher.owns(operation),
+                  operation.presentation === shown else { return }
+            action(publisher, operation)
+        }
+    }
+
+    /// Analytics' gate for repeat screen requests: idle, and at least one second after a close event.
+    /// Builder capture mode deliberately does not affect it, so screen events keep flowing.
+    func canRequestScreenEvent() -> Bool {
+        let state = reads.value
+        return !state.busy && (state.suppressScreenUntil.map { DispatchTime.now() >= $0 } ?? true)
+    }
+
+    /// Builder capture mode blocks every instance's experiences at admission and again before presenting.
+    /// It is a separate check from `busy`; nothing dropped here is cached or replayed afterwards.
+    private func isBlockedByCaptureMode() -> Bool {
+        guard BuilderCaptureMode.isActive else { return false }
+        logger.info("Experience dropped - Builder capture mode is on")
+        return true
+    }
+}
+
+// MARK: - Admission
+
+extension ExperiencesPublisher {
+
+    /// Manual API entry. Claims ownership before requesting experience; dropped while busy or capturing.
+    func triggerExperience(_ experienceId: String) {
+        guard !reads.value.busy else { return }
+        onQueue { publisher in
+            guard !publisher.isBlockedByCaptureMode() else { return }
+            guard publisher.current == nil, !publisher.isPreviewing else {
+                publisher.logger.info("Manual experience dropped - another experience is in progress")
                 return
             }
-            delayUtils.delayAction { [weak self] in
-                let thankYouBottomSheetViewController = ThankYouBottomSheetViewController(
-                    surveyContent: surveyContent, surveyTheme: surveyTheme)
-                thankYouBottomSheetViewController.actionButtonClicked = { [weak self] deepLink in
-                    let eventExperienceSeen = ExperienceSurveyCompletedEvent(
-                        surveyId: surveyContent.id,
-                        submissionId: submissionId,
-                        hasDeepLinkContent: deepLink != nil
-                    )
-                    self?.publishInternalSDKEvent(eventExperienceSeen)
-
-                    delay(ThemeHandler.DefaultValues.delayTimeForExperience) { [weak self] in
-                        if let deepLink, let url = URL(string: deepLink) {
-                            self?.triggerDeepLink(url: url)
-                        }
-                    }
-                }
-                thankYouBottomSheetViewController.onDismissCompleted = { [weak self] in
-                    self?.experienceDidFinishDismissing()
-                }
-                host.presentBottomSheet(viewController: thankYouBottomSheetViewController)
-            }
+            let operation = Operation(trigger: .manual, generation: publisher.generation.value,
+                                      screenVisitID: publisher.currentScreenEvent?.screenVisitID)
+            publisher.current = operation
+            publisher.publishReadState()
+            publisher.request(FetchExperienceEvent(experienceId: experienceId), for: operation)
         }
     }
 
-}
-
-// MARK: - Experience Validation and Display Logic
-
-extension ExperiencesPublisher {
-
-    /**
-     * Resolves the display delay for an experience.
-     * Surveys and NPS have configurable delays, with a default fallback.
-     *
-     * - Returns: The delay duration in seconds
-     */
-    func resolvedDelay(_ experienceContent: ExperienceContent) -> TimeInterval {
-        if let surveyDelay = experienceContent.asSurveyContent()?.delayDuration, surveyDelay > 0 {
-            return surveyDelay
-        }
-        if let npsDelay = experienceContent.asNPSContent()?.delayDuration, npsDelay > 0 {
-            return npsDelay
-        }
-        return ThemeHandler.DefaultValues.delayTimeForExperience
-    }
-
-    /**
-     * Validates content before showing it and applies the necessary delay.
-     * Delay is needed because socket responses are too fast (~200ms) which causes
-     * dropped frames and interrupts opening content animations.
-     */
-    private func showExperience<VM, VC: UIViewController>(
-        _ pendingExperience: PendingExperience,
-        makeViewModel: @escaping (DIContainer) -> VM,
-        makeViewController: @escaping (VM) -> VC,
-        presentation: PresentationStyle
-    ) {
-        tryCatch {
-            let experienceContent = pendingExperience.experienceContent
-            experienceStateMachine.markWaitingDelay(pendingExperience.triggerType)
-
-            delayUtils.delayAction(delayTime: resolvedDelay(experienceContent)) { [weak self] in
-                guard
-                    let self,
-                    self.canShowExperience(pendingExperience),
-                    let container = self.container
-                else {
-                    // Delay was cancelled through resetState, stop processing this experience
-                    // If not valid to show the content, move to next one
-                    self?.processNextPendingExperiences()
-                    return
-                }
-
-                performOn(.main) { [weak self] in
-                    guard let self, let host = self.experiencePresentationHost() else {
-                        self?.processNextPendingExperiences()
-                        return
-                    }
-                    let viewModel = makeViewModel(container)
-                    let viewController = makeViewController(viewModel)
-                    if presentation == .fullScreen {
-                        viewController.modalPresentationStyle = .fullScreen
-                    }
-                    self.activeExperience = viewController
-                    self.experienceStateMachine.markActive(pendingExperience.triggerType, experienceContent)
-                    if let upExperience = viewController as? UPExperience {
-                        self.experienceStateMachine.setActiveComponent(upExperience)
-                    }
-                    if viewController.isKind(of: NPSBottomSheetViewController.self) {
-                        self.npsShownOnCurrentScreen.value = true
-                    }
-                    switch presentation {
-                    case .fullScreen, .normal:
-                        host.present(viewController, animated: true)
-                    case .dialog:
-                        host.presentDialog(viewController: viewController)
-                    case .bottomSheet:
-                        host.presentBottomSheet(viewController: viewController)
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-// MARK: - Experience content helper methods
-
-extension ExperiencesPublisher {
-
-    /**
-     * Determines whether an experience can be shown based on current state and targeting rules.
-     *
-     * Validation rules:
-     * - Returns `false` if there are no pending experiences to show.
-     * - Returns `false` if there is already an active rendered experience.
-     * - Returns `true` if the experience was manually triggered (screen validation not required).
-     * - Returns `true` if the current session has just started and the experience is tied to the start session
-     *   (these experiences have no screens to check, so they are shown without screen validation).
-     * - Otherwise, validates screen targeting rules for Flow, Survey, or NPS content.
-     *
-     * @param pendingExperience The content and original trigger to validate.
-     * @return `true` if the experience can be shown, `false` otherwise.
-     */
-    private func canShowExperience(_ pendingExperience: PendingExperience) -> Bool {
-        guard !pendingExperiences.isEmpty else {
-            logger.info("Cannot show experience: pending experiences is empty")
-            return false
-        }
-
-        guard !hasActiveExperience else {
-            logger.info("Cannot show experience: there is an active experience already")
-            return false
-        }
-
-        if pendingExperience.triggerType == .manual || pendingExperience.triggerType == .preview {
-            logger.info("Can show experience: bypassing screen validation")
-            return true
-        }
-
-        if analyticsPublisher.isStartSession {
-            logger.info("Can show experience: start session is true")
-            return true
-        }
-
-        let experienceContent = pendingExperience.experienceContent
-        let flowContent = experienceContent.asFlowContent()
-        let surveyContent = experienceContent.asSurveyContent()
-        let npsContent = experienceContent.asNPSContent()
-
-        let isFlowContentValid =
-            flowContent.map { $0.isForAllScreens || $0.screens.contains(currentScreen) } ?? false
-        let isSurveyContentValid =
-            surveyContent.map { $0.isForAllScreens || $0.screens.contains(currentScreen) } ?? false
-        let isNPSContentValid =
-            npsContent.map { $0.isForAllScreens || $0.screens.contains(currentScreen) } ?? false
-        let isValidScreen = isFlowContentValid || isSurveyContentValid || isNPSContentValid
-
-        logger.info(
-            """
-            Screen validation result: Flow=%{public}@, Survey=%{public}@, NPS=%{public}@, \
-            is valid=%{public}@, current screen='%{public}@'
-            """,
-            "\(isFlowContentValid)",
-            "\(isSurveyContentValid)",
-            "\(isNPSContentValid)",
-            "\(isValidScreen)",
-            currentScreen
-        )
-
-        return isValidScreen
-    }
-
-    /** Removes all cached/pending experiences from the queue */
-    private func clearPendingExperiences() {
-        if pendingExperiences.isEmpty { return }
-        experienceQueue.async { [weak self] in
-            self?.pendingExperiences.removeAll()
-        }
-    }
-
-    /**
-     * Moves to the next pending experience in the queue.
-     * Retains only the last experience and processes it.
-     */
-    private func processNextPendingExperiences() {
-        tryCatch {
-            if pendingExperiences.isEmpty { return }
-            experienceQueue.async { [weak self] in
-                guard let self else { return }
-                // A live preview owns the queue: re-assert preview mode instead of draining the
-                // pending experience out from under it.
-                if self.previewSessionTracker.isActive() {
-                    self.experienceStateMachine.markPreviewMode()
-                    return
-                }
-                self.resetProcessingExperienceStatus()
-                if self.pendingExperiences.count == 1 {
-                    self.pendingExperiences.removeAll()
-                    self.processCachedExperienceAfterClose()
-                } else {
-                    if let lastContent = self.pendingExperiences.last, self.pendingExperiences.count > 1 {
-                        self.pendingExperiences = [lastContent]
-                        self.openExperienceFlow()
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Resets the publisher state, cancelling pending content and experiences.
-     * Called when logging out, updating screen, activity changes, or when content
-     * becomes invalid from view models.
-     */
-    private func resetState() {
-        // A lifecycle reset abandons any preview in flight; its late response must not render.
-        previewSessionTracker.cancel()
-        resetState(completion: nil)
-    }
-
-    private func resetState(completion: (() -> Void)?) {
-        tryCatch {
-            delayUtils.cancelDelay()
-            clearPendingExperiences()
-            experienceStateMachine.clearCachedExperience()
-
-            if hasActiveExperience || experienceStateMachine.getActiveComponent() != nil {
-                endExperience(manualClose: true, completion: completion)
-            } else {
-                activeExperience = nil
-                experienceStateMachine.markIdle()
-                hideExperienceOverlayIfIdle()
-                completion?()
-            }
-        }
-    }
-
-    private func resetProcessingExperienceStatus() {
-        activeExperience = nil
-        experienceStateMachine.markIdle()
-    }
-
-    /**
-     * Decodes every experience type present in the response, in Flow → Survey → NPS order.
-     *
-     * Returning all of them (rather than stopping at the first that decodes) is what lets automatic
-     * selection fall through to an unseen Survey or NPS when the Flow was already shown on this
-     * screen.
-     */
-    private func experienceCandidates(_ response: String) -> [ExperienceContent] {
-        var candidates: [ExperienceContent] = []
-        if let flowContent = response.toFlowContent()?.flowContent {
-            candidates.append(.flow(content: flowContent))
-        }
-        if let surveyContent = response.toSurveyContent()?.surveyContent {
-            candidates.append(.survey(content: surveyContent))
-        }
-        if let npsContent = response.toNPSContent()?.npsContent {
-            candidates.append(.nps(content: npsContent))
-        }
-        return candidates
-    }
-
-    /// `fetchExperienceContent` is a manual API response and bypasses seen-screen filtering; screen
-    /// events are automatic and must select an unseen candidate.
-    private func triggerTypeForEvent(_ eventName: String) -> TriggerType {
-        eventName == SDKEventsName.fetchExperienceContent.rawValue ? .manual : .automatic
-    }
-
-    /**
-     * Whether this experience is already active, queued, or cached.
-     *
-     * Distinct from a seen check: seen content was already displayed on this screen, whereas a
-     * duplicate is the same content arriving twice before it has been shown.
-     */
-    private func isDuplicateExperience(_ experience: ExperienceContent) -> Bool {
-        if sameExperience(experienceStateMachine.getActiveContent(), experience) {
-            return true
-        }
-        if pendingExperiences.contains(where: { sameExperience($0.experienceContent, experience) }) {
-            return true
-        }
-        return sameExperience(experienceStateMachine.getCachedExperienceContent(), experience)
-    }
-
-    /// Identity comparison per type — a Flow and a Survey sharing a numeric id are not the same
-    /// experience, and NPS is identified by its survey key rather than an id.
-    private func sameExperience(
-        _ first: ExperienceContent?,
-        _ second: ExperienceContent
+    /// Admits backend-selected screen or track experience. Idle starts preparation; busy or capturing drops it.
+    /// Returns true when the experience took ownership, carrying `owedReload` before preparation can end it.
+    @discardableResult
+    private func accept(
+        _ experience: ExperienceContent,
+        screenVisitID: UUID? = nil,
+        owedReload: Bool = false
     ) -> Bool {
-        switch (first, second) {
-        case (.flow(let firstContent), .flow(let secondContent)):
-            return firstContent.id == secondContent.id
-        case (.survey(let firstContent), .survey(let secondContent)):
-            return firstContent.id == secondContent.id
-        case (.nps(let firstContent), .nps(let secondContent)):
-            return firstContent.content.survey.key == secondContent.content.survey.key
-        default:
+        assertOnQueue()
+        guard !isBlockedByCaptureMode() else { return false }
+        guard !isPreviewing else { return false }
+        guard !isSuppressedNPS(experience) else {
+            logger.info("NPS suppressed - already shown on the current screen")
             return false
         }
-    }
-
-    /// - Parameter previewSessionId: When given, the reset only applies if that session is still the
-    ///   active one — a superseded preview must not tear down the one that replaced it. When `nil`
-    ///   the caller is abandoning whatever preview is active.
-    private func resetProcessingPreviewExperienceStatus(previewSessionId: UInt64? = nil) {
-        if let previewSessionId {
-            guard previewSessionTracker.finish(previewSessionId) else { return }
-        } else {
-            previewSessionTracker.cancel()
+        guard current == nil else {
+            logger.info("Experience dropped - another experience is in progress")
+            return false
         }
-        resetProcessingExperienceStatus()
+        let operation = Operation(trigger: .automatic, generation: generation.value, experience: experience,
+                                  screenVisitID: screenVisitID ?? currentScreenEvent?.screenVisitID)
+        operation.owedReload = owedReload
+        current = operation
+        publishReadState()
+        prepare(operation)
+        return true
     }
 
-    private func processCachedExperienceAfterClose() {
-        experienceQueue.async { [weak self] in
-            guard let self,
-                  case .idle = self.experienceStateMachine.getCurrentState(),
-                  !self.previewSessionTracker.isActive(),
-                  self.pendingExperiences.isEmpty else { return }
+    /// Socket push carrying a server-triggered experience; one arriving while another is active is held.
+    /// A non-null `request_id` answers a request instead, so only a missing or null one is a push.
+    func onNewMessage(_ message: Message) {
+        onQueue { publisher in
+            guard !publisher.isPreviewing,
+                  let payload = message.payload["payload"] as? [String: Any],
+                  (payload["request_id"] ?? NSNull()) is NSNull,
+                  let response = payload.toJSONString(),
+                  let experience = response.experienceCandidates(logger: publisher.logger).first else { return }
+            if publisher.current == nil {
+                publisher.accept(experience)
+            } else if !publisher.isBlockedByCaptureMode() {
+                publisher.heldPush.hold(experience)
+            }
+        }
+    }
 
-            switch self.experienceStateMachine.processCachedExperience() {
-            case .processAutomatic(let experience):
-                // Cached content may have been shown while waiting for the previous renderer.
-                guard !self.analyticsPublisher.isExperienceSeen(experience) else {
-                    self.logger.info(
-                        "Ignoring cached experience already seen: %@",
-                        experience.experienceId().toString()
-                    )
-                    return
-                }
-                let pendingExperience = PendingExperience(experienceContent: experience, triggerType: .automatic)
-                self.pendingExperiences.append(pendingExperience)
-                self.experienceStateMachine.markAutomaticTrigger(experience)
-                if experience.asNPSContent() != nil {
-                    self.openNPSBottomSheetExperience(pendingExperience)
-                } else {
-                    self.checkCachedThemes(experience.experienceThemeId())
-                }
+    /// Screen replies remain shared notifications; experience/theme requests own their completions.
+    func onSocketEventSent(_ eventName: String, _ payload: Payload, _ message: Message, _ eventSent: Bool) {
+        // Class-aware mode consumes per-send completions, never the same response twice.
+        guard !config.enableScreenClassIdentity else { return }
+        guard eventName == Constants.Event.screenEvent, !reads.value.busy else { return }
+        onQueue { publisher in
+            guard !publisher.isPreviewing else { return }
+            publisher.receiveScreen(payload, message, success: eventSent)
+        }
+    }
 
-            case .triggerManual(let experienceId):
-                self.triggerExperienceIfIdle(experienceId)
+    func receiveScreenResponse(_ payload: Payload, _ message: Message, success: Bool, visitID: UUID?) {
+        guard !reads.value.busy else { return }
+        onQueue { publisher in
+            guard !publisher.isPreviewing,
+                  visitID == nil || visitID == publisher.currentScreenEvent?.screenVisitID else { return }
+            publisher.receiveScreen(payload, message, success: success, visitID: visitID)
+        }
+    }
 
-            case .none:
+    /// Admits a screen reply unless a newer screen event waits in the analytics queue, meaning the user has
+    /// moved on; the reply is then not even decoded. This is the only screen check, for every content type.
+    private func receiveScreen(_ payload: Payload, _ message: Message, success: Bool, visitID: UUID? = nil) {
+        assertOnQueue()
+        guard success else { return }
+        if analytics.hasQueuedScreenEvent(payload) {
+            logger.info("Screen response ignored - a newer screen event is queued")
+            return
+        }
+        guard let response = message.payload.toJSONString(),
+              let experience = response.experienceCandidates(logger: logger).first else { return }
+        accept(experience, screenVisitID: visitID)
+    }
+
+    /// Continues the current manual fetch. A failed or empty reply releases the gate.
+    /// Equal experience tokens from an older request cannot release this operation.
+    private func receiveManualExperience(_ operation: Operation, _ message: Message, success: Bool) {
+        assertOnQueue()
+        guard operation.trigger == .manual, case .experience = operation.phase else { return }
+        guard success, let response = message.payload.toJSONString(),
+              let experience = response.experienceCandidates(logger: logger).first else {
+            logger.info("Manual experience request returned no content")
+            finish(operation)
+            return
+        }
+        operation.experience = experience
+        publishReadState()
+        prepare(operation)
+    }
+
+    /// Continues the operation waiting for this theme. A failed app theme reply falls back to the
+    /// experience's own theme; any other failed reply releases the gate.
+    private func receiveTheme(_ operation: Operation, _ message: Message, success: Bool) {
+        assertOnQueue()
+        guard case .theme(let key) = operation.phase else { return }
+        let response = message.payload.toJSONString()
+        logger.debug("🎨 Theme response for %{public}@ (success: %{public}@): %{public}@",
+                     String(describing: key), String(success), response ?? "nil")
+        let theme = success ? response?.toMobileTheme(logger: logger) : nil
+        switch key {
+        case .id(let themeID):
+            guard let theme, theme.id == themeID else {
+                logger.info("Experience dropped - theme request failed")
+                finish(operation)
+                return
+            }
+            themes.saveTheme(theme)
+        case .title(let title):
+            guard let theme, themes.saveAppTheme(theme, title: title) else {
+                logger.info("App theme %@ unavailable - using the experience's own theme", title)
+                themes.markAppThemeUnavailable(title)
+                prepare(operation)
+                return
+            }
+        }
+        schedulePresentation(operation)
+    }
+
+    /// Each connection fetches the app theme again, so dashboard edits reach the next experience.
+    func onSocketOpened() {
+        themes.resetAppThemes()
+    }
+
+    /// Socket loss abandons preparation still waiting for a experience/theme reply.
+    /// Delayed or visible UI and HTTP-based preview work continue.
+    func onSocketClosed() {
+        onQueue { publisher in
+            guard let operation = publisher.current, operation.trigger != .preview else { return }
+            switch operation.phase {
+            case .experience, .theme:
+                publisher.finish(operation)
+            default:
                 break
             }
         }
     }
 }
 
-// MARK: - Preview Experience
+// MARK: - Preparation
 
 extension ExperiencesPublisher {
 
+    /// NPS and cached themes go straight to the display delay; otherwise request the one missing theme,
+    /// which is the app theme while one is selected and available.
+    private func prepare(_ operation: Operation) {
+        assertOnQueue()
+        guard let experience = operation.experience else {
+            finish(operation)
+            return
+        }
+        guard !isSuppressedNPS(experience) else {
+            logger.info("NPS suppressed - already shown on the current screen")
+            finish(operation)
+            return
+        }
+        guard let themeKey = themes.requiredThemeKey(for: experience) else {
+            schedulePresentation(operation)
+            return
+        }
+        guard analytics.canRequestEvent else {
+            logger.info("Experience dropped - socket unavailable to fetch its theme")
+            finish(operation)
+            return
+        }
+        operation.phase = .theme(themeKey)
+        request(FetchThemeEvent(key: themeKey, token: config.token), for: operation)
+    }
+
+    /// The completion belongs to this operation; cancellation also covers time in the SDK queue.
+    private func request(_ event: SDKEvent, for operation: Operation) {
+        guard owns(operation) else { return }
+        let eventName = event.eventName
+        analytics.publishInternalSDKEvent(event, shouldSend: { [weak self] in
+            self?.generation.value == operation.generation && !operation.isCancelled.value
+        }, completion: { [weak self] message, success in
+            self?.onQueue { publisher in
+                guard publisher.owns(operation) else { return }
+                if eventName == SDKEventsName.fetchExperienceContent.rawValue {
+                    publisher.receiveManualExperience(operation, message, success: success)
+                } else {
+                    publisher.receiveTheme(operation, message, success: success)
+                }
+            }
+        })
+    }
+
+    /// Apply this experience's display delay; the scheduled continuation rechecks operation ownership.
+    private func schedulePresentation(_ operation: Operation) {
+        guard let experience = operation.experience else { finish(operation); return }
+        schedule(operation, after: experience.resolvedDelay()) { $0.openExperience($1) }
+    }
+
+    /// One delay at a time (initial display or thank-you). DelayUtils fires on main, so the action
+    /// returns to the queue and runs only if this operation is still current and waiting.
+    private func schedule(
+        _ operation: Operation,
+        after interval: TimeInterval,
+        action: @escaping (ExperiencesPublisher, Operation) -> Void
+    ) {
+        assertOnQueue()
+        operation.phase = .delay
+        publishReadState()
+        delayUtils.delayAction(delayTime: interval) { [weak self, weak operation] in
+            self?.onQueue { publisher in
+                guard let operation, publisher.owns(operation),
+                      case .delay = operation.phase else { return }
+                action(publisher, operation)
+            }
+        }
+    }
+
+    /// Do not repeat NPS within the same screen visit, even if the backend returns it again.
+    private func isSuppressedNPS(_ experience: ExperienceContent) -> Bool {
+        experience.asNPSContent() != nil && npsShownOnCurrentScreen
+    }
+}
+
+// MARK: - Renderers
+
+extension ExperiencesPublisher {
+
+    /// Picks the existing renderer and presentation style. UIKit work happens later on main.
+    private func openExperience(_ operation: Operation) {
+        guard let experience = operation.experience else { finish(operation); return }
+        switch experience {
+        case .flow(let flow, _):
+            openFlow(flow, operation)
+        case .survey(let survey):
+            openSurvey(survey, operation)
+        case .nps:
+            showExperience(operation, makeViewModel: NPSViewModel.init,
+                           makeViewController: NPSBottomSheetViewController.init, style: .bottomSheet)
+        }
+    }
+
+    /// Choose the flow's carousel or themed slideout renderer; creation remains on main. A whole Flow
+    /// starts a walk, whose segments come back here as carousel, slideout or tooltip content.
+    private func openFlow(_ flow: FlowContent, _ operation: Operation) {
+        switch flow.type {
+        case .carousel:
+            showExperience(operation, makeViewModel: ExperienceViewModel.init,
+                           makeViewController: CarouselExperienceViewController.init, style: .fullScreen)
+        case .slideout where flow.isBottomSheet(using: themes):
+            showExperience(operation, makeViewModel: ExperienceViewModel.init,
+                           makeViewController: SlideOutBottomSheetViewController.init, style: .bottomSheet)
+        case .slideout:
+            showExperience(operation, makeViewModel: ExperienceViewModel.init,
+                           makeViewController: SlideOutDialogViewController.init, style: .dialog)
+        case .tooltip:
+            guard flow.tooltipSteps != nil else { finish(operation); return }
+            showExperience(operation, makeViewModel: TooltipViewModel.init,
+                           makeViewController: TooltipViewController.init, style: .anchored)
+        case .flow:
+            startFlowWalk(flow, operation)
+        }
+    }
+
+    /// One operation walks the whole Flow payload. Consecutive tooltip steps form one segment and a modal or
+    /// slideout step is its own; each segment reuses a renderer through its projection.
+    private func startFlowWalk(_ flow: FlowContent, _ operation: Operation) {
+        let context = DebugFlowContext(flow: flow, isPreview: operation.trigger == .preview,
+                                       generation: operation.generation)
+        operation.debugFlow = context
+        debugEventStore.recordFlow(context, outcome: nil, screen: nil)
+        operation.flowWalk = FlowWalk(flow: flow)
+        openFlowSegment(operation)
+    }
+
+    /// Presents the walk's current segment on the current screen; the projection's type picks the renderer.
+    private func openFlowSegment(_ operation: Operation) {
+        let screen = currentScreenEvent?.screenTitle
+        guard let segment = operation.flowWalk?.current(screen: screen, run: operation.flowRun),
+              let flow = segment.asFlowContent() else {
+            finish(operation)
+            return
+        }
+        guard !flow.steps.isEmpty else {
+            logger.info("‼️ Flow %{public}@ dropped - it has no steps", String(flow.id))
+            finish(operation)
+            return
+        }
+        operation.experience = segment
+        publishReadState()
+        openFlow(flow, operation)
+    }
+
+    /// Choose the list or themed survey renderer; showExperience reserves any thank-you continuation.
+    private func openSurvey(_ survey: SurveyContent, _ operation: Operation) {
+        switch survey.type {
+        case .list:
+            showExperience(operation, makeViewModel: SurveyViewModel.init,
+                           makeViewController: SurveyListViewController.init, style: .fullScreen)
+        case .step where survey.isBottomSheet(using: themes):
+            showExperience(operation, makeViewModel: SurveyViewModel.init,
+                           makeViewController: SurveyBottomSheetViewController.init, style: .bottomSheet)
+        case .step:
+            showExperience(operation, makeViewModel: SurveyViewModel.init,
+                           makeViewController: SurveyDialogViewController.init, style: .dialog)
+        }
+    }
+
+    /// A list survey with an enabled completion module reserves its thank-you step up front.
+    private func showExperience<VM, VC: UIViewController>(
+        _ operation: Operation,
+        makeViewModel: @escaping (DIContainer) -> VM,
+        makeViewController: @escaping (VM) -> VC,
+        style: PresentationStyle
+    ) {
+        guard let experience = operation.experience else {
+            finish(operation)
+            return
+        }
+        if let survey = experience.asSurveyContent(), survey.type == .list,
+           let last = survey.modules.last, last.type == .completed, last.metadata?.enabled != false {
+            operation.needsThankYou = true
+        }
+        enqueuePresentation(operation, style: style) { publisher, _ in
+            guard let container = publisher.container else { return nil }
+            return makeViewController(makeViewModel(container))
+        }
+    }
+
+    /// Marks the operation visible, then hands creation to main with only immutable values.
+    /// Cancelling a visible operation waits for main to skip or dismiss its renderer.
+    private func enqueuePresentation(
+        _ operation: Operation,
+        style: PresentationStyle,
+        makeController: @escaping (ExperiencesPublisher, Presentation) -> UIViewController?
+    ) {
+        assertOnQueue()
+        guard owns(operation) else { return }
+        let shown = Presentation(screenVisitID: operation.screenVisitID)
+        operation.presentation = shown
+        operation.phase = .visible
+        publishReadState()
+        let screen = getCurrentScreen
+        onMain { publisher in
+            publisher.presentOnMain(shown, screen: screen, style: style, makeController: makeController)
+        }
+    }
+
+    /// Skips a cancelled handoff, clears a preview error alert, then builds and presents the renderer.
+    /// A preview without a host waits for lifecycle recovery; renderer failures release ownership.
+    private func presentOnMain(
+        _ shown: Presentation,
+        screen: String,
+        style: PresentationStyle,
+        makeController: @escaping (ExperiencesPublisher, Presentation) -> UIViewController?
+    ) {
+        assertOnMain()
+        let state = reads.value
+        guard state.isVisible, state.presentation === shown,
+              state.generation == generation.value,
+              shown.screenVisitID == nil || shown.screenVisitID == state.screenEvent?.screenVisitID else { return }
+        // Work that was preparing or delayed when capture mode started never shows or sends a seen event.
+        guard !isBlockedByCaptureMode() else {
+            didDismissOnMain(shown)
+            return
+        }
+        if let alert = previewErrorAlert {
+            previewErrorAlert = nil
+            alert.dismiss(animated: false) { [weak self] in
+                self?.presentOnMain(shown, screen: screen, style: style, makeController: makeController)
+            }
+            return
+        }
+        guard let host = presentationHost() else {
+            logger.info("Experience not shown - no free presentation host")
+            waitForPresentationHost(shown)
+            return
+        }
+        guard host.presentedViewController == nil,
+              let controller = makeController(self, shown) else {
+            logger.info("Experience not shown - no free presentation host")
+            didDismissOnMain(shown)
+            return
+        }
+        if let tooltip = controller as? TooltipViewController {
+            guard let targetWindow = tooltip.admitTargetHost() else {
+                didDismissOnMain(shown)
+                return
+            }
+            // Target coordinates and the overlay must belong to the same admitted app window.
+            userpilot?.experienceOverlayWindow.prepareForPresentation(in: targetWindow)
+            // The focused input belongs to the app window, not the SDK overlay.
+            targetWindow.endEditing(true)
+        }
+        shown.controller = controller
+        onPresentation(shown) { publisher, operation in
+            publisher.recordExperienceShown(operation)
+            guard operation.experience?.asNPSContent() != nil,
+                  publisher.getCurrentScreen == screen else { return }
+            publisher.npsShownOnCurrentScreen = true
+        }
+        presentController(controller, on: host, style: style)
+    }
+
+    /// Each renderer keeps its existing native presentation and dismissal mechanism.
+    private func presentController(
+        _ controller: UIViewController, on host: UIViewController, style: PresentationStyle
+    ) {
+        assertOnMain()
+        switch style {
+        case .fullScreen:
+            controller.modalPresentationStyle = .fullScreen
+            host.present(controller, animated: true)
+        case .dialog:
+            host.presentDialog(viewController: controller)
+        case .bottomSheet:
+            host.presentBottomSheet(viewController: controller)
+        case .anchored:
+            host.present(controller, animated: false)
+        }
+    }
+
+    /// This SDK instance's overlay root, or the provider's controller when no overlay exists.
+    private func presentationHost() -> UIViewController? {
+        assertOnMain()
+        if let overlay = userpilot?.experienceOverlayWindow {
+            overlay.prepareForPresentation()
+            guard overlay.isReadyForPresentation(in: UIApplication.shared.windows) else { return nil }
+            return overlay.rootViewController
+        }
+        return topViewControllerProvider()
+    }
+
+    /// No renderer was created. Normal content ends like any other unshown renderer, so a Flow walk pauses
+    /// without a reload; a preview retains its loaded content and theme.
+    private func waitForPresentationHost(_ shown: Presentation) {
+        onPresentation(shown) { publisher, operation in
+            guard case .visible = operation.phase else { return }
+            operation.presentation = nil
+            guard operation.trigger == .preview else { publisher.continueFlowWalk(operation); return }
+            operation.phase = .waitingForHost
+            publisher.publishReadState()
+            // The host can become ready before this queue receives the failed main-thread attempt.
+            publisher.resumeWaitingPreview()
+        }
+    }
+
+    /// Continue only the matching survey after its UIKit dismissal; keep ownership through thank-you delay.
+    func showThankYouMessage(
+        _ survey: SurveyContent, _ theme: SurveyTheme, _ submissionId: Int64, rendererID: UUID?
+    ) {
+        guard let rendererID else { return }
+        onMain { publisher in
+            guard let shown = publisher.reads.value.presentation, shown.id == rendererID,
+                  shown.controller?.presentingViewController == nil else { return }
+            publisher.onPresentation(shown) { publisher, operation in
+                guard operation.needsThankYou,
+                      operation.experience?.asSurveyContent()?.id == survey.id else { return }
+                operation.needsThankYou = false
+                operation.presentation = nil
+                let interval = Constants.Theme.delayTimeForExperience
+                publisher.schedule(operation, after: interval) { publisher, operation in
+                    publisher.presentThankYou(operation, survey: survey, theme: theme, submissionID: submissionId)
+                }
+            }
+        }
+    }
+
+    /// The survey's final renderer. Its dismissal callback releases the operation.
+    private func presentThankYou(
+        _ operation: Operation,
+        survey: SurveyContent,
+        theme: SurveyTheme,
+        submissionID: Int64
+    ) {
+        enqueuePresentation(operation, style: .bottomSheet) { publisher, shown in
+            let controller = ThankYouBottomSheetViewController(surveyContent: survey, surveyTheme: theme)
+            controller.actionButtonClicked = { [weak publisher] deepLink in
+                publisher?.onPresentation(shown) { publisher, operation in
+                    guard case .visible = operation.phase else { return }
+                    operation.completionDeepLink = deepLink.flatMap { $0.isEmpty ? nil : URL(string: $0) }
+                    let completed = SurveyExperienceActionEvent.completed(
+                        surveyId: survey.id, submissionId: submissionID, hasDeepLink: deepLink != nil
+                    )
+                    publisher.publish([completed], operation: operation)
+                }
+            }
+            controller.onDismissCompleted = { [weak publisher] in
+                publisher?.onMain { $0.didDismissOnMain(shown) }
+            }
+            return controller
+        }
+    }
+}
+
+// MARK: - Final dismissal and cancellation
+
+extension ExperiencesPublisher {
+
+    /// Accept dismissal only for the named presentation after UIKit has detached its controller.
+    /// A completed/dismissed analytics event alone cannot release the operation or request the next experience.
+    func experienceDidFinishDismissing(rendererID: UUID?) {
+        guard let rendererID else { return }
+        onMain { publisher in
+            guard let shown = publisher.reads.value.presentation, shown.id == rendererID,
+                  shown.controller?.presentingViewController == nil else { return }
+            publisher.didDismissOnMain(shown)
+        }
+    }
+
+    /// Close request. Returning does not mean the renderer has finished dismissing.
+    func endExperience(manualClose: Bool) {
+        onQueue { $0.closeCurrent(manualClose: manualClose, refresh: true) }
+    }
+
+    /// Completes once the current operation released its renderer.
+    func endExperience(manualClose: Bool, completion: (() -> Void)?) {
+        onQueue(checkGeneration: false) { publisher in
+            publisher.closeCurrent(manualClose: manualClose, refresh: true, completion: completion)
+        }
+    }
+
+    /// Builder capture waits for native teardown instead of photographing a closing experience.
+    func closeSilently(completion: (() -> Void)?) {
+        onQueue(checkGeneration: false) { publisher in
+            publisher.heldPush.clear()
+            publisher.closeCurrent(manualClose: false, refresh: false, completion: completion)
+        }
+    }
+
+    /// The one close every SDK-driven cause shares (navigation, logout, QR preview, Builder capture), for every
+    /// content type and Flow step: renderers close without reporting, no host callback fires, the held push is
+    /// dropped and nothing reloads, so an open Flow run pauses.
+    private func closeSilently() {
+        assertOnQueue()
+        heldPush.clear()
+        closeCurrent(manualClose: false, refresh: false)
+    }
+
+    /// Teardown waiters still complete when logout invalidated queued experience work.
+    private func closeCurrent(manualClose: Bool, refresh: Bool, completion: (() -> Void)?) {
+        assertOnQueue()
+        guard let operation = current else {
+            onMain { _ in completion?() }
+            return
+        }
+        if let completion { operation.dismissalCompletions.append(completion) }
+        closeCurrent(manualClose: manualClose, refresh: refresh)
+    }
+
+    /// Work not yet handed to main finishes immediately; a handed-off renderer keeps ownership until main
+    /// confirms it is gone. Repeated calls never start a second dismissal.
+    private func closeCurrent(manualClose: Bool, refresh: Bool) {
+        assertOnQueue()
+        delayUtils.cancelDelay()
+        guard let operation = current else { startWaitingPreview(); return }
+        operation.isCancelled.value = true
+        operation.completionDeepLink = nil
+        operation.refreshAfterDismissal = refresh
+        operation.needsThankYou = false
+        operation.flowWalk = nil
+        switch operation.phase {
+        case .dismissing:
+            publishReadState()
+        case .visible:
+            operation.phase = .dismissing
+            publishReadState() // Invalidates presentation work that main has not started yet.
+            guard let shown = operation.presentation else { finish(operation); return }
+            onMain { $0.dismissOnMain(shown, manualClose: manualClose) }
+        default:
+            finish(operation)
+        }
+    }
+
+    /// Every SDK-driven close waits `screenTransitionCloseDelay` so a navigated-to screen becomes visible first,
+    /// then closes only if this presentation is still current; the user's and the host app's closes run at once.
+    /// Logout's new generation does not cancel it.
+    private func dismissOnMain(_ shown: Presentation, manualClose: Bool) {
+        assertOnMain()
+        guard !manualClose, sdkCloseDelay > 0 else {
+            dismissRendererOnMain(shown, manualClose: manualClose)
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + sdkCloseDelay) { [weak self] in
+            guard let self, self.reads.value.presentation === shown else { return }
+            self.dismissRendererOnMain(shown, manualClose: false)
+        }
+    }
+
+    /// Dismisses this operation's renderer. A natural dismissal already running reports through
+    /// the renderer's own callback; the operation stays busy until dismissal is confirmed.
+    private func dismissRendererOnMain(_ shown: Presentation, manualClose: Bool) {
+        assertOnMain()
+        guard let renderer = shown.controller, renderer.presentingViewController != nil else {
+            didDismissOnMain(shown)
+            return
+        }
+        guard !renderer.isBeingDismissed else { return }
+        let completed: () -> Void = { [weak self] in
+            self?.onMain { $0.didDismissOnMain(shown) }
+        }
+        if let experience = renderer as? UPExperienceDelegate {
+            experience.triggerCloseExperience(manualClose: manualClose, completion: completed)
+        } else if let sheet = renderer as? BottomSheetViewController {
+            sheet.dismissBottomSheet(completion: completed)
+        } else {
+            renderer.dismiss(animated: true, completion: completed)
+        }
+    }
+
+    /// Cleanup also runs after logout, but only for the presentation that actually dismissed.
+    private func didDismissOnMain(_ shown: Presentation) {
+        assertOnMain()
+        shown.controller = nil
+        onQueue(checkGeneration: false) { publisher in
+            guard let operation = publisher.current, operation.presentation === shown else { return }
+            operation.presentation = nil
+            publisher.continueFlowWalk(operation)
+        }
+    }
+
+    /// Presents the next segment in this operation once every step of the removed one ended and the run is
+    /// still open; otherwise finishes. A segment removed before its steps ended, while the run is still open,
+    /// closed silently, which pauses the walk; one whose run ended early (`end_flow`) still reloads.
+    private func continueFlowWalk(_ operation: Operation) {
+        assertOnQueue()
+        let hasOpenSteps = operation.flowWalk?.isCurrentSegmentEnded(operation.flowRun) == false
+        if hasOpenSteps, !operation.flowRun.hasEnded { operation.flowWalk = nil }
+        guard !operation.flowRun.hasEnded, operation.closeEvent == nil,
+              let next = operation.flowWalk?.next() else {
+            finish(operation)
+            return
+        }
+        operation.flowWalk = next
+        schedule(operation, after: Constants.Theme.delayTimeForExperience) { $0.openFlowSegment($1) }
+    }
+
+    /// Release ownership and start a waiting preview, then a held push in place of the fake reload,
+    /// which then owes that reload; otherwise enqueue the reload. Generation, reload policy and deep-link
+    /// checks prevent an outgoing operation from refreshing another context.
+    private func finish(_ operation: Operation) {
+        assertOnQueue()
+        guard current === operation else { return }
+        if let context = operation.debugFlow { debugEventStore.pauseFlow(operationID: context.operationID) }
+        operation.isCancelled.value = true
+        delayUtils.cancelDelay()
+        current = nil
+        let completions = operation.dismissalCompletions
+        operation.dismissalCompletions.removeAll()
+        publishReadState()
+        onMain { _ in completions.forEach { $0() } }
+        onMain { $0.userpilot?.existingExperienceOverlayWindow?.hideIfIdle() }
+        startWaitingPreview()
+        let opensDeepLink = operation.completionDeepLink != nil
+        openCompletionDeepLink(operation)
+        if opensDeepLink { heldPush.clear() }
+        heldPush.onOperationFinished(owesReload: owesReload(operation, opensDeepLink: opensDeepLink))
+    }
+
+    /// Whether `operation`'s ending calls for a fake reload: one a held push inherited, a walk that ran out of
+    /// segments, ended its run or was closed by the user, or an eligible close event. A walk that closed silently
+    /// without a close event pauses instead; a deep link, a new context (logout, a newer operation) or a skipped
+    /// refresh owes none.
+    private func owesReload(_ operation: Operation, opensDeepLink: Bool) -> Bool {
+        guard !opensDeepLink, current == nil, operation.refreshAfterDismissal,
+              operation.generation == generation.value else { return false }
+        if operation.owedReload { return true }
+        if operation.isFlowWalk { return operation.flowWalk != nil || operation.closeEvent != nil }
+        guard let close = operation.closeEvent else { return false }
+        return close.isEventForCloseExperience() && !close.hasDeepLink
+    }
+
+    /// Starts the latest QR request once the outgoing operation has released ownership.
+    private func startWaitingPreview() {
+        assertOnQueue()
+        guard current == nil, let preview = replacementPreview else { return }
+        replacementPreview = nil
+        guard !isBlockedByCaptureMode() else {
+            publishReadState()
+            return
+        }
+        beginPreview(preview)
+    }
+
+    /// Routes a named screen through the same navigation rules as a full screen event.
+    func updateScreen(_ screenName: String) {
+        updateScreen(Event(type: .screen(screenName)))
+    }
+
+    /// Publishes an app screen immediately; on a screen change the queue then resets NPS, drops the held push
+    /// and closes the current experience silently. Repeated identities and generated reloads retain the visit;
+    /// preview survives navigation.
+    @discardableResult
+    func updateScreen(_ event: Event) -> UUID? {
+        guard event.isFakeReload == nil, let screenName = event.screenTitle else { return nil }
+        var changed = false
+        var visitID: UUID?
+        reads.update {
+            var state = $0
+            changed = config.enableScreenClassIdentity
+                ? state.screenEvent?.screenIdentityKey(classAware: true) != event.screenIdentityKey(classAware: true)
+                : state.screen != screenName
+            var captured = event
+            if config.enableScreenClassIdentity, event.nativeSwiftUIScreenClass != nil {
+                visitID = changed ? UUID() : (state.screenEvent?.screenVisitID ?? UUID())
+            }
+            captured.screenVisitID = visitID
+            state.screenEvent = captured
+            state.screen = screenName
+            return state
+        }
+        guard changed else { return visitID }
+        onQueue { publisher in
+            // A newer background screen update can overtake this queued transition.
+            guard publisher.getCurrentScreen == screenName,
+                  visitID == publisher.currentScreenEvent?.screenVisitID else { return }
+            publisher.npsShownOnCurrentScreen = false
+            publisher.heldPush.clear()
+            guard !publisher.isPreviewing else { return }
+            publisher.closeSilently()
+        }
+        return visitID
+    }
+
+    /// Drops any preview or held push, resets the NPS limit, and closes silently.
+    func logout() {
+        generation.value = UUID() // Stop old renderer/service callbacks before asynchronous teardown.
+        reads.update {
+            var state = $0
+            if state.screenEvent?.screenVisitID != nil { state.screenEvent?.screenVisitID = UUID() }
+            return state
+        }
+        onQueue(checkGeneration: false) { publisher in
+            publisher.replacementPreview = nil
+            publisher.npsShownOnCurrentScreen = false
+            publisher.closeSilently()
+            // An idle overlay can outlive its operation; collapse it without constructing a new window.
+            publisher.onMain { $0.userpilot?.existingExperienceOverlayWindow?.hideIfIdle() }
+        }
+    }
+}
+
+// MARK: - Preview owns admission from the scan through final dismissal
+
+extension ExperiencesPublisher: LifecycleDelegate {
+    func onAppActive() { resumeWaitingPreview() }
+    func onSceneActive() { resumeWaitingPreview() }
+    func onWindowBecameKey() { resumeWaitingPreview() }
+
+    /// Inspect UIKit on main, then claim the retry on the operation queue. Repeated lifecycle
+    /// signals cannot schedule twice, and logout or replacement invalidates the original operation.
+    private func resumeWaitingPreview() {
+        onQueue { publisher in
+            guard let operation = publisher.current, case .waitingForHost = operation.phase else { return }
+            publisher.onMain { [weak operation] publisher in
+                guard let operation, !operation.isCancelled.value,
+                      operation.generation == publisher.generation.value,
+                      publisher.presentationHost() != nil else { return }
+                publisher.onQueue { publisher in
+                    guard publisher.owns(operation), case .waitingForHost = operation.phase else { return }
+                    publisher.schedulePresentation(operation)
+                }
+            }
+        }
+    }
+}
+
+extension ExperiencesPublisher {
+
+    /// QR entry, the only input that interrupts the current operation. Preparation (experience or theme
+    /// fetch, display delay) is cancelled at once; a visible renderer finishes dismissing first.
+    /// The latest scan wins, including over an older preview and a held push. Builder capture mode drops it.
     func triggerPreviewExperience(_ experienceId: String, _ queryItems: [URLQueryItem]) {
-        // Claim the session before `resetState` — that call is asynchronous, so a second deep link
-        // arriving during it must supersede this attempt rather than race it.
-        let previewSessionId = previewSessionTracker.begin()
-        resetState { [weak self] in
-            guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
-            self.experienceStateMachine.markPreviewMode()
-            self.userpilotRemoteSource.fetchPreviewExperience(
-                params: PreviewExperienceQueryParams(
-                        baseUrl: Environment.getExperienceContentUrl(),
-                    appToken: self.config.token,
-                    contentType: queryItems.first(where: { $0.name == "type" })?.value ?? "",
-                    contentId: experienceId
-                ),
-                completion: { [weak self] result in
-                    guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
-                    switch result {
-                    case .success(let previewExperience):
-                        self.processPreviewExperience(
-                            previewExperience,
-                            previewSessionId: previewSessionId
-                        )
-                    case .failure(let error):
-                        self.showExperienceTriggeringDebugMessage(
-                            error.localizedDescription,
-                            previewSessionId: previewSessionId
-                        )
+        onQueue { publisher in
+            publisher.heldPush.clear()
+            guard !publisher.isBlockedByCaptureMode() else { return }
+            publisher.replacementPreview = PreviewRequest(
+                experienceID: experienceId,
+                contentType: queryItems.first { $0.name == "type" }?.value ?? ""
+            )
+            publisher.publishReadState()
+            publisher.closeSilently()
+        }
+    }
+
+    /// Claims the gate before fetching. The response bundles its theme, so no theme request follows.
+    /// Results for a replaced preview are ignored.
+    private func beginPreview(_ request: PreviewRequest) {
+        assertOnQueue()
+        let operation = Operation(trigger: .preview, generation: generation.value)
+        current = operation
+        publishReadState()
+        remote.fetchPreviewExperience(
+            params: PreviewExperienceQueryParams(
+                baseUrl: Environment.getExperienceContentUrl(), appToken: config.token,
+                contentType: request.contentType, contentId: request.experienceID
+            )
+        ) { [weak self, weak operation] result in
+            self?.onQueue { publisher in
+                guard let operation, publisher.owns(operation) else { return }
+                switch result {
+                case .success(let preview):
+                    let experience = preview.flow.map { ExperienceContent.flow(content: $0) }
+                        ?? preview.survey.map { ExperienceContent.survey(content: $0) }
+                    guard let experience, let theme = preview.theme else {
+                        publisher.logger.info("Preview dropped - response has no content or theme")
+                        publisher.finish(operation)
+                        return
+                    }
+                    operation.experience = experience
+                    publisher.themes.saveTheme(theme)
+                    publisher.publishReadState()
+                    publisher.schedulePresentation(operation)
+                case .failure(let error):
+                    let expectedGeneration = operation.generation
+                    publisher.finish(operation)
+                    publisher.onMain { publisher in
+                        guard publisher.generation.value == expectedGeneration else { return }
+                        publisher.showPreviewError(error.localizedDescription)
                     }
                 }
-            )
-        }
-    }
-
-    private func processPreviewExperience(
-        _ previewExperience: PreviewExperience,
-        previewSessionId: UInt64
-    ) {
-        tryCatch {
-            guard previewSessionTracker.isCurrent(previewSessionId) else { return }
-            guard let theme = previewExperience.theme,
-                  previewExperience.flow != nil || previewExperience.survey != nil
-            else {
-                resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
-                return
-            }
-
-            let experience: ExperienceContent?
-            if let flow = previewExperience.flow {
-                experience = .flow(content: flow)
-            } else if let survey = previewExperience.survey {
-                experience = .survey(content: survey)
-            } else {
-                experience = nil
-            }
-
-            guard let experience else {
-                resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
-                return
-            }
-
-            experienceQueue.async { [weak self] in
-                guard let self, self.previewSessionTracker.isCurrent(previewSessionId) else { return }
-                // This session is the one about to be on screen, so it is the one its close owns.
-                self.previewSessionTracker.markRendered(previewSessionId)
-                self.pendingExperiences.append(
-                    PendingExperience(experienceContent: experience, triggerType: .preview)
-                )
-                self.themeHandler.saveTheme(theme)
-                self.openExperienceFlow()
             }
         }
     }
 
-    private func showExperienceTriggeringDebugMessage(
-        _ message: String,
-        previewSessionId: UInt64
+    /// Shown only while idle and the host is free, so it never competes with an accepted experience.
+    private func showPreviewError(_ message: String) {
+        assertOnMain()
+        guard !reads.value.busy, let host = presentationHost(), host.presentedViewController == nil else { return }
+        let alert = UIAlertController(title: "Preview Experience", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .default))
+        previewErrorAlert = alert
+        host.present(alert, animated: true)
+    }
+}
+
+// MARK: - Renderer events and links
+
+extension ExperiencesPublisher {
+
+    /// Resolve the named presentation, then validate operation ownership on the experience queue.
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent, rendererID: UUID?) {
+        guard let rendererID else { return }
+        let state = reads.value
+        guard let shown = state.presentation, shown.id == rendererID else { return }
+        onPresentation(shown) { $0.publish([sdkEvent], operation: $1) }
+    }
+
+    /// The run and its events land together, so the next segment and the reload rule read this outcome's run.
+    func publishFlowStepOutcome(_ outcome: FlowStepOutcome, rendererID: UUID?) {
+        let state = reads.value
+        guard let rendererID, let shown = state.presentation, shown.id == rendererID else { return }
+        let screen = state.screenEvent?.screenTitle
+        onPresentation(shown) { publisher, operation in
+            operation.flowRun = outcome.run
+            publisher.publish(outcome.events, flowOutcome: (outcome, screen), operation: operation)
+        }
+    }
+
+    /// The one exit for experience events: a Flow step outcome updates the debugger's run, then each event
+    /// is sent, or for a preview only recorded in the debugger.
+    private func publish(
+        _ events: [ExperienceEvent],
+        flowOutcome: (outcome: FlowStepOutcome, screen: String?)? = nil,
+        operation: Operation
     ) {
-        guard previewSessionTracker.isCurrent(previewSessionId) else { return }
-        resetProcessingPreviewExperienceStatus(previewSessionId: previewSessionId)
-        performOn(.main) { [weak self] in
-            guard
-                let self,
-                let host = self.experiencePresentationHost()
-            else { return }
+        assertOnQueue()
+        if let flowOutcome, let context = operation.debugFlow {
+            debugEventStore.recordFlow(context, outcome: flowOutcome.outcome, screen: flowOutcome.screen)
+        }
+        events.forEach { publishEvent($0, operation: operation) }
+    }
 
-            let alert = UIAlertController(
-                title: "Preview Experience",
-                message: message,
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
+    /// Close events record reload policy; ownership is released only after UIKit dismissal.
+    private func publishEvent(_ sdkEvent: ExperienceEvent, operation: Operation) {
+        if operation.trigger == .preview {
+            debugEventStore.recordPreview(sdkEvent)
+        } else {
+            analytics.publishInternalSDKEvent(sdkEvent)
+        }
+        guard sdkEvent.isEventForCloseExperience(isFlowWalk: operation.isFlowWalk)
+                || sdkEvent.isEventForCloseNPSExperience() else { return }
+        reads.update {
+            var state = $0
+            state.suppressScreenUntil = .now() + 1
+            return state
+        }
+        operation.closeEvent = sdkEvent
+    }
 
-            if let popover = alert.popoverPresentationController {
-                popover.sourceView = host.view
-                popover.sourceRect = CGRect(
-                    x: host.view.bounds.midX,
-                    y: host.view.bounds.midY,
-                    width: 0,
-                    height: 0
-                )
-                popover.permittedArrowDirections = []
-            }
+    /// Records a Flow or survey in the screen's seen content as its renderer is handed to UIKit, so the fake
+    /// reload carries no content of its own; a walked segment records its Flow's id. Previews and NPS record nothing.
+    private func recordExperienceShown(_ operation: Operation) {
+        assertOnQueue()
+        guard operation.trigger != .preview else { return }
+        switch operation.experience {
+        case .flow(let flow, let segment): analytics.experiencePublished(.flow, segment?.flowId ?? flow.id)
+        case .survey(let survey): analytics.experiencePublished(.survey, survey.id)
+        case .nps, nil: break
+        }
+    }
 
-            host.present(alert, animated: true, completion: nil)
+    /// Capture the selected link before dismissal. An old or closing renderer cannot replace it.
+    func setCompletionDeepLink(_ deepLink: String?, rendererID: UUID?) {
+        guard let rendererID, let shown = reads.value.presentation, shown.id == rendererID else { return }
+        onPresentation(shown) { _, operation in
+            guard case .visible = operation.phase else { return }
+            operation.completionDeepLink = deepLink.flatMap { $0.isEmpty ? nil : URL(string: $0) }
+        }
+    }
+
+    /// Final removal starts the navigation delay; logout still invalidates the outgoing user's link.
+    private func openCompletionDeepLink(_ operation: Operation) {
+        guard let url = operation.completionDeepLink else { return }
+        operation.completionDeepLink = nil
+        let expectedGeneration = operation.generation
+        delay(Constants.Theme.delayTimeForDeepLink) { [weak self] in
+            guard let self, self.generation.value == expectedGeneration else { return }
+            self.links.handleURL(url)
         }
     }
 }
 
 #if DEBUG
 extension ExperiencesPublisher {
-    /// Set before delivering events so tests can control when the display delay finishes.
-    func mockSetDelayUtils(_ delayUtils: DelayUtils) {
+    /// Test-thread barrier; the optional action orders submissions before the queue drains again.
+    /// Never call from the owner queue.
+    func mockWaitForQueue(_ action: () -> Void = {}) {
+        experienceQueue.sync(execute: action)
+    }
+
+    /// Set on main before delivering events so tests control when display and thank-you delays fire.
+    /// SDK-driven closes then skip `screenTransitionCloseDelay` unless `sdkCloseDelay` says otherwise.
+    func mockSetDelayUtils(_ delayUtils: DelayUtils, sdkCloseDelay: TimeInterval = 0) {
+        assertOnMain()
         self.delayUtils = delayUtils
-    }
-
-    func mockSetCurrentScreen(title: String) {
-        currentScreen = title
-    }
-
-    func mockGetCurrentScreen() -> String {
-        return currentScreen
-    }
-
-    func mockSetNPSShownOnCurrentScreen(_ shown: Bool) {
-        npsShownOnCurrentScreen.value = shown
-    }
-
-    func mockActiveExperience(experience: UIViewController) {
-        self.activeExperience = experience
+        self.sdkCloseDelay = sdkCloseDelay
     }
 }
 #endif

@@ -39,6 +39,9 @@ class AutoCaptureTestViewController: UIViewController {
     // Labels for displaying values
     private let stepperValueLabel = UILabel()
 
+    // How many times the mixed button's UIAction handler ran
+    private var mixedUIActionRuns = 0
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -125,6 +128,8 @@ class AutoCaptureTestViewController: UIViewController {
         normalButton.applyLiquidGlassStyle(.prominent, title: "Tap Me!")
         normalButton.heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight).isActive = true
         stackView.addArrangedSubview(normalButton)
+
+        addActionButtonSection()
 
         // UISwitch
         addSectionHeader("2. UISwitch (switch_changed)")
@@ -228,6 +233,43 @@ class AutoCaptureTestViewController: UIViewController {
         gestureTestView.addGestureRecognizer(tapGesture)
         gestureTestView.addGestureRecognizer(longPressGesture)
         gestureTestView.isUserInteractionEnabled = true
+    }
+
+    /// These buttons dispatch closure actions, which UIKit does not route through selector target–action.
+    /// The mixed button has both a UIAction and a selector target, so one tap reaches both capture hooks.
+    private func addActionButtonSection() {
+        guard #available(iOS 14.0, *) else { return }
+        addSectionHeader("UIButton · UIAction")
+        addLabel("Tap each button. Expected: one button tap autocapture event with its title and identifier. "
+            + "The mixed button's event also has target_action \"onMixedButtonTapped\".")
+
+        let actionButton = UIButton(type: .system)
+        actionButton.applyLiquidGlassStyle(.prominent, title: "UIAction · addAction")
+        actionButton.accessibilityIdentifier = "autocapture_direct_action_button"
+        actionButton.addAction(UIAction { [weak self] _ in
+            self?.showAlert("UIAction", "addAction handler executed. Check the autocapture event.")
+        }, for: .touchUpInside)
+
+        let primaryAction = UIAction(title: "UIAction · primaryAction") { [weak self] _ in
+            self?.showAlert("UIAction", "primaryAction handler executed. Check the autocapture event.")
+        }
+        let primaryButton = UIButton(type: .system, primaryAction: primaryAction)
+        primaryButton.applyLiquidGlassStyle(.prominent, title: "UIAction · primaryAction")
+        primaryButton.accessibilityIdentifier = "autocapture_primary_action_button"
+
+        // UIAction added first, so UIKit runs it before the selector target.
+        let mixedButton = UIButton(type: .system)
+        mixedButton.applyLiquidGlassStyle(.prominent, title: "Mixed · UIAction + selector")
+        mixedButton.accessibilityIdentifier = "autocapture_mixed_action_button"
+        mixedButton.addAction(UIAction { [weak self] _ in
+            self?.mixedUIActionRuns += 1
+        }, for: .touchUpInside)
+        mixedButton.addTarget(self, action: #selector(onMixedButtonTapped), for: .touchUpInside)
+
+        for button in [actionButton, primaryButton, mixedButton] {
+            button.heightAnchor.constraint(equalToConstant: SampleAppearance.buttonHeight).isActive = true
+            stackView.addArrangedSubview(button)
+        }
     }
 
     private func setupMenuButton() {
@@ -345,6 +387,11 @@ class AutoCaptureTestViewController: UIViewController {
 
     @IBAction func onPageControlChanged(_ sender: UIPageControl) {
         print("Page: \(sender.currentPage)")
+    }
+
+    @objc private func onMixedButtonTapped() {
+        showAlert("UIAction + selector", "Both handlers executed (UIAction runs: \(mixedUIActionRuns)). "
+            + "Expected: exactly one tap event, with target_action \"onMixedButtonTapped\".")
     }
 
     @objc private func onGestureTap(_ sender: UITapGestureRecognizer) {

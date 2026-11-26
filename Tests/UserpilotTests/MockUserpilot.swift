@@ -17,21 +17,29 @@ import UserNotifications
 public typealias Payload = [String: Any]?
 
 class MockUserpilot: Userpilot {
-    init() {
-        super.init(config: Userpilot.Config(token: "NX-00000"))
-    }
-
-    override init(config: Config) {
-        super.init(config: config)
+    /// Exercise runtime registration and startup while replacing service dependencies with mocks.
+    static func make(config: Config = Userpilot.Config(token: "NX-00000")) -> MockUserpilot {
+        MockUserpilot(config: config)
     }
 
     override func initializeContainer() {
         container.owner = self
         container.register(Userpilot.Config.self, value: config)
-        // The real `AutoCaptureCoordinater` resolves `InstanceRegistering`; register
-        // the shared registry (which these MockUserpilot instances register into on
-        // init) so forwarding tests see the same default-resolution behavior.
-        container.register(InstanceRegistering.self, value: Userpilot.Registry.shared)
+        container.register(UserpilotElementTargetingStrategy.self, value: config.targetingStrategy ?? NativeElementTargetingStrategy())
+        container.registerLazy(Logging.self) { $0.resolve(Userpilot.Config.self).logger }
+        // The real coordinator and native hooks use the process runtime that these instances
+        // register into during initialization; share the same runtime services as production `initializeContainer()`.
+        let runtime = UserpilotRuntime.shared
+        container.register(InstanceRegistering.self, value: runtime.instanceRegistry)
+        container.register(InstanceResolving.self, value: runtime.instanceResolver)
+        container.register(AutoCaptureIntegrating.self, value: runtime.captureIntegration)
+        container.register(SwiftUIScanCache.self, value: runtime.scanCache)
+        container.register(LifecycleMonitoring.self, value: runtime.lifecycleMonitor)
+        container.register(DebugEventStoring.self, value: debugEventStore)
+        container.register(DebugFontCataloging.self, value: debugFontCatalog)
+        container.register(DebugConfigSnapshotMaking.self, value: debugConfigFactory)
+        container.register(DebugUserSnapshotMaking.self, value: debugUserFactory)
+        container.register(DebuggerManaging.self, value: debuggerManager)
         container.register(AnalyticsPublishing.self, value: analyticsPublisher)
         container.register(DataStoring.self, value: storage)
         container.register(NetworkMonitoring.self, value: networkMonitor)
@@ -47,14 +55,12 @@ class MockUserpilot: Userpilot {
         container.register(ThemeHandling.self, value: themeHandler)
         container.register(ImageLoading.self, value: imageLoader)
         container.register(LinkOpening.self, value: linkOpener)
-        experienceStateMachine = ExperienceStateMachine(container: container)
-        container.register(ExperienceStateManaging.self, value: experienceStateMachine)
         // Real screen tracker + autocapture coordinator (lazy: only built when a test
         // resolves `autoCaptureCoordinator`). `ScreenNameTracker.init` ignores its
-        // container, and `AutoCaptureCoordinater.init` resolves the mocks registered
+        // container, and `AutoCaptureCoordinator.init` resolves the mocks registered
         // above, so this is safe for tests that never touch autocapture.
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
-        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
+        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinator.init)
     }
 
     var analyticsPublisher = MockAnalyticsPublisher()
@@ -71,8 +77,17 @@ class MockUserpilot: Userpilot {
     var themeHandler = MockThemeHandler()
     var imageLoader = MockImageLoader()
     var linkOpener = MockLinkOpening()
-    var experienceStateMachine: ExperienceStateManaging!
     var mockLogger = MockLogger()
+    var debugEventStore = DebugEventStore()
+    var debugFontCatalog = DebugFontCatalog()
+    lazy var debugConfigFactory = DebugConfigSnapshotFactory(
+        config: config,
+        storage: storage,
+        fontCatalog: debugFontCatalog,
+        owner: self
+    )
+    lazy var debugUserFactory = DebugUserSnapshotFactory(storage: storage)
+    var debuggerManager = MockDebuggerManager()
 }
 
 // MARK: - Mock Image Loader
@@ -95,6 +110,41 @@ class MockThemeHandler: ThemeHandling {
     var onGetThemeById: ((Int) -> ThemeData?)?
     func getThemeById(_ themeId: Int) -> ThemeData? {
         return onGetThemeById?(themeId) ?? nil
+    }
+
+    var appTheme: ThemeData?
+
+    var appThemeNames: [String?] = []
+    func setAppTheme(name: String) {
+        appThemeNames.append(name)
+    }
+
+    /// Defaults to the content's own theme ID, matching behavior without an app theme.
+    var onRequiredThemeKey: ((ExperienceContent) -> ThemeKey?)?
+    func requiredThemeKey(for content: ExperienceContent) -> ThemeKey? {
+        if let onRequiredThemeKey { return onRequiredThemeKey(content) }
+        guard content.asNPSContent() == nil, getThemeById(content.experienceThemeId()) == nil else { return nil }
+        return .id(content.experienceThemeId())
+    }
+
+    var onSaveAppTheme: ((ThemeContent, String) -> Bool)?
+    func saveAppTheme(_ themeContent: ThemeContent, title: String) -> Bool {
+        return onSaveAppTheme?(themeContent, title) ?? false
+    }
+
+    var unavailableAppThemes: [String] = []
+    func markAppThemeUnavailable(_ title: String) {
+        unavailableAppThemes.append(title)
+    }
+
+    var clearAppThemeCount = 0
+    func clearAppTheme() {
+        clearAppThemeCount += 1
+    }
+
+    var resetAppThemesCount = 0
+    func resetAppThemes() {
+        resetAppThemesCount += 1
     }
 
     var onMergeExperienceThemes: ((ThemeData?, ExperienceTheme?, ExperienceTheme?) -> ThemeData?)?
@@ -144,18 +194,27 @@ class MockAutoPropertyDecoratorer: AutoPropertyDecoratoring {
 // MARK: - Mock Experiences Publisher
 
 class MockExperiencesPublisher: ExperiencesPublishing {
-    var previewExperienceMode = false
-    func isPreviewExperienceMode() -> Bool {
-        return previewExperienceMode
+    var isExperienceVisible = false
+    var onEndExperienceCompletion: ((Bool, (() -> Void)?) -> Void)?
+
+    func endExperience(manualClose: Bool, completion: (() -> Void)?) {
+        if let onEndExperienceCompletion {
+            onEndExperienceCompletion(manualClose, completion)
+        } else {
+            endExperience(manualClose: manualClose)
+            completion?()
+        }
     }
 
+    var previewExperienceMode = false
+
     var onGetActiveMobileContent: (() -> ExperienceContent)?
-    func getActiveMobileContent() -> ExperienceContent? {
+    func getActiveExperience(rendererID: UUID?) -> ExperienceContent? {
         return onGetActiveMobileContent?() ?? nil
     }
 
-    var onPublishInternalSDKEvent: ((SDKEvent) -> Void)?
-    func publishInternalSDKEvent(_ sdkEvent: SDKEvent) {
+    var onPublishInternalSDKEvent: ((ExperienceEvent) -> Void)?
+    func publishInternalSDKEvent(_ sdkEvent: ExperienceEvent, rendererID: UUID?) {
         onPublishInternalSDKEvent?(sdkEvent)
     }
 
@@ -174,8 +233,19 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         onEndExperience?(manualClose)
     }
 
+    /// Receives the close's completion when set, so a test decides when the close finishes; unset, it finishes
+    /// at once.
+    var onCloseSilently: (((() -> Void)?) -> Void)?
+    func closeSilently(completion: (() -> Void)?) {
+        if let onCloseSilently {
+            onCloseSilently(completion)
+        } else {
+            completion?()
+        }
+    }
+
     var onExperienceDidFinishDismissing: (() -> Void)?
-    func experienceDidFinishDismissing() {
+    func experienceDidFinishDismissing(rendererID: UUID?) {
         onExperienceDidFinishDismissing?()
     }
 
@@ -189,9 +259,10 @@ class MockExperiencesPublisher: ExperiencesPublishing {
         return currentScreen
     }
 
-    var onTriggerDeepLink: ((URL) -> Void)?
-    func triggerDeepLink(url: URL) {
-        onTriggerDeepLink?(url)
+    var onSetCompletionDeepLink: ((URL) -> Void)?
+    func setCompletionDeepLink(_ deepLink: String?, rendererID: UUID?) {
+        guard let deepLink, !deepLink.isEmpty, let url = URL(string: deepLink) else { return }
+        onSetCompletionDeepLink?(url)
     }
 
     var onCancelPendingSurveyContent: (() -> Void)?
@@ -200,14 +271,28 @@ class MockExperiencesPublisher: ExperiencesPublishing {
     }
 
     var onShowThankYouMessage: ((SurveyContent, SurveyTheme, Int64) -> Void)?
-    func showThankYouMessage(_ surveyContent: SurveyContent, _ surveyTheme: SurveyTheme, _ submissionId: Int64) {
-        onShowThankYouMessage?(surveyContent, surveyTheme, submissionId)
+    func showThankYouMessage(
+        _ survey: SurveyContent, _ theme: SurveyTheme, _ submissionId: Int64, rendererID: UUID?
+    ) {
+        onShowThankYouMessage?(survey, theme, submissionId)
+    }
+
+    /// Defaults to true so survey tests keep reaching the thank-you branch, which is what the
+    /// real publisher reports for a list survey ending in its completed module.
+    var onHasNextFlowStep: (() -> Bool)?
+    func hasNextFlowStep(rendererID: UUID?) -> Bool {
+        onHasNextFlowStep?() ?? true
     }
 
     var onUpdateScreen: ((String) -> Void)?
     func updateScreen(_ screenName: String) {
         currentScreen = screenName
         onUpdateScreen?(screenName)
+    }
+
+    var onPublishFlowStepOutcome: ((FlowStepOutcome) -> Void)?
+    func publishFlowStepOutcome(_ outcome: FlowStepOutcome, rendererID: UUID?) {
+        onPublishFlowStepOutcome?(outcome)
     }
 
     var onLogout: (() -> Void)?
@@ -233,6 +318,38 @@ class MockUserpilotRemoteSource: UserpilotRemoteSourcing {
     ) {
         onFetchPreviewExperience?(params, completion) ?? completion(.failure(.emptyResponse))
     }
+
+    /// One recorded upload attempt; the test decides when and how it finishes.
+    final class Upload: CaptureUploadCancellable {
+        let upload: CaptureUpload
+        let token: CaptureToken
+        let url: URL
+        let completion: (Result<Void, CaptureUploadError>) -> Void
+        private(set) var isCancelled = false
+
+        init(upload: CaptureUpload, token: CaptureToken, url: URL,
+             completion: @escaping (Result<Void, CaptureUploadError>) -> Void) {
+            self.upload = upload
+            self.token = token
+            self.url = url
+            self.completion = completion
+        }
+
+        func cancel() { isCancelled = true }
+    }
+
+    private(set) var uploads: [Upload] = []
+    @discardableResult
+    func uploadCapture(
+        _ upload: CaptureUpload,
+        token: CaptureToken,
+        url: URL,
+        completion: @escaping (Result<Void, CaptureUploadError>) -> Void
+    ) -> CaptureUploadCancellable {
+        let recorded = Upload(upload: upload, token: token, url: url, completion: completion)
+        uploads.append(recorded)
+        return recorded
+    }
 }
 
 // MARK: - Mock Link Opening
@@ -247,6 +364,21 @@ class MockLinkOpening: LinkOpening {
     func processPendingDeepLink() {
         didProcessPendingDeepLink = true
     }
+}
+
+// MARK: - Mock Builder Capture Coordinator
+
+final class MockBuilderCaptureCoordinator: BuilderCaptureCoordinating {
+    var isActive = false
+    private(set) var startedLinks: [CaptureLink] = []
+    private(set) var rejections = 0
+    private(set) var otherPlatformRejections = 0
+
+    func start(link: CaptureLink) { startedLinks.append(link) }
+    func rejectInvalidLink() { rejections += 1 }
+    func rejectOtherPlatformLink() { otherPlatformRejections += 1 }
+    func stop() {}
+    func capture() {}
 }
 
 // MARK: - Mock Socket Manager
@@ -270,11 +402,14 @@ class MockSocketManager: SocketManaging {
 
     var onClose: (() -> Void)?
     func close() {
+        isSocketOpened = false
+        isJoiningSocket = false
+        isShutdownState = false
         onClose?()
     }
 
-    var onRegisterCallback: ((SocketSubscription) -> Void)?
-    func registerCallback(_ socketSubscription: SocketSubscription) {
+    var onRegisterCallback: ((SocketSubscriptionDelegate) -> Void)?
+    func registerCallback(_ socketSubscription: SocketSubscriptionDelegate) {
         onRegisterCallback?(socketSubscription)
     }
 
@@ -284,6 +419,33 @@ class MockSocketManager: SocketManaging {
         payload: Payload
     ) {
         onPublish?(eventName, payload)
+    }
+
+    struct Request {
+        let event: String
+        let payload: Payload
+        let shouldSend: () -> Bool
+        let completion: SocketCompletion?
+    }
+    var requests: [Request] = []
+    var onPublishRequest: ((Request) -> Void)?
+
+    func publish(
+        _ eventName: String, payload: Payload, userID: String?,
+        shouldSend: @escaping () -> Bool, completion: SocketCompletion?
+    ) {
+        guard shouldSend() else { return }
+        let request = Request(event: eventName, payload: payload, shouldSend: shouldSend, completion: completion)
+        requests.append(request)
+        onPublish?(eventName, payload)
+        onPublishRequest?(request)
+    }
+
+    /// Resolve the captured request, matching production's per-push completion rather than a shared notification.
+    func completeNext(_ event: String, _ payload: Payload = nil, _ message: Message = Message(), _ success: Bool = true) {
+        guard let index = requests.firstIndex(where: { $0.event == event && $0.shouldSend() }) else { return }
+        let request = requests.remove(at: index)
+        request.completion?(message, success)
     }
 
 }
@@ -311,9 +473,9 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onReset?()
     }
 
-    var onLogout: ((Bool) -> Void)?
-    func logout(clearCachedIdentifyEvent: Bool) {
-        onLogout?(clearCachedIdentifyEvent)
+    var onLogout: (() -> Void)?
+    func logout() {
+        onLogout?()
     }
 
     var canRequestEvent: Bool = true
@@ -323,13 +485,28 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
         onPublishInternalSDKEvent?(sdkEvent)
     }
 
-    var onPublishFakeReloadScreenEvent: ((ExperienceType?, Int?, Bool) -> Bool)?
-    func publishFakeReloadScreenEvent(
-        _ experienceType: ExperienceType?,
-        _ experienceId: Int?,
-        isFakeReload: Bool
-    ) -> Bool {
-        return onPublishFakeReloadScreenEvent?(experienceType, experienceId, isFakeReload) ?? false
+    struct Request {
+        let event: SDKEvent
+        let shouldSend: () -> Bool
+        let completion: SocketCompletion?
+    }
+    var requests: [Request] = []
+    var onPublishRequest: ((Request) -> Void)?
+
+    func publishInternalSDKEvent(
+        _ sdkEvent: SDKEvent, shouldSend: @escaping () -> Bool, completion: SocketCompletion?
+    ) {
+        guard shouldSend() else { return }
+        let request = Request(event: sdkEvent, shouldSend: shouldSend, completion: completion)
+        requests.append(request)
+        onPublishInternalSDKEvent?(sdkEvent)
+        onPublishRequest?(request)
+    }
+
+    /// Takes `isFakeReload` and returns whether the reload was queued; unset, nothing is queued.
+    var onPublishFakeReloadScreenEvent: ((Bool) -> Bool)?
+    func publishFakeReloadScreenEvent(isFakeReload: Bool) -> Bool {
+        return onPublishFakeReloadScreenEvent?(isFakeReload) ?? false
     }
 
     var onExperiencePublished: ((ExperienceType, Int) -> Void)?
@@ -340,6 +517,11 @@ class MockAnalyticsPublisher: AnalyticsPublishing {
     var onIsExperienceSeen: ((ExperienceContent) -> Bool)?
     func isExperienceSeen(_ experienceContent: ExperienceContent) -> Bool {
         onIsExperienceSeen?(experienceContent) ?? false
+    }
+
+    var onHasQueuedScreenEvent: ((Payload) -> Bool)?
+    func hasQueuedScreenEvent(_ answeredPayload: Payload) -> Bool {
+        onHasQueuedScreenEvent?(answeredPayload) ?? false
     }
 
     var isStartSession: Bool = false
@@ -354,10 +536,15 @@ class MockStorage: DataStoring {
     var pushToken: String? = ""
     var userId: String = "user-id"
     var anonymousUserId: String = ""
-    var user: String = ""
     var temporaryUser: String?
+    var appThemeName: String?
     var sessionDate: Date?
     var configurationDate: Date?
+
+    func clean() {
+        pushToken = nil
+        userId = ""
+    }
 }
 
 // MARK: - Mock Session Monitor
@@ -387,11 +574,6 @@ class MockPushNotificationMonitor: PushNotificationMonitoring {
     var onSetPushToken: ((Data?) -> Void)?
     func setPushToken(_ deviceToken: Data?) {
         onSetPushToken?(deviceToken)
-    }
-
-    var onResyncPushToken: (() -> Void)?
-    func resyncPushToken() {
-        onResyncPushToken?()
     }
 
     var onRefreshPushStatus: (() -> Void)?
@@ -441,9 +623,13 @@ class MockNetworkMonitor: NetworkMonitoring {
 // MARK: - Mock Offline Events Handler
 
 class MockOfflineEventsHandler: OfflineEventsHandling {
+    struct SavedEvent {
+        let event: Event
+    }
+
     var shouldSaveOffline: Bool = false
     var hasCachedEvents: Bool = false
-    var savedEvents: [(event: Event, clearStoredEventsFirst: Bool)] = []
+    var savedEvents: [SavedEvent] = []
     var savedSDKEvents: [SDKEvent] = []
     var didRestoreEvents = false
     var didClearLocalEvents = false
@@ -454,8 +640,8 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
     var holdRestoreCompletion = false
     private var heldRestoreCompletion: (() -> Void)?
 
-    func saveEventToLocalStorage(event: Event, clearStoredEventsFirst: Bool) {
-        savedEvents.append((event, clearStoredEventsFirst))
+    func saveEventToLocalStorage(event: Event) {
+        savedEvents.append(SavedEvent(event: event))
     }
 
     func saveSDKEventToLocalStorage(_ sdkEvent: SDKEvent) {
@@ -473,7 +659,7 @@ class MockOfflineEventsHandler: OfflineEventsHandling {
         heldRestoreCompletion = completion
     }
 
-    /// Resolves a held restore the way the batch ACK does in `onSocketEventSent`.
+    /// Resolves a held restore through the batch request's own completion.
     func finishRestore() {
         let completion = heldRestoreCompletion
         heldRestoreCompletion = nil
@@ -552,6 +738,7 @@ class MockLogger: Logging {
     func debug(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedDebugs.append(formatted)
+        render(message, args)
         onDebug?(message, args)
     }
 
@@ -559,6 +746,7 @@ class MockLogger: Logging {
     func info(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedInfos.append(formatted)
+        render(message, args)
         onInfo?(message, args)
     }
 
@@ -566,6 +754,7 @@ class MockLogger: Logging {
     func log(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedLogs.append(formatted)
+        render(message, args)
         onLog?(message, args)
     }
 
@@ -573,6 +762,7 @@ class MockLogger: Logging {
     func error(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedErrors.append(formatted)
+        render(message, args)
         onError?(message, args)
     }
 
@@ -580,9 +770,22 @@ class MockLogger: Logging {
     func fault(_ message: StaticString, _ args: any CVarArg...) {
         let formatted = String(format: String(describing: message), arguments: args)
         loggedFaults.append(formatted)
+        render(message, args)
         onFault?(message, args)
     }
 
+    /// Every line at every level with its arguments filled in, as the device log shows it.
+    /// `String(format:)` leaves os_log's `%{public}@` / `%{private}@` unfilled, so the logged* arrays omit them.
+    private(set) var renderedLines: [String] = []
+
+    private func render(_ message: StaticString, _ args: [any CVarArg]) {
+        var text = "\(message)"
+        for arg in args {
+            guard let range = text.range(of: #"%(\{(public|private)\})?[@dl]"#, options: .regularExpression) else { break }
+            text.replaceSubrange(range, with: "\(arg)")
+        }
+        renderedLines.append(text)
+    }
 }
 
 // MARK: - Mock Navigation Delegate
@@ -599,33 +802,16 @@ class MockNavigationDelegate: UserpilotNavigationDelegate {
 class MockSDKEvent: SDKEvent {
     var eventName: String
     var eventPayload: [String: Any]
-    var hasDeepLink: Bool
 
-    var isCloseNPSEvent = false
-    var isCloseEvent = false
-
-    init(
-        eventName: String = "test-event",
-        eventPayload: [String: Any] = [:],
-        hasDeepLink: Bool = false
-    ) {
+    init(eventName: String = "test-event", eventPayload: [String: Any] = [:]) {
         self.eventName = eventName
         self.eventPayload = eventPayload
-        self.hasDeepLink = hasDeepLink
-    }
-
-    func isEventForCloseNPSExperience() -> Bool {
-        return isCloseNPSEvent
-    }
-
-    func isEventForCloseExperience() -> Bool {
-        return isCloseEvent
     }
 }
 
-// MARK: - Mock UPExperience
+// MARK: - Mock UPExperienceDelegate
 
-class MockUPExperience: UIViewController, UPExperience {
+class MockUPExperienceDelegate: UIViewController, UPExperienceDelegate {
     var onTriggerClose: ((Bool) -> Void)?
 
     func triggerCloseExperience(
@@ -637,9 +823,29 @@ class MockUPExperience: UIViewController, UPExperience {
     }
 }
 
+// MARK: - Mock Debugger Manager
+
+class MockDebuggerManager: DebuggerManaging {
+    var showCount = 0
+    var resetCount = 0
+    var hideCount = 0
+
+    func show() {
+        showCount += 1
+    }
+
+    func reset() {
+        resetCount += 1
+    }
+
+    func hide() {
+        hideCount += 1
+    }
+}
+
 // MARK: - Mock Socket Subscription
 
-class MockSocketSubscription: SocketSubscription {
+class MockSocketSubscriptionDelegate: SocketSubscriptionDelegate {
     var onSocketClosedCalled: (() -> Void)?
     var onSocketOpenedCalled: (() -> Void)?
     var onSocketEventSentCalled: ((String, [String: Any]?, Message, Bool) -> Void)?

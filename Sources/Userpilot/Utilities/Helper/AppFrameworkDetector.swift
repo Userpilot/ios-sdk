@@ -2,9 +2,9 @@
 //  AppFrameworkDetector.swift
 //  Userpilot SDK
 //
+//  Created by Userpilot on 07/06/2026.
 //  Copyright © 2026 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Resolves the host app's UI framework (UIKit or SwiftUI) by inspecting
 //  the key window's root view controller and writes the result back to
 //  `Userpilot.Config.appFramework`.
@@ -24,16 +24,18 @@ import UIKit
 /// - Important: This class is only instantiated when the host app did **not**
 ///   set `Config.appFramework(_:)` explicitly. The caller (Userpilot's DI
 ///   setup) gates registration on `config.appFramework == nil`.
-internal final class AppFrameworkDetector {
+internal final class AppFrameworkDetector: LifecycleDelegate {
 
     // MARK: - Properties
 
     private let config: Userpilot.Config
+    private let lifecycleMonitor: LifecycleMonitoring
 
     // MARK: - Initialization
 
     init(container: DIContainer) {
         self.config = container.resolve(Userpilot.Config.self)
+        self.lifecycleMonitor = container.resolve(LifecycleMonitoring.self)
         start()
     }
 
@@ -50,27 +52,16 @@ internal final class AppFrameworkDetector {
     /// 3. `UIScene.didActivateNotification` (catches SwiftUI App lifecycle and
     ///    multi-scene apps).
     private func start() {
-        DispatchQueue.main.async { [weak self] in
-            self?.detectIfNeeded()
+        performOn(.main) { [weak self] in
+            guard let self else { return }
+            self.lifecycleMonitor.addDelegate(self, replayCurrentState: false)
+            self.detectIfNeeded()
         }
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleNotification),
-            name: UIWindow.didBecomeKeyNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleNotification),
-            name: UIScene.didActivateNotification,
-            object: nil
-        )
     }
 
-    @objc private func handleNotification() {
-        detectIfNeeded()
-    }
+    func onWindowBecameKey() { detectIfNeeded() }
+
+    func onSceneActive() { detectIfNeeded() }
 
     /// Performs a single detection attempt. Stops observing as soon as the
     /// framework value is resolved (either by us or by the host app setting
@@ -83,8 +74,10 @@ internal final class AppFrameworkDetector {
 
         guard let detected = Self.detect() else { return }
 
-        config.appFramework = detected
+        let didSetFramework = config.setDetectedAppFramework(detected)
         stopObserving()
+
+        guard didSetFramework else { return }
 
         config.logger.info(
             "🔎 Userpilot auto-detected app framework: %{public}@",
@@ -93,12 +86,7 @@ internal final class AppFrameworkDetector {
     }
 
     private func stopObserving() {
-        NotificationCenter.default.removeObserver(
-            self, name: UIWindow.didBecomeKeyNotification, object: nil
-        )
-        NotificationCenter.default.removeObserver(
-            self, name: UIScene.didActivateNotification, object: nil
-        )
+        lifecycleMonitor.removeDelegate(self)
     }
 
     // MARK: - One-shot detection

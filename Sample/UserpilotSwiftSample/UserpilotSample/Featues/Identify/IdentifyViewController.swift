@@ -42,7 +42,6 @@ class IdentifyViewController: BaseViewController {
         )
         logoutItem.tintColor = .systemRed
         navigationItem.rightBarButtonItem = logoutItem
-        wrapPrimaryScrollContentInCard()
     }
 
     override func viewWillAppear(_ animated: Bool) {

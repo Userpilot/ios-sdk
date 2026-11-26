@@ -2,10 +2,9 @@
 //  SlideOutContainerView.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 20/10/2024.
+//  Created by Userpilot on 20/10/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  The `SlideOutContainerView` is a custom view component designed to provide a slide-out interface
 //  that contains a dismiss button at the top, scrollable content in the center, and an action button
 //  at the bottom. It allows for dynamic content binding through sections, and is highly customizable
@@ -16,7 +15,7 @@
 import Foundation
 import UIKit
 
-internal class SlideOutContainerView: UIView {
+internal final class SlideOutContainerView: UIView {
 
     // MARK: - UI Components
 
@@ -44,12 +43,45 @@ internal class SlideOutContainerView: UIView {
         return view
     }()
 
-    /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button).
+    /// A Flow step's dots under the action button. Hidden, it takes no space in the stack.
+    private lazy var stepsProgressView: UPStepsProgressView = {
+        let progressView = UPStepsProgressView()
+        progressView.isHidden = true
+        progressView.heightAnchor.constraint(equalToConstant: Constants.Theme.stepsProgressDotsHeight).isActive = true
+        return progressView
+    }()
+
+    /// A Flow step's `2 of 3` under the action button, shown instead of the dots for a `counter` style.
+    private lazy var counterStepsProgressView: UPStepsCounterView = {
+        let progressView = UPStepsCounterView()
+        progressView.isHidden = true
+        progressView.heightAnchor.constraint(equalToConstant: Constants.Theme.stepsProgressDotsHeight).isActive = true
+        return progressView
+    }()
+
+    /// A Flow step's bar for a `bar` style, over the card's top edge like the NPS bar; the card clips its corners.
+    private lazy var barStepsProgressView: UPStepsBarProgressView = {
+        let progressView = UPStepsBarProgressView()
+        progressView.translatesAutoresizingMaskIntoConstraints = false
+        progressView.isHidden = true
+        progressView.heightAnchor.constraint(equalToConstant: Constants.Theme.stepsProgressBarHeight).isActive = true
+        return progressView
+    }()
+
+    /// How far below the card's top edge the host lays this view out (the dialog's content margin), for the bar.
+    var cardTopInset: CGFloat = 0 {
+        didSet { barStepsProgressTopConstraint?.constant = -cardTopInset }
+    }
+
+    /// A vertical stack view to manage the arrangement of UI elements (dismiss button, content, action button,
+    /// a Flow step's dots or counter).
     private lazy var contentStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: [buttonDismissContainerView, scrollView, spaceView, actionButton])
+        let stackView = UIStackView(arrangedSubviews: [
+            buttonDismissContainerView, scrollView, spaceView, actionButton,
+            stepsProgressView, counterStepsProgressView])
         stackView.axis = .vertical
         stackView.distribution = .fill
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -72,7 +104,7 @@ internal class SlideOutContainerView: UIView {
     private let stepSectionsStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -80,6 +112,7 @@ internal class SlideOutContainerView: UIView {
     private weak var slideOutContainerViewDelegate: SlideOutContainerViewDelegate?
 
     private var scrollViewHeightConstraint: NSLayoutConstraint?
+    private var barStepsProgressTopConstraint: NSLayoutConstraint?
     private var storedConstraints: [NSLayoutConstraint] = []
 
     // MARK: - Initial Setup
@@ -105,7 +138,7 @@ internal class SlideOutContainerView: UIView {
         }
         scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
             lessThanOrEqualToConstant:
-                screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
         scrollViewHeightConstraint?.isActive = true
         self.layoutIfNeeded()
     }
@@ -125,7 +158,7 @@ internal class SlideOutContainerView: UIView {
             }
             scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
                 lessThanOrEqualToConstant:
-                    screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                    screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
@@ -136,6 +169,7 @@ internal class SlideOutContainerView: UIView {
 
             // Add subviews
             addSubview(contentStackView)
+            addSubview(barStepsProgressView)
             scrollView.addSubview(contentContainerView)
             contentContainerView.addSubview(stepSectionsStackView)
 
@@ -148,7 +182,7 @@ internal class SlideOutContainerView: UIView {
             contentViewHeightConstraint.priority = .defaultLow
 
             // Define constraints
-            storedConstraints.append(contentsOf: [
+            storedConstraints.append(contentsOf: stepsProgressBarConstraints() + [
                 // Constraints for the content stack view (full-screen with padding)
                 contentStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
                 contentStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
@@ -227,7 +261,7 @@ internal class SlideOutContainerView: UIView {
                 buttonDismiss.bottomAnchor.constraint(equalTo: buttonDismissContainerView.bottomAnchor),
                 buttonDismiss.trailingAnchor.constraint(
                     equalTo: buttonDismissContainerView.trailingAnchor,
-                    constant: ThemeHandler.DefaultValues.dismissButtonMargin),
+                    constant: Constants.Theme.dismissButtonMargin),
                 buttonDismiss.heightAnchor.constraint(equalToConstant: UPDismissButton.buttonSize),
                 buttonDismiss.widthAnchor.constraint(equalToConstant: UPDismissButton.buttonSize)
             ])
@@ -312,5 +346,55 @@ internal class SlideOutContainerView: UIView {
 
     @objc private func buttonDismissClicked() {
         slideOutContainerViewDelegate?.onClose()
+    }
+}
+
+// MARK: - Flow Steps Progress
+
+extension SlideOutContainerView {
+
+    /**
+     Shows a Flow step's progress after `bindStep`: a bar along the top edge when its theme's style is `bar`,
+     `2 of 3` under the action button for `counter`, else dots there, at the step `FlowStepsProgress` lights.
+     Standalone slideouts never call this, so they show none.
+
+     - Parameters:
+       - stepsCount: The whole Flow's `steps_count`.
+       - stepIndex: The step's 0-based place in the Flow (`position - 1`).
+       - theme: The step's merged theme, the one passed to `bindStep`.
+       - isRTL: Whether the layout is right-to-left.
+     */
+    func bindStepsProgress(
+        stepsCount: Int,
+        stepIndex: Int,
+        theme: ExperienceTheme,
+        isRTL: Bool
+    ) {
+        let progress = FlowStepsProgress(stepsCount: stepsCount, stepIndex: stepIndex)
+        guard theme.isStepsProgressEnabled, progress.isShown else { return }
+        let shownIndex = progress.index
+        if theme.isStepsProgressBar {
+            barStepsProgressView.isHidden = false
+            barStepsProgressView.setupView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
+            barStepsProgressView.setCurrentStep(shownIndex)
+        } else if theme.isStepsProgressCounter {
+            counterStepsProgressView.isHidden = false
+            counterStepsProgressView.setupView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
+            counterStepsProgressView.setCurrentStep(shownIndex)
+        } else {
+            stepsProgressView.isHidden = false
+            stepsProgressView.setupView(stepsCount: stepsCount, theme: theme, isRTL: isRTL)
+            stepsProgressView.setCurrentStep(shownIndex)
+        }
+    }
+
+    /// Pins the bar over the card's top edge, past the host's content margins.
+    private func stepsProgressBarConstraints() -> [NSLayoutConstraint] {
+        let margin = Constants.Theme.contentMargin
+        let topConstraint = barStepsProgressView.topAnchor.constraint(equalTo: topAnchor, constant: -cardTopInset)
+        barStepsProgressTopConstraint = topConstraint
+        return [topConstraint,
+                barStepsProgressView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: -margin),
+                barStepsProgressView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: margin)]
     }
 }

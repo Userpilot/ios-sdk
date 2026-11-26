@@ -4,7 +4,7 @@
 //
 //  Created by Userpilot on 15/03/2026.
 //
-//  This file demonstrates the userpilotRedactText() and userpilotIgnoreInteractions() APIs
+//  This file exercises the userpilotRedactText() and userpilotIgnoreInteractions() APIs
 //
 
 import SwiftUI

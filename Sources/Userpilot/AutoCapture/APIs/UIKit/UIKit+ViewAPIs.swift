@@ -1,11 +1,10 @@
 //
-//  UIKitAutoCaptureProperties.swift
-//  Userpilot
+//  UIKit+ViewAPIs.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 17/02/2026.
+//  Created by Userpilot on 17/02/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIKitAutoCaptureProperties provides properties for controlling automatic capture
 //  behavior on UIKit views and view controllers, including ignoring interactions
 //  and redacting text/accessibility labels.

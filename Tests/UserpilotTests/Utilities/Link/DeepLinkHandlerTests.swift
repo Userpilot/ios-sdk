@@ -20,7 +20,7 @@ final class DeepLinkHandlerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let config = Userpilot.Config(token: "NX-12345").defaultInstance(false)
-        mockUserpilot = MockUserpilot(config: config)
+        mockUserpilot = MockUserpilot.make(config: config)
         mockExperiencesPublisher = mockUserpilot.experiencesPublisher
         deepLinkHandler = DeepLinkHandler(container: mockUserpilot.container)
         mockTopControllerGetting = MockTopControllerGetting()
@@ -123,6 +123,98 @@ final class DeepLinkHandlerTests: XCTestCase {
     func testAction_caseInsensitiveScheme_createsAction() {
         let url = URL(string: "USERPILOT-NX-12345://sdk/experience_preview/EX-123")!
         XCTAssertNotNil(DeepLinkHandler.Action(url: url, token: "NX-12345"))
+    }
+
+    // MARK: - Capture Link Tests
+
+    func testAction_captureLink_decodesItsValues() throws {
+        let url = URL(string: "userpilot-nx-12345://sdk/capture?capture_id=cap-1&platform=ios&token=secret-token")!
+
+        guard case let .capture(link)? = DeepLinkHandler.Action(url: url, token: "NX-12345") else {
+            return XCTFail("Expected capture action")
+        }
+        let decoded = try XCTUnwrap(link)
+        XCTAssertEqual(decoded.captureID, "cap-1")
+        XCTAssertEqual(decoded.token.bearerHeader(), "Bearer secret-token")
+    }
+
+    func testAction_captureLinkKeepsARawPlusSign() throws {
+        // A capture token can contain `+`; reading it as a space would break the credential.
+        let url = URL(string: "userpilot-nx-12345://sdk/capture?capture_id=cap+1&platform=ios&token=tok+en%2B1")!
+
+        guard case let .capture(link)? = DeepLinkHandler.Action(url: url, token: "NX-12345") else {
+            return XCTFail("Expected capture action")
+        }
+        let decoded = try XCTUnwrap(link)
+        XCTAssertEqual(decoded.captureID, "cap+1")
+        XCTAssertEqual(decoded.token.bearerHeader(), "Bearer tok+en+1")
+    }
+
+    func testAction_captureLinkWithAMissingValue_routesAsInvalid() {
+        for query in ["platform=ios&token=secret-token", "capture_id=cap-1&platform=ios",
+                      "capture_id=&platform=ios&token=secret-token", "capture_id=cap-1&token=secret-token",
+                      "capture_id=cap-1&platform=web&token=secret-token"] {
+            let url = URL(string: "userpilot-nx-12345://sdk/capture?\(query)")!
+            XCTAssertEqual(DeepLinkHandler.Action(url: url, token: "NX-12345"), .capture(link: nil), query)
+        }
+    }
+
+    func testAction_captureLinkNeedsExactlyOneSegment() {
+        let url = URL(string: "userpilot-nx-12345://sdk/capture/extra?capture_id=cap-1&token=t")!
+        XCTAssertNil(DeepLinkHandler.Action(url: url, token: "NX-12345"))
+    }
+
+    func testAction_oldCaptureRoutes_noLongerMatch() {
+        for link in ["userpilot-nx-12345://sdk/capture_screen/session-1?launch_token=secret",
+                     "userpilot-nx-12345://sdk/builder_capture/session-1?token=secret"] {
+            XCTAssertNil(DeepLinkHandler.Action(url: URL(string: link)!, token: "NX-12345"), link)
+        }
+    }
+
+    func testDidHandleURL_validCaptureLink_startsCaptureMode() {
+        mockTopControllerGetting.hasActiveWindowScenes = true
+        let coordinator = MockBuilderCaptureCoordinator()
+        mockUserpilot.container.register(BuilderCaptureCoordinating.self, value: coordinator)
+        let url = URL(string: "userpilot-nx-12345://sdk/capture?capture_id=cap-1&platform=ios&token=secret-token")!
+
+        XCTAssertTrue(deepLinkHandler.didHandleURL(url))
+
+        XCTAssertEqual(coordinator.startedLinks.map(\.captureID), ["cap-1"])
+        XCTAssertEqual(coordinator.rejections, 0)
+    }
+
+    func testDidHandleURL_invalidCaptureLink_rejectsAndLogsOnlyTheField() {
+        mockTopControllerGetting.hasActiveWindowScenes = true
+        // The handler reads the logger on first use, so this one sees every line.
+        let logger = MockLogger()
+        mockUserpilot.config.logger = logger
+        let coordinator = MockBuilderCaptureCoordinator()
+        mockUserpilot.container.register(BuilderCaptureCoordinating.self, value: coordinator)
+        let url = URL(string: "userpilot-nx-12345://sdk/capture?capture_id=cap-1&platform=ios")!
+
+        XCTAssertTrue(deepLinkHandler.didHandleURL(url))
+
+        XCTAssertEqual(coordinator.rejections, 1)
+        XCTAssertTrue(coordinator.startedLinks.isEmpty)
+        let logs = logger.renderedLines
+        XCTAssertTrue(logs.contains("❌ Capture link rejected: token"), "\(logs)")
+        XCTAssertFalse(logs.contains { $0.contains("cap-1") })
+    }
+
+    func testDidHandleURL_androidCaptureLink_isRefusedBeforeCaptureStarts() {
+        mockTopControllerGetting.hasActiveWindowScenes = true
+        let logger = MockLogger()
+        mockUserpilot.config.logger = logger
+        let coordinator = MockBuilderCaptureCoordinator()
+        mockUserpilot.container.register(BuilderCaptureCoordinating.self, value: coordinator)
+        let url = URL(string: "userpilot-nx-12345://sdk/capture?capture_id=cap-1&platform=android&token=secret")!
+
+        XCTAssertTrue(deepLinkHandler.didHandleURL(url))
+
+        XCTAssertEqual(coordinator.otherPlatformRejections, 1)
+        XCTAssertEqual(coordinator.rejections, 0)
+        XCTAssertTrue(coordinator.startedLinks.isEmpty)
+        XCTAssertTrue(logger.renderedLines.contains("❌ Capture link rejected: platform"), "\(logger.renderedLines)")
     }
 
     // MARK: - DidHandleURL Tests

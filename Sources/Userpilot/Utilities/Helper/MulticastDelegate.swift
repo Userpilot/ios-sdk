@@ -2,10 +2,9 @@
 //  MulticastDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  MulticastDelegate allows multiple delegates to be notified of an event or process.
 //  It enables multicasting by holding weak references to delegates, avoiding retain cycles
 //  and ensuring delegates are automatically removed when deallocated.
@@ -52,7 +51,7 @@ internal struct Multicast<T> {
 /// A class that manages multiple delegates using weak references to prevent retain cycles.
 ///
 /// Thread-safe. `NSLock` is not recursive, so callbacks must run outside it: `currentDelegates()`
-/// is the only reader of the storage and `invoke` takes no lock. A subscriber registering from
+/// copies storage under the lock and `invoke` calls delegates after releasing it. A subscriber registering from
 /// inside its own callback — which happens on the socket thread — would otherwise deadlock.
 internal final class MulticastDelegate<T> {
 
@@ -76,6 +75,11 @@ internal final class MulticastDelegate<T> {
         }
     }
 
+    /// Checks membership without retaining the delegate.
+    func contains(_ delegate: T) -> Bool {
+        lock.withLock { delegates.contains(delegate as AnyObject) }
+    }
+
     /// Removes a delegate.
     func remove(_ delegateToRemove: T) {
         let object = delegateToRemove as AnyObject
@@ -91,7 +95,7 @@ internal final class MulticastDelegate<T> {
         currentDelegates().forEach(invocation)
     }
 
-    /// The only read of `delegates`. The snapshot holds each delegate strongly while the caller
+    /// Takes a locked snapshot of `delegates`. Each delegate is held strongly while the caller
     /// iterates it, so a subscriber cannot deallocate mid-callback.
     private func currentDelegates() -> [T] {
         lock.withLock {

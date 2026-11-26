@@ -53,7 +53,7 @@ final class SDKEventTableViewCell: UITableViewCell, ReusableTableCellView {
         activateConstraints(contentStack: contentStack)
     }
 
-    /// The badge + title row shown at the top of the card.
+    /// Stacks the event type and title so long values can use the full card width.
     private func makeHeaderStack() -> UIStackView {
         typeBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
         typeBadgeLabel.textInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
@@ -71,8 +71,8 @@ final class SDKEventTableViewCell: UITableViewCell, ReusableTableCellView {
 
         let headerStack = UIStackView(arrangedSubviews: [typeBadgeLabel, titleLabel])
         headerStack.translatesAutoresizingMaskIntoConstraints = false
-        headerStack.axis = .horizontal
-        headerStack.alignment = .center
+        headerStack.axis = .vertical
+        headerStack.alignment = .leading
         headerStack.spacing = 10
         return headerStack
     }

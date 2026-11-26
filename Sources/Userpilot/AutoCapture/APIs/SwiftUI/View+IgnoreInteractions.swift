@@ -1,11 +1,10 @@
 //
 //  View+IgnoreInteractions.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 15/03/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  View+IgnoreInteractions provides SwiftUI view modifiers for preventing interaction capture.
 //  When applied, no interaction events will be captured for the view or its children.
 //
@@ -116,7 +115,7 @@ private struct UserpilotIgnoreInteractionsRepresentable: UIViewRepresentable {
 }
 
 /// Internal UIView that applies the ignore interactions property to its parent view
-private class UserpilotIgnoreInteractionsView: UIView {
+private final class UserpilotIgnoreInteractionsView: UIView {
     private var ignore: Bool
     private weak var appliedToView: UIView?
 

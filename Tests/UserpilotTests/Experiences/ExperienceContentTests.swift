@@ -88,6 +88,90 @@ final class ExperienceContentTests: XCTestCase {
         XCTAssertNil(wrongRoot?.toNPSContent())
     }
 
+    func testMissingOrNullNPSPrimaryColorKeepsContentAndUsesBlack() throws {
+        for general in [[:], ["primary": NSNull()]] as [[String: Any]] {
+            let content = try XCTUnwrap(npsJSON(general: general).toNPSContent()?.npsContent)
+            XCTAssertNotNil(content.npsTheme.general)
+            XCTAssertNil(content.npsTheme.general?.primary)
+            XCTAssertEqual(content.npsTheme.primaryColorAsString, "#000000")
+        }
+    }
+
+    func testExplicitNPSPrimaryColorIsPreserved() throws {
+        let content = try XCTUnwrap(npsJSON(general: ["primary": "#112233"]).toNPSContent()?.npsContent)
+        XCTAssertEqual(content.npsTheme.primaryColorAsString, "#112233")
+    }
+
+    func testMalformedNPSPrimaryColorStillRejectsContent() throws {
+        XCTAssertNil(try npsJSON(general: ["primary": [String: Any]()]).toNPSContent())
+    }
+
+    func testMissingOrNullChoiceIDKeepsSurveyAndChoice() throws {
+        for choice in [["value": "First"], ["id": NSNull(), "value": "First"]] as [[String: Any]] {
+            let content = try XCTUnwrap(surveyJSON(choice: choice).toSurveyContent()?.surveyContent)
+            let decodedChoice = try XCTUnwrap(content.modules.first?.metadata?.choices?.first)
+            XCTAssertNil(decodedChoice.id)
+            XCTAssertEqual(decodedChoice.value, "First")
+        }
+    }
+
+    func testExplicitChoiceIDIsPreserved() throws {
+        let content = try XCTUnwrap(
+            surveyJSON(choice: ["id": "choice-1", "value": "First"]).toSurveyContent()?.surveyContent
+        )
+        XCTAssertEqual(content.modules.first?.metadata?.choices?.first?.id, "choice-1")
+    }
+
+    func testMissingOrNullNPSFollowUpKeyKeepsContentAndQuestion() throws {
+        for question in [["question": "Why?"], ["key": NSNull(), "question": "Why?"]] as [[String: Any]] {
+            let content = try XCTUnwrap(npsJSON(followUpQuestion: question).toNPSContent()?.npsContent)
+            let decodedQuestion = try XCTUnwrap(content.content.followUp.all)
+            XCTAssertNil(decodedQuestion.key)
+            XCTAssertEqual(decodedQuestion.question, "Why?")
+        }
+    }
+
+    func testExplicitNPSFollowUpKeyIsPreserved() throws {
+        let content = try XCTUnwrap(
+            npsJSON(followUpQuestion: ["key": "feedback", "question": "Why?"]).toNPSContent()?.npsContent
+        )
+        XCTAssertEqual(content.content.followUp.all?.key, "feedback")
+    }
+
+    private func surveyJSON(choice: [String: Any]) throws -> String {
+        var payload = MockContentFactory.makeSurveyContentPayload()
+        var survey = try XCTUnwrap(payload["surveys"] as? [String: Any])
+        survey["modules"] = [[
+            "id": 101,
+            "type": "multiple_choice",
+            "metadata": ["choices": [choice]]
+        ]]
+        payload["surveys"] = survey
+        return try XCTUnwrap(payload.toJSONString())
+    }
+
+    private func npsJSON(
+        general: [String: Any]? = nil,
+        followUpQuestion: [String: Any]? = nil
+    ) throws -> String {
+        var payload = MockContentFactory.makeNPSContentPayload()
+        var nps = try XCTUnwrap(payload["nps"] as? [String: Any])
+        if let general {
+            var theme = try XCTUnwrap(nps["theme_data"] as? [String: Any])
+            theme["main"] = general
+            nps["theme_data"] = theme
+        }
+        if let followUpQuestion {
+            var content = try XCTUnwrap(nps["content"] as? [String: Any])
+            var followUp = try XCTUnwrap(content["follow_up"] as? [String: Any])
+            followUp["all"] = followUpQuestion
+            content["follow_up"] = followUp
+            nps["content"] = content
+        }
+        payload["nps"] = nps
+        return try XCTUnwrap(payload.toJSONString())
+    }
+
     private func makeFlowContent() throws -> FlowContent {
         try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload()

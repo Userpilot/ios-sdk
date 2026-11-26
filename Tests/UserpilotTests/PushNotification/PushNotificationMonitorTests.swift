@@ -108,6 +108,28 @@ final class PushNotificationMonitorTests: PushNotificationMonitorTestCase {
         XCTAssertEqual(userpilot.storage.pushToken, "")
     }
 
+    func testFailedTokenAcknowledgement_preservesStoredTokenAndRetriesCachedTokenOnOpen() {
+        userpilot.storage.pushToken = "previous-token"
+        let token = Data([0x01, 0xab])
+        pushNotificationMonitor.setCachedToken(token: token)
+
+        pushNotificationMonitor.onSocketEventSent(
+            SDKEventsName.pushNotificationToken.rawValue,
+            ["token": "01ab"],
+            Message(),
+            false
+        )
+        XCTAssertEqual(userpilot.storage.pushToken, "previous-token")
+
+        var publishedToken: String?
+        userpilot.analyticsPublisher.onPublishInternalSDKEvent = { event in
+            publishedToken = event.eventPayload["token"] as? String
+        }
+        pushNotificationMonitor.onSocketOpened()
+
+        XCTAssertEqual(publishedToken, "01ab")
+    }
+
     func testOnSocketOpened_tracksCachedToken_ifAvailable() throws {
         pushNotificationMonitor.setCachedToken(token: Data("token-00000".utf8))
 

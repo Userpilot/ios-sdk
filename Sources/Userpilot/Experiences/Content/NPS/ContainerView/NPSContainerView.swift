@@ -1,14 +1,17 @@
 //
 //  NPSContainerView.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 09/02/2025.
+//  Created by Userpilot on 09/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Builds the NPS question and feedback views, including their action and dismiss controls.
 //
 
 import UIKit
 
 // swiftlint:disable all
-internal class NPSContainerView: UIView {
+internal final class NPSContainerView: UIView {
 
     // MARK: - UI Components
 
@@ -19,11 +22,11 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
-        let height = ThemeHandler.DefaultValues.npsProgressBarTopInset
-            + ThemeHandler.DefaultValues.stepsProgressBarHeight
-            + ThemeHandler.DefaultValues.npsDismissButtonTopMargin
-            + ThemeHandler.DefaultValues.npsDismissButtonHeight
-            - ThemeHandler.DefaultValues.npsDismissButtonBottomOverhang
+        let height = Constants.Theme.npsProgressBarTopInset
+            + Constants.Theme.stepsProgressBarHeight
+            + Constants.Theme.npsDismissButtonTopMargin
+            + Constants.Theme.npsDismissButtonHeight
+            - Constants.Theme.npsDismissButtonBottomOverhang
         view.heightAnchor.constraint(equalToConstant: height).isActive = true
         return view
     }()
@@ -48,7 +51,7 @@ internal class NPSContainerView: UIView {
         let stackView = UIStackView()
         stackView.axis = .horizontal
         stackView.backgroundColor = .clear
-        stackView.spacing = ThemeHandler.DefaultValues.distanceBetweenSections
+        stackView.spacing = Constants.Theme.distanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -67,7 +70,7 @@ internal class NPSContainerView: UIView {
         let progressView = UPStepsBarProgressView()
         progressView.translatesAutoresizingMaskIntoConstraints = false
         progressView.heightAnchor.constraint(
-            equalToConstant: ThemeHandler.DefaultValues.stepsProgressBarHeight).isActive = true
+            equalToConstant: Constants.Theme.stepsProgressBarHeight).isActive = true
         return progressView
     }()
     
@@ -83,7 +86,7 @@ internal class NPSContainerView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: ThemeHandler.DefaultValues.smallDistanceBetweenSections).isActive = true
+        view.heightAnchor.constraint(equalToConstant: Constants.Theme.smallDistanceBetweenSections).isActive = true
         return view
     }()
     
@@ -94,7 +97,7 @@ internal class NPSContainerView: UIView {
         stackView.axis = .vertical
         stackView.distribution = .fill
         stackView.backgroundColor = .clear
-        stackView.spacing = ThemeHandler.DefaultValues.smallDistanceBetweenSections
+        stackView.spacing = Constants.Theme.smallDistanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -122,7 +125,7 @@ internal class NPSContainerView: UIView {
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
-        view.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)).isActive = true
+        view.heightAnchor.constraint(equalToConstant: CGFloat(Constants.Theme.npsImageDimensions)).isActive = true
         return view
     }()
     
@@ -130,8 +133,8 @@ internal class NPSContainerView: UIView {
     private let imageView: UPImageView = {
         let imageView = UPImageView()
         NSLayoutConstraint.activate([
-            imageView.widthAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions)),
-            imageView.heightAnchor.constraint(equalToConstant: CGFloat(ThemeHandler.DefaultValues.npsImageDimensions))
+            imageView.widthAnchor.constraint(equalToConstant: CGFloat(Constants.Theme.npsImageDimensions)),
+            imageView.heightAnchor.constraint(equalToConstant: CGFloat(Constants.Theme.npsImageDimensions))
         ])
         return imageView
     }()
@@ -141,7 +144,7 @@ internal class NPSContainerView: UIView {
         let stackView = UIStackView()
         stackView.axis = .vertical
         stackView.backgroundColor = .clear
-        stackView.spacing = ThemeHandler.DefaultValues.smallDistanceBetweenSections
+        stackView.spacing = Constants.Theme.smallDistanceBetweenSections
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -199,7 +202,7 @@ internal class NPSContainerView: UIView {
             }
             scrollViewHeightConstraint = scrollView.heightAnchor.constraint(
                 lessThanOrEqualToConstant:
-                    screenHeight * ThemeHandler.DefaultValues.slideOutContentMaxHeightPercentage)
+                    screenHeight * Constants.Theme.slideOutContentMaxHeightPercentage)
             scrollViewHeightConstraint?.isActive = true
 
             // Disable autoresizing masks for custom layout
@@ -232,7 +235,7 @@ internal class NPSContainerView: UIView {
                 // Constraints for the content stack view (full-screen with padding)
                 barStepsProgressView.topAnchor.constraint(
                     equalTo: safeAreaLayoutGuide.topAnchor,
-                    constant: ThemeHandler.DefaultValues.npsProgressBarTopInset),
+                    constant: Constants.Theme.npsProgressBarTopInset),
                 barStepsProgressView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: -20),
                 barStepsProgressView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 20),
 
@@ -421,7 +424,7 @@ extension NPSContainerView {
         
         // Universal case
         if followUpContent.type == .universal, let all = followUpContent.all {
-            userFollowUpKey = all.key
+            userFollowUpKey = all.key ?? ""
             return all
         }
         
@@ -429,17 +432,17 @@ extension NPSContainerView {
         switch userAnswer {
         case 0...6:
             if let detractors = followUpContent.detractors {
-                userFollowUpKey = detractors.key
+                userFollowUpKey = detractors.key ?? ""
                 return detractors
             }
         case 7...8:
             if let passives = followUpContent.passives {
-                userFollowUpKey = passives.key
+                userFollowUpKey = passives.key ?? ""
                 return passives
             }
         default:
             if let promoters = followUpContent.promoters {
-                userFollowUpKey = promoters.key
+                userFollowUpKey = promoters.key ?? ""
                 return promoters
             }
         }
@@ -467,7 +470,7 @@ extension NPSContainerView {
     }
 }
 
-extension NPSContainerView: ViewStateDelegate {
+extension NPSContainerView: UPViewStateDelegate {
 
     func onViewStateChanged(isValid: Bool) {
         if currentStep == 0, isValid {
@@ -477,7 +480,7 @@ extension NPSContainerView: ViewStateDelegate {
 
     private func getAnswerAndMoveToFollowUpQuestion() {
         guard let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap({ $0 as? UPExperienceView })
+            .compactMap({ $0 as? UPExperienceViewDelegate })
             .first else { return }
 
         if let answer = upExperienceView.getAnswer() as? Int {
@@ -490,7 +493,7 @@ extension NPSContainerView: ViewStateDelegate {
 
     private func getFollowUpAnswer() {
         guard let upExperienceView = stepSectionsStackView.arrangedSubviews
-            .compactMap({ $0 as? UPExperienceView })
+            .compactMap({ $0 as? UPExperienceViewDelegate })
             .first else { return }
 
         if let answer = upExperienceView.getAnswer() as? String {
@@ -541,10 +544,10 @@ extension NPSContainerView {
         buttonDismiss.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             buttonDismiss.heightAnchor.constraint(
-                equalToConstant: ThemeHandler.DefaultValues.npsDismissButtonHeight),
+                equalToConstant: Constants.Theme.npsDismissButtonHeight),
             buttonDismiss.bottomAnchor.constraint(
                 equalTo: buttonDismissContainerView.bottomAnchor,
-                constant: ThemeHandler.DefaultValues.npsDismissButtonBottomOverhang),
+                constant: Constants.Theme.npsDismissButtonBottomOverhang),
             // Keep the chip inside the content margins, otherwise its trailing edge sits flush with the screen
             buttonDismiss.trailingAnchor.constraint(equalTo: buttonDismissContainerView.trailingAnchor)
         ])

@@ -1,0 +1,72 @@
+//
+//  UserpilotConfig+Extensions.swift
+//  Userpilot SDK
+//
+//  Created by Userpilot on 29/06/2026.
+//  Copyright © 2024 Userpilot. All rights reserved.
+//
+//  Config helpers for wrapper SDKs that pass extra setup flags through
+//  `Userpilot.Config.additionalProperties`.
+//
+
+import Foundation
+
+internal extension Userpilot.Config {
+    /// Hybrid resolves from the captured surface; an unknown source leaves framework metadata absent.
+    /// Existing explicit modes and automatic detection retain their previous behavior.
+    func resolvedFramework(_ source: Userpilot.AppFramework?) -> Userpilot.AppFramework? {
+        appFramework == .Hybrid ? source : appFramework
+    }
+
+    /// `true` when this config belongs to a supported wrapper SDK integration.
+    ///
+    /// Wrapper SDKs, such as React Native, Flutter, and Ionic, pass
+    /// `WrapperSDKConstants.pluginType` through `additionalProperties` so the
+    /// native SDK can skip UIKit swizzling and accept wrapper-provided
+    /// autocapture events instead.
+    var isWrapperSDK: Bool {
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeReactNative
+        ) ||
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeIonic
+        ) ||
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeFlutter
+        ) ||
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeCordova
+        ) ||
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.pluginType,
+            expectedValue: WrapperSDKConstants.pluginTypeMAUI
+        )
+    }
+
+    /// `true` when the wrapper layer is responsible for screen autocapture.
+    var isWrapperScreenAutoCaptureEnabled: Bool {
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.enableScreenAutoCapture,
+            expectedValue: true
+        )
+    }
+
+    /// `true` when the wrapper layer is responsible for interaction autocapture.
+    var isWrapperInteractionAutoCaptureEnabled: Bool {
+        additionalProperties.hasPropertyValue(
+            WrapperSDKConstants.enableInteractionAutoCapture,
+            expectedValue: true
+        )
+    }
+
+    /// Manual screens supply context when interaction capture is on but that platform's screen capture is off.
+    func shouldSyncManualScreenForInteractionPayload() -> Bool {
+        isWrapperSDK
+            ? !isWrapperScreenAutoCaptureEnabled && isWrapperInteractionAutoCaptureEnabled
+            : !enableScreenAutoCapture && enableInteractionAutoCapture
+    }
+}

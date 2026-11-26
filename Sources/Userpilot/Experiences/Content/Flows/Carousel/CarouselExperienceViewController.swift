@@ -2,10 +2,9 @@
 //  CarouselExperienceViewController.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This class is responsible for managing and displaying the carousel experience.
 //  It contains UI components such as a dismiss button, action button, step progress view,
 //  and a collection view to show the steps. The class integrates with the
@@ -15,7 +14,7 @@
 import Foundation
 import UIKit
 
-internal class CarouselExperienceViewController: UIViewController {
+internal final class CarouselExperienceViewController: UIViewController {
 
     // MARK: - IBOutlets
     /// Container view for the dismiss button.
@@ -26,6 +25,24 @@ internal class CarouselExperienceViewController: UIViewController {
 
     /// View displaying the step progress indicator.
     @IBOutlet internal weak var viewStepsProgress: UPStepsProgressView!
+
+    /// Counter-style progress indicator, `2 of 3`, in the dots' row. Shown instead of the dots
+    /// (`viewStepsProgress`) only when this carousel is one step of a Flow and the step's theme sets the progress
+    /// style to `counter`; hidden otherwise.
+    internal lazy var viewStepsCounter: UPStepsCounterView = {
+        let progressView = UPStepsCounterView()
+        progressView.isHidden = true
+        return progressView
+    }()
+
+    /// Bar-style progress indicator along the top edge. Shown instead of the dots (`viewStepsProgress`) only when
+    /// this carousel is one step of a Flow and the step's theme sets the progress style to `bar`; hidden otherwise.
+    internal lazy var viewStepsBarProgress: UPStepsBarProgressView = {
+        let progressView = UPStepsBarProgressView()
+        progressView.translatesAutoresizingMaskIntoConstraints = false
+        progressView.isHidden = true
+        return progressView
+    }()
 
     /// Collection view displaying the carousel steps.
     @IBOutlet internal weak var collectionView: UICollectionView! {
@@ -43,6 +60,10 @@ internal class CarouselExperienceViewController: UIViewController {
     /// View model managing the carousel experience state and actions.
     internal let experienceViewModel: ExperienceViewModel
     private var appSemanticContentAttribute: UIUserInterfaceLayoutDirection?
+
+    /// Set by the first close of any kind; only that close may report the step, and taps during the dismiss
+    /// animation do nothing.
+    private(set) var isClosing = false
 
     // MARK: - Initializers
 
@@ -119,13 +140,24 @@ internal class CarouselExperienceViewController: UIViewController {
     /// Action handler for the close button. Dismisses the experience view.
     /// - Parameter sender: The button triggering the close action.
     @IBAction func onCloseButtonClicked(_ sender: UIButton) {
+        guard !isClosing else { return }
         closeExperience()
+    }
+
+    /// True only for the first close or last-step action; taps during the dismiss animation report nothing.
+    func claimCloseReport() -> Bool {
+        guard !isClosing else { return false }
+        isClosing = true
+        return true
     }
 }
 
-// MARK: - UPExperience
+// MARK: - UPExperienceDelegate
 
-extension CarouselExperienceViewController: UPExperience {
+extension CarouselExperienceViewController: UPExperienceDelegate {
+    /// The host app's close (`manualClose`) reports like the close button, or nothing when a tap already closed
+    /// the carousel. An SDK-driven close sends no event and fires no host callback, and taps during its dismissal
+    /// report nothing.
     func triggerCloseExperience(
         manualClose: Bool,
         completion: (() -> Void)?
@@ -133,6 +165,7 @@ extension CarouselExperienceViewController: UPExperience {
         if manualClose {
             closeExperience(completion: completion)
         } else {
+            isClosing = true
             dismiss(animated: true) { [weak self] in
                 if let completion {
                     completion()

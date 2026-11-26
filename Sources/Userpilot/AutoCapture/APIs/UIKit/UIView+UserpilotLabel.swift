@@ -1,11 +1,10 @@
 //
 //  UIView+UserpilotLabel.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed
+//  Created by Userpilot on 07/06/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIView+UserpilotLabel stores SwiftUI-provided autocapture metadata on UIKit views using
 //  associated objects, and exposes resolution helpers used by window and control capture paths.
 //
@@ -34,7 +33,8 @@ struct UserpilotLabelCaptureResult {
 
 extension UIView {
 
-    /// Developer-defined text from the SwiftUI `userpilotLabel(_:)` modifier for autocapture `element_text`.
+    /// Analytics text from the SwiftUI `userpilotLabel(_:)` modifier for autocapture `target_text`.
+    /// Never an identity: `userpilot_id` comes only from the `userpilotTarget(_:)` marker.
     ///
     /// When set from the SwiftUI bridge, this value is preferred over inferred control text
     /// where the capture pipeline supports it.
@@ -113,17 +113,18 @@ extension UIView {
         atWindowPoint point: CGPoint,
         in window: UIWindow
     ) -> UserpilotLabelCaptureResult? {
-        if let host = firstViewOnAncestorChainWithUserpilotLabel(),
-           let label = host.userpilotLabel, !label.isEmpty {
-            let viewType = host.userpilotLabelViewType
-            let resolvedType = (viewType?.isEmpty == false) ? viewType : nil
-            return UserpilotLabelCaptureResult(label: label, viewType: resolvedType, labeledView: host)
+        if let host = firstViewOnAncestorChainWithUserpilotLabel() {
+            return host.userpilotLabelCaptureResult()
         }
-        guard let host = labeledDescendantContainingPoint(point, in: window),
-              let label = host.userpilotLabel, !label.isEmpty else { return nil }
-        let viewType = host.userpilotLabelViewType
+        return labeledDescendantContainingPoint(point, in: window)?.userpilotLabelCaptureResult()
+    }
+
+    /// Normalizes only the resolved host's semantic type; ancestor and descendant walks stay distinct.
+    private func userpilotLabelCaptureResult() -> UserpilotLabelCaptureResult? {
+        guard let label = userpilotLabel, !label.isEmpty else { return nil }
+        let viewType = userpilotLabelViewType
         let resolvedType = (viewType?.isEmpty == false) ? viewType : nil
-        return UserpilotLabelCaptureResult(label: label, viewType: resolvedType, labeledView: host)
+        return UserpilotLabelCaptureResult(label: label, viewType: resolvedType, labeledView: self)
     }
 
     // MARK: - Private

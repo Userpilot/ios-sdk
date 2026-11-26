@@ -22,24 +22,21 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     private var vendorInstance: MockUserpilot!
 
     override func setUpWithError() throws {
-        Userpilot.Registry.shared.resetForTesting()
-
         // Host uses a plain Config: `isDefault` now defaults to `true`, so the host
         // claims the default role without an explicit `defaultInstance()` call.
-        hostInstance = MockUserpilot(config: Userpilot.Config(token: "HOST"))
+        hostInstance = MockUserpilot.make(config: Userpilot.Config(token: "HOST-\(UUID().uuidString)"))
 
         // Vendor MUST opt out of the default role (it would otherwise claim it on a
         // before-host init and trigger a rejected-claim warning).
-        let vendorConfig = Userpilot.Config(token: "VENDOR")
+        let vendorConfig = Userpilot.Config(token: "VENDOR-\(UUID().uuidString)")
             .defaultInstance(false)
             .attach(viewControllerClasses: [VendorScreenVC.self])
-        vendorInstance = MockUserpilot(config: vendorConfig)
+        vendorInstance = MockUserpilot.make(config: vendorConfig)
     }
 
     override func tearDownWithError() throws {
         hostInstance = nil
         vendorInstance = nil
-        Userpilot.Registry.shared.resetForTesting()
     }
 
     // MARK: - Per-tenant identify isolation
@@ -69,10 +66,11 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     // MARK: - Resolver routes to correct tenant
 
     func testResolver_routesScopedVCsToVendorAndUnscopedToHost() throws {
-        let scoped = InstanceResolver.shared.target(forViewController: VendorScreenVC())
+        let resolver = UserpilotRuntime.shared.instanceResolver
+        let scoped = resolver.resolveOwner(from: VendorScreenVC())
         XCTAssertTrue(scoped === vendorInstance, "Scoped VC must resolve to vendor")
 
-        let unscoped = InstanceResolver.shared.target(forViewController: HostScreenVC())
+        let unscoped = resolver.resolveOwner(from: HostScreenVC())
         XCTAssertTrue(unscoped === hostInstance, "Unscoped VC must fall back to host (default)")
     }
 
@@ -126,7 +124,7 @@ final class MultiInstanceIntegrationTests: XCTestCase {
 
     // MARK: - Instance Deallocation
 
-    /// `Registry` holds instances weakly, so a `Userpilot` deallocates on whichever
+    /// `InstanceRegistry` holds instances weakly, so a `Userpilot` deallocates on whichever
     /// thread the host drops its reference on. Its overlay `UIWindow` must not be torn
     /// down there: every teardown step is main-thread-only UIKit work, and running it
     /// on a background thread trips the same UIKit assertion that crashed logout.
@@ -135,7 +133,7 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     /// gone — asserting on ARC release timing would only measure the autorelease pool.
     func testInstanceReleasedOffTheMainThread_tearsItsOverlayDownOnTheMainThread() throws {
         // Arrange — a surfaced overlay attached to a live scene
-        var instance: MockUserpilot? = MockUserpilot(
+        var instance: MockUserpilot? = MockUserpilot.make(
             config: Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         )
         let overlay = try XCTUnwrap(instance?.experienceOverlayWindow)
@@ -171,18 +169,20 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     func testShared_returnsHostInstanceWhenBothCoexist() throws {
         XCTAssertTrue(Userpilot.shared === hostInstance)
         // Vendor instance is reachable by token, not by `Userpilot.shared`.
-        XCTAssertTrue(Userpilot.instance(forToken: "VENDOR") === vendorInstance)
+        XCTAssertTrue(Userpilot.instance(forToken: vendorInstance.config.token) === vendorInstance)
     }
 
     // MARK: - External-source forwarding
 
     func testVendorInteraction_isForwardedToHostWhenHostOptsIn() throws {
-        Userpilot.Registry.shared.resetForTesting()
+        // These scenarios own the default claim; release the shared fixtures first.
+        hostInstance = nil
+        vendorInstance = nil
 
-        let host = MockUserpilot(
+        let host = MockUserpilot.make(
             config: Userpilot.Config(token: "HOST-FWD").allowReceiveEventsFromExternalSource()
         )
-        let vendor = MockUserpilot(
+        let vendor = MockUserpilot.make(
             config: Userpilot.Config(token: "VENDOR-FWD")
                 .defaultInstance(false)
                 .enableInteractionAutoCapture()
@@ -203,11 +203,13 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     }
 
     func testVendorInteraction_isNotForwardedWhenHostDoesNotOptIn() throws {
-        Userpilot.Registry.shared.resetForTesting()
+        // These scenarios own the default claim; release the shared fixtures first.
+        hostInstance = nil
+        vendorInstance = nil
 
         // Host does NOT opt in (default `allowReceiveEventsFromExternalSource == false`).
-        let host = MockUserpilot(config: Userpilot.Config(token: "HOST-NOFWD"))
-        let vendor = MockUserpilot(
+        let host = MockUserpilot.make(config: Userpilot.Config(token: "HOST-NOFWD"))
+        let vendor = MockUserpilot.make(
             config: Userpilot.Config(token: "VENDOR-NOFWD")
                 .defaultInstance(false)
                 .enableInteractionAutoCapture()
@@ -228,11 +230,13 @@ final class MultiInstanceIntegrationTests: XCTestCase {
     }
 
     func testDefaultInstanceInteraction_isNotForwardedToItself() throws {
-        Userpilot.Registry.shared.resetForTesting()
+        // These scenarios own the default claim; release the shared fixtures first.
+        hostInstance = nil
+        vendorInstance = nil
 
         // Default host opts in AND emits its own interaction: it must not duplicate the
         // event to itself.
-        let host = MockUserpilot(
+        let host = MockUserpilot.make(
             config: Userpilot.Config(token: "HOST-SELF")
                 .allowReceiveEventsFromExternalSource()
                 .enableInteractionAutoCapture()

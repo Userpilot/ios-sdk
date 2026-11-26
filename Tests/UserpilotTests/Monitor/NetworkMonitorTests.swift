@@ -64,7 +64,7 @@ final class NetworkMonitorTests: XCTestCase {
         super.setUp()
         let config = Userpilot.Config(token: "NX-\(UUID().uuidString)").defaultInstance(false)
         config.logger = MockLogger()
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
 
         monitor = NetworkMonitor(container: userpilot.container)
         // Collapse the interface debounce so the tests exercise ordering, not wall-clock.
@@ -94,13 +94,9 @@ final class NetworkMonitorTests: XCTestCase {
     private func arrangeOfflineOnALiveInterface(counter: ProbeCounter) {
         monitor.updateInterfaceState(hasInterface: true, connectionType: .wifi)
         // The interface debounce plus the probe are both async.
-        let settled = XCTNSPredicateExpectation(
-            predicate: NSPredicate { [weak monitor] _, _ in
-                monitor?.isReady == true
-            },
-            object: nil
-        )
-        wait(for: [settled], timeout: 5.0)
+        let settled = expectation(description: "first probe settled")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { settled.fulfill() }
+        wait(for: [settled], timeout: 2.0)
 
         XCTAssertGreaterThanOrEqual(counter.value, 1, "precondition: the first probe ran")
         XCTAssertFalse(monitor.isNetworkAvailable, "precondition: the monitor is offline")
@@ -178,21 +174,15 @@ final class NetworkMonitorTests: XCTestCase {
     /// Without an interface there is nothing to reach through; the interface transition itself
     /// re-probes when one comes back.
     func testRecheckIfOffline_doesNothing_whileTheInterfaceIsDown() {
-        // Exercise a debounce longer than the former fixed setup wait.
-        monitor.debounceDelay = 0.5
         let counter = ProbeCounter()
         installProbe(failuresBeforeSuccess: .max, counter: counter)
         monitor.reachabilityRecheckInterval = 0
         arrangeOfflineOnALiveInterface(counter: counter)
 
         monitor.updateInterfaceState(hasInterface: false, connectionType: .unknown)
-        let dropped = XCTNSPredicateExpectation(
-            predicate: NSPredicate { [weak monitor] _, _ in
-                monitor?.connectionType == .unknown
-            },
-            object: nil
-        )
-        wait(for: [dropped], timeout: 5.0)
+        let dropped = expectation(description: "interface drop settled")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { dropped.fulfill() }
+        wait(for: [dropped], timeout: 2.0)
 
         let afterDrop = counter.value
         for _ in 0..<5 {

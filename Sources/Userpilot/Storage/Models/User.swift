@@ -2,13 +2,12 @@
 //  User.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 15/09/2024.
+//  Created by Userpilot on 15/09/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  The `User` struct is a holder for user details in the Userpilot SDK.
 //  It tracks information about user properties and company attributes and supports
-//  custom serialization and updating with events.
+//  serialization for pending identify restoration.
 //
 
 import Foundation
@@ -81,39 +80,6 @@ extension User {
             }
         }
         return User()
-    }
-}
-
-extension User {
-
-    /**
-     * Updates the current `User` object with the data from the given `Event`.
-     * If the `userId` in the event differs from the current user's `userId`, the user data is reset.
-     * It then merges the new properties and company information from the event into the current user.
-     *
-     * @param event The event containing user-related data such as userId, properties, and company information.
-     * @return The updated `User` object with the new data.
-     */
-    mutating func updateUser(event: Event) -> User {
-        guard let eventUserId = event.userId else { return self }
-
-        if userId != eventUserId {
-            self = User()
-        }
-
-        // Assuming properties and company are dictionaries with property list-compatible values
-        if let eventProperties = event.properties {
-            // Convert eventProperties to a dictionary with compatible values if needed
-            properties.merge(eventProperties) { (_, new) in new }
-        }
-
-        if let eventCompany = event.company {
-            // Convert eventCompany to a dictionary with compatible values if needed
-            company.merge(eventCompany) { (_, new) in new }
-        }
-
-        userId = eventUserId
-        return self
     }
 }
 

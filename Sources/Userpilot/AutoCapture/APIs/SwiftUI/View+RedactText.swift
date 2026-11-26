@@ -1,11 +1,10 @@
 //
 //  View+RedactText.swift
-//  Userpilot
+//  Userpilot SDK
 //
 //  Created by Userpilot on 15/03/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  View+RedactText provides SwiftUI view modifiers for marking text content as sensitive.
 //  When applied, text will be replaced with "****" in captured events.
 //
@@ -108,7 +107,7 @@ private struct UserpilotRedactTextRepresentable: UIViewRepresentable {
 }
 
 /// Internal UIView that applies the redaction property to its parent view
-private class UserpilotRedactTextView: UIView {
+private final class UserpilotRedactTextView: UIView {
     private var redact: Bool
     private weak var appliedToView: UIView?
 

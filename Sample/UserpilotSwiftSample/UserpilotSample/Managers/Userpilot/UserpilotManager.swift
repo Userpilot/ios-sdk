@@ -78,6 +78,11 @@ class UserpilotManager {
     func logout() {
         userpilot?.logout()
     }
+
+    /// Shows the in-app debugger overlay.
+    func debug() {
+        userpilot?.debug()
+    }
     
     /// Track screens
     func screen(_ screenTitle: String) {
@@ -101,6 +106,14 @@ class UserpilotManager {
     
     func triggerExperience(experienceId: String) {
         userpilot?.triggerExperience(experienceId)
+    }
+
+    func theme(_ name: String) {
+        userpilot?.theme(name)
+    }
+
+    func clearTheme() {
+        userpilot?.clearTheme()
     }
     
     func endExperience() {

@@ -12,7 +12,7 @@ import Foundation
 
 // swiftlint:disable all
 
-class AnalyticsPublisherTests: XCTestCase {
+final class AnalyticsPublisherTests: XCTestCase {
 
     var analyticsPublisher: AnalyticsPublisher!
     var userpilot: MockUserpilot!
@@ -20,7 +20,7 @@ class AnalyticsPublisherTests: XCTestCase {
     override func setUpWithError() throws {
         super.setUp()
         let config = Userpilot.Config(token: "NX-00000")
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
 
         analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
     }
@@ -30,11 +30,177 @@ class AnalyticsPublisherTests: XCTestCase {
         super.tearDown()
     }
 
+    private func acknowledge(_ event: String, _ payload: Payload, _ message: Message, _ success: Bool) {
+        analyticsPublisher.mockWaitForQueue()
+        XCTAssertTrue(userpilot.socketManager.requests.contains { $0.event == event && $0.shouldSend() }, "No captured request for \(event); captured: \(userpilot.socketManager.requests.map(\.event))")
+        userpilot.socketManager.completeNext(event, payload, message, success)
+        analyticsPublisher.testSettle()
+    }
+
+    func testStaleACKCannotDequeueIdenticalRetryAfterReconnect() throws {
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .event("Purchase")))
+        let original = try XCTUnwrap(userpilot.socketManager.requests.last)
+        userpilot.socketManager.didCloseFromError = true
+        userpilot.socketManager.isSocketOpened = false
+        analyticsPublisher.testOnSocketClosed()
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        let retry = try XCTUnwrap(userpilot.socketManager.requests.last)
+        XCTAssertFalse(original.shouldSend())
+        XCTAssertTrue(retry.shouldSend())
+        original.completion?(Message(), true)
+        analyticsPublisher.testSettle()
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.eventTitle), ["Purchase"])
+        retry.completion?(Message(), true)
+        analyticsPublisher.testSettle()
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
     // MARK: - Publish Method Tests
+
+    func testScreenBeforeFirstIdentify_shouldWaitForIdentifyACK() {
+        assertScreenBeforeFirstIdentify(networkReady: true)
+    }
+
+    func testScreenBeforeFirstIdentify_withPendingNetwork_shouldWaitForIdentifyACK() {
+        assertScreenBeforeFirstIdentify(networkReady: false)
+    }
+
+    private func assertScreenBeforeFirstIdentify(networkReady: Bool) {
+        userpilot.storage.userId = ""
+        userpilot.networkMonitor.isReady = networkReady
+        var connectCount = 0
+        var closeCount = 0
+        userpilot.socketManager.onConnect = { connectCount += 1 }
+        userpilot.socketManager.onClose = { closeCount += 1 }
+        let sent = recordPublishedEvents()
+
+        analyticsPublisher.testPublish(Event(type: .event("unidentified")))
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+        XCTAssertTrue(analyticsPublisher.mockGetInitialQueue().isEmpty)
+        XCTAssertNil(analyticsPublisher.screenSessionStateMachine)
+        XCTAssertEqual(userpilot.experiencesPublisher.getCurrentScreen, "Home")
+        XCTAssertEqual(connectCount, 0)
+        XCTAssertTrue(sent().isEmpty)
+
+        analyticsPublisher.testPublish(Event(type: .identify("first-user")))
+        if !networkReady {
+            userpilot.networkMonitor.isReady = true
+            analyticsPublisher.networkMonitorDidUpdate(isReady: true, isNetworkAvailable: true)
+            analyticsPublisher.testSettle()
+        }
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        XCTAssertEqual(sent(), [Constants.Event.identifyEvent])
+        guard userpilot.socketManager.requests.first?.event == Constants.Event.identifyEvent else { return }
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        XCTAssertEqual(sent(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
+        let first = userpilot.socketManager.requests.last
+        XCTAssertEqual(first?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Home")
+        let firstMetadata = first?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(firstMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(firstMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        XCTAssertEqual(closeCount, 0, "First identify has no previous connection to tear down")
+        XCTAssertFalse(userpilot.offlineEventsHandler.didClearLocalEvents)
+
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .identify("first-user")))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let refresh = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refresh?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(refresh?[Constants.Analytics.fakeReload] as? Bool, true)
+    }
+
+    func testUnidentifiedAnalytics_shouldNotPersistOffline() {
+        userpilot.storage.userId = ""
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(Event(type: .event("unidentified")))
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+
+        XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
+        XCTAssertNil(analyticsPublisher.screenSessionStateMachine)
+        XCTAssertEqual(userpilot.experiencesPublisher.getCurrentScreen, "Home")
+        analyticsPublisher.testPublish(Event(type: .identify("first-user")))
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.map { $0.event.eventName }, [Constants.Event.identifyEvent])
+    }
+
+    func testFirstIdentify_withoutKnownScreen_shouldWaitForManualScreen() {
+        userpilot.storage.userId = ""
+        let sent = recordPublishedEvents()
+        analyticsPublisher.testPublish(Event(type: .identify("first-user")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        XCTAssertEqual(sent(), [Constants.Event.identifyEvent])
+
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        XCTAssertEqual(sent(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
+        let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+    }
+
+    func testLogoutThenColdLaunch_retainsManualScreenUntilIdentifySucceeds() {
+        assertScreenAfterLogoutAndColdLaunch(queuedInteraction: false)
+    }
+
+    func testLogoutThenColdLaunch_requestsKnownScreenAfterQueuedAutocaptureACK() {
+        assertScreenAfterLogoutAndColdLaunch(queuedInteraction: true)
+    }
+
+    private func assertScreenAfterLogoutAndColdLaunch(queuedInteraction: Bool) {
+        arrangeReloadableScreen(title: "Home", userId: "first-user")
+        analyticsPublisher.logout()
+        userpilot.storage.clean()
+        analyticsPublisher.testSettle()
+        let storedUserId = userpilot.storage.userId
+        XCTAssertTrue(storedUserId.isEmpty)
+
+        // Recreate all runtime services; only logout's empty persisted identity survives launch.
+        analyticsPublisher = nil
+        userpilot = nil
+        userpilot = MockUserpilot.make()
+        userpilot.storage.userId = storedUserId
+        analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
+        let sent = recordPublishedEvents()
+        analyticsPublisher.testPublish(Event(type: .screen("Identify")))
+        XCTAssertTrue(sent().isEmpty)
+        XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
+
+        analyticsPublisher.testPublish(Event(type: .identify("first-user")))
+        if queuedInteraction {
+            analyticsPublisher.testPublish(makeAutoCaptureEvent(
+                screen: ["title": "Identify"], interactionEventName: "text_change"
+            ))
+        }
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        XCTAssertEqual(sent(), [Constants.Event.identifyEvent])
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        if queuedInteraction {
+            XCTAssertEqual(sent(), [Constants.Event.identifyEvent, Constants.Event.autoCaptureEvent])
+            acknowledge(Constants.Event.autoCaptureEvent, nil, Message(), true)
+        }
+
+        let expected = [Constants.Event.identifyEvent]
+            + (queuedInteraction ? [Constants.Event.autoCaptureEvent] : [])
+            + [Constants.Event.screenEvent]
+        XCTAssertEqual(sent(), expected)
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Identify")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertEqual(sent(), expected, "The screen ACK must not generate a duplicate screen")
+    }
 
     func testPublish_identifyEvent_shouldCacheEventAndUpdateStorage() {
         userpilot.storage.userId = ""
-        userpilot.storage.user = ""
         userpilot.socketManager.isJoiningSocket = true
         let identify = Event(
             type: .identify("user-123"),
@@ -42,7 +208,7 @@ class AnalyticsPublisherTests: XCTestCase {
             company: ["id": "company-123"]
         )
 
-        analyticsPublisher.publish(identify)
+        analyticsPublisher.testPublish(identify)
 
         let queued = analyticsPublisher.mockGetEventsToFlush()
         XCTAssertEqual(queued.count, 1)
@@ -53,7 +219,87 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(pending.userId, "user-123")
         XCTAssertEqual(pending.properties["plan"] as? String, "pro")
         XCTAssertEqual(pending.company["id"] as? String, "company-123")
-        XCTAssertEqual(userpilot.storage.user, "", "Unacknowledged data must not be committed")
+        XCTAssertEqual(userpilot.storage.userId, "user-123")
+    }
+
+    func testPublish_userSwitch_shouldDropOldQueuedEventsAtAdmission() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.testPublish(Event(type: .event("old-user-event")))
+
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertTrue(userpilot.offlineEventsHandler.didClearLocalEvents)
+        XCTAssertTrue(userpilot.container.resolve(UserSessionStateManaging.self).isUserSwitching())
+    }
+
+    func testPublish_userSwitchWhileNetworkStatePending_shouldDropOldInitialEvents() {
+        userpilot.storage.userId = "user-a"
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.testPublish(Event(type: .event("old-user-event")))
+
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+
+        let queued = analyticsPublisher.mockGetInitialQueue()
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+    }
+
+    func testNetworkReady_afterPendingUserSwitch_shouldRouteOnlyNewUserEvents() {
+        userpilot.storage.userId = "user-a"
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.testPublish(Event(type: .event("old-user-event")))
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        analyticsPublisher.testPublish(Event(type: .screen("user-b-screen")))
+
+        userpilot.networkMonitor.isReady = true
+        userpilot.socketManager.isJoiningSocket = true
+        analyticsPublisher.networkMonitorDidUpdate(
+            isReady: true,
+            isNetworkAvailable: true
+        )
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertTrue(analyticsPublisher.mockGetInitialQueue().isEmpty)
+        XCTAssertEqual(queued.count, 2)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(queued.last?.screenTitle, "user-b-screen")
+    }
+
+    func testPublish_rapidUserSwitch_shouldKeepOnlyLatestIdentify() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isJoiningSocket = true
+
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        analyticsPublisher.testPublish(Event(type: .screen("user-b-screen")))
+        analyticsPublisher.testPublish(Event(type: .identify("user-c"), properties: ["plan": "pro"]))
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(userpilot.storage.userId, "user-c")
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued.first?.userId, "user-c")
+        XCTAssertEqual(queued.first?.properties?["plan"] as? String, "pro")
+    }
+
+    func testPublish_userSwitchShutdown_shouldQueueFollowingNewUserEvents() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.socketManager.isShutdownState = true
+        analyticsPublisher.testPublish(Event(type: .screen("user-b-screen")))
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(queued.count, 2)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(queued.last?.screenTitle, "user-b-screen")
     }
 
     func testPublish_screenEvent_shouldSetupScreenSessionStateMachine() {
@@ -63,7 +309,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
 
         // Act
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.testPublish(screenEvent)
 
         // Assert
         XCTAssertNotNil(analyticsPublisher.screenSessionStateMachine)
@@ -79,14 +325,14 @@ class AnalyticsPublisherTests: XCTestCase {
                 WrapperSDKConstants.enableInteractionAutoCapture: true
             ])
             .defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
         userpilot.socketManager.isSocketOpened = true
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
         let screenEvent = Event(type: .screen("Wrapper Manual Screen"))
 
         // Act
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.testPublish(screenEvent)
 
         // Assert
         let tracker = userpilot.container.resolve(ScreenNameTracking.self)
@@ -102,14 +348,14 @@ class AnalyticsPublisherTests: XCTestCase {
                 WrapperSDKConstants.enableInteractionAutoCapture: true
             ])
             .defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         analyticsPublisher = AnalyticsPublisher(container: userpilot.container)
         userpilot.socketManager.isSocketOpened = true
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
         let screenEvent = Event(type: .screen("Wrapper Screen Autocapture"))
 
         // Act
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.testPublish(screenEvent)
 
         // Assert
         let tracker = userpilot.container.resolve(ScreenNameTracking.self)
@@ -126,19 +372,11 @@ class AnalyticsPublisherTests: XCTestCase {
             didPublishEvent = true
         }
 
-        let expectation = XCTestExpectation(description: "Wait for event to be enqueued and processed")
+        // Act: the test helper waits for admission on the real owner queue.
+        analyticsPublisher.testPublish(customEvent)
 
-        // Act
-        analyticsPublisher.publish(customEvent)
-
-        // Delay before assertion to allow event processing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            // Assert
-            XCTAssertTrue(didPublishEvent)
-            expectation.fulfill()
-        }
-
-        wait(for: [expectation], timeout: 2.0)
+        XCTAssertTrue(didPublishEvent)
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.eventTitle), ["button_clicked"])
     }
 
     func testPublish_whenSocketNotOpened_shouldCacheEvent() {
@@ -151,7 +389,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onConnect = { connectCalled = true }
 
         // Act
-        analyticsPublisher.publish(customEvent)
+        analyticsPublisher.testPublish(customEvent)
 
         // Assert
         XCTAssertTrue(connectCalled)
@@ -163,14 +401,14 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.isJoiningSocket = true
 
         // Act
-        analyticsPublisher.publish(customEvent)
+        analyticsPublisher.testPublish(customEvent)
 
         // Assert
         // Event should be cached in the live queue, not sent immediately.
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 1)
     }
 
-    func testPublish_whenSocketInShutdownState_shouldNotProcess() {
+    func testPublish_whenSocketInShutdownState_keepsEventUntilSocketAcceptsReconnect() {
         // Arrange
         let customEvent = Event(type: .event("test_event"))
         userpilot.socketManager.isShutdownState = true
@@ -180,11 +418,13 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.publish(customEvent)
+        analyticsPublisher.testPublish(customEvent)
 
         // Assert
-        // Event should not be processed
-        XCTAssertFalse(didSocketConnect) // Would need to verify no processing occurred
+        // SocketManager owns connection admission; analytics retains the event until it opens.
+        XCTAssertTrue(didSocketConnect)
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.eventTitle), ["test_event"])
+        XCTAssertTrue(userpilot.socketManager.requests.isEmpty)
     }
 
     // MARK: - Flush Tests
@@ -196,7 +436,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onClose = { closeCalled = true }
 
         // Act
-        analyticsPublisher.flush()
+        analyticsPublisher.testFlush()
 
         // Assert
         XCTAssertTrue(closeCalled)
@@ -218,19 +458,19 @@ class AnalyticsPublisherTests: XCTestCase {
         var closeCalled = false
         userpilot.socketManager.onClose = { closeCalled = true }
         userpilot.socketManager.isJoiningSocket = true
-        analyticsPublisher.publish(Event(type: .event("Before switch")))
-        analyticsPublisher.publish(Event(type: .identify("intermediate-user"), properties: ["plan": "basic"]))
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
-        analyticsPublisher.publish(Event(type: .identify(latestUserId), properties: ["plan": "pro"]))
-        analyticsPublisher.publish(Event(
+        analyticsPublisher.testPublish(Event(type: .event("Before switch")))
+        analyticsPublisher.testPublish(Event(type: .identify("intermediate-user"), properties: ["plan": "basic"]))
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        analyticsPublisher.testPublish(Event(type: .identify(latestUserId), properties: ["plan": "pro"]))
+        analyticsPublisher.testPublish(Event(
             type: .identify(latestUserId), properties: ["plan": "enterprise"], company: ["id": "latest-company"]))
-        analyticsPublisher.publish(Event(type: .event("Purchase"), properties: ["amount": 42]))
+        analyticsPublisher.testPublish(Event(type: .event("Purchase"), properties: ["amount": 42]))
         userpilot.sessionMonitor.isAppActive = false
 
-        analyticsPublisher.flush()
+        analyticsPublisher.testFlush()
 
         XCTAssertTrue(closeCalled)
-        analyticsPublisher.onSocketClosed()
+        analyticsPublisher.testOnSocketClosed()
         let queued = analyticsPublisher.mockGetEventsToFlush()
         XCTAssertEqual(queued.count, 1)
         XCTAssertEqual(queued.first?.userId, latestUserId)
@@ -245,19 +485,19 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.isJoiningSocket = false
         userpilot.socketManager.isSocketOpened = true
         userpilot.sessionMonitor.isAppActive = true
-        analyticsPublisher.resume()
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testResume()
+        analyticsPublisher.testOnSocketOpened()
         XCTAssertEqual(userpilot.storage.userId, latestUserId)
         XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent])
         let metadata = sent.first?.1?[Constants.Analytics.metaDataProperty] as? [String: Any]
         XCTAssertEqual(metadata?["plan"] as? String, "enterprise")
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
         XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent, Constants.Event.screenEvent])
         XCTAssertEqual(sent.last?.1?[Constants.Analytics.screenTitleProperty] as? String, "Home")
         let screenMetadata = sent.last?.1?[Constants.Analytics.metaDataProperty] as? [String: Any]
-        XCTAssertEqual(screenMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, latestUserId != "old-user")
-        XCTAssertEqual(screenMetadata?[Constants.Analytics.fakeReload] as? Bool, latestUserId == "old-user")
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertEqual(screenMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(screenMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         XCTAssertEqual(sent.count, 2)
     }
@@ -272,7 +512,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onConnect = { connectCalled = true }
 
         // Act
-        analyticsPublisher.resume()
+        analyticsPublisher.testResume()
 
         // Assert
         XCTAssertTrue(connectCalled)
@@ -287,7 +527,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onConnect = { connectCalled = true }
 
         // Act
-        analyticsPublisher.resume()
+        analyticsPublisher.testResume()
 
         // Assert
         XCTAssertTrue(connectCalled)
@@ -302,7 +542,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onConnect = { connectCalled = true }
 
         // Act
-        analyticsPublisher.resume()
+        analyticsPublisher.testResume()
 
         // Assert
         XCTAssertFalse(connectCalled)
@@ -312,10 +552,11 @@ class AnalyticsPublisherTests: XCTestCase {
 
     func testReset_shouldResetStartSessionFlag() {
         userpilot.storage.sessionDate = Date().addingTimeInterval(-60)
-        analyticsPublisher.updateSessionState()
+        analyticsPublisher.testResume()
+        analyticsPublisher.mockWaitForQueue()
         XCTAssertFalse(analyticsPublisher.isStartSession)
 
-        analyticsPublisher.reset()
+        analyticsPublisher.testReset()
 
         XCTAssertTrue(analyticsPublisher.isStartSession)
     }
@@ -331,7 +572,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onClose = { closeCalled = true }
 
         // Act
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
 
         // Assert
         XCTAssertTrue(closeCalled)
@@ -348,10 +589,21 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { _, _ in publishLogoutEventCalled = true }
 
         // Act
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
 
         // Assert
         XCTAssertTrue(publishLogoutEventCalled)
+    }
+
+    func testLogout_shouldClearInitialQueue() {
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.testPublish(Event(type: .identify("user-a")))
+        XCTAssertEqual(analyticsPublisher.mockGetInitialQueue().count, 1)
+
+        analyticsPublisher.logout()
+
+        XCTAssertTrue(analyticsPublisher.mockGetInitialQueue().isEmpty)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
     // MARK: - Socket Subscription Tests
@@ -364,7 +616,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return true }
 
         let identifyEvent = Event(type: .identify("test-user"))
-        analyticsPublisher.publish(identifyEvent)
+        analyticsPublisher.testPublish(identifyEvent)
 
         userpilot.socketManager.isSocketOpened = true
         userpilot.socketManager.isJoiningSocket = false
@@ -374,7 +626,7 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert
         // Would need to verify that cached events were flushed
@@ -384,7 +636,7 @@ class AnalyticsPublisherTests: XCTestCase {
     func testOnSocketClosed_shouldHandleReconnection() {
         // Arrange
         let identifyEvent = Event(type: .identify("test-user"))
-        analyticsPublisher.publish(identifyEvent)
+        analyticsPublisher.testPublish(identifyEvent)
         userpilot.socketManager.didCloseFromError = false
 
         var didSocketConnect = false
@@ -393,7 +645,7 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.onSocketClosed()
+        analyticsPublisher.testOnSocketClosed()
 
         // Assert
         // Should republish cached identify event
@@ -409,26 +661,23 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.onSocketClosed()
+        analyticsPublisher.testOnSocketClosed()
 
         // Assert
         XCTAssertFalse(didSocketConnect)
     }
 
-    func testOnSocketEventSent_shouldUpdateUserOnIdentifyEvent() {
+    func testIdentifyAcknowledgementClearsOnlyPendingIdentifySnapshot() {
         userpilot.storage.userId = "test-user"
-        userpilot.storage.user = User(userId: "test-user", properties: ["plan": "free"]).toJson()!
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .identify("test-user"), properties: ["plan": "pro"]))
-        XCTAssertEqual(User.fromJson(userpilot.storage.user).properties["plan"] as? String, "free")
+        analyticsPublisher.testPublish(Event(type: .identify("test-user"), properties: ["plan": "pro"]))
+        XCTAssertEqual(User.fromJson(userpilot.storage.temporaryUser.orEmpty()).properties["plan"] as? String, "pro")
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 1)
 
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
 
-        let user = User.fromJson(userpilot.storage.user)
-        XCTAssertEqual(user.userId, "test-user")
-        XCTAssertEqual(user.properties["plan"] as? String, "pro")
-        XCTAssertTrue(userpilot.storage.temporaryUser.orEmpty().isEmpty)
+        XCTAssertEqual(userpilot.storage.userId, "test-user")
+        XCTAssertNil(userpilot.storage.temporaryUser)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
@@ -458,7 +707,7 @@ class AnalyticsPublisherTests: XCTestCase {
         let sdkEvent = MockSDKEvent()
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(sdkEvent)
+        analyticsPublisher.testPublishInternalSDKEvent(sdkEvent)
 
         // Assert
         // Would need to verify socket manager publish was called
@@ -475,7 +724,7 @@ class AnalyticsPublisherTests: XCTestCase {
         let sdkEvent = MockSDKEvent()
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(sdkEvent)
+        analyticsPublisher.testPublishInternalSDKEvent(sdkEvent)
 
         // Assert
         // Should not publish experience event when socket is closed
@@ -505,13 +754,14 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+        analyticsPublisher.testPublishInternalSDKEvent(makePushTokenEvent())
 
         // Assert - the offline batch owns the wire, the token does not overtake it
         XCTAssertFalse(publishedEvents.contains(pushTokenEventName))
 
         // Act - the batch lands and the cached SDK events drain
         userpilot.offlineEventsHandler.finishRestore()
+        analyticsPublisher.testSettle()
 
         // Assert
         XCTAssertTrue(publishedEvents.contains(pushTokenEventName))
@@ -527,7 +777,7 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+        analyticsPublisher.testPublishInternalSDKEvent(makePushTokenEvent())
 
         // Assert
         XCTAssertEqual(publishedPayload?["token"] as? String, "device-push-token")
@@ -542,12 +792,12 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { eventName, _ in
             publishedEvents.append(eventName)
         }
-        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
+        analyticsPublisher.testPublishInternalSDKEvent(makePushTokenEvent())
         XCTAssertFalse(publishedEvents.contains(pushTokenEventName))
 
         // Act
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert
         XCTAssertTrue(publishedEvents.contains(pushTokenEventName))
@@ -562,8 +812,8 @@ class AnalyticsPublisherTests: XCTestCase {
         }
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(makePushTokenEvent())
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testPublishInternalSDKEvent(makePushTokenEvent())
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert - sent exactly once, and the second drain found an empty cache
         XCTAssertEqual(publishCount, 1)
@@ -582,13 +832,14 @@ class AnalyticsPublisherTests: XCTestCase {
         let contentEvent = MockSDKEvent(eventName: contentEventName)
 
         // Act
-        analyticsPublisher.publishInternalSDKEvent(contentEvent)
+        analyticsPublisher.testPublishInternalSDKEvent(contentEvent)
 
         // Assert
         XCTAssertFalse(publishedEvents.contains(contentEventName))
 
         // Act - the batch lands and the cached SDK events drain
         userpilot.offlineEventsHandler.finishRestore()
+        analyticsPublisher.testSettle()
 
         // Assert
         XCTAssertTrue(publishedEvents.contains(contentEventName))
@@ -605,13 +856,13 @@ class AnalyticsPublisherTests: XCTestCase {
             publishedEvents.append(eventName)
         }
         ["sdk-event-1", "sdk-event-2", "sdk-event-3"].forEach {
-            analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: $0))
+            analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: $0))
         }
         XCTAssertTrue(publishedEvents.isEmpty)
 
         // Act
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert
         XCTAssertEqual(publishedEvents, ["sdk-event-1", "sdk-event-2", "sdk-event-3"])
@@ -629,12 +880,12 @@ class AnalyticsPublisherTests: XCTestCase {
             userpilot?.socketManager.isSocketOpened = false
         }
         ["sdk-event-1", "sdk-event-2"].forEach {
-            analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: $0))
+            analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: $0))
         }
 
         // Act
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert - only the first went out, and the re-drive on the empty queue settled
         // instead of spinning on the still-cached second event
@@ -642,7 +893,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Act - the socket comes back
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert - the second event survived the closed window
         XCTAssertEqual(publishedEvents, ["sdk-event-1", "sdk-event-2"])
@@ -661,17 +912,17 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { eventName, _ in
             publishedEvents.append(eventName)
         }
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
         XCTAssertTrue(publishedEvents.isEmpty)
 
         // Act — a reconnect attempt fails and the channel reports the error close
         userpilot.socketManager.didCloseFromError = true
-        analyticsPublisher.onSocketClosed()
+        analyticsPublisher.testOnSocketClosed()
 
         // Act — the connection comes back
         userpilot.socketManager.didCloseFromError = false
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert — the dismissal still reaches the backend
         XCTAssertEqual(publishedEvents, ["content-dismissed"])
@@ -686,14 +937,14 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onPublish = { eventName, _ in
             publishedEvents.append(eventName)
         }
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "content-dismissed"))
 
         // Act — the SDK is torn down
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
+        analyticsPublisher.logout()
 
         // Act — a socket opens for the next session
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         // Assert — the previous session's event does not leak into it
         XCTAssertTrue(publishedEvents.isEmpty)
@@ -703,16 +954,18 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.userId = "user-a"
         userpilot.offlineEventsHandler.shouldSaveOffline = true
         let published = recordPublishedEvents()
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublish(Event(type: .event("old-user-event")))
 
-        analyticsPublisher.publish(Event(type: .identify("user-b")))
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_theme"))
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_theme"))
 
         XCTAssertEqual(userpilot.storage.userId, "user-b")
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
         XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.first?.event.userId, "user-b")
         userpilot.offlineEventsHandler.shouldSaveOffline = false
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         XCTAssertEqual(published(), ["get_mobile_theme"])
     }
@@ -720,60 +973,136 @@ class AnalyticsPublisherTests: XCTestCase {
     func testDisconnectedUserSwitch_dropsOldSDKRequestsAndKeepsIdentify() {
         userpilot.storage.userId = "user-a"
         let published = recordPublishedEvents()
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
 
-        analyticsPublisher.publish(Event(type: .identify("user-b")))
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         XCTAssertEqual(userpilot.storage.userId, "user-b")
         XCTAssertEqual(published(), [Constants.Event.identifyEvent])
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
     }
 
-    func testResumeWithQueuedUserSwitch_dropsSDKRequestsCachedAfterIdentify() {
+    func testUserSwitchSocketClose_shouldReconnectWithoutReplayingQueuedIdentify() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.socketManager.isShutdownState = true
+        analyticsPublisher.testPublish(Event(type: .screen("user-b-screen")))
+
+        var connectCount = 0
+        userpilot.socketManager.onConnect = { connectCount += 1 }
+        userpilot.socketManager.isShutdownState = false
+        analyticsPublisher.testOnSocketClosed()
+
+        let queued = analyticsPublisher.mockGetEventsToFlush()
+        XCTAssertEqual(connectCount, 1)
+        XCTAssertEqual(queued.count, 2)
+        XCTAssertEqual(queued.first?.userId, "user-b")
+        XCTAssertEqual(queued.last?.screenTitle, "user-b-screen")
+        let state = userpilot.container.resolve(UserSessionStateManaging.self).getCurrentState()
+        guard case .userSwitching = state else {
+            XCTFail("Socket close must not advance identify state before the identify is sent")
+            return
+        }
+    }
+
+    func testUserSwitchSocketClose_whileInactive_shouldWaitForResume() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.publish(Event(type: .identify("user-b")))
+
+        var connectCount = 0
+        userpilot.socketManager.onConnect = { connectCount += 1 }
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.sessionMonitor.isAppActive = false
+        analyticsPublisher.testOnSocketClosed()
+
+        XCTAssertEqual(connectCount, 0)
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
+
+        userpilot.sessionMonitor.isAppActive = true
+        analyticsPublisher.testResume()
+        XCTAssertEqual(connectCount, 1)
+    }
+
+    func testUserSwitch_shouldSendIdentifyBeforeNewUserSDKRequests() {
+        userpilot.storage.userId = "user-a"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        userpilot.socketManager.isSocketOpened = false
+        userpilot.socketManager.isShutdownState = true
+        analyticsPublisher.testPublishInternalSDKEvent(
+            MockSDKEvent(eventName: "new-user-content-request")
+        )
+
+        let published = recordPublishedEvents()
+        userpilot.socketManager.isShutdownState = false
+        analyticsPublisher.testOnSocketClosed()
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        acknowledge(
+            Constants.Event.identifyEvent, nil, Message(), true
+        )
+        XCTAssertEqual(
+            published(),
+            [Constants.Event.identifyEvent, "new-user-content-request"]
+        )
+    }
+
+    func testResumeWithQueuedUserSwitch_keepsNewUserSDKRequestsBehindIdentify() {
         userpilot.storage.userId = "user-a"
         userpilot.socketManager.isJoiningSocket = true
-        analyticsPublisher.publish(Event(type: .identify("user-b")))
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
         let published = recordPublishedEvents()
 
-        analyticsPublisher.resume()
+        analyticsPublisher.testResume()
         userpilot.socketManager.isJoiningSocket = false
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         XCTAssertEqual(userpilot.storage.userId, "user-b")
         XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        acknowledge(
+            Constants.Event.identifyEvent, nil, Message(), true
+        )
+        XCTAssertEqual(
+            published(),
+            [Constants.Event.identifyEvent, "get_mobile_content"]
+        )
     }
 
-    func testUserSwitchLogout_dropsSDKRequestsAndPreservesQueuedIdentify() {
+    func testAppLogout_dropsQueuedIdentifyAndSDKRequests() {
         userpilot.storage.userId = "user-a"
         userpilot.socketManager.isJoiningSocket = true
-        analyticsPublisher.publish(Event(type: .identify("user-b")))
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublish(Event(type: .identify("user-b")))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
         let published = recordPublishedEvents()
 
-        analyticsPublisher.logout(clearCachedIdentifyEvent: false)
+        analyticsPublisher.logout()
 
-        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.userId, "user-b")
-        userpilot.storage.userId = "user-b"
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         userpilot.socketManager.isJoiningSocket = false
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
-        XCTAssertEqual(published(), [Constants.Event.identifyEvent])
+        analyticsPublisher.testOnSocketOpened()
+        XCTAssertTrue(published().isEmpty)
     }
 
     func testOfflineIdentifyForSameUser_preservesCachedSDKRequests() {
         userpilot.storage.userId = "user-a"
         userpilot.offlineEventsHandler.shouldSaveOffline = true
         let published = recordPublishedEvents()
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
 
-        analyticsPublisher.publish(Event(type: .identify("user-a")))
+        analyticsPublisher.testPublish(Event(type: .identify("user-a")))
         userpilot.offlineEventsHandler.shouldSaveOffline = false
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
+        analyticsPublisher.testOnSocketOpened()
 
         XCTAssertEqual(published(), ["get_mobile_content"])
     }
@@ -782,7 +1111,7 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        analyticsPublisher.testPublish(Event(type: .screen("Test Screen")))
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload()
                 .toJSONString()?
@@ -811,7 +1140,7 @@ class AnalyticsPublisherTests: XCTestCase {
     func testPublish_offlineScreenChange_shouldClearSeenContent() throws {
         // Arrange — a flow already shown on the current screen
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen X")))
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload()
                 .toJSONString()?
@@ -823,7 +1152,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Act — the user navigates to another screen with no network
         userpilot.offlineEventsHandler.shouldSaveOffline = true
-        analyticsPublisher.publish(Event(type: .screen("Screen Y")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen Y")))
 
         // Assert — the flow is eligible again, and the screen event is still only stored
         XCTAssertFalse(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
@@ -835,7 +1164,7 @@ class AnalyticsPublisherTests: XCTestCase {
     func testPublish_offlineSameScreen_shouldKeepSeenContent() throws {
         // Arrange — a flow already shown on the current screen
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen X")))
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload()
                 .toJSONString()?
@@ -846,7 +1175,7 @@ class AnalyticsPublisherTests: XCTestCase {
 
         // Act — the same screen is tracked again with no network
         userpilot.offlineEventsHandler.shouldSaveOffline = true
-        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen X")))
 
         // Assert — it is still recorded as seen
         XCTAssertTrue(analyticsPublisher.isExperienceSeen(.flow(content: flow)))
@@ -860,12 +1189,12 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange — the user is on "Screen X" and an experience has just been dismissed there,
         // which is what leaves `canRequestScreenEvent()` reporting false
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen X")))
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return false }
 
         // Act — the host surface re-emits the same screen with no network
         userpilot.offlineEventsHandler.shouldSaveOffline = true
-        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen X")))
 
         // Assert — nothing is persisted, and the screen session still tracks the screen
         XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
@@ -876,12 +1205,12 @@ class AnalyticsPublisherTests: XCTestCase {
     func testPublish_offlineNavigationAfterAnExperienceClosed_shouldStillBeStored() {
         // Arrange — the user is on "Screen X" and an experience has just been dismissed there
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Screen X")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen X")))
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { return false }
 
         // Act — the user navigates to another screen with no network
         userpilot.offlineEventsHandler.shouldSaveOffline = true
-        analyticsPublisher.publish(Event(type: .screen("Screen Y")))
+        analyticsPublisher.testPublish(Event(type: .screen("Screen Y")))
 
         // Assert — the navigation is persisted
         XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
@@ -892,7 +1221,7 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange — the screen session (which owns the seen sets) is only created once the
         // screen event actually goes out, which requires an open socket.
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        analyticsPublisher.testPublish(Event(type: .screen("Test Screen")))
         let flow = try XCTUnwrap(
             MockContentFactory.makeFlowContentPayload()
                 .toJSONString()?
@@ -915,7 +1244,7 @@ class AnalyticsPublisherTests: XCTestCase {
     func testIsExperienceSeen_shouldReturnFalseForNPS() throws {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
+        analyticsPublisher.testPublish(Event(type: .screen("Test Screen")))
         let nps = try XCTUnwrap(
             MockContentFactory.makeNPSContentPayload()
                 .toJSONString()?
@@ -931,8 +1260,8 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
         let screenEvent = Event(type: .screen("Test Screen"))
-        analyticsPublisher.publish(screenEvent)
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(screenEvent)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         let expectation = XCTestExpectation(description: "Wait for delayed fake reload publish")
 
@@ -942,34 +1271,34 @@ class AnalyticsPublisherTests: XCTestCase {
             expectation.fulfill()
         }
 
-        // Act (add delay before publishing, because screen events are throttled)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
-            self.analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10)
-        }
+        // Generated refresh bypasses an earlier screen throttle, but retains its own ACK slot.
+        analyticsPublisher.publishFakeReloadScreenEvent()
 
         // Assert (wait for the delayed call)
         wait(for: [expectation], timeout: 2.0)
         XCTAssertTrue(publishScreenEventCalled)
     }
 
-    func testPublishFakeReloadScreenEvent_withSameTimeForScreenEvent_shouldNotPublishScreenEvent() {
+    func testPublishFakeReloadScreenEvent_bypassesPreviousThrottleAndSuppressesHostResumeScreen() {
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.publish(Event(type: .screen("Test Screen")))
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Test Screen")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         let published = recordPublishedEvents()
 
-        let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        let sent = analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
-        XCTAssertFalse(sent)
-        XCTAssertEqual(published(), [])
+        XCTAssertTrue(sent)
+        analyticsPublisher.testPublish(Event(type: .screen("Test Screen")))
+        XCTAssertEqual(published(), [Constants.Event.screenEvent])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 1)
     }
 
     func testExperiencePublished_shouldUpdateSeenExperiences() {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
         let screenEvent = Event(type: .screen("Test Screen"))
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.testPublish(screenEvent)
 
         // Act
         analyticsPublisher.experiencePublished(.flow, 123)
@@ -982,7 +1311,7 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
         let screenEvent = Event(type: .screen("Test Screen"))
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.testPublish(screenEvent)
 
         // Act
         analyticsPublisher.experiencePublished(.survey, 456)
@@ -1000,11 +1329,11 @@ class AnalyticsPublisherTests: XCTestCase {
         let secondScreenEvent = Event(type: .screen("Screen 2"))
 
         // Act
-        analyticsPublisher.publish(firstScreenEvent)
+        analyticsPublisher.testPublish(firstScreenEvent)
         let firstScreenSessionStateMachine = analyticsPublisher.screenSessionStateMachine
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
-        analyticsPublisher.publish(secondScreenEvent)
+        analyticsPublisher.testPublish(secondScreenEvent)
         let secondScreenSessionStateMachine = analyticsPublisher.screenSessionStateMachine
 
         // Assert
@@ -1016,12 +1345,12 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange
         userpilot.socketManager.isSocketOpened = true
         let screenEvent = Event(type: .screen("Same Screen"))
-        analyticsPublisher.publish(screenEvent)
+        analyticsPublisher.testPublish(screenEvent)
         analyticsPublisher.experiencePublished(.flow, 123)
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         // Act
-        analyticsPublisher.publish(screenEvent) // Same screen again
+        analyticsPublisher.testPublish(screenEvent) // Same screen again
 
         // Assert
         XCTAssertTrue(analyticsPublisher.screenSessionStateMachine?.seenExperiences.contains(123) ?? false)
@@ -1035,7 +1364,8 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.sessionDate = pastDate
 
         // Act
-        analyticsPublisher.updateSessionState()
+        analyticsPublisher.testResume()
+        analyticsPublisher.mockWaitForQueue()
 
         // Assert
         XCTAssertTrue(analyticsPublisher.isStartSession)
@@ -1048,7 +1378,8 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.sessionDate = recentDate
 
         // Act
-        analyticsPublisher.updateSessionState()
+        analyticsPublisher.testResume()
+        analyticsPublisher.mockWaitForQueue()
 
         // Assert
         XCTAssertFalse(analyticsPublisher.isStartSession)
@@ -1067,13 +1398,13 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.socketManager.onConnect = { connectCalled = true }
 
         // Act
-        analyticsPublisher.publish(eventWithoutUserId)
+        analyticsPublisher.testPublish(eventWithoutUserId)
 
         // Assert
         XCTAssertFalse(connectCalled)
     }
 
-    // MARK: - Autocapture screen guard (Android parity)
+    // MARK: - Autocapture screen guard
 
     /// An autocapture event with no screen is meaningless, so it must be neither sent nor STORED.
     /// The offline branch of `publish` returns before `trackEvent` runs, so the guard has to sit
@@ -1082,7 +1413,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.userId = "user-1"
         userpilot.offlineEventsHandler.shouldSaveOffline = true
 
-        analyticsPublisher.publish(makeAutoCaptureEvent(screen: nil))
+        analyticsPublisher.testPublish(makeAutoCaptureEvent(screen: nil))
 
         XCTAssertTrue(
             userpilot.offlineEventsHandler.savedEvents.isEmpty,
@@ -1095,7 +1426,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.userId = "user-1"
         userpilot.offlineEventsHandler.shouldSaveOffline = true
 
-        analyticsPublisher.publish(makeAutoCaptureEvent(screen: [:]))
+        analyticsPublisher.testPublish(makeAutoCaptureEvent(screen: [:]))
 
         XCTAssertTrue(
             userpilot.offlineEventsHandler.savedEvents.isEmpty,
@@ -1107,7 +1438,7 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.storage.userId = "user-1"
         userpilot.offlineEventsHandler.shouldSaveOffline = true
 
-        analyticsPublisher.publish(makeAutoCaptureEvent())
+        analyticsPublisher.testPublish(makeAutoCaptureEvent())
 
         XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
     }
@@ -1130,10 +1461,10 @@ class AnalyticsPublisherTests: XCTestCase {
     /// Counts socket publishes triggered by publishing the given events back-to-back.
     ///
     /// The pipeline is ACK-gated: `processEvent` claims a single-flight gate and only releases it
-    /// when the socket resolves the in-flight head through `onSocketEventSent`. `MockSocketManager`
-    /// has no backend, so the ACK is simulated here — asynchronously, the way the real push receipt
-    /// arrives. Without it only the first event is ever published and every later one waits for the
-    /// `pushTimeout + 2` (12s) watchdog, so any multi-event expectation fails on timeout, and any
+    /// when the socket resolves the captured request's completion. The mock returns an ACK for
+    /// each submission; the real publisher enqueues its progression on its owner queue.
+    /// Without it only the first event is ever published and every later one stays queued,
+    /// so any multi-event expectation fails on timeout, and any
     /// single-event expectation passes for the wrong reason (the gate caps it at one regardless of
     /// whether the throttle works).
     private func publishAndCountSocketPublishes(
@@ -1147,21 +1478,17 @@ class AnalyticsPublisherTests: XCTestCase {
         let expectation = XCTestExpectation(description: "events flushed to socket")
         expectation.expectedFulfillmentCount = expectedCount
         expectation.assertForOverFulfill = false
-        userpilot.socketManager.onPublish = { [weak self] eventName, payload in
+        userpilot.socketManager.onPublishRequest = { request in
             publishCount += 1
             expectation.fulfill()
-            DispatchQueue.main.async {
-                self?.analyticsPublisher.onSocketEventSent(eventName, payload, Message(), true)
-            }
+            request.completion?(Message(), true)
         }
 
         events.forEach { analyticsPublisher.publish($0) }
 
         wait(for: [expectation], timeout: timeout)
-        // Grace period so an unexpected extra publish would also be counted
-        let grace = XCTestExpectation(description: "grace period")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { grace.fulfill() }
-        wait(for: [grace], timeout: 1.0)
+        // Each ACK enqueues progression; drain that work before counting unexpected extra sends.
+        analyticsPublisher.testSettle()
         return publishCount
     }
 
@@ -1261,16 +1588,83 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(publishCount, 1)
     }
 
+    // MARK: - Offline Track Event Throttle
+
+    /// Offline events are stored and replayed later, so a duplicate the live path drops
+    /// must not reach local storage either.
+    func testOffline_identicalAutoCaptureEvents_storeOnce() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    func testOffline_distinctAutoCaptureEvents_areBothStored() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+        analyticsPublisher.testPublish(makeButtonTap(text: "Cancel"))
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 2)
+    }
+
+    func testOffline_customEventsWithSameTitle_storeOnce() {
+        userpilot.storage.userId = "user-1"
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+
+        analyticsPublisher.testPublish(Event(type: .event("button_clicked")))
+        analyticsPublisher.testPublish(Event(type: .event("button_clicked")))
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    /// Online and offline share one window: the network dropping between two copies of a tap
+    /// must not let the second one through.
+    func testOffline_tapAlreadySentLive_isNotStoredAgainWithinTheWindow() {
+        userpilot.storage.userId = "user-1"
+        XCTAssertEqual(publishAndCountSocketPublishes([makeButtonTap(text: "Save")], expectedCount: 1), 1)
+
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+
+        XCTAssertTrue(userpilot.offlineEventsHandler.savedEvents.isEmpty)
+    }
+
+    /// An event published before the network state is known is routed again on replay; the throttle
+    /// must run once, after that hold, or the replay drops the event as its own duplicate.
+    func testTapHeldUntilNetworkStateIsKnown_isStoredOnReplay() {
+        userpilot.storage.userId = "user-1"
+        userpilot.networkMonitor.isReady = false
+        analyticsPublisher.testPublish(makeButtonTap(text: "Save"))
+
+        userpilot.networkMonitor.isReady = true
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        analyticsPublisher.networkMonitorDidUpdate(isReady: true, isNetworkAvailable: false)
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(userpilot.offlineEventsHandler.savedEvents.count, 1)
+    }
+
+    private func makeButtonTap(text: String) -> Event {
+        makeAutoCaptureEvent(properties: [
+            Constants.AutoCapture.hierarchy: "UIButton:attr__index=\"0\";HomeViewController",
+            Constants.AutoCapture.rawInteractionType: "tap",
+            Constants.AutoCapture.targetText: text
+        ])
+    }
+
     // MARK: - User Switch With A Screen Tracked Right After Identify
 
-    /// A user switch blanks the user id via `clean()` while the new user's identify waits in the
-    /// queue to be replayed by `onSocketClosed`. Any event queued behind that identify — a screen
-    /// tracked right after `identify` — must survive the replay, otherwise the queue empties and
-    /// the post-identify screen event goes out carrying the *previous* screen.
-    func testUserSwitch_withQueuedScreen_shouldPublishQueuedScreenTitleAndSkipPostIdentifyScreen() {
+    /// A user switch selects the new id immediately and retains its identify before closing the old
+    /// socket. Any event queued behind that identify — a screen tracked right after `identify` —
+    /// must survive teardown, otherwise the post-identify screen uses the previous title.
+    func testUserSwitch_withQueuedScreen_shouldPreserveSessionStartUntilNavigation() {
         // Arrange: user N is identified and sitting on the "online queue" screen
         userpilot.storage.userId = "userN"
-        userpilot.storage.user = User(userId: "userN").toJson() ?? ""
         userpilot.socketManager.isSocketOpened = true
         userpilot.experiencesPublisher.onCanRequestScreenEvent = { true }
 
@@ -1279,25 +1673,23 @@ class AnalyticsPublisherTests: XCTestCase {
             if eventName == Constants.Event.screenEvent { screenPayloads.append(payload) }
         }
 
-        analyticsPublisher.publish(Event(type: .screen("online queue")))
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("online queue")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         // Arrange: the new user's identify and a screen right behind it are both queued while the
         // socket is joining (mirrors the asynchronous processing on device)
         userpilot.socketManager.isJoiningSocket = true
-        analyticsPublisher.publish(Event(type: .identify("userA")))
-        analyticsPublisher.publish(Event(type: .screen("queue s1 home")))
+        analyticsPublisher.testPublish(Event(type: .identify("userA")))
+        analyticsPublisher.testPublish(Event(type: .screen("queue s1 home")))
         userpilot.socketManager.isJoiningSocket = false
 
-        // Act: the identify is processed, which switches user and tears the old socket down
-        analyticsPublisher.onSocketOpened()
-
-        // Act: the socket close replays the pending identify, then the connection comes back
+        // Act: admission already selected user A and retained the identify before teardown.
+        // The close callback reconnects without dequeuing or republishing it.
         userpilot.socketManager.isSocketOpened = false
-        analyticsPublisher.onSocketClosed()
+        analyticsPublisher.testOnSocketClosed()
         userpilot.socketManager.isSocketOpened = true
-        analyticsPublisher.onSocketOpened()
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
 
         // Assert: only the queued screen event follows the switch — no post-identify screen event —
         // and it carries its own title, starting a new session for the new user
@@ -1308,32 +1700,216 @@ class AnalyticsPublisherTests: XCTestCase {
         let metadata = payload[Constants.Analytics.metaDataProperty] as? [String: Any] ?? [:]
         XCTAssertEqual(metadata[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
         XCTAssertEqual(metadata[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        // Screen ACKs and same-user identifies preserve session-start until navigation.
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+        var refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        analyticsPublisher.testPublish(Event(type: .identify("userA")))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        let navigationMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(navigationMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(navigationMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
+    }
+
+    func testRepeatedSameUserIdentify_duringUserSwitch_shouldPreservePendingSessionStart() {
+        assertRepeatedIdentifyPreservesPendingSessionStart(afterLogout: false)
+    }
+
+    func testRepeatedSameUserIdentify_afterLogout_shouldPreservePendingSessionStart() {
+        assertRepeatedIdentifyPreservesPendingSessionStart(afterLogout: true)
+    }
+
+    private func assertRepeatedIdentifyPreservesPendingSessionStart(afterLogout: Bool) {
+        userpilot.storage.userId = "previous-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        if afterLogout {
+            analyticsPublisher.logout()
+            userpilot.storage.userId = ""
+        }
+        let userId = afterLogout ? "previous-user" : "next-user"
+        analyticsPublisher.testPublish(Event(type: .identify(userId)))
+        analyticsPublisher.testPublish(Event(type: .identify(userId)))
+        analyticsPublisher.testPublish(Event(type: .screen("Login home")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+
+        // The ACK settles the identity boundary; later identifies preserve session-start on this screen.
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .identify(userId)))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let refresh = userpilot.socketManager.requests.last
+        XCTAssertEqual(refresh?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(refresh?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
+        let refreshMetadata = refresh?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
+    }
+
+    func testSameUserIdentify_afterLogoutAndScreenACK_shouldContinueSession() {
+        assertSameUserIdentifyAfterScreenACK(afterLogout: true)
+    }
+
+    func testSameUserIdentify_afterUserSwitchAndScreenACK_shouldContinueSession() {
+        assertSameUserIdentifyAfterScreenACK(afterLogout: false)
+    }
+
+    func testFailedScreenReply_shouldNotConsumeSessionStart() {
+        userpilot.storage.userId = "same-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), false)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
+
+        analyticsPublisher.testPublish(Event(type: .identify("same-user")))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
+    }
+
+    private func assertSameUserIdentifyAfterScreenACK(afterLogout: Bool) {
+        userpilot.storage.userId = "previous-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("online queue"), properties: ["screen_source": "manual"]))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        if afterLogout {
+            analyticsPublisher.logout()
+            userpilot.storage.userId = ""
+        }
+        let userId = afterLogout ? "previous-user" : "next-user"
+        analyticsPublisher.testPublish(Event(type: .identify(userId), properties: ["source": "online_queue_setup"]))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        let initialScreen = userpilot.socketManager.requests.last
+        XCTAssertEqual(initialScreen?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(initialScreen?.payload?[Constants.Analytics.screenTitleProperty] as? String, "online queue")
+        let initialMetadata = initialScreen?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(initialMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(initialMetadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        // QA's second identify comes after the first screen's successful ACK, on the same screen.
+        analyticsPublisher.testPublish(Event(type: .identify(userId), properties: ["source": "online_queue_setup"]))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        let refresh = userpilot.socketManager.requests.last
+        XCTAssertEqual(refresh?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(refresh?.payload?[Constants.Analytics.screenTitleProperty] as? String, "online queue")
+        let refreshMetadata = refresh?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?["screen_source"] as? String, "manual")
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.fakeReload] as? Bool, true)
+    }
+
+    func testLogout_shouldResetSessionStartForNextIdentityOnRetainedScreen() {
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.storage.userId = "first-user"
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
+
+        analyticsPublisher.logout()
+        userpilot.storage.userId = "" // Userpilot clears storage after the synchronous publisher logout.
+        analyticsPublisher.testSettle()
+        analyticsPublisher.testPublish(Event(type: .identify("next-user")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        let screenRequest = userpilot.socketManager.requests.last
+        XCTAssertEqual(screenRequest?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(screenRequest?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Checkout")
+        let metadata = screenRequest?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+    }
+
+    func testLogout_withSameUserAndQueuedScreen_shouldStartNewSession() {
+        assertLogoutStartsSession(nextUserId: "first-user")
+    }
+
+    func testLogout_withDifferentUserAndQueuedScreen_shouldStartNewSession() {
+        assertLogoutStartsSession(nextUserId: "next-user")
+    }
+
+    private func assertLogoutStartsSession(nextUserId: String) {
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.storage.userId = "first-user"
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
+
+        analyticsPublisher.logout()
+        userpilot.storage.userId = "" // The facade clears identity after synchronous logout.
+        analyticsPublisher.testPublish(Event(type: .identify(nextUserId)))
+        analyticsPublisher.testPublish(Event(type: .screen("Login home")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Login home")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+        let refreshMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(refreshMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        analyticsPublisher.testPublish(Event(type: .screen("Next screen")))
+        let navigationMetadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(navigationMetadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
     }
 
     // MARK: - Screen reloads and host identify
 
-    /// Establishes a cached user and a live screen session, then waits out the screen throttle so
-    /// the reload under test is not swallowed by it.
-    ///
-    /// `screenSessionStateMachine` is `private(set)`, so the session has to be built through a real
-    /// screen event — hence the throttle wait.
+    /// Establishes an acknowledged screen session through the real FIFO before requesting a reload.
     private func arrangeReloadableScreen(
         title: String = "Reload Screen",
         userId: String = "reload-user"
     ) {
         userpilot.socketManager.isSocketOpened = true
         userpilot.storage.userId = userId
-        userpilot.storage.user = User(
-            userId: userId,
-            properties: ["plan": "pro"]
-        ).toJson() ?? ""
 
-        analyticsPublisher.publish(Event(type: .screen(title)))
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
-
-        let throttleWindow = XCTestExpectation(description: "screen throttle window elapsed")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { throttleWindow.fulfill() }
-        wait(for: [throttleWindow], timeout: 2.0)
+        analyticsPublisher.testPublish(Event(type: .screen(title)))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        // Reset is the public lifecycle entry that clears throttle state; avoid real-time sleeps.
+        analyticsPublisher.testReset()
     }
 
     /// Records the event names published to the socket from this point on.
@@ -1352,11 +1928,92 @@ class AnalyticsPublisherTests: XCTestCase {
         }
     }
 
+    func testExperienceReload_preservesSessionStartAfterFailedScreen() {
+        assertExperienceReloadPreservesSessionStart(screenAcknowledged: false)
+    }
+
+    func testExperienceReload_preservesSessionStartAfterAcknowledgedScreen() {
+        assertExperienceReloadPreservesSessionStart(screenAcknowledged: true)
+    }
+
+    private func assertExperienceReloadPreservesSessionStart(screenAcknowledged: Bool) {
+        userpilot.storage.userId = "reload-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), screenAcknowledged)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
+
+        // Consecutive content dismissals on the first screen retain true, including after each ACK.
+        for _ in 0..<2 {
+            XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+            analyticsPublisher.testSettle()
+
+            let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+            XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, true)
+            XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, true)
+            XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
+            acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+            XCTAssertTrue(analyticsPublisher.isStartSession)
+        }
+    }
+
+    func testExperienceReload_preservesFalseAfterNavigation() {
+        userpilot.storage.userId = "reload-user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.isStartSession)
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        let request = userpilot.socketManager.requests.last
+        XCTAssertEqual(request?.payload?[Constants.Analytics.screenTitleProperty] as? String, "Checkout")
+        let metadata = request?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.isSessionStartedProperty] as? Bool, false)
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        XCTAssertFalse(analyticsPublisher.isStartSession)
+    }
+
+    func testExperienceReload_isDroppedWhenScreenIsInFlight() {
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let published = recordPublishedEvents()
+
+        XCTAssertFalse(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        XCTAssertTrue(published().isEmpty)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
+    func testExperienceReload_isDroppedWhenScreenWaitsBehindTrack() {
+        arrangeReloadableScreen(title: "Home")
+        let published = recordPublishedEvents()
+        analyticsPublisher.testPublish(Event(type: .event("First")))
+        analyticsPublisher.testPublish(Event(type: .screen("Next")))
+
+        XCTAssertFalse(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 2)
+        acknowledge(Constants.Event.trackEvent, nil, Message(), true)
+        let metadata = userpilot.socketManager.requests.last?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+        XCTAssertEqual(metadata?[Constants.Analytics.fakeReload] as? Bool, false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+
+        XCTAssertEqual(published(), [Constants.Event.trackEvent, Constants.Event.screenEvent])
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
     func testReloadSendsTheScreenEventAlone() {
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
@@ -1369,15 +2026,15 @@ class AnalyticsPublisherTests: XCTestCase {
             titles.append(payload?[Constants.Analytics.screenTitleProperty] as? String ?? "")
         }
 
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true))
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
 
         XCTAssertEqual(titles, ["Home"], "Navigation must wait for the reload ACK")
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home", "Checkout"])
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertEqual(titles, ["Home", "Checkout"])
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Checkout"])
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
@@ -1387,33 +2044,54 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.experiencesPublisher.updateScreen("Home")
         var sent: [(String, Payload)] = []
         userpilot.socketManager.onPublish = { sent.append(($0, $1)) }
-        analyticsPublisher.publish(Event(type: .identify("user-1"), properties: ["plan": "pro"]))
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .identify("user-1"), properties: ["plan": "pro"]))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
         XCTAssertEqual(sent.map { $0.0 }, [Constants.Event.identifyEvent, Constants.Event.screenEvent])
 
-        analyticsPublisher.publish(Event(type: .event("Purchase"), properties: ["amount": 42]))
+        analyticsPublisher.testPublish(Event(type: .event("Purchase"), properties: ["amount": 42]))
         XCTAssertEqual(sent.count, 2)
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
 
         XCTAssertEqual(sent.map { $0.0 }, [
             Constants.Event.identifyEvent, Constants.Event.screenEvent, Constants.Event.trackEvent
         ])
         XCTAssertEqual(sent.last?.1?[Constants.Analytics.eventNameProperty] as? String, "Purchase")
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.eventTitle, "Purchase")
-        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
+        acknowledge(Constants.Event.trackEvent, nil, Message(), true)
+        XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
+    }
+
+    func testFailedPush_dropsOnlyTheCurrentEventAndPublishesTheNext() {
+        userpilot.storage.userId = "user-1"
+        userpilot.socketManager.isSocketOpened = true
+        var titles: [String] = []
+        userpilot.socketManager.onPublish = { _, payload in
+            titles.append(payload?[Constants.Analytics.eventNameProperty] as? String ?? "")
+        }
+
+        analyticsPublisher.testPublish(Event(type: .event("First")))
+        analyticsPublisher.testPublish(Event(type: .event("Second")))
+        XCTAssertEqual(titles, ["First"])
+
+        acknowledge(Constants.Event.trackEvent, nil, Message(), false)
+
+        XCTAssertEqual(titles, ["First", "Second"])
+        XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.eventTitle), ["Second"])
+        acknowledge(Constants.Event.trackEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
     func testBackgroundScreenRefresh_holdsTheQueueUntilItResolves() {
         arrangeReloadableScreen(title: "Home")
         userpilot.sessionMonitor.isAppActive = false
-        analyticsPublisher.flush()
+        analyticsPublisher.testFlush()
         userpilot.sessionMonitor.isAppActive = true
         var sent: [(String, Payload)] = []
         userpilot.socketManager.onPublish = { sent.append(($0, $1)) }
 
-        analyticsPublisher.onSocketOpened()
-        analyticsPublisher.publish(Event(type: .screen("Checkout")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        analyticsPublisher.testPublish(Event(type: .screen("Checkout")))
 
         XCTAssertEqual(sent.count, 1)
         XCTAssertEqual(sent.first?.1?[Constants.Analytics.screenTitleProperty] as? String, "Home")
@@ -1422,11 +2100,11 @@ class AnalyticsPublisherTests: XCTestCase {
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home", "Checkout"])
 
         // A failed/timeout resolution must also release only the refresh's queue entry.
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), false)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), false)
         XCTAssertEqual(sent.count, 2)
         XCTAssertEqual(sent.last?.1?[Constants.Analytics.screenTitleProperty] as? String, "Checkout")
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Checkout"])
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
@@ -1436,19 +2114,20 @@ class AnalyticsPublisherTests: XCTestCase {
         userpilot.offlineEventsHandler.holdRestoreCompletion = true
         let sent = recordPublishedEvents()
 
-        let accepted = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        let accepted = analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertTrue(accepted, "The refresh waits in the same queue during offline replay")
         XCTAssertEqual(sent(), [])
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().map(\.screenTitle), ["Home"])
-        analyticsPublisher.publish(Event(type: .event("Purchase")))
+        analyticsPublisher.testPublish(Event(type: .event("Purchase")))
         userpilot.offlineEventsHandler.finishRestore()
+        analyticsPublisher.testSettle()
         XCTAssertEqual(sent(), [Constants.Event.screenEvent])
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().count, 2)
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertEqual(sent(), [Constants.Event.screenEvent, Constants.Event.trackEvent])
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.eventTitle, "Purchase")
-        analyticsPublisher.onSocketEventSent(Constants.Event.trackEvent, nil, Message(), true)
+        acknowledge(Constants.Event.trackEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
@@ -1461,62 +2140,53 @@ class AnalyticsPublisherTests: XCTestCase {
             screenTitle = payload?[Constants.Analytics.screenTitleProperty] as? String
         }
 
-        analyticsPublisher.publish(Event(type: .screen("Another Screen")))
+        analyticsPublisher.testPublish(Event(type: .screen("Another Screen")))
 
         XCTAssertEqual(published, [Constants.Event.screenEvent])
         XCTAssertEqual(screenTitle, "Another Screen")
         XCTAssertEqual(analyticsPublisher.mockGetEventsToFlush().first?.screenTitle, "Another Screen")
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
     }
 
     func testReloadSendsOnlyScreen_whenCachedUserIsEmpty() {
         arrangeReloadableScreen()
-        userpilot.storage.user = ""
         let published = recordPublishedEvents()
 
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
+        analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
         XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
 
-    func testReloadSendsNothing_forAThrottledScreen() {
+    func testReloadAfterPreviousReloadACK_isAdmittedWithoutWaitingForHostThrottle() {
         arrangeReloadableScreen()
-        analyticsPublisher.publishFakeReloadScreenEvent(.flow, 10, isFakeReload: true)
-        analyticsPublisher.onSocketEventSent(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
         XCTAssertTrue(analyticsPublisher.mockGetEventsToFlush().isEmpty)
         let published = recordPublishedEvents()
 
-        let sent = analyticsPublisher.publishFakeReloadScreenEvent(.flow, 11, isFakeReload: true)
+        let sent = analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true)
 
-        XCTAssertFalse(sent)
-        XCTAssertEqual(published(), [])
+        XCTAssertTrue(sent)
+        XCTAssertEqual(published(), [Constants.Event.screenEvent])
     }
 
-    /// Identify de-duplication is the backend's job, so an identify matching the cached user is
-    /// still sent.
-    func testIdentifyCarryingNothingNewIsForwarded() {
+    func testIdentifyCarryingNewDataIsForwarded() {
         arrangeReloadableScreen()
         let published = recordPublishedEvents()
 
-        analyticsPublisher.publish(
-            Event(type: .identify("reload-user"), properties: ["plan": "pro"]))
+        analyticsPublisher.testPublish(
+            Event(type: .identify("reload-user"), properties: ["plan": "enterprise"]))
 
         XCTAssertEqual(published(), [Constants.Event.identifyEvent])
     }
 
-    func testPushTokenIsReassertedWhenAnIdentifyIsAcknowledged() {
-        // The token senders are value-guarded, so an unchanged token would never re-pair
-        // token <-> user without this.
+    func testIdentifyACKDoesNotResendPushToken() {
         arrangeReloadableScreen()
-        var resynced = false
-        userpilot.pushNotificationMonitor.onResyncPushToken = { resynced = true }
-
-        analyticsPublisher.publish(
-            Event(type: .identify("reload-user"), properties: ["plan": "enterprise"]))
-        analyticsPublisher.onSocketEventSent(Constants.Event.identifyEvent, nil, Message(), true)
-
-        XCTAssertTrue(resynced)
+        let published = recordPublishedEvents()
+        analyticsPublisher.testPublish(Event(type: .identify("reload-user"), properties: ["plan": "enterprise"]))
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+        XCTAssertEqual(published(), [Constants.Event.identifyEvent, Constants.Event.screenEvent])
     }
 
     // MARK: - Internal SDK Events Ordering Around A Screen Message
@@ -1534,13 +2204,13 @@ class AnalyticsPublisherTests: XCTestCase {
         // Arrange — a live screen session, and a content dismissal cached while the socket was down
         arrangeReloadableScreen()
         userpilot.socketManager.isSocketOpened = false
-        analyticsPublisher.publishInternalSDKEvent(
+        analyticsPublisher.testPublishInternalSDKEvent(
             MockSDKEvent(eventName: "dismissed_mobile_content"))
         userpilot.socketManager.isSocketOpened = true
         let published = recordPublishedEvents()
 
         // Act — the dismissal drives a fake reload for the current screen
-        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(.flow, 2, isFakeReload: true))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
 
         // Assert — the dismissal reaches the socket before the screen message
         XCTAssertEqual(published(), ["dismissed_mobile_content", Constants.Event.screenEvent])
@@ -1568,7 +2238,7 @@ class AnalyticsPublisherTests: XCTestCase {
             eventPayload: ["mobile_content_id": 42]
         )
 
-        analyticsPublisher.publishInternalSDKEvent(sdkEvent)
+        analyticsPublisher.testPublishInternalSDKEvent(sdkEvent)
 
         XCTAssertEqual(offlineHandler.savedSDKEvents.count, 1)
         XCTAssertEqual(offlineHandler.savedSDKEvents.first?.eventName, "seen_mobile_content_step")
@@ -1584,7 +2254,7 @@ class AnalyticsPublisherTests: XCTestCase {
         var didOpenSocket = false
         userpilot.socketManager.onConnect = { didOpenSocket = true }
 
-        analyticsPublisher.publishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
+        analyticsPublisher.testPublishInternalSDKEvent(MockSDKEvent(eventName: "get_mobile_content"))
 
         XCTAssertTrue(offlineHandler.savedSDKEvents.isEmpty)
         // Neither persisted nor dropped: a request/response event still takes the cached route
@@ -1599,11 +2269,260 @@ class AnalyticsPublisherTests: XCTestCase {
         var didOpenSocket = false
         userpilot.socketManager.onConnect = { didOpenSocket = true }
 
-        analyticsPublisher.publishInternalSDKEvent(
+        analyticsPublisher.testPublishInternalSDKEvent(
             MockSDKEvent(eventName: "seen_mobile_content_step", eventPayload: ["mobile_content_id": 42]))
 
         XCTAssertTrue(offlineHandler.savedSDKEvents.isEmpty)
         XCTAssertTrue(didOpenSocket)
+    }
+
+    func testPublishInternalSDKEvent_persistsAFlowContentErrorWhileOffline() throws {
+        let offlineHandler = try XCTUnwrap(
+            userpilot.container.resolve(OfflineEventsHandling.self) as? MockOfflineEventsHandler)
+        offlineHandler.shouldSaveOffline = true
+        var didOpenSocket = false
+        userpilot.socketManager.onConnect = { didOpenSocket = true }
+
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowContentErrorEvent(flowId: 42, stepId: 7, issue: "not_found", screen: "Checkout"))
+
+        XCTAssertEqual(offlineHandler.savedSDKEvents.map(\.eventName), ["mobile_content_error"])
+        XCTAssertFalse(didOpenSocket)
+    }
+
+    // MARK: - Queued screen query
+
+    func testHasQueuedScreenEvent_isFalse_whenNothingIsQueued() {
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent(nil))
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent([Constants.Analytics.screenTitleProperty: "Home"]))
+    }
+
+    func testHasQueuedScreenEvent_skipsTheScreenItAnswers() throws {
+        userpilot.storage.userId = "user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let answered = try XCTUnwrap(userpilot.socketManager.requests.last?.payload)
+
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent(answered))
+        XCTAssertTrue(analyticsPublisher.hasQueuedScreenEvent([Constants.Analytics.screenTitleProperty: "Other"]))
+    }
+
+    func testHasQueuedScreenEvent_countsANewerScreenBehindTheAnsweredOne() throws {
+        userpilot.storage.userId = "user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let answered = try XCTUnwrap(userpilot.socketManager.requests.last?.payload)
+
+        analyticsPublisher.testPublish(Event(type: .screen("Settings")))
+
+        XCTAssertTrue(analyticsPublisher.hasQueuedScreenEvent(answered))
+    }
+
+    func testHasQueuedScreenEvent_ignoresQueuedNonScreenEvents() throws {
+        userpilot.storage.userId = "user"
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        let answered = try XCTUnwrap(userpilot.socketManager.requests.last?.payload)
+
+        analyticsPublisher.testPublish(Event(type: .event("Purchase")))
+
+        XCTAssertFalse(analyticsPublisher.hasQueuedScreenEvent(answered))
+    }
+
+    // MARK: - Flow run screen metadata (error_steps, shown steps in seen_contents)
+
+    func testErrorSteps_isAlwaysSent_emptyOnNormalAndFakeReloadScreens() {
+        userpilot.socketManager.isSocketOpened = true
+        userpilot.storage.userId = "flow-user"
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testReset()
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenMetadata()?[Constants.Analytics.fakeReload] as? Bool, true)
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+    }
+
+    func testErrorSteps_carriesOpenRunsErroredSteps_onFakeReloadAndNormalScreens() {
+        arrangeReloadableScreen(title: "Home")
+        let sent = recordPublishedEvents()
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 50, stepId: 501))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(sent(), [
+            "mobile_content_error", "mobile_content_error", "mobile_content_error", Constants.Event.screenEvent
+        ])
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [401, 501])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Other")))
+        XCTAssertEqual(lastScreenMetadata()?[Constants.Analytics.fakeReload] as? Bool, false)
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [401, 501])
+    }
+
+    func testEveryRunEnd_dropsThatFlowsErrorSteps_andAContinuingRunKeepsThem() {
+        arrangeReloadableScreen(title: "Home")
+        for flowId in [40, 50, 60, 70] {
+            analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: flowId, stepId: flowId * 10 + 1))
+        }
+
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.completed(flowId: 40, stepId: 402, endsRun: true))
+        analyticsPublisher.testPublishInternalSDKEvent(FlowExperienceActionEvent.dismissed(flowId: 50, stepId: 502))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 60, stepId: 602, endsRun: true))
+        analyticsPublisher.testPublishInternalSDKEvent(FlowExperienceStepActionEvent.completed(flowId: 70, stepId: 702))
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [701])
+    }
+
+    func testAnErrorThatEndsItsRun_isNeverSentInErrorSteps() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 403, endsRun: true))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+    }
+
+    func testAnExpiredBackgroundReturn_clearsErrorSteps() {
+        XCTAssertEqual(errorStepsAfterBackground(elapsedMinutes: 35), [])
+    }
+
+    func testAShortBackgroundReturn_keepsErrorSteps() {
+        XCTAssertEqual(errorStepsAfterBackground(elapsedMinutes: 10), [401])
+    }
+
+    func testAShownFlowStep_joinsSeenContents_withNoNewKey_andLeavesOnNavigation() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.experiencePublished(.flow, 40)
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 401, fromFlowRun: true))
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 40, fromFlowRun: true))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        let metadata = lastScreenMetadata()
+        XCTAssertEqual((metadata?[Constants.Analytics.seenContents] as? [Int])?.count, 2, "De-duplicated on the wire")
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [40, 401])
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenSurveys), [])
+        XCTAssertEqual(metadata.map { Set($0.keys) }, [
+            Constants.Analytics.isSessionStartedProperty, Constants.Analytics.fakeReload,
+            Constants.Analytics.seenContents, Constants.Analytics.seenSurveys, Constants.Analytics.errorSteps
+        ])
+        acknowledge(Constants.Event.screenEvent, nil, Message(), true)
+        analyticsPublisher.testPublish(Event(type: .screen("Other")))
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [])
+    }
+
+    func testTheSameScreen_keepsShownFlowSteps() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 401, fromFlowRun: true))
+
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+
+        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.flowSeenContent, [401])
+    }
+
+    func testAStandaloneStepSeen_orAFlowStepError_neverJoinsSeenContents() {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(FlowExperienceStepActionEvent.seen(flowId: 10, stepId: 101))
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+
+        XCTAssertTrue(analyticsPublisher.publishFakeReloadScreenEvent(isFakeReload: true))
+        analyticsPublisher.testSettle()
+
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [])
+    }
+
+    func testAShownFlowStep_withNoScreenSession_isSkipped() {
+        userpilot.storage.userId = "flow-user"
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 401, fromFlowRun: true))
+
+        XCTAssertNil(analyticsPublisher.screenSessionStateMachine)
+    }
+
+    func testLogout_clearsErrorStepsAndShownFlowSteps_forTheNextIdentity() {
+        arrangeReloadableScreen(title: "Home", userId: "first-user")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 402, fromFlowRun: true))
+
+        analyticsPublisher.logout()
+        userpilot.storage.userId = "" // Userpilot clears storage after the synchronous publisher logout.
+        analyticsPublisher.testSettle()
+        analyticsPublisher.testPublish(Event(type: .identify("next-user")))
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+        acknowledge(Constants.Event.identifyEvent, nil, Message(), true)
+
+        XCTAssertEqual(userpilot.socketManager.requests.last?.event, Constants.Event.screenEvent)
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.errorSteps), [])
+        XCTAssertEqual(lastScreenIds(Constants.Analytics.seenContents), [])
+    }
+
+    func testOfflineScreenBatchEntries_carryNeitherSeenContentsNorErrorSteps_asBefore() throws {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        analyticsPublisher.testPublishInternalSDKEvent(
+            FlowExperienceStepActionEvent.seen(flowId: 40, stepId: 402, fromFlowRun: true))
+        userpilot.offlineEventsHandler.shouldSaveOffline = true
+        userpilot.experiencesPublisher.onCanRequestScreenEvent = { true }
+
+        analyticsPublisher.testPublish(Event(type: .screen("Home")))
+
+        let saved = try XCTUnwrap(userpilot.offlineEventsHandler.savedEvents.first?.event)
+        let entry = try XCTUnwrap(StoredOfflineEvent(event: saved).toBatchPayload(createdAt: 0))
+        XCTAssertEqual(
+            entry[Constants.Analytics.metaDataProperty] as? NSDictionary,
+            [Constants.Analytics.fakeReload: false] as NSDictionary
+        )
+        XCTAssertEqual(analyticsPublisher.screenSessionStateMachine?.flowSeenContent, [402])
+    }
+
+    private func contentError(flowId: Int, stepId: Int, endsRun: Bool = false) -> FlowContentErrorEvent {
+        FlowContentErrorEvent(flowId: flowId, stepId: stepId, issue: "not_found", screen: "Home", endsRun: endsRun)
+    }
+
+    /// Mirrors the background refresh path: the error is recorded live, then the app returns after `elapsedMinutes`.
+    private func errorStepsAfterBackground(elapsedMinutes: Double) -> Set<Int>? {
+        arrangeReloadableScreen(title: "Home")
+        analyticsPublisher.testPublishInternalSDKEvent(contentError(flowId: 40, stepId: 401))
+        userpilot.sessionMonitor.isAppActive = false
+        analyticsPublisher.testFlush()
+        userpilot.sessionMonitor.isAppActive = true
+        userpilot.storage.sessionDate = Date().addingTimeInterval(-elapsedMinutes * 60)
+        let sent = recordPublishedEvents()
+
+        analyticsPublisher.testResume()
+        userpilot.socketManager.isSocketOpened = true
+        analyticsPublisher.testOnSocketOpened()
+
+        XCTAssertEqual(sent(), [Constants.Event.screenEvent])
+        XCTAssertEqual(lastScreenMetadata()?[Constants.Analytics.fakeReload] as? Bool, false)
+        return lastScreenIds(Constants.Analytics.errorSteps)
+    }
+
+    private func lastScreenMetadata() -> [String: Any]? {
+        let screen = userpilot.socketManager.requests.last { $0.event == Constants.Event.screenEvent }
+        return screen?.payload?[Constants.Analytics.metaDataProperty] as? [String: Any]
+    }
+
+    /// The last sent screen's id list for `key` as a set; nil when the key is missing.
+    private func lastScreenIds(_ key: String) -> Set<Int>? {
+        (lastScreenMetadata()?[key] as? [Int]).map(Set.init)
     }
 }
 

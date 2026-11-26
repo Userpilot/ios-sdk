@@ -31,14 +31,9 @@ class UserpilotManager {
     // MARK: - Userpilot SDK APIs
 
     func initialize() {
-        userpilot = Userpilot(
-            config: Userpilot.Config(token: "<#APP_TOKEN#>")
-                .logging(enabled: true)
-                .enableUseInAppBrowser()
-                .enableScreenAutoCapture()
-                .enableInteractionAutoCapture()
-                .enableInteractionValueCapture()
-        )
+        let config = SampleConfig.load()
+        guard !config.token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        userpilot = Userpilot(config: config.sdkConfig())
         userpilot?.navigationDelegate = self
     }
 
@@ -61,6 +56,11 @@ class UserpilotManager {
     /// Logout user
     func logout() {
         userpilot?.logout()
+    }
+
+    /// Shows the in-app debugger overlay.
+    func debug() {
+        userpilot?.debug()
     }
 
     /// Track screens (manual). When `enableScreenAutoCapture` is on, the SDK ignores manual `screen` calls.

@@ -8,6 +8,20 @@ import XCTest
 
 final class DIContainerTests: XCTestCase {
 
+    func testResolveIfCreatedDoesNotStartUnusedFeature() {
+        let container = DIContainer()
+        var creations = 0
+        container.registerLazy(String.self) {
+            creations += 1
+            return "created"
+        }
+        XCTAssertNil(container.resolveIfCreated(String.self))
+        XCTAssertEqual(creations, 0)
+        XCTAssertEqual(container.resolve(String.self), "created")
+        XCTAssertEqual(container.resolveIfCreated(String.self), "created")
+        XCTAssertEqual(creations, 1)
+    }
+
     func testRegisterValueResolvesAndCanBeOverridden() {
         let container = DIContainer()
 
@@ -65,6 +79,31 @@ final class DIContainerTests: XCTestCase {
         XCTAssertTrue(first === second)
         XCTAssertEqual(first.id, 1)
         XCTAssertEqual(initializerCallCount, 1)
+    }
+
+    func testConcurrentFirstResolutionConstructsOneSharedInstance() {
+        let container = DIContainer()
+        let finished = expectation(description: "all callers receive the lazy singleton")
+        finished.expectedFulfillmentCount = 100
+        let created = AtomicReference(0)
+        let instances = AtomicReference<[CountingService]>([])
+        container.registerLazy(CountingService.self) {
+            created.update { $0 + 1 }
+            return CountingService(id: created.value)
+        }
+
+        for _ in 0..<100 {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let service = container.resolve(CountingService.self)
+                instances.update { $0 + [service] }
+                finished.fulfill()
+            }
+        }
+        wait(for: [finished], timeout: 2)
+
+        XCTAssertEqual(created.value, 1)
+        XCTAssertEqual(instances.value.count, 100)
+        XCTAssertTrue(instances.value.allSatisfy { $0 === instances.value.first })
     }
 
     func testConcurrentResolveOfRegisteredValueKeepsContainerConsistent() {

@@ -1,8 +1,11 @@
 //
 //  NPSBottomSheetViewController+Keyboard.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 12/02/2025.
+//  Created by Userpilot on 12/02/2025.
+//  Copyright © 2025 Userpilot. All rights reserved.
+//
+//  Adjusts the NPS bottom sheet layout as the keyboard appears, changes size or hides.
 //
 
 import UIKit

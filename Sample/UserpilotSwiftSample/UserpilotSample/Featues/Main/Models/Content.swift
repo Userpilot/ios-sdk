@@ -14,6 +14,8 @@ enum Content {
     case configurations
     case eventsLog
     case debug
+    case builder
+    case tooltips
     case autoCapture
 
     var title: String {
@@ -30,8 +32,35 @@ enum Content {
             return "logs".localized
         case .debug:
             return "Debug"
+        case .builder:
+            return "Builder"
+        case .tooltips:
+            return "Tooltips"
         case .autoCapture:
             return "Auto Capture"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .configurations:
+            return "gearshape"
+        case .identify:
+            return "person.crop.circle"
+        case .screens:
+            return "rectangle.on.rectangle"
+        case .events:
+            return "bolt"
+        case .eventsLog:
+            return "list.bullet.rectangle"
+        case .debug:
+            return "ant"
+        case .builder:
+            return "square.grid.2x2"
+        case .autoCapture:
+            return "hand.tap"
+        case .tooltips:
+            return "bubble.left.and.bubble.right"
         }
     }
 }

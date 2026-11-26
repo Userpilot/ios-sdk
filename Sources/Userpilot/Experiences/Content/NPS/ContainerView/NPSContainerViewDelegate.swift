@@ -2,7 +2,7 @@
 //  NPSContainerViewDelegate.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 10/02/2025.
+//  Created by Userpilot on 10/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
 //  This protocol defines the delegate methods for handling user interactions

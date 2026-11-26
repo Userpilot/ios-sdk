@@ -9,7 +9,7 @@ import XCTest
 final class ScreenNameTrackerTests: XCTestCase {
 
     func testUpdateGetBuildAndResetScreenPayload() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "SCREEN-TRACKER-\(UUID().uuidString)").defaultInstance(false)
         )
         let tracker = ScreenNameTracker(container: userpilot.container)
@@ -44,7 +44,7 @@ final class ScreenNameTrackerTests: XCTestCase {
     }
 
     func testBuildScreenDictionaryForEventOmitsEmptyNavigationTitle() {
-        let userpilot = MockUserpilot(
+        let userpilot = MockUserpilot.make(
             config: Userpilot.Config(token: "SCREEN-TRACKER-\(UUID().uuidString)").defaultInstance(false)
         )
         let tracker = ScreenNameTracker(container: userpilot.container)

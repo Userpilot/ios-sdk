@@ -1,11 +1,10 @@
 //
 //  View+UserpilotLabel.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed
+//  Created by Userpilot on 07/06/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  View+UserpilotLabel provides a SwiftUI modifier that attaches stable analytics metadata
 //  (custom text and a logical view type) to the underlying UIKit view tree for autocapture.
 //
@@ -22,8 +21,8 @@ public extension View {
 
     /// Attaches a stable label and semantic view type to this view for mobile autocapture.
     ///
-    /// Use this when you want autocapture events to report a specific `element_text` and a
-    /// readable `element_type` (for example `"Button"` or `"Text"`) instead of relying only
+    /// Use this when you want autocapture events to report a specific `target_text` and a
+    /// readable `target_class` (for example `"Button"` or `"Text"`) instead of relying only
     /// on private SwiftUI/UIKit class names from hit-testing.
     ///
     /// ## How it works
@@ -58,6 +57,9 @@ public extension View {
     ///
     /// ## Important notes
     ///
+    /// - Analytics only: the label never sets `userpilot_id` and is not used for tooltip targeting
+    ///   or Builder identity. Tooltip targeting uses ``SwiftUI/View/userpilotTarget(_:)``.
+    /// - It does not enable autocapture; normal text privacy settings still apply.
     /// - Pass `nil` if you need to clear a previously applied label when content is conditional.
     /// - Target resolution prefers a **taggable** sibling under the same UIKit parent (typical
     ///   for `.background` placement), then walks up for the nearest taggable ancestor.
@@ -98,9 +100,11 @@ private struct UserpilotLabelInjector: UIViewRepresentable {
 }
 
 /// Hidden view that assigns `userpilotLabel` / `userpilotLabelViewType` to a resolved UIKit target.
-private final class LabelCarrierView: UIView {
+/// Keep its class and placement stable for analytics hierarchy compatibility.
+final class LabelCarrierView: UIView {
 
-    private var appliedToView: UIView?
+    private weak var appliedToView: UIView?
+    private let attachmentID = UUID()
     private var label: String?
     private var viewType: String?
 
@@ -127,26 +131,39 @@ private final class LabelCarrierView: UIView {
 
     override func removeFromSuperview() {
         super.removeFromSuperview()
-        appliedToView?.userpilotLabel = nil
-        appliedToView?.userpilotLabelViewType = nil
-        appliedToView = nil
+        clearAppliedLabel()
     }
 
     // MARK: - Apply label
 
     private func applyLabelIfPossible() {
-        guard let label, let viewType else { return }
-
-        if appliedToView?.userpilotLabel == label,
-           appliedToView?.userpilotLabelViewType == viewType {
+        guard let label, let viewType, let target = findBestTargetView() else {
+            clearAppliedLabel()
             return
         }
 
-        guard let target = findBestTargetView() else { return }
+        // Resolve first: a carrier can move to another host without its label changing.
+        if appliedToView !== target { clearAppliedLabel() }
+        if target.userpilotLabelAttachmentID == attachmentID,
+           target.userpilotLabel == label,
+           target.userpilotLabelViewType == viewType {
+            return
+        }
 
         target.userpilotLabel = label
         target.userpilotLabelViewType = viewType
+        target.userpilotLabelAttachmentID = attachmentID
         appliedToView = target
+    }
+
+    /// A replaced carrier must not clear metadata now owned by its replacement.
+    private func clearAppliedLabel() {
+        if let target = appliedToView, target.userpilotLabelAttachmentID == attachmentID {
+            target.userpilotLabel = nil
+            target.userpilotLabelViewType = nil
+            target.userpilotLabelAttachmentID = nil
+        }
+        appliedToView = nil
     }
 
     // MARK: - Target resolution
@@ -181,31 +198,5 @@ private enum UserpilotSwiftUIViewTypeResolver {
         if reflected.contains("toggle") { return "Toggle" }
         if reflected.contains("navigationlink") { return "NavigationLink" }
         return String(describing: viewType)
-    }
-}
-
-// MARK: - Taggable detection (SwiftUI file–local)
-
-private extension UIView {
-
-    /// Deepest descendant (including self) considered a good host for SwiftUI-driven tagging.
-    var deepestTaggableView: UIView? {
-        if isTaggable { return self }
-
-        for subview in subviews {
-            if let match = subview.deepestTaggableView {
-                return match
-            }
-        }
-
-        return nil
-    }
-
-    /// UIKit view kinds that meaningfully represent interactive or readable SwiftUI content.
-    var isTaggable: Bool {
-        self is UIControl ||
-        self is UILabel ||
-        self is UIImageView ||
-        self is UITextView
     }
 }

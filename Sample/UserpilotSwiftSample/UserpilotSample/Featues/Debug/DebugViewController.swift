@@ -12,7 +12,8 @@ final class DebugViewController: BaseViewController {
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private let items: [DebugContent] = [
         .onlineQueue,
-        .offlineEvents
+        .offlineEvents,
+        .theme
     ]
 
     override func viewDidLoad() {
@@ -54,7 +55,12 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row].title
+        let item = items[indexPath.row]
+        var config = cell.defaultContentConfiguration()
+        config.text = item.title
+        config.image = UIImage(systemName: item.symbolName)
+        config.imageProperties.tintColor = SampleAppearance.accentColor
+        cell.contentConfiguration = config
         cell.accessoryType = .disclosureIndicator
         return cell
     }
@@ -66,6 +72,8 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
             FlowRoutingManager.shared.openViewController(OnlineQueueViewController())
         case .offlineEvents:
             FlowRoutingManager.shared.openViewController(OfflineEventsViewController())
+        case .theme:
+            FlowRoutingManager.shared.openViewController(ThemeViewController())
         }
     }
 }
@@ -73,6 +81,7 @@ extension DebugViewController: UITableViewDataSource, UITableViewDelegate {
 enum DebugContent {
     case onlineQueue
     case offlineEvents
+    case theme
 
     var title: String {
         switch self {
@@ -80,6 +89,19 @@ enum DebugContent {
             return "Online queue"
         case .offlineEvents:
             return "Offline events"
+        case .theme:
+            return "Theme"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .onlineQueue:
+            return "arrow.up.circle"
+        case .theme:
+            return "paintpalette"
+        case .offlineEvents:
+            return "icloud.slash"
         }
     }
 }

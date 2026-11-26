@@ -182,7 +182,7 @@
 			);
 			mainGroup = 00F5ED1B79E6FEC6E185825F;
 			packageReferences = (
-				AB4F5EDD2E2787F600A20D92 /* XCRemoteSwiftPackageReference "ios-sdk" */,
+				AB4F5EDD2E2787F600A20D92 /* XCLocalSwiftPackageReference "../.." */,
 			);
 			projectDirPath = "";
 			projectRoot = "";
@@ -424,16 +424,12 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		AB4F5EDD2E2787F600A20D92 /* XCRemoteSwiftPackageReference "ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Userpilot/ios-sdk.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.5;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		AB4F5EDD2E2787F600A20D92 /* XCLocalSwiftPackageReference "../.." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../..";
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		AB4F5ED82E27869300A20D92 /* Userpilot */ = {
@@ -446,7 +442,7 @@
 		};
 		AB4F5EDE2E2787F600A20D92 /* Userpilot */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AB4F5EDD2E2787F600A20D92 /* XCRemoteSwiftPackageReference "ios-sdk" */;
+			package = AB4F5EDD2E2787F600A20D92 /* XCLocalSwiftPackageReference "../.." */;
 			productName = Userpilot;
 		};
 /* End XCSwiftPackageProductDependency section */

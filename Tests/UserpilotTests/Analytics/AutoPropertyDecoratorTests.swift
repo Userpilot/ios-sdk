@@ -16,8 +16,15 @@ final class AutoPropertyDecoratorTests: XCTestCase {
 
     override func setUpWithError() throws {
         let config = Userpilot.Config(token: "NX-00000")
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         decorator = AutoPropertyDecorator(container: userpilot.container)
+    }
+
+    override func tearDownWithError() throws {
+        // The runtime registry has no reset: a retained instance would keep the default claim and token.
+        decorator = nil
+        userpilot = nil
+        try super.tearDownWithError()
     }
 
     /// Verifies that auto properties contain all expected keys

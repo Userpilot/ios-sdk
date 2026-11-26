@@ -1,11 +1,10 @@
 //
 //  UIView+ClickAnalytics.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 22/01/2026.
+//  Created by Userpilot on 22/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  UIView+ClickAnalytics provides extensions for enabling click analytics recognition
 //  on UIKit views that may not be automatically detected as clickable.
 //
@@ -96,25 +95,5 @@ extension UIView {
         // The actual click tracking is handled by the UIWindow.swizzleSendEvent()
         // This gesture simply ensures the view is responsive to taps
         // The SDK's automatic tracking will capture the event
-    }
-}
-
-// MARK: - Private
-
-private var explicitlyRecognizedKey: UInt8 = 0
-
-// MARK: - Internal
-
-/// Extension providing explicit recognition flag for UIView
-internal extension UIView {
-    // Internal flag to mark views that were explicitly recognized via the API
-    // swiftlint:disable:next identifier_name
-    var userpilot_isExplicitlyRecognized: Bool {
-        get {
-            return objc_getAssociatedObject(self, &explicitlyRecognizedKey) as? Bool ?? false
-        }
-        set {
-            objc_setAssociatedObject(self, &explicitlyRecognizedKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
     }
 }

@@ -22,7 +22,7 @@ class OfflineEventsHandlerTests: XCTestCase {
         let config = Userpilot.Config(token: "NX-00000")
         logger = MockLogger()
         config.logger = logger
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
         eventStore = try XCTUnwrap(userpilot.container.resolve(EventStoring.self) as? MockEventStorage)
         storage = try XCTUnwrap(userpilot.container.resolve(DataStoring.self) as? MockStorage)
         socketManager = try XCTUnwrap(
@@ -138,7 +138,7 @@ class OfflineEventsHandlerTests: XCTestCase {
     /// failure bound. The handler's own completion is unusable here: once a batch is published
     /// the completion is parked in `offlineRestoreCompletion` until the socket ACKs, and the
     /// mock never ACKs.
-    /// Mirrors Android: the batch goes out on the CURRENT user's channel and its items carry no
+    /// The batch goes out on the CURRENT user's channel and its items carry no
     /// user id, so a row that outlived an offline user switch would be reported as this user's
     /// activity.
     func testRestore_dropsRowsStoredForAnotherUser() throws {
@@ -154,16 +154,16 @@ class OfflineEventsHandlerTests: XCTestCase {
         XCTAssertEqual(names, ["mine"], "a row stored for another user must not be replayed")
     }
 
-    /// With no current user there is nobody to compare against, so replay rather than drop.
-    func testRestore_keepsEveryRow_whenNoUserIsStored() throws {
+    /// With no current user there is no safe socket owner for the batch, so every row is dropped.
+    func testRestore_dropsEveryRow_whenNoUserIsStored() throws {
         storage.userId = ""
         let older = try XCTUnwrap(
             EventStorage(Event(type: .event("older")), userpilot.config.token, "user-2"))
         eventStore.events = [older]
 
-        let batch = try captureRestoredBatch()
+        let published = publishedEventNamesDuringRestore()
 
-        XCTAssertEqual(batch.count, 1)
+        XCTAssertTrue(published.isEmpty)
     }
 
     private func captureRestoredBatch(
@@ -289,7 +289,7 @@ class OfflineEventsHandlerTests: XCTestCase {
         XCTAssertNotNil(formatter.date(from: createdAt))
 
         // Spread flat, NOT nested under `metadata` the way an analytics item is. This is the
-        // cross-platform wire contract — Android's `buildInternalEventData` emits the same keys.
+        // backend wire contract — internal batch items retain their original event keys.
         XCTAssertEqual(item["mobile_content_id"] as? Int, 42)
         XCTAssertEqual(item["step_id"] as? Int, 7)
         XCTAssertNil(item[Constants.Analytics.metaDataProperty])
@@ -298,14 +298,30 @@ class OfflineEventsHandlerTests: XCTestCase {
             Set(["event_type", "created_at", "mobile_content_id", "step_id"]))
     }
 
+    func testRestore_sendsAFlowContentErrorFlatInTheBatch() throws {
+        handler.saveSDKEventToLocalStorage(
+            FlowContentErrorEvent(flowId: 42, stepId: 7, issue: "not_found", screen: "Checkout"))
+
+        let events = try captureRestoredBatch()
+
+        XCTAssertEqual(events.count, 1)
+        let item = try XCTUnwrap(events.first)
+        XCTAssertEqual(item[Constants.OfflineEvents.eventTypeProperty] as? String, "mobile_content_error")
+        XCTAssertEqual(item["mobile_content_id"] as? Int, 42)
+        XCTAssertEqual(item["step_id"] as? Int, 7)
+        XCTAssertEqual(item["issue"] as? String, "not_found")
+        XCTAssertEqual(item["screen"] as? String, "Checkout")
+        XCTAssertEqual(
+            Set(item.keys),
+            Set(["event_type", "created_at", "mobile_content_id", "step_id", "issue", "screen"]))
+    }
+
     func testRestore_preservesTheOrderTheStoreReturnsForMixedRows() throws {
-        handler.saveEventToLocalStorage(
-            event: Event(type: .screen("Home")), clearStoredEventsFirst: false)
+        handler.saveEventToLocalStorage(event: Event(type: .screen("Home")))
         handler.saveSDKEventToLocalStorage(
             MockSDKEvent(
                 eventName: "dismissed_mobile_content", eventPayload: ["mobile_content_id": 42]))
-        handler.saveEventToLocalStorage(
-            event: Event(type: .event("purchase")), clearStoredEventsFirst: false)
+        handler.saveEventToLocalStorage(event: Event(type: .event("purchase")))
 
         let events = try captureRestoredBatch()
 
@@ -323,6 +339,35 @@ class OfflineEventsHandlerTests: XCTestCase {
         let analyticsItems = events.filter { $0[eventType] as? String != "dismissed_mobile_content" }
         XCTAssertEqual(analyticsItems.count, 2)
         XCTAssertTrue(analyticsItems.allSatisfy { $0[Constants.Analytics.metaDataProperty] != nil })
+    }
+
+    // MARK: - Chunked Replay
+
+    func testRestore_sendsTheBacklogInOrderedChunksAndFinishesAfterTheLastChunkSettles() throws {
+        let names = (0..<450).map { "event-\($0)" }
+        names.forEach { handler.saveEventToLocalStorage(event: Event(type: .event($0))) }
+        let published = expectation(description: "every chunk published")
+        published.expectedFulfillmentCount = 3
+        socketManager.onPublishRequest = { _ in published.fulfill() }
+        var finished = false
+
+        handler.restoreEventsFromLocalStorage { finished = true }
+        wait(for: [published], timeout: 10.0)
+
+        let chunks = socketManager.requests.map {
+            $0.payload?[Constants.OfflineEvents.eventsProperty] as? [[String: Any]] ?? []
+        }
+        XCTAssertEqual(socketManager.requests.map(\.event), Array(repeating: Constants.Event.batchEventsEvent, count: 3))
+        XCTAssertEqual(chunks.map(\.count), [200, 200, 50])
+        XCTAssertEqual(chunks.flatMap { $0 }.compactMap { $0[Constants.Analytics.eventNameProperty] as? String }, names)
+        XCTAssertTrue(eventStore.events.isEmpty, "rows are still deleted when they are read, before any send")
+
+        socketManager.completeNext(Constants.Event.batchEventsEvent)
+        socketManager.completeNext(Constants.Event.batchEventsEvent, nil, Message(), false)
+        XCTAssertFalse(finished, "analytics stays paused until every chunk has an ACK, error or timeout")
+        socketManager.completeNext(Constants.Event.batchEventsEvent)
+        XCTAssertTrue(finished)
+        XCTAssertTrue(logger.loggedErrors.contains("⚠️ Offline batch events send failed or timed out"))
     }
 
     func testRestore_dropsAnUnsupportedRowAndStillPublishesTheRest() throws {
@@ -357,7 +402,7 @@ class OfflineEventsHandlerTests: XCTestCase {
     }
 
     func testRestore_logsADecodeFailureRatherThanUnsupportedForUndecodableRowData() throws {
-        // `martian` is not a `StoredOfflineEventKind`, so the envelope itself fails to decode.
+        // `martian` is not a `StoredOfflineEvent.Kind`, so the envelope itself fails to decode.
         eventStore.events = [
             try makeStoredRow(
                 rawEnvelope: #"{"schema_version":1,"kind":"martian","event_type":"whatever"}"#)

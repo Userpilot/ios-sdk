@@ -25,6 +25,9 @@ final class URLProtocolStub: URLProtocol {
     /// Set this before initiating the request in your test.
     static var response: (data: Data?, response: URLResponse?, error: Error?)?
 
+    /// Requests seen by the stub, with their bodies read from `httpBodyStream`, in arrival order.
+    static var requests: [(request: URLRequest, body: Data)] = []
+
     // MARK: - URLProtocol Overrides
 
     /// Indicates whether this protocol can handle the given request.
@@ -41,6 +44,7 @@ final class URLProtocolStub: URLProtocol {
     /// Starts loading the request by sending the stubbed response.
     override func startLoading() {
         guard let client = client else { return }
+        URLProtocolStub.requests.append((request, URLProtocolStub.body(of: request)))
 
         if let response = URLProtocolStub.response {
             if let urlResponse = response.response {
@@ -67,6 +71,23 @@ final class URLProtocolStub: URLProtocol {
     /// Resets the stored stubbed response. Call this in `tearDown()` between tests.
     static func reset() {
         response = nil
+        requests = []
+    }
+
+    /// URLSession hands protocols the body as a stream, not `httpBody`.
+    private static func body(of request: URLRequest) -> Data {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let read = stream.read(&buffer, maxLength: buffer.count)
+            guard read > 0 else { break }
+            data.append(buffer, count: read)
+        }
+        return data
     }
 }
 

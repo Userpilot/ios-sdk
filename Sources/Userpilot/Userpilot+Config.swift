@@ -1,12 +1,11 @@
 //
-//  Config.swift
+//  Userpilot+Config.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-// [Brief Description]
-// Config A configuration object that defines behavior and policies for Userpilot.
+//  Config A configuration object that defines behavior and policies for Userpilot.
 //
 
 import Foundation
@@ -17,12 +16,14 @@ import os.log
 
 extension Userpilot {
 
-    // The app framework used by the client application.
-    // Used by the SDK for autocapture and lifecycle behavior.
+    /// The native UI framework used for autocapture and screen behavior.
     public enum AppFramework: String {
+        /// UIKit screens and controls.
         case UIKit
-        // swiftlint:disable:next identifier_name
-        case SwiftUI
+        /// SwiftUI screens and controls, including their UIKit backing views.
+        case SwiftUI // swiftlint:disable:this identifier_name
+        /// UIKit and SwiftUI in one app; capture uses the originating native surface.
+        case Hybrid // swiftlint:disable:this identifier_name
     }
 
     // Note: `Config` is a class so that it can be initialized inline with the chained setters. E.g:
@@ -30,7 +31,7 @@ extension Userpilot {
     @objc
     public class Config: NSObject {
 
-        /// Customer token
+        /// Customer token, normalized once at the configuration entry point.
         let token: String
 
         /// Userpilot SDK logger
@@ -44,13 +45,23 @@ extension Userpilot {
         /// interaction autocapture is handled by the wrapper layer.
         var additionalProperties: [String: Any] = [:]
 
-        /// The app framework (UIKit or SwiftUI).
+        /// The app framework (UIKit, SwiftUI, or Hybrid).
         ///
         /// `nil` means the SDK will auto-detect the framework once the key window
         /// is attached. Set explicitly via `appFramework(_:)` to override
         /// auto-detection (recommended when you want deterministic tagging
         /// from the very first event).
-        var appFramework: AppFramework?
+        var appFramework: AppFramework? {
+            get { appFrameworkState.value }
+            set { appFrameworkState.value = newValue }
+        }
+
+        private let appFrameworkState = AtomicReference<AppFramework?>(nil)
+
+        /// Runtime detection must not overwrite an explicit configuration racing with it.
+        func setDetectedAppFramework(_ framework: AppFramework) -> Bool {
+            appFrameworkState.compareAndSet(expected: nil, new: framework)
+        }
 
         /// Disable request push notifications permission by SDK.
         var disableRequestPushPermission: Bool = false
@@ -63,6 +74,9 @@ extension Userpilot {
         /// Whether or not to enable screen autocapture. Defaults to false.
         /// If set to true, the SDK will automatically capture screen events.
         var enableScreenAutoCapture: Bool = false
+
+        /// Opt-in native SwiftUI screen identity. Existing integrations retain name-based behavior.
+        var enableScreenClassIdentity: Bool = false
 
         /// Whether or not to enable screen title capture. Defaults to true.
         /// If false, the core SDK will prevent screen titles from being stored or uploaded
@@ -77,6 +91,12 @@ extension Userpilot {
         /// If false, the core SDK will prevent user interface text from being stored or uploaded
         /// and autocapture libraries will be instructed not to capture them.
         var enableInteractionTextCapture: Bool = true
+
+        /// Whether or not to enable SwiftUI button autocapture. Defaults to false.
+        /// If set to true (with interaction autocapture), SwiftUI apps capture a click once per real
+        /// tap at touch end, and pure SwiftUI taps get their `target_text` from the rendered title.
+        /// Applies on iOS 26 and later only; when false or below iOS 26 the SDK behaves as before.
+        var enableSwiftUIButtonAutoCapture: Bool = false
 
         // Whether or not to enable user interface accessibility label capture. Defaults to true.
         // If false, the core SDK will prevent user interface accessibility labels from being
@@ -157,11 +177,15 @@ extension Userpilot {
         /// (associated with the host's user/session).
         var allowReceiveEventsFromExternalSource: Bool = false
 
+        /// Native or wrapper targeting for this instance, configured before initialization.
+        var targetingStrategy: UserpilotElementTargetingStrategy?
+
         /// Create an Userpilot SDK configuration
         /// - Parameter token: Userpilot Account Token, copied from the Environments settings page.
+        ///   Surrounding whitespace is removed before the token reaches SDK services.
         @objc
         public init(token: String) {
-            self.token = token
+            self.token = token.trim()
         }
 
         /// Sets the logging status for the configuration.
@@ -197,12 +221,13 @@ extension Userpilot {
             return self
         }
 
-        /// Sets the app framework (UIKit or SwiftUI).
+        /// Sets the app framework (UIKit, SwiftUI, or Hybrid).
         ///
         /// When set explicitly, this disables runtime auto-detection.
         /// Use this to guarantee correct framework tagging from the first
         /// event, especially in apps that send events before the key window
         /// is attached (e.g. from `application:didFinishLaunchingWithOptions:`).
+        /// Use `.Hybrid` for UIKit + SwiftUI; each capture retains its native framework behavior.
         ///
         /// - Parameter framework: The framework used by the client app.
         /// - Returns: The `Configuration` object, allowing for method chaining.
@@ -249,6 +274,20 @@ extension Userpilot {
             return self
         }
 
+        /// Distinguishes native SwiftUI screens by captured controller class and resolved name.
+        /// Defaults to disabled. Configure before initialization, together with screen autocapture.
+        /// Screen titles and metadata remain unchanged; distinct classes may create separate visits.
+        /// Manual and wrapper screens retain their existing behavior. Identical classes and names
+        /// still describe the same screen; this option does not discover a parent hierarchy.
+        /// - Parameter enabled: Whether to use class-aware identity for native SwiftUI screens.
+        /// - Returns: This configuration for chaining.
+        @discardableResult
+        @objc
+        public func enableScreenClassIdentity(_ enabled: Bool = true) -> Self {
+            enableScreenClassIdentity = enabled
+            return self
+        }
+
         /// Enables or disables screen title capture.
         /// Set to false to prevent screen titles from being stored or uploaded.
         /// - Parameter enabled: A boolean indicating whether screen title capture is enabled.
@@ -287,6 +326,22 @@ extension Userpilot {
         @objc
         public func enableInteractionTextCapture(_ enabled: Bool = true) -> Self {
             enableInteractionTextCapture = enabled
+            return self
+        }
+
+        /// Enables or disables SwiftUI button autocapture (iOS 26 and later).
+        ///
+        /// Requires `enableInteractionAutoCapture(_:)`. When enabled, a SwiftUI app captures a click
+        /// once per real tap at touch end (a scroll that starts on a button is not a click), and a
+        /// pure SwiftUI tap gets its `target_text` from the title SwiftUI rendered under the finger
+        /// (also requires `enableInteractionTextCapture(_:)`). When disabled, below iOS 26, or in
+        /// wrapper SDK hosts, interaction capture behaves exactly as it does without this option.
+        /// - Parameter enabled: A boolean indicating whether SwiftUI button autocapture is enabled.
+        /// - Returns: The `Configuration` object, allowing for method chaining.
+        @discardableResult
+        @objc
+        public func enableSwiftUIButtonAutoCapture(_ enabled: Bool = true) -> Self {
+            enableSwiftUIButtonAutoCapture = enabled
             return self
         }
 
@@ -451,6 +506,14 @@ extension Userpilot {
         @objc
         public func allowReceiveEventsFromExternalSource(_ enabled: Bool = true) -> Self {
             allowReceiveEventsFromExternalSource = enabled
+            return self
+        }
+
+        /// Uses a strategy for Builder capture and tooltip targeting in this instance.
+        /// Passing nil keeps the native strategy. The SDK retains the strategy; avoid retaining the SDK from it.
+        @objc @discardableResult
+        public func elementTargetingStrategy(_ strategy: UserpilotElementTargetingStrategy?) -> Self {
+            targetingStrategy = strategy
             return self
         }
 

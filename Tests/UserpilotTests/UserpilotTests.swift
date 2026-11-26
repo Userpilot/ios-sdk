@@ -18,7 +18,7 @@ class UserpilotTests: XCTestCase {
     override func setUpWithError() throws {
         token = "NX-\(UUID().uuidString)"
         let config = Userpilot.Config(token: token).defaultInstance(false)
-        userpilot = MockUserpilot(config: config)
+        userpilot = MockUserpilot.make(config: config)
     }
 
     override func tearDownWithError() throws {
@@ -136,6 +136,51 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(firstUserId, secondUserId, "Second call should reuse the cached user ID")
     }
 
+    // MARK: - Locale
+
+    /// Re-identifies the cached user with only the trimmed locale code as a user property
+    func testLocale_identifiesTheCachedUserWithLocaleCode() throws {
+        var published: [Event] = []
+        userpilot.analyticsPublisher.onPublish = { published.append($0) }
+        userpilot.storage.userId = "user-42"
+
+        userpilot.locale(" ar ")
+
+        XCTAssertEqual(published.count, 1)
+        let event = try XCTUnwrap(published.first)
+        guard case let .identify(userId) = event.type else {
+            return XCTFail("Expected an identify event")
+        }
+        XCTAssertEqual(userId, "user-42")
+        XCTAssertEqual(event.properties as NSDictionary?, ["locale_code": "ar"] as NSDictionary)
+        XCTAssertNil(event.company)
+    }
+
+    /// Without a cached user there is nobody to attach the locale to
+    func testLocale_isIgnored_whenNoUserIsIdentified() {
+        var published = false
+        userpilot.analyticsPublisher.onPublish = { _ in published = true }
+        let logger = MockLogger()
+        userpilot.config.logger = logger
+        userpilot.storage.userId = ""
+
+        userpilot.locale("ar")
+
+        XCTAssertFalse(published)
+        XCTAssertEqual(logger.loggedErrors.filter { $0.contains("Locale needs an identified user") }.count, 1)
+    }
+
+    /// A blank locale code is rejected before identify
+    func testLocale_isIgnored_whenCodeIsBlank() {
+        var published = false
+        userpilot.analyticsPublisher.onPublish = { _ in published = true }
+        userpilot.storage.userId = "user-42"
+
+        userpilot.locale("   ")
+
+        XCTAssertFalse(published)
+    }
+
     // MARK: - Screen
 
     /// Verifies that an empty screen name does not trigger screen tracking
@@ -203,48 +248,35 @@ class UserpilotTests: XCTestCase {
         XCTAssertEqual(lastUpdate.properties?["price"] as? Int, 29)
     }
 
+    func testDebug_showsThisInstancesDebugger() {
+        userpilot.debug()
+        XCTAssertEqual(userpilot.debuggerManager.showCount, 1)
+    }
+
     // MARK: - Logout
 
     /// Verifies logout clears all user-related data and emits logout event
     func testLogout_resetsUserAndEmitsLogoutEvent() throws {
         // Arrange
         var logoutCalled = false
-        userpilot.analyticsPublisher.onLogout = { _ in logoutCalled = true }
+        userpilot.analyticsPublisher.onLogout = { logoutCalled = true }
 
         // Act
         userpilot.logout()
 
         // Assert
         XCTAssertTrue(logoutCalled)
-        XCTAssertNil(userpilot.storage.pushToken)
-        XCTAssertEqual(userpilot.storage.userId, "")
-        XCTAssertEqual(userpilot.storage.user, "")
-    }
-
-    // MARK: - Clean
-
-    /// Verifies that clean clears stored token and userId
-    func testClean_clearsUserIdAndPushToken() throws {
-        // Act
-        userpilot.clean()
-
-        // Assert
+        XCTAssertEqual(userpilot.debuggerManager.resetCount, 1)
         XCTAssertNil(userpilot.storage.pushToken)
         XCTAssertEqual(userpilot.storage.userId, "")
     }
 
     // MARK: - Settings
 
-    /// Verifies that settings returns merged data from user, app, and auto-properties
-    func testSettings_returnsMergedUserAppAndAutoProperties() throws {
+    /// Settings expose the live identity and device/app diagnostics without restoring a merged profile.
+    func testSettings_returnsLiveIdentityAppAndAutoProperties() {
         // Arrange
-        let expectedUser: [String: Any] = [
-            "userId": "default-00000",
-            "properties": ["email": "test@mail.com"],
-            "company": ["id": "1"]
-        ]
-        let userData = try JSONSerialization.data(withJSONObject: expectedUser, options: [])
-        userpilot.storage.user = String(data: userData, encoding: .utf8) ?? ""
+        userpilot.storage.userId = "default-00000"
 
         // Act
         let settings = userpilot.settings()
@@ -255,14 +287,28 @@ class UserpilotTests: XCTestCase {
 
         let user = settings["User"] as? [String: Any]
         XCTAssertEqual(user?["userId"] as? String, "default-00000")
-        XCTAssertEqual((user?["properties"] as? [String: Any])?["email"] as? String, "test@mail.com")
-        XCTAssertEqual((user?["company"] as? [String: Any])?["id"] as? String, "1")
+        XCTAssertTrue((user?["properties"] as? [String: Any])?.isEmpty == true)
+        XCTAssertTrue((user?["company"] as? [String: Any])?.isEmpty == true)
 
         let autoProps = settings["Auto properties"] as? [String: Any]
         XCTAssertEqual(autoProps?[AutoPropertyDecorator.osKey] as? String, "iOS")
 
         let appProps = settings["App properties"] as? [String: Any]
         XCTAssertEqual(appProps?[AutoPropertyDecorator.appNameKey] as? String, Bundle.main.displayName)
+    }
+
+    /// Settings keep the logger selected at first use, even if config is changed afterward.
+    func testSettings_preservesFirstUseLogger() {
+        let firstLogger = MockLogger()
+        let laterLogger = MockLogger()
+        userpilot.config.logger = firstLogger
+
+        _ = userpilot.settings()
+        userpilot.config.logger = laterLogger
+        _ = userpilot.settings()
+
+        XCTAssertEqual(firstLogger.loggedDebugs.count, 2)
+        XCTAssertTrue(laterLogger.loggedDebugs.isEmpty)
     }
 
     // MARK: - Trigger Experience
@@ -306,6 +352,34 @@ class UserpilotTests: XCTestCase {
         XCTAssertTrue(experienceEnded)
     }
 
+    /// Verifies the app theme title reaches the theme service unchanged
+    func testTheme_forwardsTitle() throws {
+        // Act
+        userpilot.theme("Brand Dark ")
+
+        // Assert
+        XCTAssertEqual(userpilot.themeHandler.appThemeNames, ["Brand Dark "])
+    }
+
+    /// Verifies a blank app theme title is rejected without touching the selected theme
+    func testTheme_isIgnored_whenTitleIsBlank() throws {
+        // Act
+        userpilot.theme("  ")
+
+        // Assert
+        XCTAssertTrue(userpilot.themeHandler.appThemeNames.isEmpty)
+        XCTAssertEqual(userpilot.themeHandler.clearAppThemeCount, 0)
+    }
+
+    /// Verifies clearing the app theme reaches the theme service
+    func testClearTheme_clearsAppTheme() throws {
+        // Act
+        userpilot.clearTheme()
+
+        // Assert
+        XCTAssertEqual(userpilot.themeHandler.clearAppThemeCount, 1)
+    }
+
     // MARK: - Push
 
     /// Verifies that push token is passed to the push monitor
@@ -339,7 +413,7 @@ class UserpilotTests: XCTestCase {
         weak var weakAutoPropertyDecoration: AutoPropertyDecoratoring?
         weak var weakSocketManager: SocketManaging?
         weak var weakRemoteSource: UserpilotRemoteSourcing?
-        weak var weakExperienceStateMachine: ExperienceStateManaging?
+        weak var weakExperiencesPublisher: ExperiencesPublishing?
         weak var weakLinkOpener: LinkOpening?
         weak var weakThemeHandler: ThemeHandling?
         weak var weakImageLoader: ImageLoading?
@@ -359,7 +433,7 @@ class UserpilotTests: XCTestCase {
             weakAutoPropertyDecoration = userpilot.container.resolve(AutoPropertyDecoratoring.self)
             weakSocketManager = userpilot.container.resolve(SocketManaging.self)
             weakRemoteSource = userpilot.container.resolve(UserpilotRemoteSourcing.self)
-            weakExperienceStateMachine = userpilot.container.resolve(ExperienceStateManaging.self)
+            weakExperiencesPublisher = userpilot.container.resolve(ExperiencesPublishing.self)
             weakLinkOpener = userpilot.container.resolve(LinkOpening.self)
             weakThemeHandler = userpilot.container.resolve(ThemeHandling.self)
             weakImageLoader = userpilot.container.resolve(ImageLoading.self)
@@ -368,11 +442,12 @@ class UserpilotTests: XCTestCase {
             XCTAssertNotNil(weakUserpilot)
         }
 
-        let expectation = XCTestExpectation(description: "Async cleanup completed")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
+        let cleanup = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            weakUserpilot == nil && weakConfig == nil && weakAnalyticsPublishing == nil
+                && weakDataStoring == nil && weakSessionMonitoring == nil && weakSocketManager == nil
+                && weakExperiencesPublisher == nil && weakPushNotificationMonitor == nil
+        }, object: nil)
+        wait(for: [cleanup], timeout: 2)
 
         // Assert
         XCTAssertNil(weakUserpilot)
@@ -382,7 +457,7 @@ class UserpilotTests: XCTestCase {
         XCTAssertNil(weakAutoPropertyDecoration)
         XCTAssertNil(weakSocketManager)
         XCTAssertNil(weakRemoteSource)
-        XCTAssertNil(weakExperienceStateMachine)
+        XCTAssertNil(weakExperiencesPublisher)
         XCTAssertNil(weakLinkOpener)
         XCTAssertNil(weakThemeHandler)
         XCTAssertNil(weakImageLoader)

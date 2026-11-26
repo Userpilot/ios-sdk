@@ -2,19 +2,18 @@
 //  EventQueue.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 02/11/2025.
+//  Created by Userpilot on 02/11/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  Thread-safe FIFO queue with optional prioritization for internal events.
 //
 
 import Foundation
 
-internal class EventQueue<Element> {
+internal final class EventQueue<Element> {
     private var queue: [Element] = []
     private let dispatchQueue = DispatchQueue(
-        label: Constants.DispatchQueues.eventQueue,
+        label: "com.userpilot.event-queue",
         attributes: .concurrent
     )
 

@@ -1,0 +1,102 @@
+//
+//  UIView+SwiftUITitleCapture.swift
+//  Userpilot SDK
+//
+//  Created by Userpilot on 08/10/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
+//
+//  Enriches a tapped SwiftUI view with a title while preserving capture privacy and payload keys.
+//
+
+// swiftlint:disable identifier_name
+// swiftlint:disable:previous blanket_disable_command
+
+import UIKit
+
+internal extension UIView {
+
+    /// Cheap superview-chain check: is this view rendered inside a SwiftUI
+    /// hosting view? Used to gate the resolver so it never runs for plain UIKit.
+    var up_isInsideHostingView: Bool {
+        var current: UIView? = self
+        while let view = current {
+            if SwiftUIDetection.isHostingView(view) {
+                return true
+            }
+            current = view.superview
+        }
+        return false
+    }
+
+    /// The outermost SwiftUI hosting view containing this view, or `self` outside SwiftUI.
+    /// SwiftUI privacy modifiers flag a platform-view host that is often a SIBLING of the
+    /// deepest tapped view, so point-scoped flag searches start from here.
+    var up_outermostHostingView: UIView {
+        var outermost: UIView = self
+        var current: UIView? = self
+        while let view = current {
+            if SwiftUIDetection.isHostingView(view) {
+                outermost = view
+            }
+            current = view.superview
+        }
+        return outermost
+    }
+
+    /// Walks DOWN from `self` through subviews whose frame contains `windowPoint`
+    /// (window coordinates), returning the first that has `flag` set. Bounded to
+    /// the thin point-containing path, not the whole tree.
+    ///
+    /// This closes the pure-SwiftUI redact/ignore gap: the policy modifier's
+    /// carrier sets its flag on a descendant whose frame contains the tap, which
+    /// the SDK's upward responder-chain gate can't see when the tap resolves to
+    /// an ancestor hosting view. Identity + geometry match, so it never
+    /// over-flags the wrong control and fails safe on overlap.
+    func up_flagInSubtree(containing windowPoint: CGPoint, _ flag: KeyPath<UIView, Bool>) -> Bool {
+        let local = convert(windowPoint, from: nil)   // `nil` == window space
+        guard bounds.contains(local) else { return false }
+        if self[keyPath: flag] { return true }
+        return subviews.contains { $0.up_flagInSubtree(containing: windowPoint, flag) }
+    }
+
+    /// SwiftUI button-title enrichment for a regular window tap on this view. Runs when
+    /// the title is missing or redacted, and writes `target_text` ONLY — target_class / hierarchy /
+    /// accessibility_* are untouched. The window-tap caller rejects ignored interactions,
+    /// including sibling/descendant privacy carriers, before building any properties.
+    /// A redacted resolved title uses the existing placeholder in the analytics payload.
+    /// Returns whether a SwiftUI control resolved, so its hosting root can pass window filtering.
+    @discardableResult
+    func addSwiftUITitle(
+        to properties: inout [String: Any],
+        at point: CGPoint,
+        in window: UIWindow,
+        owner: Userpilot
+    ) -> Bool {
+        let config = owner.config
+        let swiftUIRoot = up_outermostHostingView
+        let existingTitle = properties[Constants.AutoCapture.targetText] as? String
+        // A privacy placeholder alone does not prove that this tap hit an interactive control.
+        guard existingTitle == nil || existingTitle == Constants.AutoCapture.reductText,
+              SwiftUITitleCapturePolicy.shouldRun(for: owner) else { return false }
+
+        // A fast first tap after navigation can beat the debounced screen-appear
+        // scan, and a scroll can reveal rows the cache hasn't seen: make sure the
+        // cache covers this tap before resolving it.
+        UserpilotRuntime.shared.scanCache.prepareForTapResolution(
+            at: point, in: window, tappedView: self, owner: owner
+        )
+        guard let title = SwiftUITitleResolver.shared.resolveTitle(
+            at: point, in: window, captureAccessibility: config.enableInteractionAccessibilityLabelCapture,
+            logger: config.logger
+        ) else { return false }
+
+        // An existing placeholder came from a privacy rule (redaction or an ignored inner
+        // hierarchy). The resolved title only admits the tap; it never replaces that placeholder.
+        let isRedacted = existingTitle == Constants.AutoCapture.reductText
+            || swiftUIRoot.up_flagInSubtree(containing: point, \.userpilotRedactText)
+        properties[Constants.AutoCapture.targetText] = isRedacted
+            ? Constants.AutoCapture.reductText
+            : resolvedInteractionText(title)
+        return true
+    }
+}

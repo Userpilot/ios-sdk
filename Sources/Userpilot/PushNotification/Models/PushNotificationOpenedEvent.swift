@@ -2,10 +2,9 @@
 //  PushNotificationOpenedEvent.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/02/2025.
+//  Created by Userpilot on 18/02/2025.
 //  Copyright © 2025 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This struct is responsible for defining the event triggered when a push notification is opened.
 //
 

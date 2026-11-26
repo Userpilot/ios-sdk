@@ -2,10 +2,9 @@
 //  Userpilot.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  The `Userpilot` class is the primary interface for integrating Userpilot SDK into an application.
 //  It manages user tracking, event publishing, experience rendering, and various analytics functions,
 //  allowing you to deliver personalized, context-aware content based on user actions and data.
@@ -39,12 +38,7 @@ public class Userpilot: NSObject {
     /// SDK-internal call sites use this as the fallback for unattributed
     /// autocapture and screen-tracking work.
     internal static var shared: Userpilot? {
-        return Registry.shared.default
-    }
-
-    /// Returns `true` if the SDK has been initialized and the default instance is available.
-    internal static var isInitialized: Bool {
-        return Registry.shared.default != nil
+        return UserpilotRuntime.shared.instanceRegistry.default
     }
 
     /// Look up a registered `Userpilot` instance by its configured token.
@@ -55,32 +49,35 @@ public class Userpilot: NSObject {
     /// Useful for code paths that need to reach a specific tenant from outside the
     /// callsite that created it (e.g. callbacks from a vendor SDK back into Userpilot).
     internal static func instance(forToken token: String) -> Userpilot? {
-        return Registry.shared.instance(forToken: token)
+        return UserpilotRuntime.shared.instanceRegistry.instance(forToken: token)
     }
 
     // MARK: - Properties
 
-    /// `var` rather than `let` so the idempotent initializer can adopt an already-registered
-    /// instance's container when `Userpilot(config:)` is called twice with the same token.
-    var container = DIContainer()
+    /// Services belong to this instance; other SDK components may resolve but cannot replace its container.
+    internal private(set) var container = DIContainer()
 
-    let config: Config
+    internal let config: Config
 
-    // Resolved lazily, never in `init`: the idempotent initializer may swap `container` for an
-    // already-registered instance's, and these must bind to that one.
-    private lazy var analyticsPublisher = container.resolve(AnalyticsPublishing.self)
-    private lazy var storage = container.resolve(DataStoring.self)
-    private lazy var socketManager = container.resolve(SocketManaging.self)
-    private lazy var sessionMonitor = container.resolve(SessionMonitoring.self)
-    private lazy var experiencesPublisher = container.resolve(ExperiencesPublishing.self)
-    private lazy var autoPropertyDecorator = container.resolve(AutoPropertyDecoratoring.self)
-    private lazy var pushNotificationMonitor = container.resolve(PushNotificationMonitoring.self)
-    private lazy var linkOpener = container.resolve(LinkOpening.self)
-    private lazy var logger = container.resolve(Userpilot.Config.self).logger
+    // Resolve after runtime registration; the container owns caching and concurrent first access.
+    private var analyticsPublisher: AnalyticsPublishing { container.resolve(AnalyticsPublishing.self) }
+    private var storage: DataStoring { container.resolve(DataStoring.self) }
+    private var socketManager: SocketManaging { container.resolve(SocketManaging.self) }
+    private var sessionMonitor: SessionMonitoring { container.resolve(SessionMonitoring.self) }
+    private var experiencesPublisher: ExperiencesPublishing { container.resolve(ExperiencesPublishing.self) }
+    private var themeHandler: ThemeHandling { container.resolve(ThemeHandling.self) }
+    private var autoPropertyDecorator: AutoPropertyDecoratoring { container.resolve(AutoPropertyDecoratoring.self) }
+    private var pushNotificationMonitor: PushNotificationMonitoring {
+        container.resolve(PushNotificationMonitoring.self)
+    }
+    private var linkOpener: LinkOpening { container.resolve(LinkOpening.self) }
+    private var debuggerManager: DebuggerManaging { container.resolve(DebuggerManaging.self) }
+    private var appReviewManager: AppReviewManaging { container.resolve(AppReviewManaging.self) }
+    private var logger: Logging { container.resolve(Logging.self) }
 
     /// Lazy-instantiated overlay window used to present experiences for this instance.
     ///
-    /// Each `Userpilot` instance owns one. The window is created on first
+    /// Each instance owns one. The window is created on first
     /// access (i.e. only when this instance actually presents an experience),
     /// uses passthrough hit-testing so non-experience touches fall through, and
     /// sits at a deterministic `UIWindow.Level` derived from the instance's
@@ -116,84 +113,35 @@ public class Userpilot: NSObject {
 
     // MARK: - Delegates
 
-    /// The delegate object that handles application screen navigation during experience presentation.
+    /// The weak delegate that handles screen navigation.
     @objc public weak var navigationDelegate: UserpilotNavigationDelegate? {
         didSet {
-            // A cold-start push deep link may be held waiting on exactly this assignment: the
-            // notification is replayed from inside `init`, before a host could set a delegate.
+            // Cold-start push routing may be waiting for the first delegate assignment after initialization.
             guard navigationDelegate != nil else { return }
             linkOpener.processPendingDeepLink()
         }
     }
 
-    /// The delegate object that broadcast analytics events.
+    /// The weak analytics delegate.
     @objc public weak var analyticsDelegate: UserpilotAnalyticsDelegate?
 
-    /// The delegate object that manages and observes experience presentations.
+    /// The weak experience delegate.
     @objc public weak var experienceDelegate: UserpilotExperienceDelegate?
 
     // MARK: - Initialization
 
-    /**
-     Initializes the `Userpilot` SDK with the provided configuration.
-
-     Idempotent ("get-or-create"): if a `Userpilot` for `config.token` is already
-     registered, this initializer adopts that instance's services by pointing the
-     new wrapper at the existing dependency container. The supplied `config` is
-     discarded in that case — the first call wins. This prevents accidental
-     socket / observer churn from duplicate `Userpilot(config:)` calls.
-
-     On the fresh-init path it sets up analytics, storage, networking, push
-     auto-config, and autocapture as before.
-
-     - Parameter config: A `Config` object that contains various initialization settings like logging,
-     API keys, and anonymous user tracking settings.
-     */
-
-    @objc
-    public init(config: Config) {
+    /// Initializes the SDK with its own services and registers it for `config.token`.
+    /// Create and retain one instance per app token. Repeated initialization with the same
+    /// live token is unsupported; use different tokens for independent instances.
+    /// Surrounding token whitespace is trimmed by `Config` before services are initialized.
+    @objc public init(config: Config) {
         self.config = config
         super.init()
+        UserpilotRuntime.shared.initializeInstance(self)
+    }
 
-        // One-shot legacy storage migration. Idempotent, runs at most once per
-        // (token, install). The first-token-wins claim inside `StorageMigrator`
-        // ensures only one tenant ever absorbs the legacy v1 suite.
-        StorageMigrator.runIfNeeded(forToken: config.token)
-
-        // Idempotent: if a Userpilot for this token already exists, adopt its
-        // container and return. The new wrapper still resolves the same
-        // services (analytics, socket, storage, etc.) as the original — the
-        // existing instance and this returned facade publish through the same
-        // underlying machinery. Callers that hold the original reference and
-        // the one returned here both observe the same state.
-        if let existing = Registry.shared.instance(forToken: config.token) {
-            self.container = existing.container
-            config.logger.error(
-                // swiftlint:disable:next line_length
-                "⚠️ Userpilot already initialized for token %{public}@; returning the existing instance. The supplied config was discarded.",
-                config.token
-            )
-            return
-        }
-
-        // Default-instance resolution: if `Config.defaultInstance(true)` was set
-        // (the default), this instance claims the default role (first claim wins).
-        // When the role is already held, the claim is rejected. See
-        // `Registry.register(_:)`.
-        // The registry is a pure data structure, so when it rejects a second
-        // `isDefault` claim it returns the existing claimant's token and the
-        // warning is emitted here at the call site.
-        if let existingDefaultToken = Registry.shared.register(self) {
-            config.logger.error(
-                // swiftlint:disable:next line_length
-                "⚠️ isDefault is already claimed by token %{public}@; ignoring isDefault=true on token %{public}@. Only one Userpilot instance per process can be the default; unattributed events will continue to route to %{public}@.",
-                existingDefaultToken,
-                config.token,
-                existingDefaultToken
-            )
-        }
-
-        // Set up the dependency container and register required services
+    /// Called once by the runtime after registration; native startup order remains per instance.
+    internal func initializeInstance() {
         initializeContainer()
 
         // Register pushNotificationMonitoring for push notification auto config
@@ -205,18 +153,19 @@ public class Userpilot: NSObject {
         // Log the initialization of the SDK with the current version.
         config.logger.info("🌏 Userpilot SDK initialized, version: %{public}@", version())
 
-        // Hosts assign `navigationDelegate` on the lines *after* this constructor returns, so a
+        // Hosts assign `navigationDelegate` on the lines *after* init returns, so a
         // cold-start push replayed by `register(observer:)` above has nowhere to route to yet.
         // Opening routing one runloop turn later lets those assignments land first, and still
         // delivers the link for hosts that never set a delegate at all.
-        performOn(.main) { [weak self] in
-            self?.linkOpener.processPendingDeepLink()
-        }
+        linkOpener.processPendingDeepLink()
     }
 
     deinit {
-        Registry.shared.unregister(self)
+        UserpilotRuntime.shared.removeInstance(self)
         releaseExperienceOverlayWindowOnMain()
+        if let capture = container.resolveIfCreated(BuilderCaptureCoordinating.self) {
+            performOnMain { capture.stop() }
+        }
     }
 
     /// Tears the overlay window down on the main thread as this instance goes away.
@@ -230,18 +179,14 @@ public class Userpilot: NSObject {
     private func releaseExperienceOverlayWindowOnMain() {
         guard let overlay = experienceOverlayWindowStorage else { return }
         experienceOverlayWindowStorage = nil
-        if Thread.isMainThread {
-            overlay.teardown()
-        } else {
-            performOn(.main) { overlay.teardown() }
-        }
+        performOnMain { overlay.teardown() }
     }
 
     // MARK: - Setup Methods
 
     /**
      Initializes the DI (Dependency Injection) container and registers required services.
-    
+
      This method sets up lazy initialization for essential SDK services like `DataStoring`,
      `Networking`, `SocketManaging`, and more.
      By using lazy registration, the services are only created when they are first used, improving performance.
@@ -249,29 +194,45 @@ public class Userpilot: NSObject {
     internal func initializeContainer() {
         container.owner = self
         container.register(Config.self, value: config)
-        // Inject the process-wide registry as an abstraction so consumers
-        // (e.g. `AutoCaptureCoordinater`) resolve it instead of reaching for
-        // `Registry.shared` directly. The value is the shared singleton, so
-        // every instance's container hands back the same registry.
-        container.register(InstanceRegistering.self, value: Registry.shared)
+        // Preserve the facade's first-use logger snapshot without an unsynchronized lazy property.
+        container.registerLazy(Logging.self) { $0.resolve(Config.self).logger }
+        let runtime = UserpilotRuntime.shared
+        container.register(InstanceRegistering.self, value: runtime.instanceRegistry)
+        container.register(InstanceResolving.self, value: runtime.instanceResolver)
+        container.register(AutoCaptureIntegrating.self, value: runtime.captureIntegration)
+        container.register(SwiftUIScanCache.self, value: runtime.scanCache)
+        container.register(LifecycleMonitoring.self, value: runtime.lifecycleMonitor)
         container.registerLazy(
             AutoPropertyDecoratoring.self, initializer: AutoPropertyDecorator.init)
+        // One implementation per delivery contract.
         container.registerLazy(SocketManaging.self) { container in
             SocketManager(container: container)
         }
         container.registerLazy(UserpilotRemoteSourcing.self, initializer: UserpilotRemoteSource.init)
         container.registerLazy(ThemeHandling.self, initializer: ThemeHandler.init)
         container.registerLazy(ImageLoading.self, initializer: ImageLoader.init)
+        container.registerLazy(UserpilotElementTargetingStrategy.self) { container in
+            container.resolve(Config.self).targetingStrategy ?? NativeElementTargetingStrategy()
+        }
+        container.registerLazy(ElementTargeting.self, initializer: ElementResolver.init)
+        container.registerLazy(ScreenSnapshotting.self, initializer: ScreenSnapshotter.init)
+        container.registerLazy(CaptureEncoding.self) { CaptureEncoder() }
+        container.registerLazy(BuilderCaptureCoordinating.self, initializer: BuilderCaptureCoordinator.init)
         container.registerLazy(ScreenNameTracking.self, initializer: ScreenNameTracker.init)
-        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinater.init)
+        container.registerLazy(AutoCaptureCoordinating.self, initializer: AutoCaptureCoordinator.init)
         container.registerLazy(DeepLinkHandling.self, initializer: DeepLinkHandler.init)
         container.registerLazy(LinkOpening.self, initializer: LinkOpener.init)
-        container.registerLazy(ExperienceStateManaging.self, initializer: ExperienceStateMachine.init)
+        container.registerLazy(AppReviewManaging.self, initializer: AppReviewManager.init)
         container.registerLazy(EventStoring.self, initializer: EventDatabaseStorage.init)
         container.registerEager(UserSessionStateManaging.self, initializer: UserSessionStateMachine.init)
         container.registerEager(DataStoring.self, initializer: Storage.init)
         container.registerEager(NetworkMonitoring.self, initializer: NetworkMonitor.init)
         container.registerEager(OfflineEventsHandling.self, initializer: OfflineEventsHandler.init)
+        container.registerLazy(DebugEventStoring.self) { DebugEventStore() }
+        container.registerLazy(DebugFontCataloging.self, initializer: DebugFontCatalog.init(container:))
+        container.registerLazy(DebugConfigSnapshotMaking.self, initializer: DebugConfigSnapshotFactory.init)
+        container.registerLazy(DebugUserSnapshotMaking.self, initializer: DebugUserSnapshotFactory.init)
+        container.registerLazy(DebuggerManaging.self, initializer: DebuggerManager.init)
         container.registerEager(AnalyticsPublishing.self, initializer: AnalyticsPublisher.init)
         container.registerEager(
             PushNotificationMonitoring.self, initializer: PushNotificationMonitor.init)
@@ -287,15 +248,15 @@ public class Userpilot: NSObject {
     }
 }
 
-// MARK: - Public Methods
+// MARK: - SDK version
 
 extension Userpilot {
 
     /**
      Retrieves the current version of the Userpilot SDK as a string.
-    
+
      This method provides the static version of the SDK, useful for logging or debugging purposes.
-    
+
      - Returns: A string representing the current version of the Userpilot SDK.
      */
     @objc(sdkVersion)
@@ -311,16 +272,16 @@ extension Userpilot {
 
 }
 
-// MARK: - Tracking APIs
+// MARK: - Identity and session
 
 extension Userpilot {
 
     /**
      Identifies a user to the SDK, enabling personalized content and behavior tracking.
-    
+
      This method allows the SDK to associate analytics and content with a known user by passing their unique `userId`.
      Additional properties and company details can be provided for more context.
-    
+
      - Parameters:
        - userId: A unique identifier for the user, which is used to track their behavior across sessions.
        - properties: An optional dictionary containing user-specific properties like email, role, or age.
@@ -332,13 +293,14 @@ extension Userpilot {
         properties: Payload = nil,
         company: Payload = nil
     ) {
-        guard userId.trim().isNotEmpty else {
+        let normalizedUserId = userId.trim()
+        guard normalizedUserId.isNotEmpty else {
             config.logger.error("Invalid user id - empty string")
             return
         }
         analyticsPublisher.publish(
             Event(
-                type: .identify(userId.trim()),
+                type: .identify(normalizedUserId),
                 properties: properties,
                 company: company
             )
@@ -347,7 +309,7 @@ extension Userpilot {
 
     /**
      Tracks an anonymous user session.
-    
+
      This method generates a unique anonymous ID - cache it, allowing the SDK to track behavior and trigger
      relevant content even when the user has not explicitly signed in or identified themselves.
      */
@@ -360,11 +322,54 @@ extension Userpilot {
     }
 
     /**
+     Sets the current user's locale. Call it after `identify(userId:properties:company:)` or `anonymous()`;
+     before either call, the locale is ignored and an error is logged.
+
+     - Parameters:
+       - localeCode: the user's locale code, for example `"en"`, `"en-US"` or `"fr-FR"`.
+     */
+    @objc
+    public func locale(_ localeCode: String) {
+        let normalizedLocaleCode = localeCode.trim()
+        guard normalizedLocaleCode.isNotEmpty else {
+            config.logger.error("Invalid locale code - empty string")
+            return
+        }
+        let userId = storage.userId
+        guard userId.isNotEmpty else {
+            config.logger.error("Locale needs an identified user - call identify(userId:) first")
+            return
+        }
+        identify(userId: userId, properties: [Constants.Analytics.localeCodeProperty: normalizedLocaleCode])
+    }
+
+    /**
+     Logs the user out and clears their session data.
+
+     This method should be called when the user logs out of the application.
+     Clears stored identity, closes the user socket and ends Builder capture mode.
+     */
+    @objc
+    public func logout() {
+        storage.temporaryUser = nil
+        analyticsPublisher.logout()
+        debuggerManager.reset()
+        storage.clean()
+        container.resolveIfCreated(BuilderCaptureCoordinating.self)?.stop()
+    }
+
+}
+
+// MARK: - Tracking APIs
+
+extension Userpilot {
+
+    /**
      Tracks a screen view event when a user navigates to a specific screen in the app.
-    
+
      This method records the screen title and sends it to the analytics service for tracking
      user activity and triggering content.
-    
+
      - Parameter title: The title of the screen that the user has viewed.
      */
     @objc
@@ -378,13 +383,7 @@ extension Userpilot {
             config.logger.error("Invalid screen title - empty string")
             return
         }
-        // Interaction autocapture debounces text-field / text-view changes, so a change the user made
-        // right before navigating would otherwise be published after this screen event and attributed
-        // to the new screen. Screen autocapture never reaches here (guarded above), so this covers the
-        // interaction-autocapture-with-manual-screens setup.
-        if config.enableInteractionAutoCapture {
-            InteractionEventCache.flushPendingInteractions()
-        }
+        flushPendingInteractionCaptures()
         let event = Event(
             type: .screen(title),
             properties: [Constants.AutoCapture.source: Constants.AutoCapture.manualCaptureSourceValue]
@@ -392,13 +391,20 @@ extension Userpilot {
         analyticsPublisher.publish(event)
     }
 
+    /// Flushes debounced interactions before the manual screen event changes their screen context.
+    /// Automatic screen capture flushes through the coordinator instead.
+    private func flushPendingInteractionCaptures() {
+        guard config.enableInteractionAutoCapture else { return }
+        autoCaptureCoordinator.flushPendingInteractions()
+    }
+
     /**
      Tracks a custom event based on a user action.
-    
+
      This method allows developers to track any arbitrary action taken by the user, such as button clicks,
      form submissions, or purchases.
      The event is recorded and sent to the analytics service for further analysis or content triggering.
-    
+
      - Parameters:
        - name: The name of the custom event (e.g., "purchase", "button_click").
        - properties: An optional dictionary containing additional context or metadata related to the event.
@@ -420,18 +426,16 @@ extension Userpilot {
         )
     }
 
-    /**
-     Logs the user out and clears their session data.
-    
-     This method should be called when the user logs out of the application.
-     It calls clean method and close user socket.
-     */
-    @objc
-    public func logout() {
-        storage.temporaryUser = nil
-        storage.user = ""
-        analyticsPublisher.logout(clearCachedIdentifyEvent: true)
-        clean()
+}
+
+// MARK: - Debugging and settings
+
+extension Userpilot {
+
+    /// Shows this instance's in-app debugger with configuration, stored identity and live events.
+    /// Events appear when submitted to the publisher; this is not a socket acknowledgment view.
+    @objc public func debug() {
+        debuggerManager.show()
     }
 
     /**
@@ -440,38 +444,7 @@ extension Userpilot {
      */
     @objc
     public func settings() -> [String: Any] {
-        var autoPropertiesDict: [String: Any]?
-        var appPropertiesDict: [String: Any]?
-        var user: [String: Any]?
-
-        // Convert the JSON strings to dictionaries
-        if let autoPropertiesData = autoPropertyDecorator.autoProperties.toJSONString()?.data(
-            using: .utf8) {
-            autoPropertiesDict =
-                (try? JSONSerialization.jsonObject(
-                    with: autoPropertiesData, options: [])) as? [String: Any]
-        }
-
-        if let appPropertiesData = autoPropertyDecorator.appProperties.toJSONString()?.data(
-            using: .utf8) {
-            appPropertiesDict =
-                (try? JSONSerialization.jsonObject(
-                    with: appPropertiesData, options: [])) as? [String: Any]
-        }
-
-        if let userData = storage.user.data(using: .utf8) {
-            user =
-                (try? JSONSerialization.jsonObject(with: userData, options: [])) as? [String: Any]
-        }
-
-        // Create the dictionary for settings
-        let settings: [String: Any] = [
-            "SDK version": version(),
-            "Token": config.token,
-            "User": user ?? [:],
-            "Auto properties": autoPropertiesDict ?? [:],
-            "App properties": appPropertiesDict ?? [:]
-        ]
+        let settings = makeSettings()
 
         if let jsonData = try? JSONSerialization.data(
             withJSONObject: settings, options: .withoutEscapingSlashes) {
@@ -483,19 +456,19 @@ extension Userpilot {
         return settings
     }
 
-    // MARK: - SDK APIs
+    /// Preserves the diagnostic dictionary's JSON-normalized values and empty-object fallbacks.
+    private func makeSettings() -> [String: Any] {
+        let autoProperties = autoPropertyDecorator.autoProperties.toJSONString()?.toJSONDictionary()
+        let appProperties = autoPropertyDecorator.appProperties.toJSONString()?.toJSONDictionary()
+        let user = User(userId: storage.userId).toJson()?.toJSONDictionary()
 
-    /**
-     Clear user session data.
-    
-     This method should be called when the user logs out or when identify called with new userId.
-     It resets the session state, clears user-related data, and ensures no further tracking occurs for
-     the logged-out user.
-     */
-    internal func clean() {
-        storage.pushToken = nil
-        storage.userId = ""
-        storage.user = ""
+        return [
+            "SDK version": version(),
+            "Token": config.token,
+            "User": user ?? [:],
+            "Auto properties": autoProperties ?? [:],
+            "App properties": appProperties ?? [:]
+        ]
     }
 }
 
@@ -505,10 +478,10 @@ extension Userpilot {
 
     /**
      Manually starts an experience within the client application using the provided experience token.
-    
+
      - Parameters:
-       - experienceId: unique identifier for the experience to be launched, this ID should be provided
-        by the backend or obtained during experience configuration.
+     - experienceId: unique identifier for the experience to be launched, this ID should be provided
+     by the backend or obtained during experience configuration.
      */
     @objc
     public func triggerExperience(_ experienceId: String) {
@@ -525,6 +498,56 @@ extension Userpilot {
     @objc
     public func endExperience() {
         experiencesPublisher.endExperience(manualClose: true)
+    }
+
+}
+
+// MARK: - App review
+
+extension Userpilot {
+
+    /// Requests the host app's native App Store review prompt. Safe to call from any thread.
+    /// Call after a meaningful interaction while the app is active. StoreKit controls whether
+    /// the prompt appears; this method does not report whether a review was submitted.
+    /// Requests require an active app and, on iOS 14+, a foreground scene; otherwise they are dropped.
+    @objc public func requestReview() {
+        appReviewManager.requestReview()
+    }
+}
+
+// MARK: - Theme
+
+extension Userpilot {
+
+    /**
+     Renders flows and surveys with the mobile theme that has this exact title, for example the theme
+     matching the app's light or dark appearance. While it is in use, it replaces each experience's own
+     theme, including builder styling and placement. NPS keeps its own theme.
+
+     The change applies from the next experience. If no single theme has this title, experiences keep
+     their own themes. The selected title persists across launches and logout for this SDK token;
+     the first flow or survey fetches its theme when needed.
+
+     - Parameters:
+       - name: the mobile theme's title as defined in Userpilot. Use `clearTheme()` to restore each
+        experience's own theme.
+     */
+    @objc
+    public func theme(_ name: String) {
+        guard name.trim().isNotEmpty else {
+            config.logger.error("Invalid theme name - empty string")
+            return
+        }
+        themeHandler.setAppTheme(name: name)
+    }
+
+    /**
+     Stops applying the theme selected with `theme(_:)` and forgets every fetched app theme, so flows and
+     surveys use their own themes again from the next experience. Removes the saved selection too.
+     */
+    @objc
+    public func clearTheme() {
+        themeHandler.clearAppTheme()
     }
 }
 
@@ -571,86 +594,6 @@ extension Userpilot {
 
 }
 
-// MARK: - Auto capture
-
-extension Userpilot {
-
-    /// Internal access to the automatic capture engine (screen + interaction hooks).
-    internal var autoCaptureCoordinator: AutoCaptureCoordinating {
-        return container.resolve(AutoCaptureCoordinating.self)
-    }
-
-    /// The analytics publisher backing this instance, resolved from its container.
-    ///
-    /// Used by a non-default instance's `AutoCaptureCoordinater` to forward an
-    /// autocapture event into this (default) instance's publisher when the default
-    /// opted in via `Config.allowReceiveEventsFromExternalSource`. Publishing
-    /// straight to the publisher (never back through routing) means it cannot
-    /// re-forward.
-    internal func resolveAnalyticsPublisher() -> AnalyticsPublishing {
-        container.resolve(AnalyticsPublishing.self)
-    }
-
-    /// Check auto capture configuration and initialize engines if enabled.
-    public func checkAutoCapture() {
-        let config = container.resolve(Userpilot.Config.self)
-        let screenAutocaptureEnabled = config.enableScreenAutoCapture
-        let interactionEnabled = config.enableInteractionAutoCapture
-
-        if screenAutocaptureEnabled || interactionEnabled {
-            _ = autoCaptureCoordinator
-        }
-    }
-
-    /// Auto capture screen events from wrappers
-    @objc
-    public func trackExternalAutoCaptureScreen(_ title: String) {
-        autoCaptureCoordinator.trackExternalAutoCaptureScreen(title)
-    }
-
-    /// Auto capture interactions events from wrappers
-    @objc
-    public func trackExternalAutoCaptureEvent(eventName: String, properties: Payload) {
-        autoCaptureCoordinator.trackExternalAutoCaptureEvent(eventName, properties)
-    }
-}
-
-// MARK: - Autocapture Stop / Resume (per instance)
-
-extension Userpilot {
-
-    /// Stops automatic screen and interaction capture for **this** instance. No events are
-    /// recorded for it until `resumeAutoCapture()` is called. Other Userpilot instances in the
-    /// same process keep capturing, so a host app and an embedded vendor SDK can pause independently.
-    @objc
-    public func stopAutoCapture() {
-        autoCaptureCoordinator.stopAutoCapture()
-    }
-
-    /// Resumes automatic screen and interaction capture for **this** instance after a previous
-    /// `stopAutoCapture()`.
-    @objc
-    public func resumeAutoCapture() {
-        autoCaptureCoordinator.resumeAutoCapture()
-    }
-}
-
-// MARK: - Autocapture View Configuration (thin facade; implementation in AutocaptureViewConfiguration)
-
-extension Userpilot {
-
-    @objc
-    public static func userpilotSetRedactText(_ value: Bool, for responder: UIResponder) {
-        AutocaptureViewConfiguration.setRedactText(value, for: responder)
-    }
-
-    @objc
-    public static func userpilotSetRedactAccessibilityLabel(_ value: Bool, for responder: UIResponder) {
-        AutocaptureViewConfiguration.setRedactAccessibilityLabel(value, for: responder)
-    }
-
-}
-
 // MARK: - Deep links
 
 extension Userpilot {
@@ -675,4 +618,125 @@ extension Userpilot {
     }
 
 }
+
+// MARK: - Auto capture
+
+extension Userpilot {
+
+    // MARK: - Setup and internal access
+
+    /// Internal access to the automatic capture engine (screen + interaction hooks).
+    internal var autoCaptureCoordinator: AutoCaptureCoordinating {
+        return container.resolve(AutoCaptureCoordinating.self)
+    }
+
+    /// The analytics publisher backing this instance, resolved from its container.
+    ///
+    /// Used by a non-default instance's `AutoCaptureCoordinator` to forward an
+    /// autocapture event into this (default) instance's publisher when the default
+    /// opted in via `Config.allowReceiveEventsFromExternalSource`. Publishing
+    /// straight to the publisher (never back through routing) means it cannot
+    /// re-forward.
+    internal func resolveAnalyticsPublisher() -> AnalyticsPublishing {
+        container.resolve(AnalyticsPublishing.self)
+    }
+
+    /// Check auto capture configuration and initialize engines if enabled.
+    public func checkAutoCapture() {
+        let config = container.resolve(Userpilot.Config.self)
+        let screenAutocaptureEnabled = config.enableScreenAutoCapture
+        let interactionEnabled = config.enableInteractionAutoCapture
+
+        if screenAutocaptureEnabled || interactionEnabled {
+            _ = autoCaptureCoordinator
+        }
+    }
+
+    // MARK: - Wrapper capture
+
+    /// Auto capture screen events from wrappers
+    @objc
+    public func trackExternalAutoCaptureScreen(_ title: String) {
+        autoCaptureCoordinator.trackExternalAutoCaptureScreen(title)
+    }
+
+    /// Auto capture interactions events from wrappers
+    @objc
+    public func trackExternalAutoCaptureEvent(eventName: String, properties: Payload) {
+        autoCaptureCoordinator.trackExternalAutoCaptureEvent(eventName, properties)
+    }
+
+    // MARK: - Stop and resume
+
+    /// Stops automatic screen and interaction capture for **this** instance. No events are
+    /// recorded for it until `resumeAutoCapture()` is called. Other Userpilot instances in the
+    /// same process keep capturing, so a host app and an embedded vendor SDK can pause independently.
+    @objc
+    public func stopAutoCapture() {
+        autoCaptureCoordinator.stopAutoCapture()
+    }
+
+    /// Resumes automatic screen and interaction capture for **this** instance after a previous
+    /// `stopAutoCapture()`.
+    @objc
+    public func resumeAutoCapture() {
+        autoCaptureCoordinator.resumeAutoCapture()
+    }
+
+    // MARK: - View privacy configuration
+
+    // Thin facade; implementation lives in AutocaptureViewConfiguration.
+
+    @objc
+    public static func userpilotSetRedactText(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setRedactText(value, for: responder)
+    }
+
+    @objc
+    public static func userpilotSetRedactAccessibilityLabel(_ value: Bool, for responder: UIResponder) {
+        AutocaptureViewConfiguration.setRedactAccessibilityLabel(value, for: responder)
+    }
+
+    // MARK: - Native UI ownership
+
+    /// Assigns this view and its descendants to this instance for autocapture.
+    /// Nested bindings take precedence. Passing a UIWindow owns its native subtree.
+    /// Call on main before displaying the view; background calls are enqueued on main.
+    @objc public func attachToView(_ view: UIView) {
+        performOnMain { [weak self, weak view] in
+            guard let self, let view else { return }
+            view.attachUserpilotOwner(self)
+        }
+    }
+
+    /// Releases this instance's binding on the view, or a binding whose owner was released.
+    /// Configured scopes or the nearest remaining binding then apply; another live
+    /// instance's binding is preserved.
+    @objc public func detachFromView(_ view: UIView) {
+        performOnMain { [weak self, weak view] in
+            guard let self, let view else { return }
+            view.detachUserpilotOwner(self)
+        }
+    }
+
+    /// Assigns a controller and its native subtree to this instance without loading
+    /// its view. Use the screen's UIHostingController to own a complete SwiftUI screen.
+    /// Call on main before presentation; background calls are enqueued on main.
+    @objc public func attachToViewController(_ viewController: UIViewController) {
+        performOnMain { [weak self, weak viewController] in
+            guard let self, let viewController else { return }
+            viewController.attachUserpilotOwner(self)
+        }
+    }
+
+    /// Releases this instance's controller binding, or one whose owner was released,
+    /// allowing ancestor bindings or configured scopes to apply again.
+    @objc public func detachFromViewController(_ viewController: UIViewController) {
+        performOnMain { [weak self, weak viewController] in
+            guard let self, let viewController else { return }
+            viewController.detachUserpilotOwner(self)
+        }
+    }
+}
+
 // swiftlint:enable file_length

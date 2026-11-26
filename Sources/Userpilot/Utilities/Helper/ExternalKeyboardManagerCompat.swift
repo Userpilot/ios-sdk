@@ -1,8 +1,11 @@
 //
 //  ExternalKeyboardManagerCompat.swift
-//  Userpilot
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 23/04/2026.
+//  Created by Userpilot on 23/04/2026.
+//  Copyright © 2026 Userpilot. All rights reserved.
+//
+//  Coordinates keyboard handling with optional host keyboard managers through runtime lookup.
 //
 
 import UIKit

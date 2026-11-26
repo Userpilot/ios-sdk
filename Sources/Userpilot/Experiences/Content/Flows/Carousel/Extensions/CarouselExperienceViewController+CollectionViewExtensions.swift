@@ -2,10 +2,9 @@
 //  CarouselExperienceViewController+CollectionViewExtensions.swift
 //  Userpilot SDK
 //
-//  Created by Motasem Hamed on 18/08/2024.
+//  Created by Userpilot on 18/08/2024.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  This class manages the carousel experience within the application.
 //  It conforms to `UICollectionViewDataSource`, `UICollectionViewDelegate`,
 //  `UICollectionViewDelegateFlowLayout`, and `UIScrollViewDelegate` protocols

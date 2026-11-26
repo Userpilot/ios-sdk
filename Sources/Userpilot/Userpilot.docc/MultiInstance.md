@@ -22,37 +22,33 @@ same process**. The most common reason to need this is the "vendor SDK" pattern:
 | --- | --- |
 | Single instance (host app only) | `Userpilot(config:)` — `isDefault` defaults to `true`, so the host claims default automatically |
 | Vendor SDK that embeds Userpilot | `Userpilot(config:)` inside the vendor's facade with `.defaultInstance(false)` |
-| Re-initialise idempotently | `Userpilot(config:)` again — returns the existing instance for the same token |
+| Subsequent SDK calls | Reuse the stored instance; initialize only once per app token |
 
 `Userpilot.Config.isDefault` defaults to **`true`**. The host application does not
 need to call `.defaultInstance(true)` — a plain `Userpilot.Config(token:)` already
 claims the default role. Embedded vendor SDKs **MUST** call
 `.defaultInstance(false)` so they do not compete for that role.
 
-The two SDK initialisation factories that used to exist on iOS
-(`Userpilot(config:)` and `Userpilot.create(config:)`) have been collapsed
-into a single `Userpilot(config:)`. Because `isDefault` defaults to `true`,
-an instance claims the default role on registration when the role is unclaimed.
-Subsequent calls with the same token return the existing instance instead of
-replacing it. A second instance with a **different** token that also leaves
-`isDefault` at its default cannot displace an existing claimant — the SDK
-logs a warning and un-anchored events keep routing to whoever already holds
-the role.
+Use `Userpilot(config:)` to initialize an instance. Because `isDefault`
+defaults to `true`, a new instance claims the default role when it is unclaimed.
+Create and retain one Userpilot instance per app token. Repeated initialization with the same live token is unsupported; reuse your stored instance. Use different tokens for independent instances.
+A different token cannot displace an existing default claimant; the original warning is logged.
 
 ---
 
 ## Mental model: one routing rule
 
-Every event — autocapture interaction, autocapture screen, or a manual
-`screen(_:)` / `track(_:)` — is routed to a Userpilot instance using a single
-three-tier rule:
+Manual calls such as `vendor.screen(_:)` and `vendor.track(_:)` use that instance
+directly. Native autocapture and APIs with an optional `userpilot:` argument use
+this routing order:
 
 1. **Explicit `userpilot:` argument**, when the API exposes one (e.g.
    `View.userpilotScreen(_:userpilot:)`).
-2. **Anchored owner**, when something in the UI hierarchy claims the
-   originating UI (`Config.attach(viewControllerClasses:)`,
+2. **Nearest explicit UI binding**, attached through `attachToView(_:)` or
+   `attachToViewController(_:)`. A nested binding overrides its ancestor.
+3. **Configured scope** (`Config.attach(viewControllerClasses:)`,
    `Config.attach(windows:)`, `Config.attach(bundles:)`).
-3. **Default**, which is the instance that claimed `isDefault` (defaults to
+4. **Default**, which is the instance that claimed `isDefault` (defaults to
    `true`; the default claimant).
 
 If none of those resolve to a live instance, the event is a silent no-op and
@@ -61,7 +57,7 @@ discoverable in Console / Sysdiagnose.
 
 ```mermaid
 flowchart TD
-    Event[Auto or manual event] --> Explicit{userpilot: passed?}
+    Event[Autocapture or optional-instance API] --> Explicit{userpilot: passed?}
     Explicit -- yes --> Route1[Route to that instance]
     Explicit -- no --> Anchored{Subtree anchor found?}
     Anchored -- yes --> Route2[Route to anchored owner]
@@ -70,9 +66,9 @@ flowchart TD
     Default -- no --> Drop[No-op + one-shot warn]
 ```
 
-No fan-out. No screen-vs-interaction policy split. In the single-instance case
-the only registered instance claims the default automatically (`isDefault`
-defaults to `true`), so nothing in your integration changes.
+Each capture has one owner. Optional forwarding adds one unchanged copy to the default instance. With `isDefault` left at its
+`true` default, single-instance routing remains unchanged. An explicitly non-default
+instance captures only its claimed UI; it never becomes a fallback merely because it is alone.
 
 ---
 
@@ -99,9 +95,8 @@ No `.defaultInstance(true)` is required — `isDefault` already defaults to
 ### 1. Vendor SDK that embeds Userpilot
 
 If you ship an SDK that uses Userpilot internally, initialise with
-`Userpilot(config:)` from inside your SDK. The factory is **idempotent**, so
-re-calls with the same token return the existing instance instead of replacing
-the host app's default.
+`Userpilot(config:)` once from inside your SDK and retain the instance. Use your own app token
+and `.defaultInstance(false)` to keep your SDK separate from the host app.
 
 ```swift
 public final class AcmeSDK {
@@ -164,7 +159,7 @@ let config = Userpilot.Config(token: "HOST_APP_TOKEN")
     .enableInteractionAutoCapture()
     // no .defaultInstance(true) needed — isDefault defaults to true
 
-_ = Userpilot(config: config)         // claims default automatically
+let userpilot = Userpilot(config: config)         // claims default automatically
 AcmeSDK.shared.identifyAcmeUser("…")  // vendor instance kept alive by AcmeSDK
 ```
 
@@ -176,16 +171,63 @@ tenant is default as long as the vendor opts out with `.defaultInstance(false)`.
 ## Routing autocapture events: scope semantics
 
 Autocapture events are attributed to the instance that owns the originating
-UI. The SDK resolves ownership by walking the responder chain from the touched
-view up to the nearest `UIViewController` and checking each registered
-instance's claimed scope, **in this priority order**:
+UI. The SDK checks the nearest explicit binding first, then walks to the
+nearest `UIViewController` for configured scopes, **in this priority order**:
 
-1. **`attach(viewControllerClasses:)`** — VC class match (subclass-aware).
-2. **`attach(windows:)`** — the VC's containing window matches.
-3. **`attach(bundles:)`** — `Bundle(for: VC.class)` identifier matches.
-4. **Default fallback** — if no instance claims the source, the event routes
+1. **Explicit binding** — `attachToView(_:)` or `attachToViewController(_:)`.
+2. **`attach(viewControllerClasses:)`** — VC class match (subclass-aware).
+3. **`attach(windows:)`** — the VC's containing window matches.
+4. **`attach(bundles:)`** — `Bundle(for: VC.class)` identifier matches.
+5. **Default fallback** — if no instance claims the source, the event routes
    to the instance that claimed `isDefault`, or is dropped
    when no instance holds the default role.
+
+### Explicit native subtree ownership
+
+These attachment/detach APIs are part of the current SDK branch; use a build that includes them.
+
+| Public instance method | Scope |
+| --- | --- |
+| `attachToView(_ view: UIView)` | Claims the view and its descendants, including a `UIWindow`. |
+| `detachFromView(_ view: UIView)` | Removes this instance's view binding, or an expired binding. |
+| `attachToViewController(_ viewController: UIViewController)` | Claims the controller and its native subtree, including an existing `UIHostingController`, without loading its view. |
+| `detachFromViewController(_ viewController: UIViewController)` | Removes this instance's controller binding, or an expired binding. |
+
+Attach an instance to a view, window, or controller on main before displaying it:
+
+```swift
+vendor.attachToView(vendorContainerView)
+vendor.attachToViewController(vendorViewController)
+// UIWindow is a UIView, so attachToView also accepts a vendor-owned window.
+```
+
+Nested bindings win over ancestor bindings. Stopping capture does not transfer an
+owned subtree to another instance. If its owner disappears, the binding continues
+to block fallback until explicitly detached. `detachFromView(_:)` and
+`detachFromViewController(_:)` remove the calling instance's binding, or one whose
+owner was released; they cannot remove a claim held by another live instance.
+
+All four methods run on main; a background call is queued and is not applied synchronously.
+Keep the `Userpilot` instance alive because iOS ownership bindings are weak. Attaching selects
+the recipient of future autocapture events; it does not enable disabled capture options,
+resume a stopped owner, or send a screen event immediately. Detaching restores the remaining
+ownership rules without logging out or stopping the instance. Explicit `track` and `screen`
+calls still use the instance on which you call them.
+
+A single non-default instance captures its claimed UI only. Unclaimed host UI is
+dropped, regardless of how many SDK instances are registered.
+
+For a complete SwiftUI screen, attach its `UIHostingController` before presentation:
+
+```swift
+let controller = UIHostingController(rootView: VendorSettings(userpilot: vendor))
+vendor.attachToViewController(controller)
+```
+
+There is no new SwiftUI subtree wrapper. SwiftUI siblings can share one native
+hosting view, so tagging that shared view would claim unrelated UI. This API uses
+the app's existing hosting boundary and does not add another hosting controller.
+The explicit `userpilot:` argument on `userpilotScreen` continues to work.
 
 ### Choosing the right `attach(...)`
 
@@ -194,7 +236,7 @@ instance's claimed scope, **in this priority order**:
 | Vendor's UI lives in its own framework | `.attach(bundles: [Bundle(for: VendorClass.self)])` |
 | Vendor presents on a custom `UIWindow` | `.attach(windows: [vendorWindow])` |
 | Vendor's UI is mixed into the host bundle (rare) | `.attach(viewControllerClasses: [VendorVC.self])` per VC |
-| Pure SwiftUI vendor view inside a generic hosting controller | `.attach(windows:)` on the overlay window the vendor presents from, or `.attach(viewControllerClasses:)` on a wrapper VC |
+| Complete SwiftUI vendor screen in its own hosting controller | `vendor.attachToViewController(hostingController)` before presentation |
 
 `.attach(...)` calls are additive — call them as many times as needed, and
 they stack into a single `Config`.
@@ -209,9 +251,9 @@ VC by class-name heuristic (anything containing `HostingController`, plus
 recovers correctly when SwiftUI views are nested inside a UIKit container
 that *is* in your bundle.
 
-If your vendor app is pure SwiftUI with no UIKit boundary, prefer either
-`.attach(windows:)` on a vendor-owned overlay window, **or** the explicit
-`userpilot:` argument on the SwiftUI screen-tracking modifier described next.
+If the app owns its hosting controller, use `attachToViewController(_:)`. Without
+an accessible UIKit boundary, the explicit `userpilot:` argument below targets
+manual SwiftUI screen events; it does not claim unrelated interactions.
 
 ---
 
@@ -314,29 +356,28 @@ If **no** instance claims the default role (every instance called
 attributed to an arbitrary tenant. Keep the default of `true` on the host app
 so it owns un-anchored events.
 
-Surviving instances are **not** auto-promoted when the default is torn down —
-call `Userpilot(config:)` again with a config that leaves `isDefault` at its
-default (or explicitly `.defaultInstance(true)`) to reclaim the role.
+Surviving instances are **not** auto-promoted when the default is torn down. A newly
+created instance can claim the vacant role with `isDefault = true`.
 
 ---
 
-## Idempotent initialisation
+## Initialization and lifetime
 
-`Userpilot(config:)` is a "get-or-create" factory. Calling it twice for the
-same token returns the same instance. The `isDefault` flag on a repeat call
-is ignored when the instance already exists — the original default claim (or
-lack thereof) is preserved:
+Create and retain one Userpilot instance per app token. Repeated initialization with the same live token is unsupported; reuse your stored instance. Use different tokens for independent instances.
 
 ```swift
-let a = Userpilot(config: .init(token: "HOST"))   // claims default (isDefault defaults true)
-let b = Userpilot(config: .init(token: "HOST"))
-// a and b share the same dependency container — same analytics, same
-// storage, same socket. The supplied config on `b` is discarded and a
-// diagnostic is logged.
+let userpilot = Userpilot(config: .init(token: "<APP_TOKEN>"))
 ```
 
-This protects against accidental double-initialisation from
-`SceneDelegate`/`AppDelegate` overlap.
+Objective-C: `[[Userpilot alloc] initWithConfig:config]`.
+
+`Userpilot.Config` trims surrounding token whitespace once. Initialization migrates storage,
+registers the owner, then builds and starts that instance's services. The instance owns its
+presentation window and weak delegates; the registry holds the instance weakly, so retain it
+in a stored property for the lifetime of the integration.
+
+The original Swift initializer and Objective-C selector remain supported. Native wrappers
+using those entry points do not need an initialization API migration.
 
 ---
 
@@ -428,13 +469,11 @@ the exact stored version: bump `currentMigrationVersion` and gate the new step.
   Pausing one instance leaves the others capturing.
 - **`Userpilot.enableAutomaticPushConfig()`** is a process-wide swizzle;
   calling it from any instance enables it for all of them.
-- **SwiftUI ownership** can be ambiguous when there is no UIKit container in
-  your bundle. Prefer `.attach(windows:)` on a vendor-owned window or pass
-  `userpilot:` explicitly on `View.userpilotScreen(...)` in those setups.
-- **Two instances with the same token** never happens through the public
-  factory — `Userpilot(config:)` is idempotent. Direct construction from
-  low-level test code or reflection that bypasses the factory will trigger
-  an `error`-level log on the second registration.
+- **SwiftUI ownership** uses an existing UIKit hosting boundary. Attach the screen's
+  `UIHostingController` with `attachToViewController(_:)`. An explicit `userpilot:`
+  on `View.userpilotScreen(...)` selects only that manual screen event's recipient.
+- **Repeated initialization with the same live token** is unsupported. Initialize once and reuse
+  your stored instance.
 
 ---
 
@@ -467,3 +506,13 @@ acmeUserpilot.track(eventName: "vendor_action")   // → ACME tenant
 You should see two distinct streams of analytics on the Userpilot dashboards
 for `HOST` and `ACME`, with autocapture events landing on whichever tenant
 owns the originating UI.
+
+
+## Wrapper compatibility
+
+The native attachment methods are additive. Existing Flutter, React Native,
+Capacitor and Expo entry points are unchanged and need no signature migration.
+Using the new methods from a wrapper requires its native integration to supply the
+actual view/controller or Activity; no JavaScript/Dart ownership API is introduced.
+Vendor integrations should verify that their native UI has an explicit binding or
+configured scope, since a non-default instance never owns unclaimed host UI.

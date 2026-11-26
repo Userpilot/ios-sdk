@@ -1,11 +1,10 @@
 //
-//  View+TrackScreen.swift
-//  Userpilot
+//  View+UserpilotScreen.swift
+//  Userpilot SDK
 //
-//  Created by Motasem Hamed on 22/01/2026.
+//  Created by Userpilot on 22/01/2026.
 //  Copyright © 2024 Userpilot. All rights reserved.
 //
-//  [Brief Description]
 //  View+TrackScreen provides SwiftUI view modifiers for manual screen tracking
 //  by posting screen events when views appear.
 //
@@ -58,7 +57,9 @@ private struct UserpilotSwiftUIViewModifier: ViewModifier {
         content.onAppear {
             // Explicit param wins; otherwise route to the default. If neither
             // exists (SDK not initialised), the event is a silent no-op.
-            (userpilot ?? Userpilot.Registry.shared.default)?.screen(screenEventName)
+            let registry = UserpilotRuntime.shared.instanceRegistry
+            guard let owner = userpilot ?? registry.default, registry.isRegistered(owner) else { return }
+            owner.screen(screenEventName)
         }
     }
 }
