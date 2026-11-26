@@ -27,16 +27,21 @@ extension Optional where Wrapped == ExperienceTheme {
 
 /// One Flow step's theme: step → the Flow's custom theme → `baseTheme`'s `flow` section, else each
 /// branch's own section → rendering defaults. The presenter picks its branch by step type, so each
-/// branch falls back to its own section. Every branch keeps progress; `stepBackdrop` wins the backdrop.
+/// branch falls back to its own section. Explicit step placement and backdrop take priority.
 func mergeFlowStepThemes(
     baseTheme: ThemeData?,
     contentTheme: ExperienceTheme?,
     stepTheme: ExperienceTheme?,
-    stepBackdrop: FlowBackdrop?
+    step: Step
 ) -> ThemeData {
     let flow = baseTheme?.flow
+    let stepBackdrop = step.settings?.backdrop
+    var carousel = (flow ?? baseTheme?.carousel).mergingFlowStep(contentTheme, stepTheme, stepBackdrop)
+    if step.stepType == .modal, let alignment = step.settings?.position?.modalAlignment {
+        carousel.general = GeneralStyle(contentAlignment: alignment, fontFamily: carousel.fontFamily)
+    }
     return ThemeData(
-        carousel: (flow ?? baseTheme?.carousel).mergingFlowStep(contentTheme, stepTheme, stepBackdrop),
+        carousel: carousel,
         slideOut: (flow ?? baseTheme?.slideOut).mergingFlowStep(contentTheme, stepTheme, stepBackdrop),
         survey: nil,
         tooltip: (flow ?? baseTheme?.tooltip).mergingFlowStep(contentTheme, stepTheme, stepBackdrop)

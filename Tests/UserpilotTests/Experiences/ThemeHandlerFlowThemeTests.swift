@@ -301,3 +301,29 @@ final class ThemeHandlerFlowThemeTests: XCTestCase {
         XCTAssertEqual(backdrop?.opacity, opacity, file: file, line: line)
     }
 }
+
+extension ThemeHandlerFlowThemeTests {
+    func testModalPositionOverridesThemeAlignmentPerStep() throws {
+        let theme = ExperienceTheme(general: GeneralStyle(contentAlignment: .middle, fontFamily: "Inter"))
+        saveBaseTheme(flow: theme)
+        let steps = try ["top", "middle", "center"].enumerated().map { index, position in
+            let json = """
+                {"id":\(index + 1),"order":\(index),"sections":[],"step_type":"modal",
+                 "settings":{"position":"\(position)"}}
+                """
+            return try JSONDecoder().decode(Step.self, from: Data(json.utf8))
+        } + [step(4, .modal)]
+        let content = flow(steps: steps)
+        let themes = themeHandler.flowThemes(for: content, isFlowSegment: true)
+
+        XCTAssertEqual(themes.map { $0.carousel?.general?.contentAlignment }, [.top, .middle, .middle, .middle])
+        XCTAssertEqual(themes.first?.carousel?.fontFamily, "Inter")
+
+        themeHandler.setAppTheme(name: "App")
+        let app = ExperienceTheme(general: GeneralStyle(contentAlignment: .top, fontFamily: "AppFont"))
+        _ = themeHandler.saveAppTheme(ThemeContent(id: 9, title: "App", themeData: baseTheme(flow: app)), title: "App")
+        let appThemes = themeHandler.flowThemes(for: content, isFlowSegment: true)
+        XCTAssertEqual(appThemes.map { $0.carousel?.general?.contentAlignment }, [.top, .middle, .middle, .top])
+        XCTAssertEqual(appThemes.first?.carousel?.fontFamily, "AppFont")
+    }
+}

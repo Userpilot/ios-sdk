@@ -11,7 +11,7 @@
 extension ThemeHandling {
 
     /// One theme per step. A resolved app theme replaces the content's base, flow and step themes,
-    /// including placement, which the app theme carries in `general`. A Flow segment's steps merge
+    /// including theme alignment. A Flow segment's steps merge
     /// through `mergeFlowStepThemes`.
     ///
     /// - Parameters:
@@ -34,7 +34,7 @@ extension ThemeHandling {
         }
     }
 
-    /// A resolved app theme replaces the base, custom and step styling, but never a step's `settings.backdrop`.
+    /// Step placement and backdrop still apply when an app theme supplies the styling.
     private func flowStepThemes(for content: FlowContent) -> [ThemeData] {
         let resolved = appTheme
         let baseTheme = resolved ?? getThemeById(content.baseThemeId)
@@ -44,7 +44,7 @@ extension ThemeHandling {
                 baseTheme: baseTheme,
                 contentTheme: contentTheme,
                 stepTheme: resolved == nil ? step.mobileTheme : nil,
-                stepBackdrop: step.settings?.backdrop
+                step: step
             )
         }
     }

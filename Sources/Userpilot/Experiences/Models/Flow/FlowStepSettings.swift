@@ -12,11 +12,10 @@ import Foundation
 
 // MARK: - FlowStepSettings
 
-/// A Flow step's settings. Appex writes per-type defaults, but every key stays optional:
-/// a modal sends `position` and `fallback` as explicit `null`, a slideout `fallback`, and an
-/// unset backdrop arrives as `null`. Unknown enum values reject the whole Flow.
+/// A Flow step's settings. Older steps can omit placement or send it as null.
+/// Unknown enum values reject the whole Flow.
 internal struct FlowStepSettings: Codable, Equatable {
-    /// Tooltip `auto`/`above`/`below`, slideout `bottom`/`center`; a modal has none.
+    /// Tooltip `auto`/`above`/`below`, modal `top`/`middle`, slideout `bottom`/`center`.
     let position: FlowStepPosition?
 
     /// Tooltip only: `target_tap` advances on a tap on the target; anything else advances on the button.
@@ -69,22 +68,32 @@ internal extension FlowStepType {
     }
 }
 
-/// Where a tooltip sits against its target, or where a slideout sits on screen.
+/// Placement in the renderer selected by the step type.
 internal enum FlowStepPosition: String, Codable {
     case auto
     case above
     case below
+    case top
+    case middle
     case bottom
     case center
 }
 
 internal extension FlowStepPosition {
-    /// `above` and `below` ask for a side; `auto`, `bottom` and `center` leave the renderer to pick one.
+    /// Only explicit tooltip sides override automatic placement.
     var tooltipPlacement: TooltipPlacement? {
         switch self {
         case .above: return .top
         case .below: return .bottom
-        case .auto, .bottom, .center: return nil
+        default: return nil
+        }
+    }
+
+    var modalAlignment: ContentAlignmentType? {
+        switch self {
+        case .top: return .top
+        case .middle, .center: return .middle
+        default: return nil
         }
     }
 }
