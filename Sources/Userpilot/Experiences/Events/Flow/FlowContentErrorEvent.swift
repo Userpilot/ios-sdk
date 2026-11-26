@@ -7,8 +7,8 @@
 //
 //  Reports that a Flow tooltip step's target can't be used (`mobile_content_error`).
 //
-//  Fire and forget, and offline-eligible: the server records the step error from it, and
-//  completes the Flow when the error ends the run. It is not a close event, so it neither
+//  Fire and forget, and offline-eligible: the server records the step error and completes a skipped final step.
+//  An explicit `end_flow` fallback also sends the Flow completion. It is not a close event, so it neither
 //  records a close nor requests the post-close screen reload; the Flow's fallback decides
 //  what the SDK shows next.
 //

@@ -35,22 +35,20 @@ internal struct FlowStepOutcome {
 // MARK: - FlowStepEvents
 
 /// Maps a Flow step outcome to the events it sends. Renderers call it when the user's action is committed,
-/// before any fade. A Flow sends step events only: never `seen_mobile_content`, `complete_mobile_content` or
-/// `dismissed_mobile_content_step`; the server derives those. Nothing is produced after the run ended or for a
-/// step that already ended (latch).
+/// before any fade. Each accepted outcome publishes its events in order.
 internal enum FlowStepEvents {
 
     /// `step` was revealed: step seen, plus Flow Started when it starts the run.
     static func shown(_ segment: FlowSegment, _ step: Step) -> FlowStepOutcome {
         outcome(segment, step, segment.run.shown(step, stepsCount: segment.stepsCount)) { _ in
-            FlowExperienceStepActionEvent.seen(flowId: segment.flowId, stepId: step.id, fromFlowRun: true)
+            [FlowExperienceStepActionEvent.seen(flowId: segment.flowId, stepId: step.id, fromFlowRun: true)]
         }
     }
 
     /// The user advanced past `step` by button or target tap: step completed, plus Flow Completed on the last.
     static func advanced(_ segment: FlowSegment, _ step: Step) -> FlowStepOutcome {
         outcome(segment, step, segment.run.completed(step, stepsCount: segment.stepsCount)) { endsRun in
-            FlowExperienceStepActionEvent.completed(flowId: segment.flowId, stepId: step.id, endsRun: endsRun)
+            [FlowExperienceStepActionEvent.completed(flowId: segment.flowId, stepId: step.id, endsRun: endsRun)]
         }
     }
 
@@ -67,29 +65,33 @@ internal enum FlowStepEvents {
     /// The user closed `step`; `state` comes from that step's own `settings.dismiss_action`.
     static func closed(_ segment: FlowSegment, _ step: Step) -> FlowStepOutcome {
         outcome(segment, step, segment.run.dismissed(step, stepsCount: segment.stepsCount)) { _ in
-            FlowExperienceActionEvent.dismissed(
+            [FlowExperienceActionEvent.dismissed(
                 flowId: segment.flowId, stepId: step.id, dismissAction: step.settings?.dismissAction
-            )
+            )]
         }
     }
 
     /// `step`'s target can't be used; `issue` is one of the fixed resolution issues.
     static func failed(_ segment: FlowSegment, _ step: Step, issue: String) -> FlowStepOutcome {
         outcome(segment, step, segment.run.errored(step, stepsCount: segment.stepsCount)) { endsRun in
-            FlowContentErrorEvent(
+            let error = FlowContentErrorEvent(
                 flowId: segment.flowId, stepId: step.id, issue: issue, screen: segment.screen, endsRun: endsRun
             )
+            if step.settings?.fallback == .endFlow {
+                return [error, FlowExperienceActionEvent.completed(flowId: segment.flowId)]
+            }
+            return [error]
         }
     }
 
-    /// `event` is told whether this outcome ends the run, so analytics can see the run end from the event.
+    /// Analytics uses the run's terminal state when updating its error-step history.
     private static func outcome(
         _ segment: FlowSegment,
         _ step: Step,
         _ next: (run: FlowRun, callbacks: [ExperienceCallback]),
-        _ event: (_ endsRun: Bool) -> ExperienceEvent
+        _ events: (_ endsRun: Bool) -> [ExperienceEvent]
     ) -> FlowStepOutcome {
         guard segment.run.acceptsOutcome(step) else { return FlowStepOutcome(run: segment.run) }
-        return FlowStepOutcome(run: next.run, events: [event(next.run.hasEnded)], callbacks: next.callbacks)
+        return FlowStepOutcome(run: next.run, events: events(next.run.hasEnded), callbacks: next.callbacks)
     }
 }

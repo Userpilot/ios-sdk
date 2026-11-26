@@ -9,8 +9,8 @@
 //
 
 /// Maps standalone content (a carousel or slideout outside a Flow walk) to its host callbacks and the events
-/// it sends, in order. Standalone content sends Flow-level and step-level events itself; a Flow walk step sends
-/// step events only, through `FlowStepEvents`. Steps are numbered by page among the content's own steps.
+/// it sends, in order. Standalone content sends Flow-level and step-level events itself; a Flow walk step reports
+/// through `FlowStepEvents`. Steps are numbered by page among the content's own steps.
 internal enum FlowContentEvents {
 
     /// The content opened on its first step: Flow seen, then that step seen. Nothing without a first step.

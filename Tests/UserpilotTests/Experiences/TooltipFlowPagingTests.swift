@@ -162,14 +162,14 @@ final class TooltipFlowPagingTests: XCTestCase {
         XCTAssertEqual(removals, 0)
     }
 
-    func testEndFlow_closesTheOverlayAtOnce_andReportsOnlyTheError() throws {
+    func testEndFlow_closesTheOverlayAtOnce_andCompletesAfterTheError() throws {
         let sut = try present(
             types: ["tooltip", "tooltip", "tooltip", "tooltip"], fallbacks: [401: "end_flow"], resolvable: [])
         settleMain()
 
         XCTAssertTrue(sut.hasReachedTerminalState)
         XCTAssertTrue(sut.viewModel.isFlowRunEnded)
-        XCTAssertEqual(names(flowEvents), ["mobile_content_error 401"])
+        XCTAssertEqual(flowEvents.map(\.eventName), ["mobile_content_error", "complete_mobile_content"])
         XCTAssertEqual(removals, 1)
     }
 

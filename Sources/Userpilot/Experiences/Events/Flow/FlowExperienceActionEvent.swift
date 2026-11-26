@@ -13,7 +13,7 @@ internal enum FlowExperienceActionEvent: ExperienceEvent {
     case seen(flowId: Int)
     /// `dismissAction` is the closed Flow step's `settings.dismiss_action`; `nil` outside Flows and when unset.
     case dismissed(flowId: Int, stepId: Int, dismissAction: FlowDismissAction? = nil)
-    /// Standalone content only. `hasDeepLink` stays local: it is never part of the payload.
+    /// Standalone completion or an explicit Flow `end_flow` fallback. `hasDeepLink` stays local.
     case completed(flowId: Int, hasDeepLink: Bool = false)
 }
 

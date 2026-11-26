@@ -80,7 +80,7 @@ internal struct FlowRun: Equatable {
     }
 
     /// `step`'s target can't be used. `end_flow` ends the run at once; `skip_step`, the default, ends only the step
-    /// unless it is the Flow's last. The server completes an errored run, so its end fires Flow Completed once.
+    /// unless it is the Flow's last. Ending the run fires the Flow Completed callback once.
     func errored(_ step: Step, stepsCount: Int) -> (run: FlowRun, callbacks: [ExperienceCallback]) {
         guard acceptsOutcome(step) else { return (self, []) }
         let ends = step.settings?.fallback == .endFlow || isLastStepOfFlow(step, stepsCount: stepsCount)

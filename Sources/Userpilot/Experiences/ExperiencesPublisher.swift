@@ -1303,7 +1303,8 @@ extension ExperiencesPublisher {
         } else {
             analytics.publishInternalSDKEvent(sdkEvent)
         }
-        guard sdkEvent.isEventForCloseExperience() || sdkEvent.isEventForCloseNPSExperience() else { return }
+        guard sdkEvent.isEventForCloseExperience(isFlowWalk: operation.isFlowWalk)
+                || sdkEvent.isEventForCloseNPSExperience() else { return }
         reads.update {
             var state = $0
             state.suppressScreenUntil = .now() + 1

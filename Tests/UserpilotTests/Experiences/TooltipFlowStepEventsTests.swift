@@ -208,7 +208,7 @@ final class TooltipFlowStepEventsTests: XCTestCase {
 
         XCTAssertTrue(runsFallback)
         XCTAssertTrue(sut.isFlowRunEnded)
-        XCTAssertEqual(flowEvents.map(\.eventName), ["mobile_content_error"])
+        XCTAssertEqual(flowEvents.map(\.eventName), ["mobile_content_error", "complete_mobile_content"])
         XCTAssertEqual(delegate.calls, [.flow(.completed)])
     }
 

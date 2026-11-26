@@ -135,7 +135,7 @@ final class FlowStepEventsTests: XCTestCase {
         XCTAssertEqual(latched.last?.run, stepEnded.run)
     }
 
-    func testAFlowNeverSendsFlowLevelSeenCompleteOrStepDismissedEvents() {
+    func testAdvancingClosingAndSkippingUseStepEventsOrFlowDismissal() {
         var current = segment
         var all: [FlowStepOutcome] = []
         for step in [first, middle, last] {

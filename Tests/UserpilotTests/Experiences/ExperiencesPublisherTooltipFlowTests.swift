@@ -52,7 +52,7 @@ extension ExperiencesPublisherTests {
         XCTAssertTrue(publisher.canRequestScreenEvent())
     }
 
-    func testEndFlowOnStepOneOfFour_sendsOnlyTheError_endsTheRun_andSendsOneReload() throws {
+    func testEndFlowOnStepOneOfFour_sendsErrorThenCompletion_andOneReload() throws {
         userpilot.debugEventStore.start()
         let tooltip = try presentTooltipSegment(
             TooltipFixture.flowPayload(types: ["tooltip", "tooltip", "modal", "modal"], fallbacks: [401: "end_flow"]),
@@ -69,7 +69,8 @@ extension ExperiencesPublisherTests {
         XCTAssertEqual(run.steps[401]?.state, .failed)
         XCTAssertTrue(run.section.rows[0].value.contains("not_found on Home"))
         XCTAssertEqual(run.section.rows[1].value, "Not observed")
-        XCTAssertEqual(publishedEvents.map(\.eventName), ["mobile_content_error"])
+        XCTAssertEqual(publishedEvents.map(\.eventName), ["mobile_content_error", "complete_mobile_content"])
+        XCTAssertEqual(publishedEvents.last?.eventPayload as? [String: Int], ["mobile_content_id": 40])
         XCTAssertEqual(NSDictionary(dictionary: publishedEvents.first?.eventPayload ?? [:]), NSDictionary(dictionary: [
             "mobile_content_id": 40, "step_id": 401, "issue": "not_found", "screen": "Home"
         ]))

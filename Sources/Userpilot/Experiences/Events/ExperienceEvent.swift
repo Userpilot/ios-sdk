@@ -21,10 +21,12 @@ extension ExperienceEvent {
     var hasDeepLink: Bool { false }
 
     /// These events allow a refresh only after the renderer has actually dismissed.
-    func isEventForCloseExperience() -> Bool {
+    func isEventForCloseExperience(isFlowWalk: Bool = false) -> Bool {
         switch name {
-        case .flowExperienceDismissed, .flowExperienceCompleted,
-             .surveyExperienceDismissed, .surveyExperienceCompleted:
+        case .flowExperienceCompleted:
+            // A Flow walk owns its reload when the last segment is removed.
+            return !isFlowWalk
+        case .flowExperienceDismissed, .surveyExperienceDismissed, .surveyExperienceCompleted:
             return true
         default:
             return false
