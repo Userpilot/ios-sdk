@@ -201,7 +201,8 @@ internal class OfflineEventsHandler: OfflineEventsHandling {
                     }
 
                     if localEvents.isEmpty {
-                        completion?()
+                        // Leave the database queue first: the caller queries the store from its completion.
+                        self.offlineEventsQueue.async { completion?() }
                         return
                     }
 

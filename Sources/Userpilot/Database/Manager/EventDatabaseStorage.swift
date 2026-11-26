@@ -59,6 +59,7 @@ internal class EventDatabaseStorage: EventStoring {
         qos: .userInitiated
     )
     private let decoder = JSONDecoder()
+    private let queueKey = DispatchSpecificKey<Bool>()
 
     /// Logger used for internal logging of operations and errors.
     private let logger: Logging
@@ -68,6 +69,7 @@ internal class EventDatabaseStorage: EventStoring {
     init(container: DIContainer) {
         let config = container.resolve(Userpilot.Config.self)
         self.logger = config.logger
+        queue.setSpecific(key: queueKey, value: true)
 
         // Application Support, not Documents: Documents is user-visible (Files app)
         // and semantically for user-created content. The events DB is SDK-internal.
@@ -198,7 +200,7 @@ internal class EventDatabaseStorage: EventStoring {
 
     deinit {
         tryCatch {
-            _ = queue.sync {
+            _ = onDatabaseQueue {
                 sqlite3_close(database)
             }
         }
@@ -246,18 +248,26 @@ internal class EventDatabaseStorage: EventStoring {
     func getAllEventsAndDelete(completion: @escaping ([EventStorage]) -> Void) {
         tryCatch {
             queue.async { [weak self] in
-                guard let self = self else {
+                guard let self else {
                     completion([])
                     return
                 }
 
                 let events = self.performRead()
-                if !events.isEmpty {
+                // Rows go even when undecodable or unread: any left behind keep `hasEvents()` true,
+                // and every restore would then re-run on nothing.
+                let count = self.performGetRecordCount()
+                if count > 0 {
                     self.performDeleteAll()
-                    self.logger.info(
-                        "✅ Retrieved and deleted %{public}d events from storage", events.count)
+                    if let events {
+                        self.logger.info(
+                            "✅ Retrieved and deleted %{public}d events from storage", events.count)
+                    } else {
+                        self.logger.error(
+                            "❗ Deleted %{public}d unread events after a failed read", count)
+                    }
                 }
-                completion(events)
+                completion(events ?? [])
             }
         }
     }
@@ -292,7 +302,7 @@ internal class EventDatabaseStorage: EventStoring {
      * - Returns: Storage statistics including count, size, and limit information
      */
     func getStorageStats() -> DatabaseStats {
-        return queue.sync { [weak self] in
+        return onDatabaseQueue { [weak self] in
             guard let self = self else {
                 return DatabaseStats(
                     eventCount: 0,
@@ -325,13 +335,22 @@ internal class EventDatabaseStorage: EventStoring {
      * - Returns: true if there are stored events, false otherwise
      */
     func hasEvents() -> Bool {
-        return queue.sync { [weak self] in
+        return onDatabaseQueue { [weak self] in
             guard let self = self else { return false }
             return self.getEventCount() > 0
         }
     }
 
     // MARK: - Private Methods
+
+    /// Completions may synchronously query the store, and the final reference may be released
+    /// on its queue. Both must reuse queue ownership rather than synchronously dispatch to self.
+    private func onDatabaseQueue<T>(_ action: () -> T) -> T {
+        if DispatchQueue.getSpecific(key: queueKey) == true {
+            return action()
+        }
+        return queue.sync(execute: action)
+    }
 
     /*
      * Internal save implementation with limit checking
@@ -419,8 +438,9 @@ internal class EventDatabaseStorage: EventStoring {
         return true
     }
 
-    private func performRead() -> [EventStorage] {
-        guard let database else { return [] }
+    /// Returns `nil` when the query fails, so a failed read is not mistaken for an empty table.
+    private func performRead() -> [EventStorage]? {
+        guard let database else { return nil }
 
         let query = "SELECT data FROM Events ORDER BY created_at, rowid;"
         var stmt: OpaquePointer?
@@ -430,10 +450,11 @@ internal class EventDatabaseStorage: EventStoring {
 
         guard sqlite3_prepare_v2(database, query, -1, &stmt, nil) == SQLITE_OK else {
             logger.error("❗ Failed to prepare read statement")
-            return []
+            return nil
         }
 
-        while sqlite3_step(stmt) == SQLITE_ROW {
+        var stepResult = sqlite3_step(stmt)
+        while stepResult == SQLITE_ROW {
             if let cString = sqlite3_column_text(stmt, 0),
                 let data = String(cString: cString).data(using: .utf8),
                 let activity = tryCatch(code: {
@@ -441,6 +462,13 @@ internal class EventDatabaseStorage: EventStoring {
                 }) {
                 activities.append(activity)
             }
+            stepResult = sqlite3_step(stmt)
+        }
+
+        guard stepResult == SQLITE_DONE else {
+            let error = String(cString: sqlite3_errmsg(database))
+            logger.error("❗ Event read failed: %{public}@", error)
+            return nil
         }
 
         return activities
